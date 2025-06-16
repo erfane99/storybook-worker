@@ -1,5 +1,5 @@
-const express = require('express');
-const cron = require('node-cron');
+import express from 'express';
+import cron from 'node-cron';
 
 // Health check server
 const app = express();
