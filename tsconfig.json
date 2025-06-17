@@ -15,11 +15,7 @@
     "removeComments": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "baseUrl": "./src",
-    "paths": {
-      "@/*": ["./*"],
-      "@/lib/*": ["./lib/*"]
-    }
+    "baseUrl": "./src"
   },
   "include": [
     "src/**/*"
