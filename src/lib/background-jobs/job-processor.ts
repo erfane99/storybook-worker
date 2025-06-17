@@ -1,6 +1,11 @@
 import { jobManager } from './job-manager.js';
 import { JobData, JobType, StorybookJobData, AutoStoryJobData, SceneJobData, CartoonizeJobData, ImageJobData } from '@/lib/types.js';
 import { cartoonizeService } from '@/lib/services/cartoonize-service.js';
+import { characterService } from '@/lib/services/character-service.js';
+import { storyService } from '@/lib/services/story-service.js';
+import { sceneService } from '@/lib/services/scene-service.js';
+import { imageService } from '@/lib/services/image-service.js';
+import { storybookService } from '@/lib/services/storybook-service.js';
 
 class BackgroundJobProcessor {
   private isProcessing = false;
@@ -89,106 +94,28 @@ class BackgroundJobProcessor {
     }
   }
 
-  // Process storybook generation job
+  // Process storybook generation job - UPDATED TO USE INTERNAL SERVICES
   async processStorybookJob(job: StorybookJobData): Promise<void> {
     const { title, story, characterImage, pages, audience, isReusedImage } = job.input_data;
 
     try {
-      // Step 1: Character description (0% → 25%)
-      await jobManager.updateJobProgress(job.id, 5, 'Analyzing character image');
-      
-      let characterDescription = '';
-      if (!isReusedImage) {
-        try {
-          const describeResponse = await fetch('/api/image/describe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageUrl: characterImage }),
-          });
+      console.log(`📚 Processing storybook job: ${job.id}`);
+      await jobManager.updateJobProgress(job.id, 5, 'Starting storybook creation');
 
-          if (describeResponse.ok) {
-            const { characterDescription: description } = await describeResponse.json();
-            characterDescription = description;
-          } else {
-            characterDescription = 'a cartoon character';
-          }
-        } catch (error) {
-          console.warn('⚠️ Character description failed, using fallback');
-          characterDescription = 'a cartoon character';
-        }
-      }
+      // Use internal storybook service
+      const result = await storybookService.createStorybook({
+        title,
+        story,
+        characterImage,
+        pages,
+        audience,
+        isReusedImage,
+        userId: job.user_id,
+      });
 
-      await jobManager.updateJobProgress(job.id, 25, 'Character analysis complete');
+      await jobManager.updateJobProgress(job.id, 75, 'Storybook generated, saving to database');
 
-      // Step 2: Process scenes page by page (25% → 75%)
-      const updatedPages: any[] = [];
-      const totalScenes = pages.reduce((total: number, page: any) => total + (page.scenes?.length || 0), 0);
-      let processedScenes = 0;
-
-      for (const [pageIndex, page] of pages.entries()) {
-        console.log(`Processing Page ${pageIndex + 1} of ${pages.length}`);
-        const updatedScenes = [];
-
-        for (const [sceneIndex, scene] of (page.scenes || []).entries()) {
-          try {
-            const imageResponse = await fetch('/api/story/generate-cartoon-image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                image_prompt: scene.imagePrompt,
-                character_description: characterDescription,
-                emotion: scene.emotion,
-                audience,
-                isReusedImage,
-                cartoon_image: characterImage,
-                style: 'storybook',
-              }),
-            });
-
-            if (imageResponse.ok) {
-              const { url } = await imageResponse.json();
-              updatedScenes.push({
-                ...scene,
-                generatedImage: url,
-              });
-            } else {
-              updatedScenes.push({
-                ...scene,
-                generatedImage: characterImage, // Fallback
-                error: 'Failed to generate image',
-              });
-            }
-          } catch (error: any) {
-            updatedScenes.push({
-              ...scene,
-              generatedImage: characterImage, // Fallback
-              error: error.message || 'Failed to generate image',
-            });
-          }
-
-          processedScenes++;
-          const progress = 25 + (processedScenes / totalScenes) * 50;
-          await jobManager.updateJobProgress(
-            job.id, 
-            Math.round(progress), 
-            `Generated ${processedScenes}/${totalScenes} scene illustrations`
-          );
-        }
-
-        updatedPages.push({
-          pageNumber: pageIndex + 1,
-          scenes: updatedScenes,
-        });
-      }
-
-      await jobManager.updateJobProgress(job.id, 75, 'All scenes processed, saving storybook');
-
-      // Step 3: Save to database (75% → 100%)
-      const hasErrors = updatedPages.some((page: any) => 
-        page.scenes.some((scene: any) => scene.error)
-      );
-
-      // Import Supabase client with proper error handling
+      // Save to database
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
         throw new Error('Missing required Supabase environment variables');
       }
@@ -202,13 +129,13 @@ class BackgroundJobProcessor {
       const { data: storybookEntry, error: supabaseError } = await supabase
         .from('storybook_entries')
         .insert({
-          title,
-          story,
-          pages: updatedPages,
+          title: result.title,
+          story: result.story,
+          pages: result.pages,
           user_id: job.user_id || null,
-          audience,
-          character_description: characterDescription,
-          has_errors: hasErrors,
+          audience: result.audience,
+          character_description: result.character_description,
+          has_errors: result.has_errors,
           created_at: new Date().toISOString(),
         })
         .select()
@@ -223,9 +150,9 @@ class BackgroundJobProcessor {
       // Mark job as completed
       await jobManager.markJobCompleted(job.id, {
         storybook_id: storybookEntry.id,
-        pages: updatedPages,
-        has_errors: hasErrors,
-        warning: hasErrors ? 'Some images failed to generate' : undefined,
+        pages: result.pages,
+        has_errors: result.has_errors,
+        warning: result.warning,
       });
 
       console.log(`✅ Storybook job completed: ${job.id}`);
@@ -236,39 +163,61 @@ class BackgroundJobProcessor {
     }
   }
 
-  // Process auto-story generation job
+  // Process auto-story generation job - UPDATED TO USE INTERNAL SERVICES
   async processAutoStoryJob(job: AutoStoryJobData): Promise<void> {
     const { genre, characterDescription, cartoonImageUrl, audience } = job.input_data;
 
     try {
-      // Step 1: Generate story content (0% → 40%)
-      await jobManager.updateJobProgress(job.id, 5, 'Generating story content');
+      console.log(`🤖 Processing auto-story job: ${job.id}`);
+      await jobManager.updateJobProgress(job.id, 5, 'Starting auto-story generation');
 
-      const storyResponse = await fetch('/api/story/generate-auto-story', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          genre,
-          characterDescription,
-          cartoonImageUrl,
-          audience,
-          user_id: job.user_id,
-        }),
+      // Use internal storybook service for complete auto-story creation
+      const result = await storybookService.createAutoStory({
+        genre,
+        characterDescription,
+        cartoonImageUrl,
+        audience,
+        userId: job.user_id,
       });
 
-      if (!storyResponse.ok) {
-        const errorData = await storyResponse.json();
-        throw new Error(errorData.error || 'Failed to generate story');
+      await jobManager.updateJobProgress(job.id, 75, 'Auto-story generated, saving to database');
+
+      // Save to database
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        throw new Error('Missing required Supabase environment variables');
       }
 
-      const { storybookId } = await storyResponse.json();
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
+
+      const { data: storybook, error: supabaseError } = await supabase
+        .from('storybook_entries')
+        .insert({
+          title: result.title,
+          story: result.story,
+          pages: result.pages,
+          user_id: job.user_id || null,
+          audience: result.audience,
+          character_description: result.character_description,
+          has_errors: result.has_errors,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (supabaseError) {
+        throw new Error(`Database save failed: ${supabaseError.message}`);
+      }
 
       await jobManager.updateJobProgress(job.id, 100, 'Auto-story generation complete');
 
       // Mark job as completed
       await jobManager.markJobCompleted(job.id, {
-        storybook_id: storybookId,
-        generated_story: 'Auto-generated story',
+        storybook_id: storybook.id,
+        generated_story: result.story,
       });
 
       console.log(`✅ Auto-story job completed: ${job.id}`);
@@ -279,73 +228,27 @@ class BackgroundJobProcessor {
     }
   }
 
-  // Process scene generation job
+  // Process scene generation job - UPDATED TO USE INTERNAL SERVICES
   async processSceneJob(job: SceneJobData): Promise<void> {
     const { story, characterImage, audience } = job.input_data;
 
     try {
-      // Step 1: Character analysis (0% → 30%)
-      await jobManager.updateJobProgress(job.id, 10, 'Analyzing story structure');
+      console.log(`🎬 Processing scene job: ${job.id}`);
+      await jobManager.updateJobProgress(job.id, 10, 'Starting scene generation');
 
-      let characterDescription = 'a young protagonist';
-      if (characterImage) {
-        try {
-          const describeResponse = await fetch('/api/image/describe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageUrl: characterImage }),
-          });
-
-          if (describeResponse.ok) {
-            const { characterDescription: description } = await describeResponse.json();
-            characterDescription = description;
-          }
-        } catch (error) {
-          console.warn('⚠️ Character description failed, using default');
-        }
-      }
-
-      await jobManager.updateJobProgress(job.id, 30, 'Character analysis complete');
-
-      // Step 2: Scene planning (30% → 70%)
-      await jobManager.updateJobProgress(job.id, 40, 'Breaking story into scenes');
-
-      const scenesResponse = await fetch('/api/story/generate-scenes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          story,
-          characterImage,
-          audience,
-        }),
+      // Use internal storybook service
+      const result = await storybookService.generateScenesFromStory({
+        story,
+        characterImage,
+        audience,
       });
-
-      if (!scenesResponse.ok) {
-        const errorText = await scenesResponse.text();
-        throw new Error(`Scene generation failed: ${errorText}`);
-      }
-
-      const { pages } = await scenesResponse.json();
-
-      await jobManager.updateJobProgress(job.id, 70, 'Scene breakdown complete');
-
-      // Step 3: Final formatting (70% → 100%)
-      await jobManager.updateJobProgress(job.id, 90, 'Finalizing scene layout');
-
-      const updatedPages = pages.map((page: any) => ({
-        ...page,
-        scenes: page.scenes.map((scene: any) => ({
-          ...scene,
-          generatedImage: characterImage // Placeholder until image generation
-        }))
-      }));
 
       await jobManager.updateJobProgress(job.id, 100, 'Scene generation complete');
 
       // Mark job as completed
       await jobManager.markJobCompleted(job.id, {
-        pages: updatedPages,
-        character_description: characterDescription,
+        pages: result.pages,
+        character_description: result.character_description,
       });
 
       console.log(`✅ Scene job completed: ${job.id}`);
@@ -356,15 +259,14 @@ class BackgroundJobProcessor {
     }
   }
 
-  // Process image cartoonization job - UPDATED TO USE INTERNAL SERVICE
+  // Process image cartoonization job - ALREADY USES INTERNAL SERVICE
   async processCartoonizeJob(job: CartoonizeJobData): Promise<void> {
     const { prompt, style, imageUrl } = job.input_data;
 
     try {
-      // Step 1: Initialize processing (0% → 10%)
+      console.log(`🎨 Processing cartoonize job: ${job.id}`);
       await jobManager.updateJobProgress(job.id, 10, 'Preparing image for processing');
 
-      // Step 2: Process with cartoonize service (10% → 90%)
       await jobManager.updateJobProgress(job.id, 40, 'Generating cartoon image');
 
       const result = await cartoonizeService.processCartoonize({
@@ -375,8 +277,6 @@ class BackgroundJobProcessor {
       });
 
       await jobManager.updateJobProgress(job.id, 90, 'Cartoon generation complete');
-
-      // Step 3: Finalize (90% → 100%)
       await jobManager.updateJobProgress(job.id, 100, 'Cartoonization complete');
 
       // Mark job as completed
@@ -393,7 +293,7 @@ class BackgroundJobProcessor {
     }
   }
 
-  // Process single image generation job
+  // Process single image generation job - UPDATED TO USE INTERNAL SERVICES
   async processImageJob(job: ImageJobData): Promise<void> {
     const { 
       image_prompt, 
@@ -406,65 +306,28 @@ class BackgroundJobProcessor {
     } = job.input_data;
 
     try {
-      // Step 1: Cache check (0% → 50%)
-      await jobManager.updateJobProgress(job.id, 10, 'Checking for cached images');
+      console.log(`🖼️ Processing image job: ${job.id}`);
+      await jobManager.updateJobProgress(job.id, 10, 'Starting image generation');
 
-      // Check cache if user and cartoon image provided
-      let cachedUrl: string | null = null;
-      if (job.user_id && cartoon_image) {
-        try {
-          // Use correct import path for cache utils
-          const cacheUtils = await import('@/lib/supabase/cache-utils.js').catch(() => null);
-          if (cacheUtils?.getCachedCartoonImage) {
-            cachedUrl = await cacheUtils.getCachedCartoonImage(cartoon_image, style || 'storybook', job.user_id);
-          }
-        } catch (error) {
-          console.warn('⚠️ Cache check failed, continuing with generation');
-        }
-      }
-
-      if (cachedUrl) {
-        await jobManager.updateJobProgress(job.id, 100, 'Retrieved from cache');
-        await jobManager.markJobCompleted(job.id, {
-          url: cachedUrl,
-          prompt_used: image_prompt,
-          reused: true,
-        });
-        return;
-      }
-
-      await jobManager.updateJobProgress(job.id, 50, 'Cache check complete, generating new image');
-
-      // Step 2: DALL-E generation (50% → 100%)
-      const imageResponse = await fetch('/api/story/generate-cartoon-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image_prompt,
-          character_description,
-          emotion,
-          audience,
-          isReusedImage,
-          cartoon_image,
-          user_id: job.user_id,
-          style,
-        }),
+      // Use internal image service
+      const result = await imageService.generateSceneImage({
+        image_prompt,
+        character_description,
+        emotion,
+        audience,
+        isReusedImage,
+        cartoon_image,
+        user_id: job.user_id,
+        style,
       });
-
-      if (!imageResponse.ok) {
-        const errorData = await imageResponse.json();
-        throw new Error(errorData.error || 'Failed to generate image');
-      }
-
-      const { url, prompt_used, reused } = await imageResponse.json();
 
       await jobManager.updateJobProgress(job.id, 100, 'Image generation complete');
 
       // Mark job as completed
       await jobManager.markJobCompleted(job.id, {
-        url,
-        prompt_used: prompt_used || image_prompt,
-        reused: reused || false,
+        url: result.url,
+        prompt_used: result.prompt_used,
+        reused: result.reused,
       });
 
       console.log(`✅ Image job completed: ${job.id}`);
@@ -485,9 +348,13 @@ class BackgroundJobProcessor {
     };
   }
 
-  // Health check
+  // Health check - includes service health
   isHealthy(): boolean {
-    return this.currentlyProcessing.size < this.maxConcurrentJobs;
+    return (
+      this.currentlyProcessing.size < this.maxConcurrentJobs &&
+      storybookService.isHealthy() &&
+      cartoonizeService.isHealthy()
+    );
   }
 }
 
