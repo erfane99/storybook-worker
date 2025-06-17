@@ -111,20 +111,34 @@ async function validateJobSystem(): Promise<boolean> {
       console.warn('⚠️ Job processor not fully configured (some services unavailable)');
     }
 
-    // In development mode, continue even if services aren't fully configured
-    if (envConfig.isDevelopment) {
-      console.log('✅ Job processing modules loaded (development mode - some services may be unavailable)');
-      return true;
+    // ✅ FIXED: More lenient validation logic
+    // Check if critical services are available
+    const criticalServicesAvailable = environmentManager.areCriticalServicesAvailable();
+    
+    if (!criticalServicesAvailable) {
+      const missingCritical = environmentManager.getMissingCriticalServices();
+      console.error('❌ Critical services not available:', missingCritical.map(s => s.name).join(', '));
+      
+      // Only fail in production if critical services are missing
+      if (envConfig.isProduction) {
+        console.error('❌ Cannot start worker in production without critical services');
+        return false;
+      } else {
+        console.warn('⚠️ Starting in development mode without critical services');
+        return true;
+      }
     }
 
-    // In production, require full configuration
-    if (!isManagerHealthy || !isProcessorHealthy) {
-      console.error('❌ Job system validation failed - critical services not configured');
-      return false;
+    // If critical services are available, we can start regardless of optional services
+    const missingNonCritical = environmentManager.getMissingNonCriticalServices();
+    if (missingNonCritical.length > 0) {
+      console.warn('⚠️ Starting with limited functionality - missing optional services:', 
+        missingNonCritical.map(s => s.name).join(', '));
     }
 
-    console.log('✅ Job processing modules validated successfully');
+    console.log('✅ Job processing system validated - worker ready to start');
     return true;
+    
   } catch (error) {
     console.error('❌ Failed to validate job processing modules:', error);
     return false;
@@ -198,13 +212,17 @@ async function initializeWorker(): Promise<void> {
   try {
     console.log('🔧 Initializing job worker...');
     
-    // Validate job processing system
+    // ✅ FIXED: More resilient validation logic
     const isValid = await validateJobSystem();
-    if (!isValid && envConfig.isProduction) {
-      console.error('❌ Worker initialization failed - job system validation failed in production');
-      process.exit(1);
-    } else if (!isValid && envConfig.isDevelopment) {
-      console.warn('⚠️ Worker starting in limited mode - some services unavailable');
+    
+    if (!isValid) {
+      // Only exit if we're in production and critical services are missing
+      if (envConfig.isProduction && !environmentManager.areCriticalServicesAvailable()) {
+        console.error('❌ Worker initialization failed - critical services not available in production');
+        process.exit(1);
+      } else {
+        console.warn('⚠️ Worker starting with limited functionality');
+      }
     }
     
     console.log('⏰ Setting up job processing schedule...');
@@ -226,14 +244,20 @@ async function initializeWorker(): Promise<void> {
     }, config.initialScanDelay);
     
     const mode = envConfig.isDevelopment ? 'development' : 'production';
-    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode`);
+    const functionalityLevel = environmentManager.areCriticalServicesAvailable() ? 'full' : 'limited';
+    
+    console.log(`✅ StoryCanvas Job Worker initialized successfully`);
+    console.log(`📊 Mode: ${mode} | Functionality: ${functionalityLevel}`);
     
   } catch (error: any) {
     console.error('❌ Failed to initialize worker:', error.message);
-    if (envConfig.isProduction) {
+    
+    // ✅ FIXED: Only exit in production if critical services are missing
+    if (envConfig.isProduction && !environmentManager.areCriticalServicesAvailable()) {
+      console.error('❌ Exiting - critical services required in production');
       process.exit(1);
     } else {
-      console.warn('⚠️ Continuing in development mode with limited functionality');
+      console.warn('⚠️ Continuing with limited functionality');
     }
   }
 }
@@ -271,9 +295,12 @@ process.on('unhandledRejection', (reason, promise) => {
 // Start the worker
 initializeWorker().catch(error => {
   console.error('❌ Failed to start worker:', error.message);
-  if (envConfig.isProduction) {
+  
+  // ✅ FIXED: Only exit if critical services are missing in production
+  if (envConfig.isProduction && !environmentManager.areCriticalServicesAvailable()) {
+    console.error('❌ Exiting - cannot start without critical services in production');
     process.exit(1);
   } else {
-    console.warn('⚠️ Worker startup failed but continuing in development mode');
+    console.warn('⚠️ Worker startup had issues but continuing with available functionality');
   }
 });

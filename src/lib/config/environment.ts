@@ -9,6 +9,7 @@ export interface ServiceConfig {
   message: string;
   requiredVars: string[];
   missingVars: string[];
+  isCritical: boolean; // NEW: Indicates if service is critical for worker operation
 }
 
 export interface EnvironmentConfig {
@@ -56,7 +57,8 @@ class EnvironmentManager {
   private validateService(
     name: string, 
     requiredVars: string[], 
-    description: string
+    description: string,
+    isCritical: boolean = false // NEW: Critical services are required for worker operation
   ): ServiceConfig {
     const missingVars: string[] = [];
     const placeholderVars: string[] = [];
@@ -100,7 +102,8 @@ class EnvironmentManager {
       status,
       message,
       requiredVars,
-      missingVars: [...missingVars, ...placeholderVars]
+      missingVars: [...missingVars, ...placeholderVars],
+      isCritical
     };
   }
 
@@ -109,18 +112,20 @@ class EnvironmentManager {
     const isDevelopment = nodeEnv === 'development';
     const isProduction = nodeEnv === 'production';
 
-    // Validate OpenAI service
+    // Validate OpenAI service (NOT CRITICAL - worker can run without it)
     const openaiConfig = this.validateService(
       'OpenAI',
       ['OPENAI_API_KEY'],
-      'OpenAI API'
+      'OpenAI API',
+      false // ✅ OpenAI is NOT critical - worker can start without it
     );
 
-    // Validate Supabase service
+    // Validate Supabase service (CRITICAL - required for job management)
     const supabaseConfig = this.validateService(
       'Supabase',
       ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'],
-      'Supabase database'
+      'Supabase database',
+      true // ✅ Supabase IS critical - required for job management
     );
 
     return {
@@ -152,27 +157,64 @@ class EnvironmentManager {
     return this.config.services[serviceName];
   }
 
+  // NEW: Check if critical services are available
+  areCriticalServicesAvailable(): boolean {
+    const { services } = this.config;
+    return Object.values(services)
+      .filter(service => service.isCritical)
+      .every(service => service.isAvailable);
+  }
+
+  // NEW: Get list of missing critical services
+  getMissingCriticalServices(): ServiceConfig[] {
+    const { services } = this.config;
+    return Object.values(services)
+      .filter(service => service.isCritical && !service.isAvailable);
+  }
+
+  // NEW: Get list of missing non-critical services
+  getMissingNonCriticalServices(): ServiceConfig[] {
+    const { services } = this.config;
+    return Object.values(services)
+      .filter(service => !service.isCritical && !service.isAvailable);
+  }
+
   logConfigurationStatus(): void {
     const { services, isDevelopment, isProduction } = this.config;
     
     console.log('\n🔧 Environment Configuration Status:');
     console.log(`📊 Mode: ${isDevelopment ? 'Development' : isProduction ? 'Production' : 'Unknown'}`);
     
-    // Log service statuses
+    // Log service statuses with criticality awareness
     Object.values(services).forEach(service => {
+      const criticalityLabel = service.isCritical ? '[CRITICAL]' : '[OPTIONAL]';
       const icon = service.isAvailable ? '✅' : service.status === 'placeholder' ? '⚠️' : '❌';
-      const level = service.isAvailable ? 'info' : isDevelopment ? 'warn' : 'error';
       
-      if (level === 'info') {
-        console.log(`${icon} ${service.name}: ${service.message}`);
-      } else if (level === 'warn') {
-        console.warn(`${icon} ${service.name}: ${service.message}`);
+      // Determine log level based on criticality and environment
+      let logLevel: 'info' | 'warn' | 'error' = 'info';
+      
+      if (!service.isAvailable) {
+        if (service.isCritical && isProduction) {
+          logLevel = 'error'; // Critical services missing in production = error
+        } else if (service.isCritical && isDevelopment) {
+          logLevel = 'warn'; // Critical services missing in development = warning
+        } else {
+          logLevel = 'warn'; // Non-critical services missing = warning
+        }
+      }
+      
+      const message = `${icon} ${service.name} ${criticalityLabel}: ${service.message}`;
+      
+      if (logLevel === 'info') {
+        console.log(message);
+      } else if (logLevel === 'warn') {
+        console.warn(message);
       } else {
-        console.error(`${icon} ${service.name}: ${service.message}`);
+        console.error(message);
       }
     });
 
-    // Development mode guidance
+    // Environment-specific guidance
     if (isDevelopment) {
       const unconfiguredServices = Object.values(services).filter(s => !s.isAvailable);
       if (unconfiguredServices.length > 0) {
@@ -190,15 +232,32 @@ class EnvironmentManager {
       }
     }
 
-    // Production mode warnings
     if (isProduction) {
-      const unconfiguredServices = Object.values(services).filter(s => !s.isAvailable);
-      if (unconfiguredServices.length > 0) {
-        console.error('\n🚨 PRODUCTION WARNING: Critical services not configured!');
-        unconfiguredServices.forEach(service => {
+      const missingCritical = this.getMissingCriticalServices();
+      const missingNonCritical = this.getMissingNonCriticalServices();
+      
+      if (missingCritical.length > 0) {
+        console.error('\n🚨 PRODUCTION ERROR: Critical services not configured!');
+        missingCritical.forEach(service => {
           console.error(`   ${service.name}: ${service.message}`);
         });
-        console.error('   Worker functionality will be severely limited.\n');
+        console.error('   Worker cannot function without these services.\n');
+      }
+      
+      if (missingNonCritical.length > 0) {
+        console.warn('\n⚠️ PRODUCTION WARNING: Optional services not configured');
+        missingNonCritical.forEach(service => {
+          console.warn(`   ${service.name}: ${service.message}`);
+        });
+        console.warn('   Worker will start with limited functionality.');
+        console.warn('   Add these environment variables to enable full features:\n');
+        
+        missingNonCritical.forEach(service => {
+          service.missingVars.forEach(varName => {
+            console.warn(`   - ${varName}=your_real_${varName.toLowerCase()}_here`);
+          });
+        });
+        console.warn('');
       }
     }
   }
@@ -207,15 +266,31 @@ class EnvironmentManager {
     const { services, isDevelopment } = this.config;
     const availableServices = Object.values(services).filter(s => s.isAvailable).length;
     const totalServices = Object.values(services).length;
+    const criticalServicesAvailable = this.areCriticalServicesAvailable();
+    
+    // Overall health: healthy if critical services are available
+    let overallHealth: 'healthy' | 'degraded' | 'unhealthy';
+    
+    if (criticalServicesAvailable) {
+      overallHealth = availableServices === totalServices ? 'healthy' : 'degraded';
+    } else {
+      overallHealth = 'unhealthy';
+    }
+    
+    // In development, always report as healthy if we can start
+    if (isDevelopment) {
+      overallHealth = 'healthy';
+    }
     
     return {
-      overall: isDevelopment ? 'healthy' : (availableServices === totalServices ? 'healthy' : 'degraded'),
+      overall: overallHealth,
       services: Object.fromEntries(
         Object.entries(services).map(([key, service]) => [
           key, 
           {
             status: service.status,
             available: service.isAvailable,
+            critical: service.isCritical,
             message: service.message
           }
         ])
@@ -223,6 +298,7 @@ class EnvironmentManager {
       configuration: {
         mode: this.config.isDevelopment ? 'development' : 'production',
         servicesAvailable: `${availableServices}/${totalServices}`,
+        criticalServicesAvailable: criticalServicesAvailable,
         fullyConfigured: availableServices === totalServices
       }
     };
