@@ -1,6 +1,6 @@
 import express from 'express';
 import cron from 'node-cron';
-import type { JobData, WorkerConfig, JobStats, HealthResponse } from '@/lib/types.js';
+import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/types.js';
 
 // Environment configuration
 const config: WorkerConfig = {
