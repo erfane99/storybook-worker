@@ -15,6 +15,8 @@
     "removeComments": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "noEmitOnError": true,
+    "preserveConstEnums": true,
     "baseUrl": "./src"
   },
   "include": [
