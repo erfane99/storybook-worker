@@ -21,7 +21,7 @@ export interface EnvironmentConfig {
   worker: {
     port: number;
     environment: string;
-    scanInterval: string;
+    jobScanInterval: string; // Fixed: Use consistent property name
     maxConcurrentJobs: number;
     initialScanDelay: number;
   };
@@ -133,7 +133,7 @@ class EnvironmentManager {
       worker: {
         port: Number(process.env.PORT) || 3000,
         environment: nodeEnv,
-        scanInterval: '*/30 * * * * *',
+        jobScanInterval: '*/30 * * * * *', // Fixed: Use consistent property name
         maxConcurrentJobs: 5,
         initialScanDelay: 10000
       }
