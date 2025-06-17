@@ -1,8 +1,11 @@
 [build]
 builder = "nixpacks"
 
+[build.nixpacks]
+nixpkgsArchive = "nixpkgs-unstable"
+
 [deploy]
-startCommand = "npm start"
+startCommand = "npm run build && npm start"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "always"
