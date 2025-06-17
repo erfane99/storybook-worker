@@ -1,6 +1,6 @@
 import express from 'express';
 import cron from 'node-cron';
-import type { JobData, WorkerConfig, JobStats, HealthResponse } from '../lib/types.js';
+import type { JobData, WorkerConfig, JobStats, HealthResponse } from '@/lib/types.js';
 
 // Environment configuration
 const config: WorkerConfig = {
@@ -60,8 +60,8 @@ const stats: JobStats = {
 async function loadJobModules() {
   try {
     const [jobManagerModule, jobProcessorModule] = await Promise.all([
-      import('../lib/background-jobs/job-manager.js'),
-      import('../lib/background-jobs/job-processor.js')
+      import('@/lib/background-jobs/job-manager.js'),
+      import('@/lib/background-jobs/job-processor.js')
     ]);
     
     return {
