@@ -10,7 +10,7 @@ import {
   SceneJobData,
   CartoonizeJobData,
   ImageJobData
-} from './types';
+} from '@/lib/types.js';
 
 // Database table mapping for each job type
 const JOB_TABLE_MAP: Record<JobType, string> = {
