@@ -1,6 +1,8 @@
 // Character description service using GPT-4o Vision
 // Extracted from /api/image/describe
 
+import { environmentManager } from '../config/environment.js';
+
 export interface CharacterDescriptionOptions {
   imageUrl: string;
   style?: string;
@@ -12,20 +14,32 @@ export interface CharacterDescriptionResult {
 }
 
 export class CharacterService {
-  private openaiApiKey: string;
+  private openaiApiKey: string | null = null;
+  private isConfigured: boolean = false;
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OpenAI API key not configured. Please set OPENAI_API_KEY in your environment variables.');
+    this.initializeConfiguration();
+  }
+
+  private initializeConfiguration(): void {
+    const openaiStatus = environmentManager.getServiceStatus('openai');
+    this.isConfigured = openaiStatus.isAvailable;
+    
+    if (this.isConfigured) {
+      this.openaiApiKey = process.env.OPENAI_API_KEY!;
+    } else {
+      this.openaiApiKey = null;
     }
-    this.openaiApiKey = apiKey;
   }
 
   /**
    * Generate character description from image using GPT-4o Vision
    */
   async describeCharacter(options: CharacterDescriptionOptions): Promise<CharacterDescriptionResult> {
+    if (!this.isConfigured || !this.openaiApiKey) {
+      throw new Error('CharacterService not configured: OpenAI API key is missing or invalid. Please check your environment variables.');
+    }
+
     const { imageUrl, style = 'storybook' } = options;
 
     console.log('🔍 Starting character description...');
@@ -118,6 +132,11 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
    * Simple character description for scenes (shorter version)
    */
   async describeCharacterForScenes(imageUrl: string): Promise<string> {
+    if (!this.isConfigured || !this.openaiApiKey) {
+      console.warn('⚠️ CharacterService not configured, using default description');
+      return 'a young protagonist';
+    }
+
     try {
       console.log('🔍 Making request to OpenAI Vision API for character description...');
 
@@ -170,10 +189,20 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
   }
 
   /**
-   * Health check
+   * Health check with configuration awareness
    */
   isHealthy(): boolean {
-    return !!this.openaiApiKey;
+    return this.isConfigured && !!this.openaiApiKey;
+  }
+
+  getStatus() {
+    const openaiStatus = environmentManager.getServiceStatus('openai');
+    return {
+      configured: this.isConfigured,
+      available: this.isHealthy(),
+      status: openaiStatus.status,
+      message: openaiStatus.message
+    };
   }
 }
 

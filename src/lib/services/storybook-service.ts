@@ -1,6 +1,7 @@
 // Complete storybook creation service
 // Orchestrates character, story, scene, and image services
 
+import { environmentManager } from '../config/environment.js';
 import { characterService } from './character-service.js';
 import { storyService, type GenreType } from './story-service.js';
 import { sceneService, type Scene, type Page } from './scene-service.js';
@@ -48,6 +49,12 @@ export class StorybookService {
 
     console.log('📚 Starting storybook creation...');
     console.log(`📋 Title: ${title}, Audience: ${audience}`);
+
+    // Check service availability
+    const openaiStatus = environmentManager.getServiceStatus('openai');
+    if (!openaiStatus.isAvailable) {
+      throw new Error(`StorybookService not available: ${openaiStatus.message}`);
+    }
 
     let characterDescription = '';
     let hasErrors = false;
@@ -146,6 +153,12 @@ export class StorybookService {
     console.log('🤖 Starting auto-story creation...');
     console.log(`📋 Genre: ${genre}, Audience: ${audience}`);
 
+    // Check service availability
+    const openaiStatus = environmentManager.getServiceStatus('openai');
+    if (!openaiStatus.isAvailable) {
+      throw new Error(`StorybookService not available: ${openaiStatus.message}`);
+    }
+
     try {
       // Step 1: Generate story
       console.log('📝 Generating story...');
@@ -201,6 +214,12 @@ export class StorybookService {
 
     console.log('🎬 Starting scene generation from story...');
 
+    // Check service availability
+    const openaiStatus = environmentManager.getServiceStatus('openai');
+    if (!openaiStatus.isAvailable) {
+      throw new Error(`StorybookService not available: ${openaiStatus.message}`);
+    }
+
     try {
       // Get character description
       let characterDescription = 'a young protagonist';
@@ -246,15 +265,20 @@ export class StorybookService {
   }
 
   /**
-   * Get service status
+   * Get service status with configuration awareness
    */
   getServiceStatus() {
+    const openaiStatus = environmentManager.getServiceStatus('openai');
+    
     return {
-      character: characterService.isHealthy(),
-      story: storyService.isHealthy(),
-      scene: sceneService.isHealthy(),
-      image: imageService.isHealthy(),
       overall: this.isHealthy(),
+      openai: openaiStatus,
+      services: {
+        character: characterService.getStatus(),
+        story: storyService.getStatus(),
+        scene: sceneService.getStatus(),
+        image: imageService.getStatus(),
+      }
     };
   }
 }

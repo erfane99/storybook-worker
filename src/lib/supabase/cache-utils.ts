@@ -1,19 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
+import { environmentManager } from '../config/environment.js';
 
 // Unified cache utilities with proper error handling and environment validation
 let supabaseClient: ReturnType<typeof createClient> | null = null;
 
 function getSupabaseClient() {
   if (!supabaseClient) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Use service role key for worker
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn('⚠️ Supabase environment variables not configured for caching');
+    const supabaseStatus = environmentManager.getServiceStatus('supabase');
+    
+    if (!supabaseStatus.isAvailable) {
+      console.warn('⚠️ Supabase not configured for caching:', supabaseStatus.message);
       return null;
     }
 
     try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+      
       supabaseClient = createClient(supabaseUrl, supabaseKey, {
         auth: {
           persistSession: false

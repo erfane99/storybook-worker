@@ -1,6 +1,8 @@
 // Image generation service using DALL-E 3
 // Extracted from /api/story/generate-cartoon-image
 
+import { environmentManager } from '../config/environment.js';
+
 export type AudienceType = 'children' | 'young_adults' | 'adults';
 
 export interface ImageGenerationOptions {
@@ -21,20 +23,32 @@ export interface ImageGenerationResult {
 }
 
 export class ImageService {
-  private openaiApiKey: string;
+  private openaiApiKey: string | null = null;
+  private isConfigured: boolean = false;
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OpenAI API key not configured. Please set OPENAI_API_KEY in your environment variables.');
+    this.initializeConfiguration();
+  }
+
+  private initializeConfiguration(): void {
+    const openaiStatus = environmentManager.getServiceStatus('openai');
+    this.isConfigured = openaiStatus.isAvailable;
+    
+    if (this.isConfigured) {
+      this.openaiApiKey = process.env.OPENAI_API_KEY!;
+    } else {
+      this.openaiApiKey = null;
     }
-    this.openaiApiKey = apiKey;
   }
 
   /**
    * Generate scene image using DALL-E 3
    */
   async generateSceneImage(options: ImageGenerationOptions): Promise<ImageGenerationResult> {
+    if (!this.isConfigured || !this.openaiApiKey) {
+      throw new Error('ImageService not configured: OpenAI API key is missing or invalid. Please check your environment variables.');
+    }
+
     const {
       image_prompt,
       character_description,
@@ -157,10 +171,20 @@ export class ImageService {
   }
 
   /**
-   * Health check
+   * Health check with configuration awareness
    */
   isHealthy(): boolean {
-    return !!this.openaiApiKey;
+    return this.isConfigured && !!this.openaiApiKey;
+  }
+
+  getStatus() {
+    const openaiStatus = environmentManager.getServiceStatus('openai');
+    return {
+      configured: this.isConfigured,
+      available: this.isHealthy(),
+      status: openaiStatus.status,
+      message: openaiStatus.message
+    };
   }
 }
 

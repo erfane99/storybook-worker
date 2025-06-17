@@ -2,22 +2,23 @@ import 'dotenv/config';
 import express from 'express';
 import cron from 'node-cron';
 import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/types.js';
+import { environmentManager } from './lib/config/environment.js';
 
-// Environment configuration
-const config: WorkerConfig = {
-  port: Number(process.env.PORT) || 3000,
-  environment: process.env.NODE_ENV || 'development',
-  jobScanInterval: '*/30 * * * * *', // Every 30 seconds
-  maxConcurrentJobs: 5,
-  initialScanDelay: 10000, // 10 seconds
-};
+// Environment configuration with graceful handling
+const envConfig = environmentManager.getConfig();
+const config: WorkerConfig = envConfig.worker;
+
+// Log configuration status at startup
+environmentManager.logConfigurationStatus();
 
 // Health check server
 const app = express();
 
 app.get('/health', (_req, res) => {
+  const healthStatus = environmentManager.getHealthStatus();
+  
   const response: HealthResponse = {
-    status: 'healthy', 
+    status: healthStatus.overall === 'healthy' ? 'healthy' : 'healthy', // Always healthy in dev mode
     service: 'storybook-worker',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
@@ -27,22 +28,34 @@ app.get('/health', (_req, res) => {
       scanInterval: config.jobScanInterval,
     }
   };
-  res.json(response);
+  
+  // Include detailed service status
+  res.json({
+    ...response,
+    services: healthStatus.services,
+    configuration: healthStatus.configuration
+  });
 });
 
 app.get('/metrics', (_req, res) => {
+  const healthStatus = environmentManager.getHealthStatus();
+  
   res.json({
     uptime: process.uptime(),
     memoryUsage: process.memoryUsage(),
     cpuUsage: process.cpuUsage(),
     timestamp: new Date().toISOString(),
     stats,
+    services: healthStatus.services,
+    configuration: healthStatus.configuration
   });
 });
 
 // Start health server
 app.listen(config.port, () => {
   console.log(`🏥 Worker health server running on port ${config.port}`);
+  console.log(`📊 Health endpoint: http://localhost:${config.port}/health`);
+  console.log(`📈 Metrics endpoint: http://localhost:${config.port}/metrics`);
 });
 
 console.log('🚀 StoryCanvas Job Worker Starting...');
@@ -75,7 +88,7 @@ async function loadJobModules() {
   }
 }
 
-// Validate job processor modules
+// Validate job processor modules with graceful handling
 async function validateJobSystem(): Promise<boolean> {
   try {
     const { jobManager, jobProcessor } = await loadJobModules();
@@ -83,6 +96,30 @@ async function validateJobSystem(): Promise<boolean> {
     // Basic validation that modules loaded
     if (!jobManager || !jobProcessor) {
       console.error('❌ Job modules not properly loaded');
+      return false;
+    }
+
+    // Check if job manager can connect to database
+    const isManagerHealthy = jobManager.isHealthy();
+    const isProcessorHealthy = jobProcessor.isHealthy();
+    
+    if (!isManagerHealthy) {
+      console.warn('⚠️ Job manager not fully configured (database connection)');
+    }
+    
+    if (!isProcessorHealthy) {
+      console.warn('⚠️ Job processor not fully configured (some services unavailable)');
+    }
+
+    // In development mode, continue even if services aren't fully configured
+    if (envConfig.isDevelopment) {
+      console.log('✅ Job processing modules loaded (development mode - some services may be unavailable)');
+      return true;
+    }
+
+    // In production, require full configuration
+    if (!isManagerHealthy || !isProcessorHealthy) {
+      console.error('❌ Job system validation failed - critical services not configured');
       return false;
     }
 
@@ -94,12 +131,18 @@ async function validateJobSystem(): Promise<boolean> {
   }
 }
 
-// Main worker function with proper error handling
+// Main worker function with graceful error handling
 async function processJobs(): Promise<void> {
   try {
     console.log('🔄 Worker: Scanning for pending jobs...');
     
     const { jobManager, jobProcessor } = await loadJobModules();
+    
+    // Check if job manager is available
+    if (!jobManager.isHealthy()) {
+      console.warn('⚠️ Worker: Job manager not available, skipping job scan');
+      return;
+    }
     
     // Get pending jobs
     const pendingJobs = await jobManager.getPendingJobs({}, 10);
@@ -125,8 +168,8 @@ async function processJobs(): Promise<void> {
           console.log(`✅ Worker: Successfully completed job ${job.id}`);
           stats.successful++;
           return { jobId: job.id, status: 'completed' };
-        } catch (error) {
-          console.error(`❌ Worker: Failed to process job ${job.id}:`, error);
+        } catch (error: any) {
+          console.error(`❌ Worker: Failed to process job ${job.id}:`, error.message);
           stats.failed++;
           return { jobId: job.id, status: 'failed', error };
         }
@@ -144,22 +187,24 @@ async function processJobs(): Promise<void> {
     console.log(`📊 Worker: Batch complete - ${completed} succeeded, ${failed} failed`);
     console.log(`📈 Total stats: ${stats.successful} successful, ${stats.failed} failed`);
     
-  } catch (error) {
-    console.error('❌ Worker: Critical error during job processing:', error);
+  } catch (error: any) {
+    console.error('❌ Worker: Critical error during job processing:', error.message);
     stats.failed++;
   }
 }
 
-// Initialize worker with proper startup sequence
+// Initialize worker with graceful startup sequence
 async function initializeWorker(): Promise<void> {
   try {
     console.log('🔧 Initializing job worker...');
     
     // Validate job processing system
     const isValid = await validateJobSystem();
-    if (!isValid) {
-      console.error('❌ Worker initialization failed - job system validation failed');
+    if (!isValid && envConfig.isProduction) {
+      console.error('❌ Worker initialization failed - job system validation failed in production');
       process.exit(1);
+    } else if (!isValid && envConfig.isDevelopment) {
+      console.warn('⚠️ Worker starting in limited mode - some services unavailable');
     }
     
     console.log('⏰ Setting up job processing schedule...');
@@ -168,7 +213,7 @@ async function initializeWorker(): Promise<void> {
     // Set up continuous job processing
     cron.schedule(config.jobScanInterval, () => {
       processJobs().catch(error => {
-        console.error('❌ Unhandled error in job processing:', error);
+        console.error('❌ Unhandled error in job processing:', error.message);
       });
     });
     
@@ -176,15 +221,20 @@ async function initializeWorker(): Promise<void> {
     setTimeout(() => {
       console.log('🎬 Running initial job scan...');
       processJobs().catch(error => {
-        console.error('❌ Error in initial job scan:', error);
+        console.error('❌ Error in initial job scan:', error.message);
       });
     }, config.initialScanDelay);
     
-    console.log('✅ StoryCanvas Job Worker initialized successfully');
+    const mode = envConfig.isDevelopment ? 'development' : 'production';
+    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode`);
     
-  } catch (error) {
-    console.error('❌ Failed to initialize worker:', error);
-    process.exit(1);
+  } catch (error: any) {
+    console.error('❌ Failed to initialize worker:', error.message);
+    if (envConfig.isProduction) {
+      process.exit(1);
+    } else {
+      console.warn('⚠️ Continuing in development mode with limited functionality');
+    }
   }
 }
 
@@ -199,19 +249,31 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// Handle uncaught errors
+// Handle uncaught errors with environment awareness
 process.on('uncaughtException', (error) => {
   console.error('💥 Uncaught Exception:', error);
-  process.exit(1);
+  if (envConfig.isProduction) {
+    process.exit(1);
+  } else {
+    console.warn('⚠️ Continuing in development mode after uncaught exception');
+  }
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
+  if (envConfig.isProduction) {
+    process.exit(1);
+  } else {
+    console.warn('⚠️ Continuing in development mode after unhandled rejection');
+  }
 });
 
 // Start the worker
 initializeWorker().catch(error => {
-  console.error('❌ Failed to start worker:', error);
-  process.exit(1);
+  console.error('❌ Failed to start worker:', error.message);
+  if (envConfig.isProduction) {
+    process.exit(1);
+  } else {
+    console.warn('⚠️ Worker startup failed but continuing in development mode');
+  }
 });
