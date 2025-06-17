@@ -10,7 +10,7 @@ import {
   SceneJobData,
   CartoonizeJobData,
   ImageJobData
-} from '@/lib/types.js';
+} from '../types.js';
 
 // Database table mapping for each job type
 const JOB_TABLE_MAP: Record<JobType, string> = {
@@ -255,235 +255,48 @@ class BackgroundJobManager {
     }
   }
 
-  // Create auto-story job using existing auto_story_jobs table
-  async createAutoStoryJob(
-    inputData: AutoStoryJobData['input_data'],
-    userId?: string
-  ): Promise<string | null> {
-    const jobId = this.generateJobId();
-    const now = new Date().toISOString();
+  // Get pending jobs across all job tables
+  async getPendingJobs(
+    filter: JobFilter = {},
+    limit: number = 50
+  ): Promise<JobData[]> {
+    const allPendingJobs: JobData[] = [];
+    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
+    
+    for (const jobType of jobTypes) {
+      const tableName = this.getTableName(jobType);
+      
+      const result = await this.executeQuery<any[]>(
+        `Get pending jobs from ${tableName}`,
+        async (supabase) => {
+          let query = supabase
+            .from(tableName)
+            .select('*')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true })
+            .limit(Math.ceil(limit / jobTypes.length)); // Distribute limit across tables
 
-    const jobData: AutoStoryJobData = {
-      id: jobId,
-      type: 'auto-story',
-      status: 'pending',
-      progress: 0,
-      current_step: 'Initializing auto-story generation',
-      user_id: userId,
-      created_at: now,
-      updated_at: now,
-      retry_count: 0,
-      max_retries: 3,
-      input_data: inputData
-    };
+          if (filter.user_id) {
+            query = query.eq('user_id', filter.user_id);
+          }
 
-    const tableData = this.mapToTableFormat('auto-story', jobData);
+          const response = await query;
+          return { data: response.data, error: response.error };
+        }
+      );
 
-    const result = await this.executeQuery<{ id: string }>(
-      'Create auto-story job',
-      async (supabase) => {
-        const response = await supabase
-          .from('auto_story_jobs')
-          .insert(tableData)
-          .select('id')
-          .single();
-        return { data: response.data, error: response.error };
+      if (result && Array.isArray(result)) {
+        const convertedJobs = result.map(job => this.mapFromTableFormat(jobType, job));
+        allPendingJobs.push(...convertedJobs);
       }
-    );
-
-    if (result?.id) {
-      console.log(`✅ Created auto-story job: ${jobId}`);
-      return jobId;
     }
 
-    return null;
-  }
+    // Sort by created_at and apply final limit
+    allPendingJobs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const finalJobs = allPendingJobs.slice(0, limit);
 
-  // Create storybook job using existing storybook_jobs table
-  async createStorybookJob(
-    inputData: StorybookJobData['input_data'],
-    userId?: string
-  ): Promise<string | null> {
-    const jobId = this.generateJobId();
-    const now = new Date().toISOString();
-
-    const jobData: StorybookJobData = {
-      id: jobId,
-      type: 'storybook',
-      status: 'pending',
-      progress: 0,
-      current_step: 'Initializing storybook generation',
-      user_id: userId,
-      created_at: now,
-      updated_at: now,
-      retry_count: 0,
-      max_retries: 3,
-      input_data: inputData
-    };
-
-    const tableData = this.mapToTableFormat('storybook', jobData);
-
-    const result = await this.executeQuery<{ id: string }>(
-      'Create storybook job',
-      async (supabase) => {
-        const response = await supabase
-          .from('storybook_jobs')
-          .insert(tableData)
-          .select('id')
-          .single();
-        return { data: response.data, error: response.error };
-      }
-    );
-
-    if (result?.id) {
-      console.log(`✅ Created storybook job: ${jobId}`);
-      return jobId;
-    }
-
-    return null;
-  }
-
-  // Create scene job using existing scene_generation_jobs table
-  async createSceneJob(
-    inputData: SceneJobData['input_data'],
-    userId?: string
-  ): Promise<string | null> {
-    const jobId = this.generateJobId();
-    const now = new Date().toISOString();
-
-    const jobData: SceneJobData = {
-      id: jobId,
-      type: 'scenes',
-      status: 'pending',
-      progress: 0,
-      current_step: 'Initializing scene generation',
-      user_id: userId,
-      created_at: now,
-      updated_at: now,
-      retry_count: 0,
-      max_retries: 3,
-      input_data: inputData
-    };
-
-    const tableData = this.mapToTableFormat('scenes', jobData);
-
-    const result = await this.executeQuery<{ id: string }>(
-      'Create scene job',
-      async (supabase) => {
-        const response = await supabase
-          .from('scene_generation_jobs')
-          .insert(tableData)
-          .select('id')
-          .single();
-        return { data: response.data, error: response.error };
-      }
-    );
-
-    if (result?.id) {
-      console.log(`✅ Created scene job: ${jobId}`);
-      return jobId;
-    }
-
-    return null;
-  }
-
-  // Create image job using existing image_generation_jobs table
-  async createImageJob(
-    inputData: ImageJobData['input_data'],
-    userId?: string
-  ): Promise<string | null> {
-    const jobId = this.generateJobId();
-    const now = new Date().toISOString();
-
-    const jobData: ImageJobData = {
-      id: jobId,
-      type: 'image-generation',
-      status: 'pending',
-      progress: 0,
-      current_step: 'Initializing image generation',
-      user_id: userId,
-      created_at: now,
-      updated_at: now,
-      retry_count: 0,
-      max_retries: 3,
-      input_data: inputData
-    };
-
-    const tableData = this.mapToTableFormat('image-generation', jobData);
-
-    const result = await this.executeQuery<{ id: string }>(
-      'Create image job',
-      async (supabase) => {
-        const response = await supabase
-          .from('image_generation_jobs')
-          .insert(tableData)
-          .select('id')
-          .single();
-        return { data: response.data, error: response.error };
-      }
-    );
-
-    if (result?.id) {
-      console.log(`✅ Created image job: ${jobId}`);
-      return jobId;
-    }
-
-    return null;
-  }
-
-  // Create cartoonize job using existing cartoonize_jobs table
-  async createCartoonizeJob(
-    inputData: CartoonizeJobData['input_data'],
-    userId?: string
-  ): Promise<string | null> {
-    const jobId = this.generateJobId();
-    const now = new Date().toISOString();
-
-    console.log(`🔧 Creating cartoonize job with UUID: ${jobId}`);
-
-    const jobData: CartoonizeJobData = {
-      id: jobId,
-      type: 'cartoonize',
-      status: 'pending',
-      progress: 0,
-      current_step: 'Initializing image cartoonization',
-      user_id: userId,
-      created_at: now,
-      updated_at: now,
-      retry_count: 0,
-      max_retries: 3,
-      input_data: inputData
-    };
-
-    const tableData = this.mapToTableFormat('cartoonize', jobData);
-
-    console.log(`📊 Cartoonize job table data:`, {
-      id: tableData.id,
-      user_id: tableData.user_id,
-      status: tableData.status,
-      original_image_data: tableData.original_image_data,
-      style: tableData.style
-    });
-
-    const result = await this.executeQuery<{ id: string }>(
-      'Create cartoonize job',
-      async (supabase) => {
-        const response = await supabase
-          .from('cartoonize_jobs')
-          .insert(tableData)
-          .select('id')
-          .single();
-        return { data: response.data, error: response.error };
-      }
-    );
-
-    if (result?.id) {
-      console.log(`✅ Created cartoonize job: ${jobId}`);
-      return jobId;
-    }
-
-    console.error(`❌ Failed to create cartoonize job: ${jobId}`);
-    return null;
+    console.log(`📋 Retrieved ${finalJobs.length} pending jobs`);
+    return finalJobs;
   }
 
   // Get job status from appropriate table
@@ -674,218 +487,6 @@ class BackgroundJobManager {
     }
 
     return false;
-  }
-
-  // Get pending jobs across all job tables
-  async getPendingJobs(
-    filter: JobFilter = {},
-    limit: number = 50
-  ): Promise<JobData[]> {
-    const allPendingJobs: JobData[] = [];
-    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
-    
-    for (const jobType of jobTypes) {
-      const tableName = this.getTableName(jobType);
-      
-      const result = await this.executeQuery<any[]>(
-        `Get pending jobs from ${tableName}`,
-        async (supabase) => {
-          let query = supabase
-            .from(tableName)
-            .select('*')
-            .eq('status', 'pending')
-            .order('created_at', { ascending: true })
-            .limit(Math.ceil(limit / jobTypes.length)); // Distribute limit across tables
-
-          if (filter.user_id) {
-            query = query.eq('user_id', filter.user_id);
-          }
-
-          const response = await query;
-          return { data: response.data, error: response.error };
-        }
-      );
-
-      if (result && Array.isArray(result)) {
-        const convertedJobs = result.map(job => this.mapFromTableFormat(jobType, job));
-        allPendingJobs.push(...convertedJobs);
-      }
-    }
-
-    // Sort by created_at and apply final limit
-    allPendingJobs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    const finalJobs = allPendingJobs.slice(0, limit);
-
-    console.log(`📋 Retrieved ${finalJobs.length} pending jobs`);
-    return finalJobs;
-  }
-
-  // Get jobs by filter criteria across all tables
-  async getJobs(filter: JobFilter = {}): Promise<JobData[]> {
-    const allJobs: JobData[] = [];
-    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
-    
-    for (const jobType of jobTypes) {
-      const tableName = this.getTableName(jobType);
-      
-      const result = await this.executeQuery<any[]>(
-        `Get jobs from ${tableName}`,
-        async (supabase) => {
-          let query = supabase
-            .from(tableName)
-            .select('*')
-            .order('created_at', { ascending: false });
-
-          if (filter.user_id) {
-            query = query.eq('user_id', filter.user_id);
-          }
-
-          if (filter.status) {
-            query = query.eq('status', filter.status);
-          }
-
-          if (filter.limit) {
-            query = query.limit(Math.ceil(filter.limit / jobTypes.length));
-          }
-
-          const response = await query;
-          return { data: response.data, error: response.error };
-        }
-      );
-
-      if (result && Array.isArray(result)) {
-        const convertedJobs = result.map(job => this.mapFromTableFormat(jobType, job));
-        allJobs.push(...convertedJobs);
-      }
-    }
-
-    // Sort by created_at descending and apply final limit
-    allJobs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    const finalJobs = filter.limit ? allJobs.slice(0, filter.limit) : allJobs;
-
-    console.log(`📋 Retrieved ${finalJobs.length} jobs`);
-    return finalJobs;
-  }
-
-  // Cancel a job across all tables
-  async cancelJob(jobId: string): Promise<boolean> {
-    const job = await this.getJobStatus(jobId);
-    if (!job) {
-      console.error(`❌ Cannot cancel - job not found: ${jobId}`);
-      return false;
-    }
-
-    const tableName = this.getTableName(job.type);
-    const updateData: any = {
-      status: 'cancelled',
-      current_step: 'Cancelled by user',
-      updated_at: new Date().toISOString(),
-      completed_at: new Date().toISOString()
-    };
-
-    const result = await this.executeQuery<{ id: string }>(
-      'Cancel job',
-      async (supabase) => {
-        const response = await supabase
-          .from(tableName)
-          .update(updateData)
-          .eq('id', jobId)
-          .select('id')
-          .single();
-        return { data: response.data, error: response.error };
-      }
-    );
-
-    if (result?.id) {
-      console.log(`🚫 Cancelled job: ${jobId}`);
-      return true;
-    }
-
-    return false;
-  }
-
-  // Clean up old jobs across all tables
-  async cleanupOldJobs(olderThanDays: number = 30): Promise<number> {
-    let totalCleaned = 0;
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-    const cutoffIso = cutoffDate.toISOString();
-
-    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
-    
-    for (const jobType of jobTypes) {
-      const tableName = this.getTableName(jobType);
-      
-      const result = await this.executeQuery<any[]>(
-        `Clean up old jobs from ${tableName}`,
-        async (supabase) => {
-          const response = await supabase
-            .from(tableName)
-            .delete()
-            .lt('created_at', cutoffIso)
-            .in('status', ['completed', 'failed', 'cancelled'])
-            .select('id');
-          return { data: response.data, error: response.error };
-        }
-      );
-
-      if (result && Array.isArray(result)) {
-        totalCleaned += result.length;
-      }
-    }
-
-    console.log(`🧹 Cleaned up ${totalCleaned} old jobs`);
-    return totalCleaned;
-  }
-
-  // Get job statistics across all job tables
-  async getJobStats(userId?: string): Promise<{
-    total: number;
-    pending: number;
-    processing: number;
-    completed: number;
-    failed: number;
-    cancelled: number;
-  }> {
-    const stats = {
-      total: 0,
-      pending: 0,
-      processing: 0,
-      completed: 0,
-      failed: 0,
-      cancelled: 0
-    };
-
-    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
-    
-    for (const jobType of jobTypes) {
-      const tableName = this.getTableName(jobType);
-      
-      const result = await this.executeQuery<any[]>(
-        `Get stats from ${tableName}`,
-        async (supabase) => {
-          let query = supabase.from(tableName).select('status');
-          
-          if (userId) {
-            query = query.eq('user_id', userId);
-          }
-          
-          const response = await query;
-          return { data: response.data, error: response.error };
-        }
-      );
-
-      if (result && Array.isArray(result)) {
-        result.forEach(job => {
-          stats.total++;
-          if (job.status in stats) {
-            (stats as any)[job.status]++;
-          }
-        });
-      }
-    }
-
-    return stats;
   }
 
   // Health check
