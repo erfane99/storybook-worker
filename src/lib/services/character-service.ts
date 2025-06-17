@@ -14,8 +14,7 @@ export interface CharacterDescriptionResult {
 }
 
 export class CharacterService {
-  private openaiApiKey: string | null = null;
-  private isConfigured: boolean = false;
+  private openaiApiKey: string;
 
   constructor() {
     this.initializeConfiguration();
@@ -23,23 +22,18 @@ export class CharacterService {
 
   private initializeConfiguration(): void {
     const openaiStatus = environmentManager.getServiceStatus('openai');
-    this.isConfigured = openaiStatus.isAvailable;
     
-    if (this.isConfigured) {
-      this.openaiApiKey = process.env.OPENAI_API_KEY!;
-    } else {
-      this.openaiApiKey = null;
+    if (!openaiStatus.isAvailable) {
+      throw new Error(`CharacterService initialization failed: ${openaiStatus.message}`);
     }
+
+    this.openaiApiKey = process.env.OPENAI_API_KEY!;
   }
 
   /**
    * Generate character description from image using GPT-4o Vision
    */
   async describeCharacter(options: CharacterDescriptionOptions): Promise<CharacterDescriptionResult> {
-    if (!this.isConfigured || !this.openaiApiKey) {
-      throw new Error('CharacterService not configured: OpenAI API key is missing or invalid. Please check your environment variables.');
-    }
-
     const { imageUrl, style = 'storybook' } = options;
 
     console.log('🔍 Starting character description...');
@@ -132,11 +126,6 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
    * Simple character description for scenes (shorter version)
    */
   async describeCharacterForScenes(imageUrl: string): Promise<string> {
-    if (!this.isConfigured || !this.openaiApiKey) {
-      console.warn('⚠️ CharacterService not configured, using default description');
-      return 'a young protagonist';
-    }
-
     try {
       console.log('🔍 Making request to OpenAI Vision API for character description...');
 
@@ -183,22 +172,22 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
       return data.choices[0].message.content;
 
     } catch (error: any) {
-      console.warn('⚠️ Failed to describe character, using default:', error.message);
-      return 'a young protagonist';
+      console.error('❌ Failed to describe character:', error.message);
+      throw new Error(`Character description failed: ${error.message}`);
     }
   }
 
   /**
-   * Health check with configuration awareness
+   * Health check
    */
   isHealthy(): boolean {
-    return this.isConfigured && !!this.openaiApiKey;
+    return !!this.openaiApiKey;
   }
 
   getStatus() {
     const openaiStatus = environmentManager.getServiceStatus('openai');
     return {
-      configured: this.isConfigured,
+      configured: openaiStatus.isAvailable,
       available: this.isHealthy(),
       status: openaiStatus.status,
       message: openaiStatus.message

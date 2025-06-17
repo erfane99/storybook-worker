@@ -4,7 +4,7 @@ import cron from 'node-cron';
 import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/types.js';
 import { environmentManager } from './lib/config/environment.js';
 
-// Environment configuration with graceful handling
+// Environment configuration
 const envConfig = environmentManager.getConfig();
 const config: WorkerConfig = envConfig.worker;
 
@@ -18,14 +18,14 @@ app.get('/health', (_req, res) => {
   const healthStatus = environmentManager.getHealthStatus();
   
   const response: HealthResponse = {
-    status: healthStatus.overall === 'healthy' ? 'healthy' : 'healthy', // Always healthy in dev mode
+    status: healthStatus.overall === 'healthy' ? 'healthy' : 'unhealthy',
     service: 'storybook-worker',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     environment: config.environment,
     config: {
       maxConcurrentJobs: config.maxConcurrentJobs,
-      scanInterval: config.jobScanInterval, // Fixed: Use jobScanInterval to match the interface
+      scanInterval: config.jobScanInterval,
     }
   };
   
@@ -88,7 +88,7 @@ async function loadJobModules() {
   }
 }
 
-// Validate job processor modules with graceful handling
+// Validate job processor modules
 async function validateJobSystem(): Promise<boolean> {
   try {
     const { jobManager, jobProcessor } = await loadJobModules();
@@ -104,48 +104,24 @@ async function validateJobSystem(): Promise<boolean> {
     const isProcessorHealthy = jobProcessor.isHealthy();
     
     if (!isManagerHealthy) {
-      console.warn('⚠️ Job manager not fully configured (database connection)');
+      console.error('❌ Job manager not configured (database connection required)');
+      return false;
     }
     
     if (!isProcessorHealthy) {
-      console.warn('⚠️ Job processor not fully configured (some services unavailable)');
+      console.error('❌ Job processor not configured (AI services required)');
+      return false;
     }
 
-    // ✅ FIXED: More lenient validation logic
-    // Check if critical services are available
-    const criticalServicesAvailable = environmentManager.areCriticalServicesAvailable();
-    
-    if (!criticalServicesAvailable) {
-      const missingCritical = environmentManager.getMissingCriticalServices();
-      console.error('❌ Critical services not available:', missingCritical.map(s => s.name).join(', '));
-      
-      // Only fail in production if critical services are missing
-      if (envConfig.isProduction) {
-        console.error('❌ Cannot start worker in production without critical services');
-        return false;
-      } else {
-        console.warn('⚠️ Starting in development mode without critical services');
-        return true;
-      }
-    }
-
-    // If critical services are available, we can start regardless of optional services
-    const missingNonCritical = environmentManager.getMissingNonCriticalServices();
-    if (missingNonCritical.length > 0) {
-      console.warn('⚠️ Starting with limited functionality - missing optional services:', 
-        missingNonCritical.map(s => s.name).join(', '));
-    }
-
-    console.log('✅ Job processing system validated - worker ready to start');
+    console.log('✅ Job processing modules validated successfully');
     return true;
-    
   } catch (error) {
     console.error('❌ Failed to validate job processing modules:', error);
     return false;
   }
 }
 
-// Main worker function with graceful error handling
+// Main worker function
 async function processJobs(): Promise<void> {
   try {
     console.log('🔄 Worker: Scanning for pending jobs...');
@@ -154,7 +130,7 @@ async function processJobs(): Promise<void> {
     
     // Check if job manager is available
     if (!jobManager.isHealthy()) {
-      console.warn('⚠️ Worker: Job manager not available, skipping job scan');
+      console.error('❌ Worker: Job manager not available, cannot scan for jobs');
       return;
     }
     
@@ -207,22 +183,15 @@ async function processJobs(): Promise<void> {
   }
 }
 
-// Initialize worker with graceful startup sequence
+// Initialize worker
 async function initializeWorker(): Promise<void> {
   try {
     console.log('🔧 Initializing job worker...');
     
-    // ✅ FIXED: More resilient validation logic
+    // Validate job processing system
     const isValid = await validateJobSystem();
-    
     if (!isValid) {
-      // Only exit if we're in production and critical services are missing
-      if (envConfig.isProduction && !environmentManager.areCriticalServicesAvailable()) {
-        console.error('❌ Worker initialization failed - critical services not available in production');
-        process.exit(1);
-      } else {
-        console.warn('⚠️ Worker starting with limited functionality');
-      }
+      throw new Error('Job system validation failed - required services not configured');
     }
     
     console.log('⏰ Setting up job processing schedule...');
@@ -244,21 +213,11 @@ async function initializeWorker(): Promise<void> {
     }, config.initialScanDelay);
     
     const mode = envConfig.isDevelopment ? 'development' : 'production';
-    const functionalityLevel = environmentManager.areCriticalServicesAvailable() ? 'full' : 'limited';
-    
-    console.log(`✅ StoryCanvas Job Worker initialized successfully`);
-    console.log(`📊 Mode: ${mode} | Functionality: ${functionalityLevel}`);
+    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode`);
     
   } catch (error: any) {
     console.error('❌ Failed to initialize worker:', error.message);
-    
-    // ✅ FIXED: Only exit in production if critical services are missing
-    if (envConfig.isProduction && !environmentManager.areCriticalServicesAvailable()) {
-      console.error('❌ Exiting - critical services required in production');
-      process.exit(1);
-    } else {
-      console.warn('⚠️ Continuing with limited functionality');
-    }
+    throw error;
   }
 }
 
@@ -273,34 +232,19 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// Handle uncaught errors with environment awareness
+// Handle uncaught errors
 process.on('uncaughtException', (error) => {
   console.error('💥 Uncaught Exception:', error);
-  if (envConfig.isProduction) {
-    process.exit(1);
-  } else {
-    console.warn('⚠️ Continuing in development mode after uncaught exception');
-  }
+  process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
-  if (envConfig.isProduction) {
-    process.exit(1);
-  } else {
-    console.warn('⚠️ Continuing in development mode after unhandled rejection');
-  }
+  process.exit(1);
 });
 
 // Start the worker
 initializeWorker().catch(error => {
   console.error('❌ Failed to start worker:', error.message);
-  
-  // ✅ FIXED: Only exit if critical services are missing in production
-  if (envConfig.isProduction && !environmentManager.areCriticalServicesAvailable()) {
-    console.error('❌ Exiting - cannot start without critical services in production');
-    process.exit(1);
-  } else {
-    console.warn('⚠️ Worker startup had issues but continuing with available functionality');
-  }
+  process.exit(1);
 });

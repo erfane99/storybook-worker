@@ -38,6 +38,18 @@ export interface StorybookResult {
 
 export class StorybookService {
   constructor() {
+    // Validate that all required services are available
+    const openaiStatus = environmentManager.getServiceStatus('openai');
+    const supabaseStatus = environmentManager.getServiceStatus('supabase');
+    
+    if (!openaiStatus.isAvailable) {
+      throw new Error(`StorybookService initialization failed: ${openaiStatus.message}`);
+    }
+    
+    if (!supabaseStatus.isAvailable) {
+      throw new Error(`StorybookService initialization failed: ${supabaseStatus.message}`);
+    }
+    
     console.log('🔧 Storybook service initialized');
   }
 
@@ -50,12 +62,6 @@ export class StorybookService {
     console.log('📚 Starting storybook creation...');
     console.log(`📋 Title: ${title}, Audience: ${audience}`);
 
-    // Check service availability
-    const openaiStatus = environmentManager.getServiceStatus('openai');
-    if (!openaiStatus.isAvailable) {
-      throw new Error(`StorybookService not available: ${openaiStatus.message}`);
-    }
-
     let characterDescription = '';
     let hasErrors = false;
 
@@ -63,16 +69,11 @@ export class StorybookService {
       // Step 1: Character analysis (if not reused)
       if (!isReusedImage) {
         console.log('🔍 Analyzing character image...');
-        try {
-          const result = await characterService.describeCharacter({
-            imageUrl: characterImage
-          });
-          characterDescription = result.description;
-          console.log('✅ Character description:', characterDescription);
-        } catch (error: any) {
-          console.warn('⚠️ Character description failed, using fallback:', error.message);
-          characterDescription = 'a cartoon character';
-        }
+        const result = await characterService.describeCharacter({
+          imageUrl: characterImage
+        });
+        characterDescription = result.description;
+        console.log('✅ Character description:', characterDescription);
       }
 
       // Step 2: Process scenes page by page
@@ -153,12 +154,6 @@ export class StorybookService {
     console.log('🤖 Starting auto-story creation...');
     console.log(`📋 Genre: ${genre}, Audience: ${audience}`);
 
-    // Check service availability
-    const openaiStatus = environmentManager.getServiceStatus('openai');
-    if (!openaiStatus.isAvailable) {
-      throw new Error(`StorybookService not available: ${openaiStatus.message}`);
-    }
-
     try {
       // Step 1: Generate story
       console.log('📝 Generating story...');
@@ -214,22 +209,12 @@ export class StorybookService {
 
     console.log('🎬 Starting scene generation from story...');
 
-    // Check service availability
-    const openaiStatus = environmentManager.getServiceStatus('openai');
-    if (!openaiStatus.isAvailable) {
-      throw new Error(`StorybookService not available: ${openaiStatus.message}`);
-    }
-
     try {
       // Get character description
       let characterDescription = 'a young protagonist';
       if (characterImage) {
-        try {
-          characterDescription = await characterService.describeCharacterForScenes(characterImage);
-          console.log('✅ Generated character description:', characterDescription);
-        } catch (error: any) {
-          console.warn('⚠️ Failed to describe character, using default:', error.message);
-        }
+        characterDescription = await characterService.describeCharacterForScenes(characterImage);
+        console.log('✅ Generated character description:', characterDescription);
       }
 
       // Generate scenes
@@ -265,14 +250,16 @@ export class StorybookService {
   }
 
   /**
-   * Get service status with configuration awareness
+   * Get service status
    */
   getServiceStatus() {
     const openaiStatus = environmentManager.getServiceStatus('openai');
+    const supabaseStatus = environmentManager.getServiceStatus('supabase');
     
     return {
       overall: this.isHealthy(),
       openai: openaiStatus,
+      supabase: supabaseStatus,
       services: {
         character: characterService.getStatus(),
         story: storyService.getStatus(),

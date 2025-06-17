@@ -30,8 +30,7 @@ export interface SceneGenerationResult {
 }
 
 export class SceneService {
-  private openaiApiKey: string | null = null;
-  private isConfigured: boolean = false;
+  private openaiApiKey: string;
 
   constructor() {
     this.initializeConfiguration();
@@ -39,23 +38,18 @@ export class SceneService {
 
   private initializeConfiguration(): void {
     const openaiStatus = environmentManager.getServiceStatus('openai');
-    this.isConfigured = openaiStatus.isAvailable;
     
-    if (this.isConfigured) {
-      this.openaiApiKey = process.env.OPENAI_API_KEY!;
-    } else {
-      this.openaiApiKey = null;
+    if (!openaiStatus.isAvailable) {
+      throw new Error(`SceneService initialization failed: ${openaiStatus.message}`);
     }
+
+    this.openaiApiKey = process.env.OPENAI_API_KEY!;
   }
 
   /**
    * Generate scenes from a story using GPT-4o
    */
   async generateScenes(options: SceneGenerationOptions): Promise<SceneGenerationResult> {
-    if (!this.isConfigured || !this.openaiApiKey) {
-      throw new Error('SceneService not configured: OpenAI API key is missing or invalid. Please check your environment variables.');
-    }
-
     const { story, audience = 'children', characterImage } = options;
 
     console.log('🎬 Starting scene generation...');
@@ -204,16 +198,16 @@ Return your output in this strict format:
   }
 
   /**
-   * Health check with configuration awareness
+   * Health check
    */
   isHealthy(): boolean {
-    return this.isConfigured && !!this.openaiApiKey;
+    return !!this.openaiApiKey;
   }
 
   getStatus() {
     const openaiStatus = environmentManager.getServiceStatus('openai');
     return {
-      configured: this.isConfigured,
+      configured: openaiStatus.isAvailable,
       available: this.isHealthy(),
       status: openaiStatus.status,
       message: openaiStatus.message

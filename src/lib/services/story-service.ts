@@ -19,8 +19,7 @@ export interface StoryGenerationResult {
 }
 
 export class StoryService {
-  private openaiApiKey: string | null = null;
-  private isConfigured: boolean = false;
+  private openaiApiKey: string;
 
   constructor() {
     this.initializeConfiguration();
@@ -28,23 +27,18 @@ export class StoryService {
 
   private initializeConfiguration(): void {
     const openaiStatus = environmentManager.getServiceStatus('openai');
-    this.isConfigured = openaiStatus.isAvailable;
     
-    if (this.isConfigured) {
-      this.openaiApiKey = process.env.OPENAI_API_KEY!;
-    } else {
-      this.openaiApiKey = null;
+    if (!openaiStatus.isAvailable) {
+      throw new Error(`StoryService initialization failed: ${openaiStatus.message}`);
     }
+
+    this.openaiApiKey = process.env.OPENAI_API_KEY!;
   }
 
   /**
    * Generate a story using GPT-4
    */
   async generateStory(options: StoryGenerationOptions): Promise<StoryGenerationResult> {
-    if (!this.isConfigured || !this.openaiApiKey) {
-      throw new Error('StoryService not configured: OpenAI API key is missing or invalid. Please check your environment variables.');
-    }
-
     const { genre, characterDescription, audience } = options;
 
     console.log('📝 Starting story generation...');
@@ -248,16 +242,16 @@ ${config.prompt}
   }
 
   /**
-   * Health check with configuration awareness
+   * Health check
    */
   isHealthy(): boolean {
-    return this.isConfigured && !!this.openaiApiKey;
+    return !!this.openaiApiKey;
   }
 
   getStatus() {
     const openaiStatus = environmentManager.getServiceStatus('openai');
     return {
-      configured: this.isConfigured,
+      configured: openaiStatus.isAvailable,
       available: this.isHealthy(),
       status: openaiStatus.status,
       message: openaiStatus.message
