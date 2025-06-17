@@ -57,7 +57,7 @@ export class CartoonizeService {
     // Optional cache check
     if (userId) {
       try {
-        const { getCachedImage } = await import('../supabase/cache-utils.js');
+        const { getCachedImage } = await import('@/lib/supabase/cache-utils.js');
         const cachedUrl = await getCachedImage(prompt, style, userId);
         if (cachedUrl) {
           console.log('✅ Found cached image');
@@ -128,7 +128,7 @@ export class CartoonizeService {
     // Optional cache save
     if (userId) {
       try {
-        const { saveToCache } = await import('../supabase/cache-utils.js');
+        const { saveToCache } = await import('@/lib/supabase/cache-utils.js');
         await saveToCache(prompt, generatedUrl, style, userId);
       } catch (cacheError) {
         console.warn('⚠️ Failed to save to cache (non-critical):', cacheError);
