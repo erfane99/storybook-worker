@@ -140,6 +140,11 @@ export class CartoonizeService {
       cached: false,
     };
   }
+
+  // Health check
+  isHealthy(): boolean {
+    return !!this.openaiApiKey;
+  }
 }
 
 // Export singleton instance
