@@ -21,7 +21,7 @@ export interface EnvironmentConfig {
   worker: {
     port: number;
     environment: string;
-    jobScanInterval: string; // Fixed: Changed from scanInterval to jobScanInterval
+    scanInterval: string;
     maxConcurrentJobs: number;
     initialScanDelay: number;
   };
@@ -53,15 +53,6 @@ class EnvironmentManager {
     );
   }
 
-  private isValidUrl(url: string): boolean {
-    try {
-      const parsed = new URL(url);
-      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-    } catch {
-      return false;
-    }
-  }
-
   private validateService(
     name: string, 
     requiredVars: string[], 
@@ -69,7 +60,6 @@ class EnvironmentManager {
   ): ServiceConfig {
     const missingVars: string[] = [];
     const placeholderVars: string[] = [];
-    const invalidVars: string[] = [];
     
     for (const varName of requiredVars) {
       const value = process.env[varName];
@@ -78,8 +68,6 @@ class EnvironmentManager {
         missingVars.push(varName);
       } else if (this.isPlaceholderValue(value)) {
         placeholderVars.push(varName);
-      } else if (varName.includes('URL') && !this.isValidUrl(value)) {
-        invalidVars.push(varName);
       }
     }
 
@@ -98,11 +86,6 @@ class EnvironmentManager {
       message = `Using placeholder values for: ${placeholderVars.join(', ')}. Service will be unavailable until real ${description} credentials are provided.`;
       isConfigured = false;
       isAvailable = false;
-    } else if (invalidVars.length > 0) {
-      status = 'invalid';
-      message = `Invalid values for: ${invalidVars.join(', ')}. Please check URL format and credentials.`;
-      isConfigured = false;
-      isAvailable = false;
     } else {
       status = 'configured';
       message = `${description} service properly configured`;
@@ -117,7 +100,7 @@ class EnvironmentManager {
       status,
       message,
       requiredVars,
-      missingVars: [...missingVars, ...placeholderVars, ...invalidVars]
+      missingVars: [...missingVars, ...placeholderVars]
     };
   }
 
@@ -150,7 +133,7 @@ class EnvironmentManager {
       worker: {
         port: Number(process.env.PORT) || 3000,
         environment: nodeEnv,
-        jobScanInterval: '*/30 * * * * *', // Fixed: Consistent property name
+        scanInterval: '*/30 * * * * *',
         maxConcurrentJobs: 5,
         initialScanDelay: 10000
       }

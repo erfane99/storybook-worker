@@ -25,7 +25,7 @@ app.get('/health', (_req, res) => {
     environment: config.environment,
     config: {
       maxConcurrentJobs: config.maxConcurrentJobs,
-      scanInterval: config.jobScanInterval, // Fixed: Use correct property name
+      scanInterval: config.jobScanInterval,
     }
   };
   
