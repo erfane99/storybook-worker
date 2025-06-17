@@ -1,13 +1,13 @@
-// Shared type definitions for the worker service
+// Shared type definitions for the worker service - matches backend exactly
 
 export type JobType = 'storybook' | 'auto-story' | 'scenes' | 'cartoonize' | 'image-generation';
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 
-export interface JobData {
+export interface BaseJobData {
   id: string;
   type: JobType;
   status: JobStatus;
-  progress: number;
+  progress: number; // 0-100
   current_step?: string;
   user_id?: string;
   created_at: string;
@@ -17,34 +17,19 @@ export interface JobData {
   error_message?: string;
   retry_count: number;
   max_retries: number;
-  input_data?: Record<string, any>;
-  result_data?: Record<string, any>;
+  input_data: any;
+  result_data?: any;
 }
 
-export interface JobFilter {
-  user_id?: string;
-  status?: JobStatus;
-  type?: JobType;
-  limit?: number;
-}
-
-export interface JobUpdateData {
-  status?: JobStatus;
-  progress?: number;
-  current_step?: string;
-  error_message?: string;
-  result_data?: Record<string, any>;
-}
-
-// Specific job data interfaces
-export interface StorybookJobData extends JobData {
+// Storybook generation job
+export interface StorybookJobData extends BaseJobData {
   type: 'storybook';
   input_data: {
     title: string;
     story: string;
     characterImage: string;
     pages: any[];
-    audience: string;
+    audience: 'children' | 'young_adults' | 'adults';
     isReusedImage?: boolean;
   };
   result_data?: {
@@ -55,13 +40,14 @@ export interface StorybookJobData extends JobData {
   };
 }
 
-export interface AutoStoryJobData extends JobData {
+// Auto-story generation job
+export interface AutoStoryJobData extends BaseJobData {
   type: 'auto-story';
   input_data: {
     genre: string;
     characterDescription: string;
     cartoonImageUrl: string;
-    audience: string;
+    audience: 'children' | 'young_adults' | 'adults';
   };
   result_data?: {
     storybook_id: string;
@@ -69,20 +55,22 @@ export interface AutoStoryJobData extends JobData {
   };
 }
 
-export interface SceneJobData extends JobData {
+// Scene generation job
+export interface SceneJobData extends BaseJobData {
   type: 'scenes';
   input_data: {
     story: string;
     characterImage: string;
-    audience: string;
+    audience: 'children' | 'young_adults' | 'adults';
   };
   result_data?: {
     pages: any[];
-    character_description: string;
+    character_description?: string;
   };
 }
 
-export interface CartoonizeJobData extends JobData {
+// Image cartoonization job
+export interface CartoonizeJobData extends BaseJobData {
   type: 'cartoonize';
   input_data: {
     prompt: string;
@@ -95,16 +83,17 @@ export interface CartoonizeJobData extends JobData {
   };
 }
 
-export interface ImageJobData extends JobData {
+// Single image generation job
+export interface ImageJobData extends BaseJobData {
   type: 'image-generation';
   input_data: {
     image_prompt: string;
     character_description: string;
     emotion: string;
-    audience: string;
-    isReusedImage: boolean;
-    cartoon_image: string;
-    style: string;
+    audience: 'children' | 'young_adults' | 'adults';
+    isReusedImage?: boolean;
+    cartoon_image?: string;
+    style?: string;
   };
   result_data?: {
     url: string;
@@ -113,7 +102,30 @@ export interface ImageJobData extends JobData {
   };
 }
 
-// Cartoonize service types
+export type JobData = StorybookJobData | AutoStoryJobData | SceneJobData | CartoonizeJobData | ImageJobData;
+
+export interface JobFilter {
+  user_id?: string;
+  type?: JobType;
+  status?: JobStatus;
+  limit?: number;
+  offset?: number;
+}
+
+// Fixed JobUpdateData interface with all required properties
+export interface JobUpdateData {
+  status?: JobStatus;
+  progress?: number;
+  current_step?: string;
+  error_message?: string;
+  result_data?: any;
+  started_at?: string;
+  completed_at?: string;
+  updated_at?: string;
+  retry_count?: number; // ✅ This was missing - causing the TypeScript error!
+}
+
+// Additional worker-specific types
 export interface CartoonizeOptions {
   prompt: string;
   style: string;
@@ -126,7 +138,6 @@ export interface CartoonizeResult {
   cached: boolean;
 }
 
-// Worker configuration types
 export interface WorkerConfig {
   port: number;
   environment: string;
