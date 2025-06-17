@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cron from 'node-cron';
 import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/types.js';
