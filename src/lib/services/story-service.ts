@@ -1,5 +1,5 @@
 // Story generation service using GPT-4
-// Extracted from /api/story/generate-auto-story
+// Implements graceful degradation pattern
 
 import { environmentManager } from '../config/environment.js';
 
@@ -19,7 +19,8 @@ export interface StoryGenerationResult {
 }
 
 export class StoryService {
-  private openaiApiKey: string;
+  private openaiApiKey: string | null = null;
+  private isConfigured: boolean = false;
 
   constructor() {
     this.initializeConfiguration();
@@ -27,18 +28,25 @@ export class StoryService {
 
   private initializeConfiguration(): void {
     const openaiStatus = environmentManager.getServiceStatus('openai');
+    this.isConfigured = openaiStatus.isAvailable;
     
-    if (!openaiStatus.isAvailable) {
-      throw new Error(`StoryService initialization failed: ${openaiStatus.message}`);
+    if (this.isConfigured) {
+      this.openaiApiKey = process.env.OPENAI_API_KEY!;
+      console.log('✅ StoryService initialized with OpenAI API');
+    } else {
+      this.openaiApiKey = null;
+      console.warn('⚠️ StoryService initialized without OpenAI API - service will be unavailable');
     }
-
-    this.openaiApiKey = process.env.OPENAI_API_KEY!;
   }
 
   /**
    * Generate a story using GPT-4
    */
   async generateStory(options: StoryGenerationOptions): Promise<StoryGenerationResult> {
+    if (!this.isConfigured || !this.openaiApiKey) {
+      throw new Error('StoryService not available: OpenAI API key is missing or invalid. Please configure OPENAI_API_KEY environment variable.');
+    }
+
     const { genre, characterDescription, audience } = options;
 
     console.log('📝 Starting story generation...');
@@ -242,16 +250,16 @@ ${config.prompt}
   }
 
   /**
-   * Health check
+   * Health check with graceful degradation awareness
    */
   isHealthy(): boolean {
-    return !!this.openaiApiKey;
+    return this.isConfigured && !!this.openaiApiKey;
   }
 
   getStatus() {
     const openaiStatus = environmentManager.getServiceStatus('openai');
     return {
-      configured: openaiStatus.isAvailable,
+      configured: this.isConfigured,
       available: this.isHealthy(),
       status: openaiStatus.status,
       message: openaiStatus.message

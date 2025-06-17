@@ -1,5 +1,5 @@
 // Scene generation service using GPT-4o
-// Extracted from /api/story/generate-scenes
+// Implements graceful degradation pattern
 
 import { environmentManager } from '../config/environment.js';
 
@@ -30,7 +30,8 @@ export interface SceneGenerationResult {
 }
 
 export class SceneService {
-  private openaiApiKey: string;
+  private openaiApiKey: string | null = null;
+  private isConfigured: boolean = false;
 
   constructor() {
     this.initializeConfiguration();
@@ -38,18 +39,25 @@ export class SceneService {
 
   private initializeConfiguration(): void {
     const openaiStatus = environmentManager.getServiceStatus('openai');
+    this.isConfigured = openaiStatus.isAvailable;
     
-    if (!openaiStatus.isAvailable) {
-      throw new Error(`SceneService initialization failed: ${openaiStatus.message}`);
+    if (this.isConfigured) {
+      this.openaiApiKey = process.env.OPENAI_API_KEY!;
+      console.log('✅ SceneService initialized with OpenAI API');
+    } else {
+      this.openaiApiKey = null;
+      console.warn('⚠️ SceneService initialized without OpenAI API - service will be unavailable');
     }
-
-    this.openaiApiKey = process.env.OPENAI_API_KEY!;
   }
 
   /**
    * Generate scenes from a story using GPT-4o
    */
   async generateScenes(options: SceneGenerationOptions): Promise<SceneGenerationResult> {
+    if (!this.isConfigured || !this.openaiApiKey) {
+      throw new Error('SceneService not available: OpenAI API key is missing or invalid. Please configure OPENAI_API_KEY environment variable.');
+    }
+
     const { story, audience = 'children', characterImage } = options;
 
     console.log('🎬 Starting scene generation...');
@@ -198,16 +206,16 @@ Return your output in this strict format:
   }
 
   /**
-   * Health check
+   * Health check with graceful degradation awareness
    */
   isHealthy(): boolean {
-    return !!this.openaiApiKey;
+    return this.isConfigured && !!this.openaiApiKey;
   }
 
   getStatus() {
     const openaiStatus = environmentManager.getServiceStatus('openai');
     return {
-      configured: openaiStatus.isAvailable,
+      configured: this.isConfigured,
       available: this.isHealthy(),
       status: openaiStatus.status,
       message: openaiStatus.message

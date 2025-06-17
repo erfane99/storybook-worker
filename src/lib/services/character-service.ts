@@ -1,5 +1,5 @@
 // Character description service using GPT-4o Vision
-// Extracted from /api/image/describe
+// Implements graceful degradation pattern
 
 import { environmentManager } from '../config/environment.js';
 
@@ -14,7 +14,8 @@ export interface CharacterDescriptionResult {
 }
 
 export class CharacterService {
-  private openaiApiKey: string;
+  private openaiApiKey: string | null = null;
+  private isConfigured: boolean = false;
 
   constructor() {
     this.initializeConfiguration();
@@ -22,18 +23,25 @@ export class CharacterService {
 
   private initializeConfiguration(): void {
     const openaiStatus = environmentManager.getServiceStatus('openai');
+    this.isConfigured = openaiStatus.isAvailable;
     
-    if (!openaiStatus.isAvailable) {
-      throw new Error(`CharacterService initialization failed: ${openaiStatus.message}`);
+    if (this.isConfigured) {
+      this.openaiApiKey = process.env.OPENAI_API_KEY!;
+      console.log('✅ CharacterService initialized with OpenAI API');
+    } else {
+      this.openaiApiKey = null;
+      console.warn('⚠️ CharacterService initialized without OpenAI API - service will be unavailable');
     }
-
-    this.openaiApiKey = process.env.OPENAI_API_KEY!;
   }
 
   /**
    * Generate character description from image using GPT-4o Vision
    */
   async describeCharacter(options: CharacterDescriptionOptions): Promise<CharacterDescriptionResult> {
+    if (!this.isConfigured || !this.openaiApiKey) {
+      throw new Error('CharacterService not available: OpenAI API key is missing or invalid. Please configure OPENAI_API_KEY environment variable.');
+    }
+
     const { imageUrl, style = 'storybook' } = options;
 
     console.log('🔍 Starting character description...');
@@ -123,9 +131,14 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
   }
 
   /**
-   * Simple character description for scenes (shorter version)
+   * Simple character description for scenes (with fallback)
    */
   async describeCharacterForScenes(imageUrl: string): Promise<string> {
+    if (!this.isConfigured || !this.openaiApiKey) {
+      console.warn('⚠️ CharacterService not available, using default description');
+      return 'a young protagonist';
+    }
+
     try {
       console.log('🔍 Making request to OpenAI Vision API for character description...');
 
@@ -172,22 +185,22 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
       return data.choices[0].message.content;
 
     } catch (error: any) {
-      console.error('❌ Failed to describe character:', error.message);
-      throw new Error(`Character description failed: ${error.message}`);
+      console.warn('⚠️ Failed to describe character, using default:', error.message);
+      return 'a young protagonist';
     }
   }
 
   /**
-   * Health check
+   * Health check with graceful degradation awareness
    */
   isHealthy(): boolean {
-    return !!this.openaiApiKey;
+    return this.isConfigured && !!this.openaiApiKey;
   }
 
   getStatus() {
     const openaiStatus = environmentManager.getServiceStatus('openai');
     return {
-      configured: openaiStatus.isAvailable,
+      configured: this.isConfigured,
       available: this.isHealthy(),
       status: openaiStatus.status,
       message: openaiStatus.message

@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { environmentManager } from '../config/environment.js';
 
-// Unified cache utilities with proper error handling and environment validation
+// Unified cache utilities with graceful degradation
 let supabaseClient: ReturnType<typeof createClient> | null = null;
 
 function getSupabaseClient() {
@@ -9,17 +9,23 @@ function getSupabaseClient() {
     const supabaseStatus = environmentManager.getServiceStatus('supabase');
     
     if (!supabaseStatus.isAvailable) {
-      throw new Error(`Supabase not configured for caching: ${supabaseStatus.message}`);
+      console.warn('⚠️ Supabase not configured for caching:', supabaseStatus.message);
+      return null;
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    
-    supabaseClient = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: false
-      }
-    });
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+      
+      supabaseClient = createClient(supabaseUrl, supabaseKey, {
+        auth: {
+          persistSession: false
+        }
+      });
+    } catch (error) {
+      console.warn('⚠️ Failed to initialize Supabase client for caching:', error);
+      return null;
+    }
   }
 
   return supabaseClient;
@@ -35,6 +41,10 @@ export async function getCachedImage(
 ): Promise<string | null> {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('⚠️ Skipping cache lookup - Supabase not configured');
+      return null;
+    }
 
     const { data, error } = await supabase
       .from('cartoon_cache')
@@ -72,6 +82,10 @@ export async function saveToCache(
 ): Promise<void> {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('⚠️ Skipping cache save - Supabase not configured');
+      return;
+    }
 
     const { error } = await supabase
       .from('cartoon_cache')
@@ -105,6 +119,10 @@ export async function getCachedCartoonImage(
 ): Promise<string | null> {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('⚠️ Skipping cartoon cache lookup - Supabase not configured');
+      return null;
+    }
 
     let query = supabase
       .from('cartoon_cache')
@@ -146,6 +164,10 @@ export async function saveCartoonImageToCache(
 ): Promise<void> {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('⚠️ Skipping cartoon cache save - Supabase not configured');
+      return;
+    }
 
     const { error } = await supabase
       .from('cartoon_cache')
