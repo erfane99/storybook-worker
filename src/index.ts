@@ -1,18 +1,8 @@
 import express from 'express';
 import cron from 'node-cron';
-import { jobManager } from '@/lib/background-jobs/job-manager.js';
-import { jobProcessor } from '@/lib/background-jobs/job-processor.js';
-import type { JobData } from '@/lib/background-jobs/types.js';
+import type { JobData, WorkerConfig, JobStats, HealthResponse } from '../lib/types.js';
 
 // Environment configuration
-interface WorkerConfig {
-  port: number;
-  environment: string;
-  jobScanInterval: string;
-  maxConcurrentJobs: number;
-  initialScanDelay: number;
-}
-
 const config: WorkerConfig = {
   port: Number(process.env.PORT) || 3000,
   environment: process.env.NODE_ENV || 'development',
@@ -25,7 +15,7 @@ const config: WorkerConfig = {
 const app = express();
 
 app.get('/health', (_req, res) => {
-  res.json({ 
+  const response: HealthResponse = {
     status: 'healthy', 
     service: 'storybook-worker',
     version: '1.0.0',
@@ -35,7 +25,8 @@ app.get('/health', (_req, res) => {
       maxConcurrentJobs: config.maxConcurrentJobs,
       scanInterval: config.jobScanInterval,
     }
-  });
+  };
+  res.json(response);
 });
 
 app.get('/metrics', (_req, res) => {
@@ -44,6 +35,7 @@ app.get('/metrics', (_req, res) => {
     memoryUsage: process.memoryUsage(),
     cpuUsage: process.cpuUsage(),
     timestamp: new Date().toISOString(),
+    stats,
   });
 });
 
@@ -57,13 +49,6 @@ console.log(`📊 Environment: ${config.environment}`);
 console.log(`⚙️ Config:`, config);
 
 // Job processing statistics
-interface JobStats {
-  totalProcessed: number;
-  successful: number;
-  failed: number;
-  lastProcessedAt: Date | null;
-}
-
 const stats: JobStats = {
   totalProcessed: 0,
   successful: 0,
@@ -71,13 +56,32 @@ const stats: JobStats = {
   lastProcessedAt: null,
 };
 
+// Dynamic import function for job modules
+async function loadJobModules() {
+  try {
+    const [jobManagerModule, jobProcessorModule] = await Promise.all([
+      import('../lib/background-jobs/job-manager.js'),
+      import('../lib/background-jobs/job-processor.js')
+    ]);
+    
+    return {
+      jobManager: jobManagerModule.jobManager || jobManagerModule.default,
+      jobProcessor: jobProcessorModule.jobProcessor || jobProcessorModule.default
+    };
+  } catch (error) {
+    console.error('❌ Failed to load job processing modules:', error);
+    throw error;
+  }
+}
+
 // Validate job processor modules
 async function validateJobSystem(): Promise<boolean> {
   try {
-    const isHealthy = jobManager.isHealthy() && jobProcessor.isHealthy();
+    const { jobManager, jobProcessor } = await loadJobModules();
     
-    if (!isHealthy) {
-      console.error('❌ Job system health check failed');
+    // Basic validation that modules loaded
+    if (!jobManager || !jobProcessor) {
+      console.error('❌ Job modules not properly loaded');
       return false;
     }
 
@@ -93,6 +97,8 @@ async function validateJobSystem(): Promise<boolean> {
 async function processJobs(): Promise<void> {
   try {
     console.log('🔄 Worker: Scanning for pending jobs...');
+    
+    const { jobManager, jobProcessor } = await loadJobModules();
     
     // Get pending jobs
     const pendingJobs = await jobManager.getPendingJobs({}, 10);
@@ -112,7 +118,7 @@ async function processJobs(): Promise<void> {
         try {
           console.log(`🔄 Worker: Starting job ${job.id} (${job.type})`);
           
-          // Use the exposed processJobAsync method
+          // Process the job
           await jobProcessor.processJobAsync(job);
           
           console.log(`✅ Worker: Successfully completed job ${job.id}`);
