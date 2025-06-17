@@ -1,6 +1,6 @@
-import { jobManager } from './job-manager';
-import { JobData, JobType, StorybookJobData, AutoStoryJobData, SceneJobData, CartoonizeJobData, ImageJobData } from './types';
-import { cartoonizeService } from '../services/cartoonize-service.js';
+import { jobManager } from './job-manager.js';
+import { JobData, JobType, StorybookJobData, AutoStoryJobData, SceneJobData, CartoonizeJobData, ImageJobData } from '@/lib/types.js';
+import { cartoonizeService } from '@/lib/services/cartoonize-service.js';
 
 class BackgroundJobProcessor {
   private isProcessing = false;
@@ -51,8 +51,8 @@ class BackgroundJobProcessor {
     return processedAny;
   }
 
-  // Process a single job asynchronously
-  private async processJobAsync(job: JobData): Promise<void> {
+  // Process a single job asynchronously - EXPOSED FOR WORKER
+  async processJobAsync(job: JobData): Promise<void> {
     try {
       console.log(`🔄 Processing job: ${job.id} (${job.type})`);
 
@@ -413,8 +413,8 @@ class BackgroundJobProcessor {
       let cachedUrl: string | null = null;
       if (job.user_id && cartoon_image) {
         try {
-          // Use relative import path that's more likely to resolve
-          const cacheUtils = await import('../supabase/cache-utils').catch(() => null);
+          // Use correct import path for cache utils
+          const cacheUtils = await import('@/lib/supabase/cache-utils.js').catch(() => null);
           if (cacheUtils?.getCachedCartoonImage) {
             cachedUrl = await cacheUtils.getCachedCartoonImage(cartoon_image, style || 'storybook', job.user_id);
           }
