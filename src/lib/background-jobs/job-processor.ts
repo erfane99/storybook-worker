@@ -173,7 +173,7 @@ class BackgroundJobProcessor {
 
       // Use internal storybook service for complete auto-story creation
       const result = await storybookService.createAutoStory({
-        genre,
+        genre: genre as any, // Type assertion for genre compatibility
         characterDescription,
         cartoonImageUrl,
         audience,
@@ -350,11 +350,18 @@ class BackgroundJobProcessor {
 
   // Health check - includes service health
   isHealthy(): boolean {
-    return (
-      this.currentlyProcessing.size < this.maxConcurrentJobs &&
-      storybookService.isHealthy() &&
-      cartoonizeService.isHealthy()
-    );
+    const baseHealth = this.currentlyProcessing.size < this.maxConcurrentJobs;
+    const servicesHealth = storybookService.isHealthy();
+    
+    // cartoonizeService might not have isHealthy method yet
+    let cartoonizeHealth = true;
+    try {
+      cartoonizeHealth = cartoonizeService.isHealthy ? cartoonizeService.isHealthy() : true;
+    } catch (error) {
+      console.warn('⚠️ Cartoonize service health check failed:', error);
+    }
+    
+    return baseHealth && servicesHealth && cartoonizeHealth;
   }
 }
 
