@@ -214,7 +214,7 @@ class BackgroundJobProcessor {
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_KEY
+        process.env.SUPABASE_SERVICE_ROLE_KEY
       );
 
       const { data: storybook, error: supabaseError } = await supabase
