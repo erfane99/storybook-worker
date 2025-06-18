@@ -13,7 +13,7 @@ class BackgroundJobProcessor {
   private currentlyProcessing = new Set<string>();
 
   constructor() {
-    console.log('🔧 Background job processor initialized');
+    console.log('🔧 Background job processor initialized with comic book support');
   }
 
   // Main processing function - processes one step at a time
@@ -94,15 +94,25 @@ class BackgroundJobProcessor {
     }
   }
 
-  // Process storybook generation job - UPDATED TO USE INTERNAL SERVICES
+  // ENHANCED: Process storybook generation job with comic book layout support
   async processStorybookJob(job: StorybookJobData): Promise<void> {
-    const { title, story, characterImage, pages, audience, isReusedImage } = job.input_data;
+    const { 
+      title, 
+      story, 
+      characterImage, 
+      pages, 
+      audience, 
+      isReusedImage,
+      characterArtStyle = 'storybook',
+      layoutType = 'comic-book-panels'
+    } = job.input_data;
 
     try {
-      console.log(`📚 Processing storybook job: ${job.id}`);
-      await jobManager.updateJobProgress(job.id, 5, 'Starting storybook creation');
+      console.log(`📚 Processing comic book storybook job: ${job.id}`);
+      console.log(`🎨 Art Style: ${characterArtStyle}, Layout: ${layoutType}`);
+      await jobManager.updateJobProgress(job.id, 5, 'Starting comic book storybook creation');
 
-      // Use internal storybook service
+      // ENHANCED: Use internal storybook service with comic book context
       const result = await storybookService.createStorybook({
         title,
         story,
@@ -111,9 +121,11 @@ class BackgroundJobProcessor {
         audience,
         isReusedImage,
         userId: job.user_id,
+        characterArtStyle, // NEW: Pass character art style
+        layoutType, // NEW: Pass layout type
       });
 
-      await jobManager.updateJobProgress(job.id, 75, 'Storybook generated, saving to database');
+      await jobManager.updateJobProgress(job.id, 75, 'Comic book storybook generated, saving to database');
 
       // Save to database
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -145,7 +157,7 @@ class BackgroundJobProcessor {
         throw new Error(`Database save failed: ${supabaseError.message}`);
       }
 
-      await jobManager.updateJobProgress(job.id, 100, 'Storybook saved successfully');
+      await jobManager.updateJobProgress(job.id, 100, 'Comic book storybook saved successfully');
 
       // Mark job as completed
       await jobManager.markJobCompleted(job.id, {
@@ -153,34 +165,46 @@ class BackgroundJobProcessor {
         pages: result.pages,
         has_errors: result.has_errors,
         warning: result.warning,
+        character_art_style: characterArtStyle,
+        layout_type: layoutType,
       });
 
-      console.log(`✅ Storybook job completed: ${job.id}`);
+      console.log(`✅ Comic book storybook job completed: ${job.id} (Style: ${characterArtStyle})`);
 
     } catch (error: any) {
-      console.error(`❌ Storybook job failed: ${job.id}`, error);
+      console.error(`❌ Comic book storybook job failed: ${job.id}`, error);
       throw error;
     }
   }
 
-  // Process auto-story generation job - UPDATED TO USE INTERNAL SERVICES
+  // ENHANCED: Process auto-story generation job with comic book layout support
   async processAutoStoryJob(job: AutoStoryJobData): Promise<void> {
-    const { genre, characterDescription, cartoonImageUrl, audience } = job.input_data;
+    const { 
+      genre, 
+      characterDescription, 
+      cartoonImageUrl, 
+      audience,
+      characterArtStyle = 'storybook',
+      layoutType = 'comic-book-panels'
+    } = job.input_data;
 
     try {
-      console.log(`🤖 Processing auto-story job: ${job.id}`);
-      await jobManager.updateJobProgress(job.id, 5, 'Starting auto-story generation');
+      console.log(`🤖 Processing comic book auto-story job: ${job.id}`);
+      console.log(`🎨 Genre: ${genre}, Art Style: ${characterArtStyle}, Layout: ${layoutType}`);
+      await jobManager.updateJobProgress(job.id, 5, 'Starting comic book auto-story generation');
 
-      // Use internal storybook service for complete auto-story creation
+      // ENHANCED: Use internal storybook service for complete auto-story creation with comic book context
       const result = await storybookService.createAutoStory({
         genre: genre as any, // Type assertion for genre compatibility
         characterDescription,
         cartoonImageUrl,
         audience,
         userId: job.user_id,
+        characterArtStyle, // NEW: Pass character art style
+        layoutType, // NEW: Pass layout type
       });
 
-      await jobManager.updateJobProgress(job.id, 75, 'Auto-story generated, saving to database');
+      await jobManager.updateJobProgress(job.id, 75, 'Comic book auto-story generated, saving to database');
 
       // Save to database
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -190,7 +214,7 @@ class BackgroundJobProcessor {
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
+        process.env.SUPABASE_SERVICE_KEY
       );
 
       const { data: storybook, error: supabaseError } = await supabase
@@ -212,49 +236,62 @@ class BackgroundJobProcessor {
         throw new Error(`Database save failed: ${supabaseError.message}`);
       }
 
-      await jobManager.updateJobProgress(job.id, 100, 'Auto-story generation complete');
+      await jobManager.updateJobProgress(job.id, 100, 'Comic book auto-story generation complete');
 
       // Mark job as completed
       await jobManager.markJobCompleted(job.id, {
         storybook_id: storybook.id,
         generated_story: result.story,
+        character_art_style: characterArtStyle,
+        layout_type: layoutType,
       });
 
-      console.log(`✅ Auto-story job completed: ${job.id}`);
+      console.log(`✅ Comic book auto-story job completed: ${job.id} (Style: ${characterArtStyle})`);
 
     } catch (error: any) {
-      console.error(`❌ Auto-story job failed: ${job.id}`, error);
+      console.error(`❌ Comic book auto-story job failed: ${job.id}`, error);
       throw error;
     }
   }
 
-  // Process scene generation job - UPDATED TO USE INTERNAL SERVICES
+  // Process scene generation job - UPDATED TO USE INTERNAL SERVICES WITH COMIC BOOK SUPPORT
   async processSceneJob(job: SceneJobData): Promise<void> {
-    const { story, characterImage, audience } = job.input_data;
+    const { 
+      story, 
+      characterImage, 
+      audience,
+      characterArtStyle = 'storybook',
+      layoutType = 'comic-book-panels' 
+    } = job.input_data;
 
     try {
-      console.log(`🎬 Processing scene job: ${job.id}`);
-      await jobManager.updateJobProgress(job.id, 10, 'Starting scene generation');
+      console.log(`🎬 Processing comic book scene job: ${job.id}`);
+      console.log(`🎨 Art Style: ${characterArtStyle}, Layout: ${layoutType}`);
+      await jobManager.updateJobProgress(job.id, 10, 'Starting comic book scene generation');
 
-      // Use internal storybook service
+      // ENHANCED: Use internal storybook service with comic book context
       const result = await storybookService.generateScenesFromStory({
         story,
         characterImage,
         audience,
+        characterArtStyle, // NEW: Pass character art style
+        layoutType, // NEW: Pass layout type
       });
 
-      await jobManager.updateJobProgress(job.id, 100, 'Scene generation complete');
+      await jobManager.updateJobProgress(job.id, 100, 'Comic book scene generation complete');
 
       // Mark job as completed
       await jobManager.markJobCompleted(job.id, {
         pages: result.pages,
         character_description: result.character_description,
+        character_art_style: characterArtStyle,
+        layout_type: layoutType,
       });
 
-      console.log(`✅ Scene job completed: ${job.id}`);
+      console.log(`✅ Comic book scene job completed: ${job.id} (Style: ${characterArtStyle})`);
 
     } catch (error: any) {
-      console.error(`❌ Scene job failed: ${job.id}`, error);
+      console.error(`❌ Comic book scene job failed: ${job.id}`, error);
       throw error;
     }
   }
@@ -264,7 +301,7 @@ class BackgroundJobProcessor {
     const { prompt, style, imageUrl } = job.input_data;
 
     try {
-      console.log(`🎨 Processing cartoonize job: ${job.id}`);
+      console.log(`🎨 Processing cartoonize job: ${job.id} (Style: ${style})`);
       await jobManager.updateJobProgress(job.id, 10, 'Preparing image for processing');
 
       await jobManager.updateJobProgress(job.id, 40, 'Generating cartoon image');
@@ -279,13 +316,14 @@ class BackgroundJobProcessor {
       await jobManager.updateJobProgress(job.id, 90, 'Cartoon generation complete');
       await jobManager.updateJobProgress(job.id, 100, 'Cartoonization complete');
 
-      // Mark job as completed
+      // Mark job as completed with style information
       await jobManager.markJobCompleted(job.id, {
         url: result.url,
         cached: result.cached,
+        style: style, // Include style in completion data
       });
 
-      console.log(`✅ Cartoonize job completed: ${job.id}`);
+      console.log(`✅ Cartoonize job completed: ${job.id} (Style: ${style})`);
 
     } catch (error: any) {
       console.error(`❌ Cartoonize job failed: ${job.id}`, error);
@@ -293,7 +331,7 @@ class BackgroundJobProcessor {
     }
   }
 
-  // Process single image generation job - UPDATED TO USE INTERNAL SERVICES
+  // ENHANCED: Process single image generation job with comic book panel support
   async processImageJob(job: ImageJobData): Promise<void> {
     const { 
       image_prompt, 
@@ -302,14 +340,16 @@ class BackgroundJobProcessor {
       audience, 
       isReusedImage, 
       cartoon_image, 
-      style 
+      style,
+      characterArtStyle = 'storybook',
+      layoutType = 'individual-scene' // Images are usually individual, not panels
     } = job.input_data;
 
     try {
-      console.log(`🖼️ Processing image job: ${job.id}`);
+      console.log(`🖼️ Processing image job: ${job.id} (Style: ${characterArtStyle})`);
       await jobManager.updateJobProgress(job.id, 10, 'Starting image generation');
 
-      // Use internal image service
+      // ENHANCED: Use internal image service with comic book context
       const result = await imageService.generateSceneImage({
         image_prompt,
         character_description,
@@ -319,6 +359,8 @@ class BackgroundJobProcessor {
         cartoon_image,
         user_id: job.user_id,
         style,
+        characterArtStyle, // NEW: Pass character art style
+        layoutType, // NEW: Pass layout type (usually individual for single images)
       });
 
       await jobManager.updateJobProgress(job.id, 100, 'Image generation complete');
@@ -328,9 +370,11 @@ class BackgroundJobProcessor {
         url: result.url,
         prompt_used: result.prompt_used,
         reused: result.reused,
+        character_art_style: characterArtStyle,
+        layout_type: layoutType,
       });
 
-      console.log(`✅ Image job completed: ${job.id}`);
+      console.log(`✅ Image job completed: ${job.id} (Style: ${characterArtStyle})`);
 
     } catch (error: any) {
       console.error(`❌ Image job failed: ${job.id}`, error);
@@ -338,17 +382,23 @@ class BackgroundJobProcessor {
     }
   }
 
-  // Get processing statistics
+  // Get processing statistics with comic book context
   getProcessingStats() {
     return {
       isProcessing: this.isProcessing,
       currentlyProcessing: this.currentlyProcessing.size,
       maxConcurrentJobs: this.maxConcurrentJobs,
       activeJobs: Array.from(this.currentlyProcessing),
+      features: {
+        comicBookSupport: true,
+        characterConsistency: true,
+        multiPanelLayouts: true,
+        variableArtStyles: true,
+      },
     };
   }
 
-  // Health check - includes service health
+  // Health check - includes service health with comic book features
   isHealthy(): boolean {
     const baseHealth = this.currentlyProcessing.size < this.maxConcurrentJobs;
     const servicesHealth = storybookService.isHealthy();
@@ -360,6 +410,8 @@ class BackgroundJobProcessor {
     } catch (error) {
       console.warn('⚠️ Cartoonize service health check failed:', error);
     }
+    
+    console.log(`🔧 Job Processor Health: Base(${baseHealth}) + Services(${servicesHealth}) + Cartoonize(${cartoonizeHealth}) + Comic Book Features(✅)`);
     
     return baseHealth && servicesHealth && cartoonizeHealth;
   }
