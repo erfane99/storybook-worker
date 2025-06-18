@@ -1,4 +1,4 @@
-// Scene generation service using GPT-4o
+// Scene generation service using GPT-4o with comic book panel support
 // Implements graceful degradation pattern
 
 import { environmentManager } from '../config/environment.js';
@@ -10,23 +10,32 @@ export interface Scene {
   emotion: string;
   imagePrompt: string;
   generatedImage?: string;
+  panelType?: string;
+  layoutType?: string;
+  characterArtStyle?: string;
 }
 
 export interface Page {
   pageNumber: number;
   scenes: Scene[];
+  layoutType?: string;
+  characterArtStyle?: string;
 }
 
 export interface SceneGenerationOptions {
   story: string;
   audience: AudienceType;
   characterImage?: string;
+  characterArtStyle?: string;
+  layoutType?: string;
 }
 
 export interface SceneGenerationResult {
   pages: Page[];
   audience: AudienceType;
   characterImage?: string;
+  layoutType?: string;
+  characterArtStyle?: string;
 }
 
 export class SceneService {
@@ -51,58 +60,77 @@ export class SceneService {
   }
 
   /**
-   * Generate scenes from a story using GPT-4o
+   * Generate comic book style scenes from a story using GPT-4o
    */
   async generateScenes(options: SceneGenerationOptions): Promise<SceneGenerationResult> {
     if (!this.isConfigured || !this.openaiApiKey) {
       throw new Error('SceneService not available: OpenAI API key is missing or invalid. Please configure OPENAI_API_KEY environment variable.');
     }
 
-    const { story, audience = 'children', characterImage } = options;
+    const { 
+      story, 
+      audience = 'children', 
+      characterImage,
+      characterArtStyle = 'storybook',
+      layoutType = 'comic-book-panels'
+    } = options;
 
-    console.log('🎬 Starting scene generation...');
-    console.log(`📋 Audience: ${audience}`);
+    console.log('🎬 Starting comic book scene generation...');
+    console.log(`📋 Audience: ${audience}, Art Style: ${characterArtStyle}, Layout: ${layoutType}`);
 
     if (!story || story.trim().length < 50) {
       throw new Error('Story must be at least 50 characters long.');
     }
 
-    // Audience-specific configuration
+    // ENHANCED: Comic book specific audience configuration
     const audienceConfig = {
       children: { 
-        scenes: 10, 
-        pages: 4, 
-        notes: 'Simple, playful structure. 2–3 scenes per page.' 
+        scenes: 8, 
+        pages: 3, 
+        panelsPerPage: '2-3',
+        notes: 'Simple comic book panels. 2-3 large, clear panels per page with minimal text.' 
       },
       young_adults: { 
-        scenes: 14, 
-        pages: 6, 
-        notes: '2–3 scenes per page with meaningful plot turns.' 
+        scenes: 12, 
+        pages: 4, 
+        panelsPerPage: '3-4',
+        notes: '3-4 panels per page with dynamic layouts and speech bubbles.' 
       },
       adults: { 
-        scenes: 18, 
-        pages: 8, 
-        notes: '3–5 scenes per page, allow complexity and layered meaning.' 
+        scenes: 16, 
+        pages: 5, 
+        panelsPerPage: '3-5',
+        notes: '3-5 panels per page, sophisticated comic book layouts with varied panel sizes.' 
       }
     };
 
-    const { scenes, pages, notes } = audienceConfig[audience];
+    const { scenes, pages, panelsPerPage, notes } = audienceConfig[audience];
 
+    // ENHANCED: Comic book focused system prompt
     const systemPrompt = `
-You are a professional comic book scene planner for a cartoon storybook app.
+You are a professional comic book layout designer for a storybook app that creates COMIC BOOK STYLE layouts.
+
+CRITICAL: You must create comic book PAGES with multiple PANELS, not individual scenes.
 
 Audience: ${audience.toUpperCase()}
-Target: ${scenes} scenes, grouped across ${pages} comic-style pages.
+Target: ${scenes} total panels arranged across ${pages} comic book pages
+Panels per page: ${panelsPerPage}
+Character Art Style: ${characterArtStyle} (maintain this art style in all panels)
 
-Each scene should reflect a strong visual moment or emotional beat from the story. Avoid filler.
+COMIC BOOK REQUIREMENTS:
+- Each page contains multiple panels (like a real comic book)
+- Panels show sequential story moments
+- Each panel has a specific action/dialogue moment
+- Focus on visual storytelling with minimal text
+- Panels should flow naturally from one to the next
 
-Scene requirements:
-- description: A short action summary for this scene
-- emotion: Main character's emotional state
-- imagePrompt: A rich, vivid DALL·E visual description (exclude character description; focus on environment, action, lighting, emotion)
+Panel Structure:
+- description: Brief action happening in this panel
+- emotion: Character's emotional state in this panel  
+- imagePrompt: Detailed visual description for panel generation (exclude character description - focus on environment, action, composition, lighting)
+- panelType: 'standard', 'wide', 'tall', or 'splash' (for layout variety)
 
-Visual pacing notes:
-${notes}
+Visual pacing notes: ${notes}
 
 Return your output in this strict format:
 {
@@ -113,7 +141,8 @@ Return your output in this strict format:
         {
           "description": "...",
           "emotion": "...",
-          "imagePrompt": "..."
+          "imagePrompt": "...",
+          "panelType": "standard"
         }
       ]
     }
@@ -122,7 +151,7 @@ Return your output in this strict format:
 `;
 
     try {
-      console.log('📝 Making request to OpenAI GPT-4o API...');
+      console.log('📝 Making request to OpenAI GPT-4o API for comic book layout...');
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -135,7 +164,10 @@ Return your output in this strict format:
           temperature: 0.85,
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: story }
+            { 
+              role: 'user', 
+              content: `Create a comic book layout for this story. Remember: Multiple panels per page, ${characterArtStyle} art style, ${panelsPerPage} panels per page.\n\nStory: ${story}` 
+            }
           ],
           response_format: { type: 'json_object' }
         }),
@@ -181,27 +213,34 @@ Return your output in this strict format:
         throw new Error('Invalid JSON response from OpenAI');
       }
 
-      // Inject character image for visual consistency
+      // ENHANCED: Add comic book metadata to each panel
       const updatedPages = parsed.pages.map((page: any) => ({
         ...page,
+        layoutType: 'comic-book-panels',
+        characterArtStyle: characterArtStyle,
         scenes: page.scenes.map((scene: any) => ({
           ...scene,
-          generatedImage: characterImage // used as fallback placeholder until image gen runs
+          panelType: scene.panelType || 'standard',
+          generatedImage: characterImage, // Placeholder until panel generation
+          layoutType: 'comic-book-panels',
+          characterArtStyle: characterArtStyle
         }))
       }));
 
-      console.log('✅ Successfully generated scenes');
-      console.log(`📊 Generated ${updatedPages.length} pages with ${updatedPages.reduce((total: number, page: any) => total + page.scenes.length, 0)} scenes`);
+      console.log('✅ Successfully generated comic book layout');
+      console.log(`📊 Generated ${updatedPages.length} comic book pages with ${updatedPages.reduce((total: number, page: any) => total + page.scenes.length, 0)} panels total`);
 
       return {
         pages: updatedPages,
         audience,
         characterImage,
+        layoutType: 'comic-book-panels',
+        characterArtStyle: characterArtStyle
       };
 
     } catch (error: any) {
-      console.error('❌ Scene generation error:', error);
-      throw new Error(`Failed to generate scenes: ${error.message}`);
+      console.error('❌ Comic book scene generation error:', error);
+      throw new Error(`Failed to generate comic book scenes: ${error.message}`);
     }
   }
 
