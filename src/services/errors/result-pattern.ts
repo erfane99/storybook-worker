@@ -46,7 +46,7 @@ export const Result = {
    * Create a successful result
    */
   success: <T>(data: T): Success<T> => {
-    const result = {
+    return {
       success: true as const,
       data,
       
@@ -72,7 +72,7 @@ export const Result = {
         } catch (error) {
           console.warn('Error in tap function:', error);
         }
-        return result;
+        return this;
       },
       
       unwrap(): T {
@@ -83,36 +83,34 @@ export const Result = {
         return data;
       },
       
-      isSuccess(): result is Success<T> {
+      isSuccess(): this is Success<T> {
         return true;
       },
       
-      isFailure(): result is never {
+      isFailure(): this is never {
         return false;
       }
     };
-    
-    return result;
   },
 
   /**
    * Create a failure result
    */
   failure: <E extends BaseServiceError>(error: E): Failure<E> => {
-    const result = {
+    return {
       success: false as const,
       error,
       
       map<U>(fn: (data: never) => U): Failure<E> {
-        return result;
+        return this;
       },
       
       flatMap<U, E2 extends BaseServiceError>(fn: (data: never) => Result<U, E2>): Failure<E> {
-        return result;
+        return this;
       },
       
       tap(fn: (data: never) => void): Failure<E> {
-        return result;
+        return this;
       },
       
       unwrap(): never {
@@ -123,11 +121,11 @@ export const Result = {
         return defaultValue;
       },
       
-      isSuccess(): result is never {
+      isSuccess(): this is never {
         return false;
       },
       
-      isFailure(): result is Failure<E> {
+      isFailure(): this is Failure<E> {
         return true;
       },
       
@@ -145,11 +143,9 @@ export const Result = {
         } catch (error) {
           console.warn('Error in tapError function:', error);
         }
-        return result;
+        return this;
       }
     };
-    
-    return result;
   },
 
   /**

@@ -55,8 +55,8 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
   constructor(config: ErrorAwareServiceConfig) {
     super(config);
     
-    // Fixed: Proper object merging without duplicate definitions
-    this.errorConfig = {
+    // Define default error handling configuration
+    const defaultErrorHandlingConfig = {
       enableRetry: true,
       maxRetries: 3,
       enableCircuitBreaker: true,
@@ -68,7 +68,11 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
         ErrorCategory.RATE_LIMIT,
         ErrorCategory.EXTERNAL_SERVICE
       ],
-      // Merge user-provided config, overriding defaults
+    };
+
+    // Merge default config with user-provided config
+    this.errorConfig = {
+      ...defaultErrorHandlingConfig,
       ...(config.errorHandling || {}),
     };
 
