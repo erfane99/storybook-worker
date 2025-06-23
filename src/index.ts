@@ -75,7 +75,7 @@ app.listen(config.port, () => {
   console.log(`📈 Metrics endpoint: http://localhost:${config.port}/metrics`);
 });
 
-console.log('🚀 StoryCanvas Job Worker Starting with Clean Architecture...');
+console.log('🚀 StoryCanvas Job Worker Starting with Production Architecture...');
 console.log(`📊 Environment: ${config.environment}`);
 console.log(`⚙️ Config:`, config);
 
@@ -87,16 +87,16 @@ const stats: JobStats = {
   lastProcessedAt: null,
 };
 
-// Dynamic import function for clean architecture job processor
-async function loadJobModules() {
+// Dynamic import function for production job processor
+async function loadJobProcessor() {
   try {
-    const jobProcessorModule = await import('./lib/background-jobs/job-processor-clean-architecture.js');
+    const jobProcessorModule = await import('./lib/background-jobs/job-processor.js');
     
     return {
-      jobProcessor: jobProcessorModule.cleanArchitectureJobProcessor || jobProcessorModule.default
+      jobProcessor: jobProcessorModule.productionJobProcessor || jobProcessorModule.default
     };
   } catch (error) {
-    console.error('❌ Failed to load clean architecture job processing modules:', error);
+    console.error('❌ Failed to load production job processor:', error);
     throw error;
   }
 }
@@ -104,11 +104,11 @@ async function loadJobModules() {
 // Validate job system with enhanced service container
 async function validateJobSystem(): Promise<boolean> {
   try {
-    const { jobProcessor } = await loadJobModules();
+    const { jobProcessor } = await loadJobProcessor();
     
     // Basic validation that modules loaded
     if (!jobProcessor) {
-      console.error('❌ Clean architecture job processor not properly loaded');
+      console.error('❌ Production job processor not properly loaded');
       return false;
     }
 
@@ -116,18 +116,18 @@ async function validateJobSystem(): Promise<boolean> {
     const isProcessorHealthy = jobProcessor.isHealthy();
     
     if (!isProcessorHealthy) {
-      console.warn('⚠️ Clean architecture job processor not fully healthy (some services may be unavailable)');
+      console.warn('⚠️ Production job processor not fully healthy (some services may be unavailable)');
     }
 
     // Worker can start with partial functionality (graceful degradation)
-    console.log('✅ Clean architecture job processing modules loaded with Interface Segregation Principle');
+    console.log('✅ Production job processing system loaded with Enhanced Service Architecture');
     if (!isProcessorHealthy) {
       console.warn('⚠️ Worker starting with limited functionality - some services unavailable');
     }
     
     return true;
   } catch (error) {
-    console.error('❌ Failed to validate clean architecture job processing modules:', error);
+    console.error('❌ Failed to validate production job processing system:', error);
     return false;
   }
 }
@@ -137,16 +137,16 @@ async function processJobs(): Promise<void> {
   try {
     console.log('🔄 Worker: Scanning for pending jobs using enhanced service container...');
     
-    const { jobProcessor } = await loadJobModules();
+    const { jobProcessor } = await loadJobProcessor();
     
     // Check if job processor is available
     const isHealthy = jobProcessor.isHealthy();
     if (!isHealthy) {
-      console.warn('⚠️ Worker: Clean architecture job processor not healthy, skipping job scan');
+      console.warn('⚠️ Worker: Production job processor not healthy, skipping job scan');
       return;
     }
     
-    // Process jobs using clean architecture
+    // Process jobs using production architecture
     const processedAny = await jobProcessor.processNextJobStep();
     
     if (!processedAny) {
@@ -173,7 +173,7 @@ async function processJobs(): Promise<void> {
 // Initialize worker with enhanced service registry
 async function initializeWorker(): Promise<void> {
   try {
-    console.log('🔧 Initializing job worker with Enhanced Service Registry and Interface Segregation Principle...');
+    console.log('🔧 Initializing job worker with Enhanced Service Registry and Production Architecture...');
     
     // Register all services with the enhanced container
     EnhancedServiceRegistry.registerServices();
@@ -206,7 +206,7 @@ async function initializeWorker(): Promise<void> {
     }, config.initialScanDelay);
     
     const mode = envConfig.isDevelopment ? 'development' : 'production';
-    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode with Clean Architecture and Interface Segregation Principle`);
+    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode with Production Architecture`);
     
   } catch (error: any) {
     console.error('❌ Failed to initialize worker:', error.message);
