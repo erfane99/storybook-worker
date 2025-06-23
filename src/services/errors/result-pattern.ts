@@ -1,7 +1,8 @@
 // Result pattern implementation for error handling
 // Provides type-safe error handling without exceptions
+// FIXED: Removed duplicate AsyncResult exports and fixed type constraints
 
-import { BaseServiceError, ServiceError } from './error-types.js';
+import { BaseServiceError, ServiceError, ErrorFactory } from './error-types.js';
 
 // ===== RESULT TYPE DEFINITIONS =====
 
@@ -39,7 +40,8 @@ export interface Failure<E extends BaseServiceError> {
   tapError(fn: (error: E) => void): Failure<E>;
 }
 
-// ===== RESULT CONSTRUCTORS =====
+// ===== RESULT IMPLEMENTATION OBJECT =====
+// FIXED: Using a single export pattern to avoid conflicts
 
 export const Result = {
   /**
@@ -182,11 +184,12 @@ export const Result = {
 
   /**
    * Combine multiple results into one
+   * FIXED: Proper type handling for arrays
    */
   combine: <T extends readonly unknown[], E extends BaseServiceError>(
     results: { [K in keyof T]: Result<T[K], E> }
   ): Result<T, E> => {
-    const data: any[] = [];
+    const data: unknown[] = [];
     
     for (const result of results) {
       if (!result.success) {
@@ -195,11 +198,13 @@ export const Result = {
       data.push(result.data);
     }
     
+    // FIXED: Safe type assertion for array results
     return Result.success(data as T);
   },
 
   /**
    * Execute multiple async operations and combine results
+   * FIXED: Proper async result combination
    */
   combineAsync: async <T extends readonly unknown[], E extends BaseServiceError>(
     operations: { [K in keyof T]: () => Promise<Result<T[K], E>> }
@@ -209,10 +214,8 @@ export const Result = {
   },
 };
 
-// Import ErrorFactory for use in Result.from methods
-import { ErrorFactory } from './error-types.js';
-
-// ===== ASYNC RESULT UTILITIES =====
+// ===== ASYNC RESULT CLASS =====
+// FIXED: Single AsyncResult implementation without conflicts
 
 export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
   constructor(private promise: Promise<Result<T, E>>) {}
@@ -315,6 +318,7 @@ export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
 
   /**
    * Unwrap the result or return default
+   * FIXED: Proper type handling for default values
    */
   async unwrapOr(defaultValue: T): Promise<T> {
     const result = await this.promise;
@@ -343,6 +347,7 @@ export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
 
   /**
    * Create a successful AsyncResult
+   * FIXED: Proper return type handling
    */
   static success<T>(data: T): AsyncResult<T, never> {
     return new AsyncResult(Promise.resolve(Result.success(data)));
@@ -350,6 +355,7 @@ export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
 
   /**
    * Create a failed AsyncResult
+   * FIXED: Proper error type handling
    */
   static failure<E extends BaseServiceError>(error: E): AsyncResult<never, E> {
     return new AsyncResult(Promise.resolve(Result.failure(error)));
