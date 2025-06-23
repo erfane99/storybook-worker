@@ -161,8 +161,7 @@ export {
 } from '../base/error-aware-base-service.js';
 
 // ===== CONVENIENCE VALUE EXPORTS =====
-// Re-export the base class for instanceof checks
-export { BaseServiceError, ErrorSeverity } from './error-types.js';
+// Note: BaseServiceError and ErrorSeverity are already exported above in the value exports section
 
 // ===== UTILITY FUNCTIONS =====
 // FIXED: Proper type imports and local value imports
