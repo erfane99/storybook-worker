@@ -6,6 +6,7 @@ import { environmentManager } from './lib/config/environment.js';
 import { EnhancedServiceRegistry } from './services/registry/enhanced-service-registry.js';
 import { enhancedServiceContainer } from './services/container/enhanced-service-container.js';
 import { SERVICE_TOKENS } from './services/interfaces/service-contracts.js';
+import { StartupValidator } from './validation/index.js';
 
 // Environment configuration with graceful degradation
 const envConfig = environmentManager.getConfig();
@@ -21,6 +22,10 @@ app.get('/health', async (_req, res) => {
   const healthStatus = environmentManager.getHealthStatus();
   const serviceHealth = await EnhancedServiceRegistry.getServiceHealth();
   const systemHealth = await EnhancedServiceRegistry.getSystemHealth();
+  
+  // Get startup validation status
+  const startupValidator = StartupValidator.getInstance();
+  const validationResult = startupValidator.getLastValidationResult();
   
   const response: HealthResponse = {
     status: serviceHealth.overall === 'healthy' ? 'healthy' : 'unhealthy',
@@ -47,6 +52,12 @@ app.get('/health', async (_req, res) => {
     configuration: healthStatus.configuration,
     containerStats: EnhancedServiceRegistry.getContainerStats(),
     systemHealth: systemHealth,
+    validation: {
+      ready: startupValidator.isSystemReady(),
+      warnings: startupValidator.getSystemWarnings(),
+      errors: startupValidator.getSystemErrors(),
+      lastValidation: validationResult?.report.timestamp,
+    },
   });
 });
 
@@ -68,11 +79,32 @@ app.get('/metrics', async (_req, res) => {
   });
 });
 
+// Validation endpoint
+app.get('/validate', async (_req, res) => {
+  try {
+    const startupValidator = StartupValidator.getInstance();
+    const result = await startupValidator.validateStartup();
+    
+    res.json({
+      success: result.ready,
+      validation: result,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // Start health server
 app.listen(config.port, () => {
   console.log(`🏥 Worker health server running on port ${config.port}`);
   console.log(`📊 Health endpoint: http://localhost:${config.port}/health`);
   console.log(`📈 Metrics endpoint: http://localhost:${config.port}/metrics`);
+  console.log(`🔍 Validation endpoint: http://localhost:${config.port}/validate`);
 });
 
 console.log('🚀 StoryCanvas Job Worker Starting with Production Architecture...');
@@ -170,7 +202,7 @@ async function processJobs(): Promise<void> {
   }
 }
 
-// Initialize worker with enhanced service registry
+// Initialize worker with enhanced service registry and validation
 async function initializeWorker(): Promise<void> {
   try {
     console.log('🔧 Initializing job worker with Enhanced Service Registry and Production Architecture...');
@@ -180,6 +212,33 @@ async function initializeWorker(): Promise<void> {
     
     // Initialize core services
     await EnhancedServiceRegistry.initializeCoreServices();
+    
+    // Run startup validation
+    console.log('🔍 Running startup validation...');
+    const startupValidator = StartupValidator.getInstance();
+    const validationResult = await startupValidator.validateStartup({
+      enableRollback: true,
+      criticalFailureThreshold: 1,
+      timeoutMs: 120000, // 2 minutes
+    });
+    
+    if (!validationResult.ready) {
+      console.error('❌ Startup validation failed - system not ready for production');
+      console.error('Errors:', validationResult.errors);
+      
+      if (validationResult.report.rollbackRequired) {
+        console.log('🔄 Rollback recommended - disposing services...');
+        await EnhancedServiceRegistry.dispose();
+        throw new Error('Startup validation failed - rollback executed');
+      }
+      
+      console.warn('⚠️ Continuing with degraded functionality...');
+    } else {
+      console.log('✅ Startup validation passed - system ready for production');
+    }
+    
+    // Start continuous monitoring
+    await startupValidator.startContinuousMonitoring(300000); // Every 5 minutes
     
     // Validate job processing system
     const isValid = await validateJobSystem();
@@ -210,7 +269,15 @@ async function initializeWorker(): Promise<void> {
     
   } catch (error: any) {
     console.error('❌ Failed to initialize worker:', error.message);
-    console.warn('⚠️ Worker will continue with limited functionality');
+    
+    // Attempt graceful shutdown
+    try {
+      await EnhancedServiceRegistry.dispose();
+    } catch (disposeError) {
+      console.error('❌ Failed to dispose services during error handling:', disposeError);
+    }
+    
+    throw error;
   }
 }
 
@@ -241,5 +308,5 @@ process.on('unhandledRejection', (reason, promise) => {
 // Start the worker
 initializeWorker().catch(error => {
   console.error('❌ Failed to start worker:', error.message);
-  console.warn('⚠️ Worker will attempt to continue with limited functionality');
+  process.exit(1);
 });
