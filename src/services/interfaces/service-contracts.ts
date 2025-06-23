@@ -1,5 +1,10 @@
 // Service contracts implementing Interface Segregation Principle
 // Separates different concerns into focused interfaces
+// FIXED: Added proper imports for JobData, JobType, JobStatus
+
+// ===== IMPORT JOB TYPES =====
+// FIXED: Import the missing job-related types
+import { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types.js';
 
 // ===== HEALTH MONITORING INTERFACES =====
 
@@ -68,7 +73,7 @@ export interface IServiceLifecycle {
 // ===== BUSINESS OPERATION INTERFACES =====
 
 export interface IDatabaseOperations {
-  // Job Management
+  // Job Management - FIXED: Now properly typed with imported JobData
   getPendingJobs(filter?: JobFilter, limit?: number): Promise<JobData[]>;
   getJobStatus(jobId: string): Promise<JobData | null>;
   updateJobProgress(jobId: string, progress: number, currentStep?: string): Promise<boolean>;
@@ -109,7 +114,7 @@ export interface IStorageOperations {
 }
 
 export interface IJobOperations {
-  // Job Lifecycle
+  // Job Lifecycle - FIXED: Now properly typed with imported JobData and JobType
   getPendingJobs(filter?: JobFilter, limit?: number): Promise<JobData[]>;
   getJobStatus(jobId: string): Promise<JobData | null>;
   updateJobProgress(jobId: string, progress: number, currentStep?: string): Promise<boolean>;
@@ -117,7 +122,7 @@ export interface IJobOperations {
   markJobFailed(jobId: string, errorMessage: string, shouldRetry?: boolean): Promise<boolean>;
   cancelJob(jobId: string, reason?: string): Promise<boolean>;
   
-  // Metrics and Monitoring
+  // Metrics and Monitoring - FIXED: Now properly typed with imported JobType and JobMetrics
   getJobMetrics(jobType?: JobType): Promise<JobMetrics>;
 }
 
@@ -250,6 +255,7 @@ export interface ServiceOptions {
   healthCheck?: boolean;
 }
 
+// FIXED: JobFilter now properly typed with imported JobType and JobStatus
 export interface JobFilter {
   user_id?: string;
   type?: JobType;
@@ -340,16 +346,6 @@ export interface UserContext {
   permissions: string[];
 }
 
-export interface JobMetrics {
-  totalJobs: number;
-  pendingJobs: number;
-  processingJobs: number;
-  completedJobs: number;
-  failedJobs: number;
-  averageProcessingTime: number;
-  successRate: number;
-}
-
 export interface ServiceConfig {
   name: string;
   timeout: number;
@@ -364,9 +360,6 @@ export interface RetryConfig {
   backoffMultiplier: number;
   maxDelay: number;
 }
-
-// Import types from existing files
-export type { JobData, JobType, JobStatus } from '../../lib/types.js';
 
 // Service Token Constants
 export const SERVICE_TOKENS = {
