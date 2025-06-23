@@ -11,12 +11,32 @@ export interface Success<T> {
   readonly success: true;
   readonly data: T;
   readonly error?: never;
+  
+  // Method signatures for Success
+  map<U>(fn: (data: T) => U): Result<U, never>;
+  flatMap<U, E extends BaseServiceError>(fn: (data: T) => Result<U, E>): Result<U, E>;
+  tap(fn: (data: T) => void): Success<T>;
+  unwrap(): T;
+  unwrapOr(defaultValue: T): T;
+  isSuccess(): this is Success<T>;
+  isFailure(): this is never;
 }
 
 export interface Failure<E extends BaseServiceError> {
   readonly success: false;
   readonly data?: never;
   readonly error: E;
+  
+  // Method signatures for Failure
+  map<U>(fn: (data: never) => U): Failure<E>;
+  flatMap<U, E2 extends BaseServiceError>(fn: (data: never) => Result<U, E2>): Failure<E>;
+  tap(fn: (data: never) => void): Failure<E>;
+  unwrap(): never;
+  unwrapOr<T>(defaultValue: T): T;
+  isSuccess(): this is never;
+  isFailure(): this is Failure<E>;
+  mapError<E2 extends BaseServiceError>(fn: (error: E) => E2): Failure<E2>;
+  tapError(fn: (error: E) => void): Failure<E>;
 }
 
 // ===== RESULT CONSTRUCTORS =====
@@ -25,18 +45,112 @@ export const Result = {
   /**
    * Create a successful result
    */
-  success: <T>(data: T): Success<T> => ({
-    success: true,
-    data,
-  }) as Success<T>,
+  success: <T>(data: T): Success<T> => {
+    const result = {
+      success: true as const,
+      data,
+      
+      map<U>(fn: (data: T) => U): Result<U, never> {
+        try {
+          return Result.success(fn(data));
+        } catch (error) {
+          return Result.failure(ErrorFactory.fromUnknown(error) as never);
+        }
+      },
+      
+      flatMap<U, E extends BaseServiceError>(fn: (data: T) => Result<U, E>): Result<U, E> {
+        try {
+          return fn(data);
+        } catch (error) {
+          return Result.failure(ErrorFactory.fromUnknown(error) as E);
+        }
+      },
+      
+      tap(fn: (data: T) => void): Success<T> {
+        try {
+          fn(data);
+        } catch (error) {
+          console.warn('Error in tap function:', error);
+        }
+        return result;
+      },
+      
+      unwrap(): T {
+        return data;
+      },
+      
+      unwrapOr(defaultValue: T): T {
+        return data;
+      },
+      
+      isSuccess(): result is Success<T> {
+        return true;
+      },
+      
+      isFailure(): result is never {
+        return false;
+      }
+    };
+    
+    return result;
+  },
 
   /**
    * Create a failure result
    */
-  failure: <E extends BaseServiceError>(error: E): Failure<E> => ({
-    success: false,
-    error,
-  }) as Failure<E>,
+  failure: <E extends BaseServiceError>(error: E): Failure<E> => {
+    const result = {
+      success: false as const,
+      error,
+      
+      map<U>(fn: (data: never) => U): Failure<E> {
+        return result;
+      },
+      
+      flatMap<U, E2 extends BaseServiceError>(fn: (data: never) => Result<U, E2>): Failure<E> {
+        return result;
+      },
+      
+      tap(fn: (data: never) => void): Failure<E> {
+        return result;
+      },
+      
+      unwrap(): never {
+        throw error;
+      },
+      
+      unwrapOr<T>(defaultValue: T): T {
+        return defaultValue;
+      },
+      
+      isSuccess(): result is never {
+        return false;
+      },
+      
+      isFailure(): result is Failure<E> {
+        return true;
+      },
+      
+      mapError<E2 extends BaseServiceError>(fn: (error: E) => E2): Failure<E2> {
+        try {
+          return Result.failure(fn(error));
+        } catch (error) {
+          return Result.failure(ErrorFactory.fromUnknown(error) as E2);
+        }
+      },
+      
+      tapError(fn: (error: E) => void): Failure<E> {
+        try {
+          fn(error);
+        } catch (error) {
+          console.warn('Error in tapError function:', error);
+        }
+        return result;
+      }
+    };
+    
+    return result;
+  },
 
   /**
    * Wrap a function that might throw into a Result
@@ -101,222 +215,6 @@ export const Result = {
 
 // Import ErrorFactory for use in Result.from methods
 import { ErrorFactory } from './error-types.js';
-
-// ===== RESULT UTILITY METHODS =====
-
-declare module './result-pattern' {
-  interface Success<T> {
-    /**
-     * Transform the success value
-     */
-    map<U>(fn: (data: T) => U): Result<U, never>;
-    
-    /**
-     * Chain another operation that returns a Result
-     */
-    flatMap<U, E extends BaseServiceError>(fn: (data: T) => Result<U, E>): Result<U, E>;
-    
-    /**
-     * Execute a side effect if successful
-     */
-    tap(fn: (data: T) => void): Success<T>;
-    
-    /**
-     * Get the value or throw the error
-     */
-    unwrap(): T;
-    
-    /**
-     * Get the value or return a default
-     */
-    unwrapOr(defaultValue: T): T;
-    
-    /**
-     * Check if result is success
-     */
-    isSuccess(): this is Success<T>;
-    
-    /**
-     * Check if result is failure
-     */
-    isFailure(): this is never;
-  }
-
-  interface Failure<E extends BaseServiceError> {
-    /**
-     * Transform the success value (no-op for failures)
-     */
-    map<U>(fn: (data: never) => U): Failure<E>;
-    
-    /**
-     * Chain another operation (no-op for failures)
-     */
-    flatMap<U, E2 extends BaseServiceError>(fn: (data: never) => Result<U, E2>): Failure<E>;
-    
-    /**
-     * Execute a side effect if successful (no-op for failures)
-     */
-    tap(fn: (data: never) => void): Failure<E>;
-    
-    /**
-     * Get the value or throw the error
-     */
-    unwrap(): never;
-    
-    /**
-     * Get the value or return a default
-     */
-    unwrapOr<T>(defaultValue: T): T;
-    
-    /**
-     * Check if result is success
-     */
-    isSuccess(): this is never;
-    
-    /**
-     * Check if result is failure
-     */
-    isFailure(): this is Failure<E>;
-    
-    /**
-     * Transform the error
-     */
-    mapError<E2 extends BaseServiceError>(fn: (error: E) => E2): Failure<E2>;
-    
-    /**
-     * Execute a side effect on error
-     */
-    tapError(fn: (error: E) => void): Failure<E>;
-  }
-}
-
-// ===== RESULT PROTOTYPE EXTENSIONS =====
-
-// Success methods
-Object.defineProperty(Object.prototype, 'map', {
-  value: function<T, U>(this: Success<T>, fn: (data: T) => U): Result<U, never> {
-    if (this.success) {
-      try {
-        return Result.success(fn(this.data));
-      } catch (error) {
-        return Result.failure(ErrorFactory.fromUnknown(error) as never);
-      }
-    }
-    return this as any;
-  },
-  enumerable: false,
-  configurable: true,
-});
-
-Object.defineProperty(Object.prototype, 'flatMap', {
-  value: function<T, U, E extends BaseServiceError>(
-    this: Result<T, E>, 
-    fn: (data: T) => Result<U, E>
-  ): Result<U, E> {
-    if (this.success) {
-      try {
-        return fn(this.data);
-      } catch (error) {
-        return Result.failure(ErrorFactory.fromUnknown(error) as E);
-      }
-    }
-    return this as any;
-  },
-  enumerable: false,
-  configurable: true,
-});
-
-Object.defineProperty(Object.prototype, 'tap', {
-  value: function<T>(this: Result<T, any>, fn: (data: T) => void): Result<T, any> {
-    if (this.success) {
-      try {
-        fn(this.data);
-      } catch (error) {
-        // Ignore errors in tap
-        console.warn('Error in tap function:', error);
-      }
-    }
-    return this;
-  },
-  enumerable: false,
-  configurable: true,
-});
-
-Object.defineProperty(Object.prototype, 'unwrap', {
-  value: function<T>(this: Result<T, any>): T {
-    if (this.success) {
-      return this.data;
-    }
-    throw this.error;
-  },
-  enumerable: false,
-  configurable: true,
-});
-
-Object.defineProperty(Object.prototype, 'unwrapOr', {
-  value: function<T>(this: Result<T, any>, defaultValue: T): T {
-    if (this.success) {
-      return this.data;
-    }
-    return defaultValue;
-  },
-  enumerable: false,
-  configurable: true,
-});
-
-Object.defineProperty(Object.prototype, 'isSuccess', {
-  value: function(this: Result<any, any>): boolean {
-    return this.success;
-  },
-  enumerable: false,
-  configurable: true,
-});
-
-Object.defineProperty(Object.prototype, 'isFailure', {
-  value: function(this: Result<any, any>): boolean {
-    return !this.success;
-  },
-  enumerable: false,
-  configurable: true,
-});
-
-// Failure-specific methods
-Object.defineProperty(Object.prototype, 'mapError', {
-  value: function<E extends BaseServiceError, E2 extends BaseServiceError>(
-    this: Failure<E>, 
-    fn: (error: E) => E2
-  ): Failure<E2> {
-    if (!this.success) {
-      try {
-        return Result.failure(fn(this.error));
-      } catch (error) {
-        return Result.failure(ErrorFactory.fromUnknown(error) as E2);
-      }
-    }
-    return this as any;
-  },
-  enumerable: false,
-  configurable: true,
-});
-
-Object.defineProperty(Object.prototype, 'tapError', {
-  value: function<E extends BaseServiceError>(
-    this: Result<any, E>, 
-    fn: (error: E) => void
-  ): Result<any, E> {
-    if (!this.success) {
-      try {
-        fn(this.error);
-      } catch (error) {
-        // Ignore errors in tapError
-        console.warn('Error in tapError function:', error);
-      }
-    }
-    return this;
-  },
-  enumerable: false,
-  configurable: true,
-});
 
 // ===== ASYNC RESULT UTILITIES =====
 
@@ -426,42 +324,38 @@ export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
     const result = await this.promise;
     return result.unwrapOr(defaultValue);
   }
-}
 
-// ===== ASYNC RESULT CONSTRUCTOR =====
-
-export const AsyncResult = {
   /**
    * Create an AsyncResult from a Promise<Result>
    */
-  from: <T, E extends BaseServiceError = ServiceError>(
+  static from<T, E extends BaseServiceError = ServiceError>(
     promise: Promise<Result<T, E>>
-  ): AsyncResult<T, E> => {
+  ): AsyncResult<T, E> {
     return new AsyncResult(promise);
-  },
+  }
 
   /**
    * Create an AsyncResult from a function that returns a Promise
    */
-  fromAsync: <T, E extends BaseServiceError = ServiceError>(
+  static fromAsync<T, E extends BaseServiceError = ServiceError>(
     fn: () => Promise<T>,
     errorContext?: { service?: string; operation?: string; correlationId?: string }
-  ): AsyncResult<T, E> => {
+  ): AsyncResult<T, E> {
     const promise = Result.fromAsync(fn, errorContext);
     return new AsyncResult(promise);
-  },
+  }
 
   /**
    * Create a successful AsyncResult
    */
-  success: <T>(data: T): AsyncResult<T, never> => {
+  static success<T>(data: T): AsyncResult<T, never> {
     return new AsyncResult(Promise.resolve(Result.success(data)));
-  },
+  }
 
   /**
    * Create a failed AsyncResult
    */
-  failure: <E extends BaseServiceError>(error: E): AsyncResult<never, E> => {
+  static failure<E extends BaseServiceError>(error: E): AsyncResult<never, E> {
     return new AsyncResult(Promise.resolve(Result.failure(error)));
-  },
-};
+  }
+}

@@ -38,7 +38,7 @@ export interface ServiceConfiguration {
   };
 }
 
-class ServiceConfigManager {
+export class ServiceConfigManager {
   private config: ServiceConfiguration;
 
   constructor() {
@@ -92,6 +92,14 @@ class ServiceConfigManager {
         rateLimiting: process.env.ENABLE_RATE_LIMITING !== 'false',
       },
     };
+  }
+
+  getName(): string {
+    return 'ServiceConfigManager';
+  }
+
+  isHealthy(): boolean {
+    return true;
   }
 
   getConfiguration(): ServiceConfiguration {

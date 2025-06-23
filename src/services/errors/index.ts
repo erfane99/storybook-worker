@@ -5,12 +5,15 @@
 import { StructuredError } from './error-types.js';
 
 // ===== ERROR TYPES =====
-export {
+export type {
   BaseServiceError,
   ErrorCategory,
   ErrorSeverity,
   StructuredError,
   ServiceError,
+} from './error-types.js';
+
+export {
   ErrorFactory,
   
   // Database Errors
@@ -61,17 +64,23 @@ export {
 } from './error-types.js';
 
 // ===== RESULT PATTERN =====
-export {
+export type {
   Result,
   Success,
   Failure,
+} from './result-pattern.js';
+
+export {
   AsyncResult,
 } from './result-pattern.js';
 
 // ===== ERROR CORRELATION =====
-export {
+export type {
   CorrelationContext,
   ErrorCorrelation,
+} from './error-correlation.js';
+
+export {
   ErrorCorrelationManager,
   errorCorrelationManager,
   withCorrelation,
@@ -83,9 +92,12 @@ export {
 } from './error-correlation.js';
 
 // ===== ERROR HANDLER =====
-export {
+export type {
   ErrorHandlerConfig,
   ErrorHandlerMetrics,
+} from './error-handler.js';
+
+export {
   CentralizedErrorHandler,
   centralizedErrorHandler,
   handleError,
@@ -95,7 +107,7 @@ export {
 } from './error-handler.js';
 
 // ===== ENHANCED CONTRACTS =====
-export {
+export type {
   IEnhancedServiceHealth,
   IEnhancedServiceMetrics,
   IEnhancedDatabaseOperations,
@@ -117,8 +129,11 @@ export {
 } from '../interfaces/enhanced-service-contracts.js';
 
 // ===== ERROR-AWARE BASE SERVICE =====
-export {
+export type {
   ErrorAwareServiceConfig,
+} from '../base/error-aware-base-service.js';
+
+export {
   ErrorAwareBaseService,
 } from '../base/error-aware-base-service.js';
 
@@ -308,3 +323,11 @@ export const ERROR_HANDLING_BEST_PRACTICES = {
     }
   `,
 } as const;
+
+// Re-export Result for convenience
+import { Result } from './result-pattern.js';
+export { Result };
+
+// Re-export error types for convenience
+import { BaseServiceError, ErrorSeverity } from './error-types.js';
+export { BaseServiceError, ErrorSeverity };

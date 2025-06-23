@@ -144,6 +144,17 @@ export interface JobUpdateData {
   retry_count?: number; // ✅ This was missing - causing the TypeScript error!
 }
 
+// Job metrics interface
+export interface JobMetrics {
+  totalJobs: number;
+  pendingJobs: number;
+  processingJobs: number;
+  completedJobs: number;
+  failedJobs: number;
+  averageProcessingTime: number;
+  successRate: number;
+}
+
 // ENHANCED: Service interface types with comic book support
 export interface StorybookCreationOptions {
   title: string;

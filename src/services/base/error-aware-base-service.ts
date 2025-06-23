@@ -21,7 +21,7 @@ import {
   CorrelationContext 
 } from '../errors/error-correlation.js';
 import { createServiceErrorHandler } from '../errors/error-handler.js';
-import { ServiceConfig, ServiceHealthStatus, ServiceMetrics } from '../interfaces/service-contracts.js';
+import { ServiceConfig, ServiceHealthStatus, ServiceMetrics, RetryConfig } from '../interfaces/service-contracts.js';
 
 // ===== ERROR-AWARE SERVICE CONFIGURATION =====
 
@@ -55,6 +55,7 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
   constructor(config: ErrorAwareServiceConfig) {
     super(config);
     
+    // Fixed: Proper object merging without duplicate definitions
     this.errorConfig = {
       enableRetry: true,
       maxRetries: 3,
@@ -67,7 +68,8 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
         ErrorCategory.RATE_LIMIT,
         ErrorCategory.EXTERNAL_SERVICE
       ],
-      ...config.errorHandling,
+      // Merge user-provided config, overriding defaults
+      ...(config.errorHandling || {}),
     };
 
     this.errorHandler = createServiceErrorHandler(this.getName());
@@ -171,12 +173,12 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
   }
 
   /**
-   * Execute operation with retry logic
+   * Execute operation with retry logic - Fixed signature to match base class
    */
   protected async withRetry<T>(
     operation: () => Promise<T>,
+    retryConfig: RetryConfig,
     operationName: string,
-    maxAttempts?: number,
     metadata?: Record<string, any>
   ): Promise<Result<T, ServiceError>> {
     return this.errorHandler.withRetry(
@@ -184,7 +186,7 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
       {
         service: this.getName(),
         operation: operationName,
-        maxAttempts: maxAttempts || this.errorConfig.maxRetries,
+        maxAttempts: retryConfig.attempts,
         metadata,
       }
     );
@@ -238,7 +240,13 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
     }
 
     if (enableRetry) {
-      return this.withRetry(operation, operationName, maxRetries, metadata);
+      const retryConfig: RetryConfig = {
+        attempts: maxRetries,
+        delay: 1000,
+        backoffMultiplier: 2,
+        maxDelay: 30000,
+      };
+      return this.withRetry(operation, retryConfig, operationName, metadata);
     } else {
       return this.withErrorHandling(operation, operationName, metadata);
     }
@@ -255,7 +263,7 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
     metadata?: Record<string, any>
   ): AsyncResult<T, ServiceError> {
     const promise = this.withErrorHandling(operation, operationName, metadata);
-    return AsyncResult.from(promise);
+    return new AsyncResult(promise);
   }
 
   /**
@@ -267,8 +275,14 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
     maxAttempts?: number,
     metadata?: Record<string, any>
   ): AsyncResult<T, ServiceError> {
-    const promise = this.withRetry(operation, operationName, maxAttempts, metadata);
-    return AsyncResult.from(promise);
+    const retryConfig: RetryConfig = {
+      attempts: maxAttempts || this.errorConfig.maxRetries,
+      delay: 1000,
+      backoffMultiplier: 2,
+      maxDelay: 30000,
+    };
+    const promise = this.withRetry(operation, retryConfig, operationName, metadata);
+    return new AsyncResult(promise);
   }
 
   // ===== ERROR TRACKING =====

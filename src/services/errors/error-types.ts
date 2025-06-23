@@ -537,12 +537,13 @@ export class ErrorFactory {
   };
 
   /**
-   * Create container-specific errors
+   * Create container-specific errors - FIXED: Added missing methods
    */
   static container = {
     serviceNotRegistered: (token: string, context = {}) => new ServiceNotRegisteredError(`Service not registered: ${token}`, { service: 'container', ...context }),
     serviceInitialization: (token: string, cause: Error, context = {}) => new ServiceInitializationError(`Failed to initialize service: ${token}`, { service: 'container', cause, ...context }),
     circularDependency: (token: string, context = {}) => new CircularDependencyError(`Circular dependency detected: ${token}`, { service: 'container', ...context }),
     containerDisposed: (context = {}) => new ContainerDisposedError('Container has been disposed', { service: 'container', ...context }),
+    circuitBreakerOpen: (message: string, context = {}) => new CircuitBreakerOpenError(message, { service: 'container', ...context }),
   };
 }
