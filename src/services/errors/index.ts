@@ -2,6 +2,12 @@
 // Central export point for all error handling functionality
 // FIXED: Proper separation of type and value exports for isolatedModules
 
+// ===== INTERNAL TYPE IMPORTS =====
+// Import types for use in function signatures
+import type { StructuredError, ServiceError } from './error-types.js';
+import type { Result } from './result-pattern.js';
+import type { AsyncResult } from './result-pattern.js';
+
 // ===== TYPE-ONLY EXPORTS =====
 // Using export type for all TypeScript types to satisfy isolatedModules
 
@@ -159,7 +165,7 @@ export {
 export { BaseServiceError, ErrorSeverity } from './error-types.js';
 
 // ===== UTILITY FUNCTIONS =====
-// FIXED: Import dependencies locally to avoid circular dependencies
+// FIXED: Proper type imports and local value imports
 
 /**
  * Create a standardized error for service operations
@@ -217,6 +223,7 @@ export function getErrorSeverityLevel(error: unknown): number {
 
 /**
  * Convert any error to a structured format
+ * FIXED: Now uses proper type import for return type
  */
 export function toStructuredError(error: unknown): StructuredError {
   // Import locally to avoid circular dependency
