@@ -1,5 +1,6 @@
 // Error-aware base service extending Enhanced Base Service with comprehensive error handling
 // Integrates Result pattern and error correlation with existing Interface Segregation
+// FIXED: Method signature alignment and proper error handling integration
 
 import { EnhancedBaseService } from './enhanced-base-service.js';
 import { 
@@ -26,13 +27,13 @@ import { ServiceConfig, ServiceHealthStatus, ServiceMetrics, RetryConfig } from 
 // ===== ERROR-AWARE SERVICE CONFIGURATION =====
 
 export interface ErrorAwareServiceConfig extends ServiceConfig {
-  errorHandling: {
-    enableRetry: boolean;
-    maxRetries: number;
-    enableCircuitBreaker: boolean;
-    enableCorrelation: boolean;
-    enableMetrics: boolean;
-    retryableCategories: ErrorCategory[];
+  errorHandling?: {
+    enableRetry?: boolean;
+    maxRetries?: number;
+    enableCircuitBreaker?: boolean;
+    enableCorrelation?: boolean;
+    enableMetrics?: boolean;
+    retryableCategories?: ErrorCategory[];
   };
 }
 
@@ -40,7 +41,7 @@ export interface ErrorAwareServiceConfig extends ServiceConfig {
 
 export abstract class ErrorAwareBaseService extends EnhancedBaseService implements IEnhancedServiceHealth, IEnhancedServiceMetrics {
   protected errorHandler: ReturnType<typeof createServiceErrorHandler>;
-  protected errorConfig: ErrorAwareServiceConfig['errorHandling'];
+  protected errorConfig: Required<ErrorAwareServiceConfig['errorHandling']>;
   
   // Error tracking (internal state, exposed through computed properties)
   private errorStats = {
@@ -70,7 +71,7 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
       ],
     };
 
-    // Merge default config with user-provided config
+    // FIXED: Proper config merging without property overwriting
     this.errorConfig = {
       ...defaultErrorHandlingConfig,
       ...(config.errorHandling || {}),
@@ -177,9 +178,35 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
   }
 
   /**
-   * Execute operation with retry logic - Fixed signature to match base class
+   * FIXED: Execute operation with retry logic - Aligned signature to match base class
    */
   protected async withRetry<T>(
+    operation: () => Promise<T>,
+    retryConfig: RetryConfig,
+    operationName: string
+  ): Promise<T> {
+    // Use the error handler's retry mechanism but convert back to throwing for base class compatibility
+    const result = await this.errorHandler.withRetry(
+      operation,
+      {
+        service: this.getName(),
+        operation: operationName,
+        maxAttempts: retryConfig.attempts,
+        metadata: {},
+      }
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw result.error;
+    }
+  }
+
+  /**
+   * Execute operation with retry logic and return Result
+   */
+  protected async withRetryResult<T>(
     operation: () => Promise<T>,
     retryConfig: RetryConfig,
     operationName: string,
@@ -250,7 +277,7 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
         backoffMultiplier: 2,
         maxDelay: 30000,
       };
-      return this.withRetry(operation, retryConfig, operationName, metadata);
+      return this.withRetryResult(operation, retryConfig, operationName, metadata);
     } else {
       return this.withErrorHandling(operation, operationName, metadata);
     }
@@ -267,7 +294,7 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
     metadata?: Record<string, any>
   ): AsyncResult<T, ServiceError> {
     const promise = this.withErrorHandling(operation, operationName, metadata);
-    return new AsyncResult(promise);
+    return AsyncResult.from(promise);
   }
 
   /**
@@ -285,8 +312,8 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
       backoffMultiplier: 2,
       maxDelay: 30000,
     };
-    const promise = this.withRetry(operation, retryConfig, operationName, metadata);
-    return new AsyncResult(promise);
+    const promise = this.withRetryResult(operation, retryConfig, operationName, metadata);
+    return AsyncResult.from(promise);
   }
 
   // ===== ERROR TRACKING =====
