@@ -1,10 +1,13 @@
 // Service contracts implementing Interface Segregation Principle
 // Separates different concerns into focused interfaces
-// FIXED: Added proper imports for JobData, JobType, JobStatus
+// FIXED: Added proper imports and exports for JobData, JobType, JobStatus, JobMetrics
 
-// ===== IMPORT JOB TYPES =====
-// FIXED: Import the missing job-related types
+// ===== IMPORT AND RE-EXPORT JOB TYPES =====
+// FIXED: Import the missing job-related types and re-export them
 import { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types.js';
+
+// Re-export job types so other modules can import them from here
+export { JobData, JobType, JobStatus, JobMetrics };
 
 // ===== HEALTH MONITORING INTERFACES =====
 
