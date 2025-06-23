@@ -1,5 +1,6 @@
 // Comprehensive error type hierarchy for the service layer
 // Integrates with existing Service Registry and Interface Segregation architecture
+// FIXED: Added missing ErrorFactory methods and container-specific errors
 
 // ===== BASE ERROR TYPES =====
 
@@ -111,6 +112,17 @@ export enum ErrorSeverity {
   MEDIUM = 'medium',
   HIGH = 'high',
   CRITICAL = 'critical'
+}
+
+// ===== ERROR CONTEXT =====
+
+export interface ErrorContext {
+  service?: string;
+  operation?: string;
+  correlationId?: string;
+  userId?: string;
+  requestId?: string;
+  metadata?: Record<string, any>;
 }
 
 // ===== STRUCTURED ERROR INTERFACE =====
@@ -348,6 +360,20 @@ export class ContainerDisposedError extends BaseServiceError {
   readonly retryable = false;
 }
 
+export class InvalidTokenError extends BaseServiceError {
+  readonly type = 'INVALID_TOKEN_ERROR';
+  readonly category = ErrorCategory.CONFIGURATION;
+  readonly severity = ErrorSeverity.HIGH;
+  readonly retryable = false;
+}
+
+export class ServiceLifecycleError extends BaseServiceError {
+  readonly type = 'SERVICE_LIFECYCLE_ERROR';
+  readonly category = ErrorCategory.SYSTEM;
+  readonly severity = ErrorSeverity.HIGH;
+  readonly retryable = false;
+}
+
 // ===== CIRCUIT BREAKER ERRORS =====
 
 export class CircuitBreakerOpenError extends BaseServiceError {
@@ -377,6 +403,15 @@ export class UnknownError extends BaseServiceError {
   readonly severity = ErrorSeverity.MEDIUM;
   readonly retryable = false;
 }
+
+// ===== ADDITIONAL TYPE ALIASES =====
+
+export type ValidationError = JobValidationError;
+export type NetworkError = DatabaseConnectionError | AIServiceUnavailableError;
+export type DatabaseError = DatabaseConnectionError | DatabaseQueryError | DatabaseTimeoutError | DatabaseTransactionError;
+export type ExternalServiceError = AIServiceUnavailableError | StorageUploadError | CircuitBreakerOpenError;
+export type BusinessLogicError = JobProcessingError;
+export type ContainerError = ServiceNotRegisteredError | ServiceInitializationError | CircularDependencyError | ContainerDisposedError | InvalidTokenError | ServiceLifecycleError;
 
 // ===== ERROR TYPE UNION =====
 
@@ -408,6 +443,8 @@ export type ServiceError =
   | ServiceInitializationError
   | CircularDependencyError
   | ContainerDisposedError
+  | InvalidTokenError
+  | ServiceLifecycleError
   | CircuitBreakerOpenError
   | SystemError
   | UnknownError;
@@ -537,13 +574,37 @@ export class ErrorFactory {
   };
 
   /**
-   * Create container-specific errors - FIXED: Added missing methods
+   * FIXED: Create container-specific errors - Added missing methods
    */
   static container = {
     serviceNotRegistered: (token: string, context = {}) => new ServiceNotRegisteredError(`Service not registered: ${token}`, { service: 'container', ...context }),
     serviceInitialization: (token: string, cause: Error, context = {}) => new ServiceInitializationError(`Failed to initialize service: ${token}`, { service: 'container', cause, ...context }),
     circularDependency: (token: string, context = {}) => new CircularDependencyError(`Circular dependency detected: ${token}`, { service: 'container', ...context }),
     containerDisposed: (context = {}) => new ContainerDisposedError('Container has been disposed', { service: 'container', ...context }),
+    invalidToken: (token: string, context = {}) => new InvalidTokenError(`Invalid service token: ${token}`, { service: 'container', ...context }),
+    serviceLifecycle: (token: string, phase: string, context = {}) => new ServiceLifecycleError(`Service lifecycle error in ${phase}: ${token}`, { service: 'container', ...context }),
     circuitBreakerOpen: (message: string, context = {}) => new CircuitBreakerOpenError(message, { service: 'container', ...context }),
+  };
+
+  /**
+   * FIXED: Create external service-specific errors - Added missing methods
+   */
+  static external = {
+    circuitBreakerOpen: (context = {}) => new CircuitBreakerOpenError(
+      context.message || 'Circuit breaker is open', 
+      { service: 'external', ...context }
+    ),
+    timeout: (context = {}) => new AITimeoutError(
+      'External service timeout', 
+      { service: 'external', ...context }
+    ),
+    rateLimit: (context = {}) => new AIRateLimitError(
+      'Rate limit exceeded', 
+      { service: 'external', ...context }
+    ),
+    networkError: (context = {}) => new DatabaseConnectionError(
+      'Network error occurred', 
+      { service: 'external', ...context }
+    ),
   };
 }
