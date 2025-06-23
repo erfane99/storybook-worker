@@ -1,6 +1,6 @@
 // Error-aware base service extending Enhanced Base Service with comprehensive error handling
 // Integrates Result pattern and error correlation with existing Interface Segregation
-// FIXED: Method signature alignment and proper error handling integration
+// FIXED: Type safety, proper imports, and configuration handling
 
 import { EnhancedBaseService } from './enhanced-base-service.js';
 import { 
@@ -8,20 +8,21 @@ import {
   IEnhancedServiceMetrics,
   EnhancedServiceOptions 
 } from '../interfaces/enhanced-service-contracts.js';
-import { Result, AsyncResult } from '../errors/result-pattern.js';
+// FIXED: Import Result and AsyncResult as values, not types
+import { Result, AsyncResult } from '../errors/index.js';
 import { 
   BaseServiceError, 
   ServiceError, 
   ErrorFactory,
   ErrorCategory,
   ErrorSeverity 
-} from '../errors/error-types.js';
+} from '../errors/index.js';
 import { 
   createServiceCorrelationContext,
   errorCorrelationManager,
   CorrelationContext 
-} from '../errors/error-correlation.js';
-import { createServiceErrorHandler } from '../errors/error-handler.js';
+} from '../errors/index.js';
+import { createServiceErrorHandler } from '../errors/index.js';
 import { ServiceConfig, ServiceHealthStatus, ServiceMetrics, RetryConfig } from '../interfaces/service-contracts.js';
 
 // ===== ERROR-AWARE SERVICE CONFIGURATION =====
@@ -37,11 +38,22 @@ export interface ErrorAwareServiceConfig extends ServiceConfig {
   };
 }
 
+// FIXED: Proper type for error configuration
+interface RequiredErrorHandlingConfig {
+  enableRetry: boolean;
+  maxRetries: number;
+  enableCircuitBreaker: boolean;
+  enableCorrelation: boolean;
+  enableMetrics: boolean;
+  retryableCategories: ErrorCategory[];
+}
+
 // ===== ERROR-AWARE BASE SERVICE =====
 
 export abstract class ErrorAwareBaseService extends EnhancedBaseService implements IEnhancedServiceHealth, IEnhancedServiceMetrics {
   protected errorHandler: ReturnType<typeof createServiceErrorHandler>;
-  protected errorConfig: Required<ErrorAwareServiceConfig['errorHandling']>;
+  // FIXED: Proper type that's never undefined
+  protected readonly errorConfig: RequiredErrorHandlingConfig;
   
   // Error tracking (internal state, exposed through computed properties)
   private errorStats = {
@@ -57,7 +69,7 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
     super(config);
     
     // Define default error handling configuration
-    const defaultErrorHandlingConfig = {
+    const defaultErrorHandlingConfig: RequiredErrorHandlingConfig = {
       enableRetry: true,
       maxRetries: 3,
       enableCircuitBreaker: true,
@@ -71,7 +83,7 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
       ],
     };
 
-    // FIXED: Proper config merging without property overwriting
+    // FIXED: Proper config merging with guaranteed non-undefined result
     this.errorConfig = {
       ...defaultErrorHandlingConfig,
       ...(config.errorHandling || {}),
@@ -188,12 +200,9 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
     // Use the error handler's retry mechanism but convert back to throwing for base class compatibility
     const result = await this.errorHandler.withRetry(
       operation,
-      {
-        service: this.getName(),
-        operation: operationName,
-        maxAttempts: retryConfig.attempts,
-        metadata: {},
-      }
+      operationName,
+      retryConfig.attempts,
+      {}
     );
 
     if (result.success) {
@@ -214,12 +223,9 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
   ): Promise<Result<T, ServiceError>> {
     return this.errorHandler.withRetry(
       operation,
-      {
-        service: this.getName(),
-        operation: operationName,
-        maxAttempts: retryConfig.attempts,
-        metadata,
-      }
+      operationName,
+      retryConfig.attempts,
+      metadata || {}
     );
   }
 
