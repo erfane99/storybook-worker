@@ -299,33 +299,64 @@ class BackgroundJobManager {
     return finalJobs;
   }
 
-  // Get job status from appropriate table
+  // FIXED: Get job status from appropriate table - now properly searches all tables
   async getJobStatus(jobId: string): Promise<JobData | null> {
-    // Try to find the job in all job tables since we don't know the type
+    if (!this.initialized || !this.supabase) {
+      console.error('❌ Cannot get job status - job manager not initialized');
+      return null;
+    }
+
+    // Search through all job tables since we don't know the type
     const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
+    
+    console.log(`🔍 Searching for job ${jobId} across ${jobTypes.length} tables...`);
     
     for (const jobType of jobTypes) {
       const tableName = this.getTableName(jobType);
       
-      const result = await this.executeQuery<any>(
-        `Get job status from ${tableName}`,
-        async (supabase) => {
-          const response = await supabase
-            .from(tableName)
-            .select('*')
-            .eq('id', jobId)
-            .single();
-          return { data: response.data, error: response.error };
-        }
-      );
+      try {
+        console.log(`🔍 Checking ${tableName} for job ${jobId}...`);
+        
+        const { data, error } = await this.supabase
+          .from(tableName)
+          .select('*')
+          .eq('id', jobId)
+          .single();
 
-      if (result) {
-        console.log(`📊 Retrieved job status for: ${jobId} from ${tableName}`);
-        return this.mapFromTableFormat(jobType, result);
+        // CRITICAL FIX: Properly classify errors
+        if (error) {
+          // PGRST116 = "The result contains 0 rows" - this is expected when job not in this table
+          if (error.code === 'PGRST116') {
+            console.log(`📭 Job ${jobId} not found in ${tableName} (expected - continuing search)`);
+            continue; // Continue searching other tables
+          } else {
+            // This is a real database error - log it but continue searching
+            console.warn(`⚠️ Database error searching ${tableName} for job ${jobId}:`, error.message);
+            continue; // Continue searching despite database error
+          }
+        }
+
+        // CRITICAL FIX: Only return when we have ACTUAL data with an ID
+        if (data && data.id) {
+          console.log(`✅ Found job ${jobId} in ${tableName}`);
+          const jobData = this.mapFromTableFormat(jobType, data);
+          console.log(`📊 Retrieved job status for: ${jobId} from ${tableName} (type: ${jobType})`);
+          return jobData;
+        } else {
+          // Successful query but no data - continue searching
+          console.log(`📭 Job ${jobId} query successful but no data in ${tableName} - continuing search`);
+          continue;
+        }
+
+      } catch (error: any) {
+        // Unexpected error - log and continue
+        console.warn(`⚠️ Unexpected error searching ${tableName} for job ${jobId}:`, error.message);
+        continue;
       }
     }
 
-    console.log(`❌ Job not found: ${jobId}`);
+    // ONLY return null after searching ALL tables
+    console.log(`❌ Job not found: ${jobId} (searched all ${jobTypes.length} job tables)`);
     return null;
   }
 
