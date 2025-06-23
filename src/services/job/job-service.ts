@@ -1,7 +1,7 @@
 // Enhanced Job Service - Production Implementation
 // FIXED: Method signatures, error handling, Result pattern integration, and industry standards
 
-import { ErrorAwareBaseService } from '../base/error-aware-base-service.js';
+import { ErrorAwareBaseService, ErrorAwareServiceConfig } from '../base/error-aware-base-service.js';
 import { 
   IJobService,
   ServiceConfig,
@@ -15,13 +15,15 @@ import {
   JobProcessingError,
   JobTimeoutError,
   JobConcurrencyLimitError,
-  ErrorFactory
+  ErrorFactory,
+  ErrorCategory
 } from '../errors/index.js';
 import { JobData, JobType, JobStatus, JobUpdateData } from '../../lib/types.js';
 
 // ===== ENHANCED JOB CONFIG =====
+// FIXED: Extend ErrorAwareServiceConfig instead of ServiceConfig
 
-export interface JobServiceConfig extends ServiceConfig {
+export interface JobServiceConfig extends ErrorAwareServiceConfig {
   maxRetries: number;
   defaultTimeout: number;
   progressUpdateInterval: number;
@@ -52,13 +54,18 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
       maxConcurrentJobs: 10,
       jobCleanupInterval: 3600000, // 1 hour
       metricsRetentionPeriod: 86400000, // 24 hours
+      // FIXED: Now properly typed as part of ErrorAwareServiceConfig
       errorHandling: {
         enableRetry: true,
         maxRetries: 3,
         enableCircuitBreaker: true,
         enableCorrelation: true,
         enableMetrics: true,
-        retryableCategories: []
+        retryableCategories: [
+          ErrorCategory.NETWORK,
+          ErrorCategory.TIMEOUT,
+          ErrorCategory.EXTERNAL_SERVICE
+        ]
       }
     };
     
@@ -307,27 +314,35 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
 
   /**
    * Get job metrics with Result pattern for better error handling
+   * FIXED: Simplified to avoid complex type casting
    */
-  getJobMetricsResult(jobType?: JobType): Promise<Result<JobMetrics, JobValidationError>> {
-    return this.withErrorHandling(
-      async () => {
-        if (jobType && !Object.values(['storybook', 'auto-story', 'scenes', 'cartoonize', 'image-generation']).includes(jobType)) {
-          throw new JobValidationError(`Invalid job type: ${jobType}`, {
-            service: this.getName(),
-            operation: 'getJobMetricsResult'
-          });
-        }
+  async getJobMetricsResult(jobType?: JobType): Promise<Result<JobMetrics, JobValidationError>> {
+    try {
+      if (jobType && !Object.values(['storybook', 'auto-story', 'scenes', 'cartoonize', 'image-generation']).includes(jobType)) {
+        const error = new JobValidationError(`Invalid job type: ${jobType}`, {
+          service: this.getName(),
+          operation: 'getJobMetricsResult'
+        });
+        return { success: false, error } as Result<JobMetrics, JobValidationError>;
+      }
 
-        return jobType ? 
-          this.jobMetrics.get(jobType) || this.createDefaultMetrics() :
-          this.calculateAggregatedMetrics();
-      },
-      'getJobMetricsResult'
-    );
+      const metrics = jobType ? 
+        this.jobMetrics.get(jobType) || this.createDefaultMetrics() :
+        this.calculateAggregatedMetrics();
+        
+      return { success: true, data: metrics } as Result<JobMetrics, JobValidationError>;
+    } catch (error) {
+      const jobError = new JobValidationError('Error getting job metrics', {
+        service: this.getName(),
+        operation: 'getJobMetricsResult'
+      });
+      return { success: false, error: jobError } as Result<JobMetrics, JobValidationError>;
+    }
   }
 
   /**
    * Get current processing statistics
+   * FIXED: Create result manually to avoid Result constructor issues
    */
   getProcessingStats(): Result<{
     currentlyProcessing: number;
@@ -344,38 +359,41 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
       )
     };
 
-    return Result.success(stats);
+    return { success: true, data: stats } as Result<typeof stats, never>;
   }
 
   /**
    * Validate job data structure
+   * FIXED: Create results manually to avoid Result constructor issues
    */
   validateJobData(jobData: any): Result<boolean, JobValidationError> {
     try {
       if (!jobData || typeof jobData !== 'object') {
-        return Result.failure(new JobValidationError('Job data must be an object', {
+        const error = new JobValidationError('Job data must be an object', {
           service: this.getName(),
           operation: 'validateJobData'
-        }));
+        });
+        return { success: false, error } as Result<boolean, JobValidationError>;
       }
 
       const requiredFields = ['id', 'type', 'status', 'input_data'];
       const missingFields = requiredFields.filter(field => !(field in jobData));
 
       if (missingFields.length > 0) {
-        return Result.failure(new JobValidationError(
+        const error = new JobValidationError(
           `Missing required fields: ${missingFields.join(', ')}`,
           { service: this.getName(), operation: 'validateJobData' }
-        ));
+        );
+        return { success: false, error } as Result<boolean, JobValidationError>;
       }
 
-      return Result.success(true);
+      return { success: true, data: true } as Result<boolean, JobValidationError>;
     } catch (error) {
       const serviceError = ErrorFactory.fromUnknown(error, {
         service: this.getName(),
         operation: 'validateJobData'
       }) as JobValidationError;
-      return Result.failure(serviceError);
+      return { success: false, error: serviceError } as Result<boolean, JobValidationError>;
     }
   }
 
