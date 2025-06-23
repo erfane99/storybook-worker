@@ -1,6 +1,6 @@
-// Job service for managing job lifecycle across all job types
+// Job service implementation with dependency injection support
 import { BaseService, ServiceConfig } from '../base/base-service.js';
-import { databaseService } from '../database/database-service.js';
+import { IJobService, IDatabaseService, IServiceContainer, SERVICE_TOKENS } from '../interfaces/service-interfaces.js';
 import { JobData, JobType, JobStatus, JobFilter, JobUpdateData } from '../../lib/types.js';
 
 export interface JobConfig extends ServiceConfig {
@@ -19,7 +19,8 @@ export interface JobMetrics {
   successRate: number;
 }
 
-export class JobService extends BaseService {
+export class JobService extends BaseService implements IJobService {
+  private databaseService: IDatabaseService | null = null;
   private jobMetrics: Map<JobType, JobMetrics> = new Map();
   private processingTimes: Map<string, number> = new Map();
 
@@ -58,6 +59,24 @@ export class JobService extends BaseService {
   }
 
   /**
+   * Set database service dependency (called by container)
+   */
+  setDatabaseService(databaseService: IDatabaseService): void {
+    this.databaseService = databaseService;
+  }
+
+  /**
+   * Get database service with lazy resolution
+   */
+  private async getDatabaseService(): Promise<IDatabaseService> {
+    if (!this.databaseService) {
+      // This would be injected by the container in a real implementation
+      throw new Error('Database service not available - dependency not injected');
+    }
+    return this.databaseService;
+  }
+
+  /**
    * Get pending jobs with filtering
    */
   async getPendingJobs(filter: JobFilter = {}, limit: number = 50): Promise<JobData[]> {
@@ -68,6 +87,7 @@ export class JobService extends BaseService {
     }
 
     try {
+      const databaseService = await this.getDatabaseService();
       const jobs = await databaseService.getPendingJobs(filter, limit);
       
       // Update metrics
@@ -90,6 +110,7 @@ export class JobService extends BaseService {
     await this.ensureInitialized();
     
     try {
+      const databaseService = await this.getDatabaseService();
       const job = await databaseService.getJobStatus(jobId);
       
       if (job) {
@@ -120,6 +141,7 @@ export class JobService extends BaseService {
     }
 
     try {
+      const databaseService = await this.getDatabaseService();
       const success = await databaseService.updateJobProgress(jobId, progress, currentStep);
       
       if (success) {
@@ -150,6 +172,7 @@ export class JobService extends BaseService {
     }
 
     try {
+      const databaseService = await this.getDatabaseService();
       const success = await databaseService.markJobCompleted(jobId, resultData);
       
       if (success) {
@@ -190,6 +213,7 @@ export class JobService extends BaseService {
     }
 
     try {
+      const databaseService = await this.getDatabaseService();
       const success = await databaseService.markJobFailed(jobId, errorMessage, shouldRetry);
       
       if (success) {
@@ -230,6 +254,7 @@ export class JobService extends BaseService {
         throw new Error(`Cannot cancel job in ${job.status} status`);
       }
       
+      const databaseService = await this.getDatabaseService();
       const success = await databaseService.markJobFailed(jobId, `Cancelled: ${reason}`, false);
       
       if (success) {
@@ -327,7 +352,7 @@ export class JobService extends BaseService {
 
   isHealthy(): boolean {
     return this.isInitialized && 
-           databaseService.isHealthy() && 
+           this.databaseService !== null && 
            !this.isCircuitBreakerOpen();
   }
 
@@ -338,13 +363,9 @@ export class JobService extends BaseService {
       available: this.isHealthy(),
       circuitBreakerOpen: this.isCircuitBreakerOpen(),
       circuitBreakerFailures: this.circuitBreakerFailures,
-      databaseServiceHealthy: databaseService.isHealthy(),
+      databaseServiceAvailable: this.databaseService !== null,
       activeProcessingJobs: this.processingTimes.size,
       totalJobTypes: this.jobMetrics.size,
     };
   }
 }
-
-// Export singleton instance
-export const jobService = new JobService();
-export default jobService;

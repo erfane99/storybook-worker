@@ -1,6 +1,7 @@
-// Database service for all Supabase operations
+// Database service implementation with dependency injection support
 import { createClient, SupabaseClient, PostgrestSingleResponse } from '@supabase/supabase-js';
 import { BaseService, ServiceConfig, RetryConfig } from '../base/base-service.js';
+import { IDatabaseService, IServiceContainer, SERVICE_TOKENS } from '../interfaces/service-interfaces.js';
 import { environmentManager } from '../../lib/config/environment.js';
 import { JobData, JobType, JobStatus, JobFilter, JobUpdateData } from '../../lib/types.js';
 
@@ -10,14 +11,10 @@ export interface DatabaseConfig extends ServiceConfig {
   queryTimeout: number;
 }
 
-export interface TransactionOptions {
-  timeout?: number;
-  retries?: number;
-}
-
-export class DatabaseService extends BaseService {
+export class DatabaseService extends BaseService implements IDatabaseService {
   private supabase: SupabaseClient | null = null;
   private connectionPool: Map<string, SupabaseClient> = new Map();
+  private container: IServiceContainer | null = null;
   private readonly defaultRetryConfig: RetryConfig = {
     attempts: 3,
     delay: 1000,
@@ -411,7 +408,7 @@ export class DatabaseService extends BaseService {
    */
   async executeTransaction<T>(
     operations: ((supabase: SupabaseClient) => Promise<T>)[],
-    options: TransactionOptions = {}
+    options: any = {}
   ): Promise<T[]> {
     await this.ensureInitialized();
     
@@ -517,7 +514,3 @@ export class DatabaseService extends BaseService {
     };
   }
 }
-
-// Export singleton instance
-export const databaseService = new DatabaseService();
-export default databaseService;

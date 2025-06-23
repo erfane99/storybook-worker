@@ -3,6 +3,9 @@ import express from 'express';
 import cron from 'node-cron';
 import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/types.js';
 import { environmentManager } from './lib/config/environment.js';
+import { ServiceRegistry } from './services/registry/service-registry.js';
+import { serviceContainer } from './services/container/service-container.js';
+import { SERVICE_TOKENS } from './services/interfaces/service-interfaces.js';
 
 // Environment configuration with graceful degradation
 const envConfig = environmentManager.getConfig();
@@ -14,11 +17,12 @@ environmentManager.logConfigurationStatus();
 // Health check server
 const app = express();
 
-app.get('/health', (_req, res) => {
+app.get('/health', async (_req, res) => {
   const healthStatus = environmentManager.getHealthStatus();
+  const serviceHealth = await ServiceRegistry.getServiceHealth();
   
   const response: HealthResponse = {
-    status: healthStatus.overall === 'healthy' ? 'healthy' : 'unhealthy',
+    status: serviceHealth.overall === 'healthy' ? 'healthy' : 'unhealthy',
     service: 'storybook-worker',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
@@ -26,19 +30,27 @@ app.get('/health', (_req, res) => {
     config: {
       maxConcurrentJobs: config.maxConcurrentJobs,
       scanInterval: config.jobScanInterval,
+    },
+    features: {
+      comicBookSupport: true,
+      characterConsistency: true,
+      multiPanelLayouts: true,
+      variableArtStyles: true,
     }
   };
   
   // Include detailed service status
   res.json({
     ...response,
-    services: healthStatus.services,
-    configuration: healthStatus.configuration
+    services: serviceHealth.services,
+    configuration: healthStatus.configuration,
+    containerStats: ServiceRegistry.getContainerStats(),
   });
 });
 
-app.get('/metrics', (_req, res) => {
+app.get('/metrics', async (_req, res) => {
   const healthStatus = environmentManager.getHealthStatus();
+  const serviceHealth = await ServiceRegistry.getServiceHealth();
   
   res.json({
     uptime: process.uptime(),
@@ -46,8 +58,9 @@ app.get('/metrics', (_req, res) => {
     cpuUsage: process.cpuUsage(),
     timestamp: new Date().toISOString(),
     stats,
-    services: healthStatus.services,
-    configuration: healthStatus.configuration
+    services: serviceHealth.services,
+    configuration: healthStatus.configuration,
+    containerStats: ServiceRegistry.getContainerStats(),
   });
 });
 
@@ -70,17 +83,13 @@ const stats: JobStats = {
   lastProcessedAt: null,
 };
 
-// Dynamic import function for job modules
+// Dynamic import function for job modules with dependency injection
 async function loadJobModules() {
   try {
-    const [jobManagerModule, jobProcessorModule] = await Promise.all([
-      import('./lib/background-jobs/job-manager.js'),
-      import('./lib/background-jobs/job-processor.js')
-    ]);
+    const jobProcessorModule = await import('./lib/background-jobs/job-processor-with-di.js');
     
     return {
-      jobManager: jobManagerModule.jobManager || jobManagerModule.default,
-      jobProcessor: jobProcessorModule.jobProcessor || jobProcessorModule.default
+      jobProcessor: jobProcessorModule.dependencyInjectedJobProcessor || jobProcessorModule.default
     };
   } catch (error) {
     console.error('❌ Failed to load job processing modules:', error);
@@ -88,32 +97,27 @@ async function loadJobModules() {
   }
 }
 
-// Validate job processor modules with graceful handling
+// Validate job system with service container
 async function validateJobSystem(): Promise<boolean> {
   try {
-    const { jobManager, jobProcessor } = await loadJobModules();
+    const { jobProcessor } = await loadJobModules();
     
     // Basic validation that modules loaded
-    if (!jobManager || !jobProcessor) {
-      console.error('❌ Job modules not properly loaded');
+    if (!jobProcessor) {
+      console.error('❌ Job processor not properly loaded');
       return false;
     }
 
-    // Check if job manager can connect to database
-    const isManagerHealthy = jobManager.isHealthy();
-    const isProcessorHealthy = jobProcessor.isHealthy();
-    
-    if (!isManagerHealthy) {
-      console.warn('⚠️ Job manager not fully configured (database connection)');
-    }
+    // Check if job processor can access services through container
+    const isProcessorHealthy = await jobProcessor.isHealthy();
     
     if (!isProcessorHealthy) {
-      console.warn('⚠️ Job processor not fully configured (some AI services unavailable)');
+      console.warn('⚠️ Job processor not fully healthy (some services may be unavailable)');
     }
 
     // Worker can start with partial functionality (graceful degradation)
-    console.log('✅ Job processing modules loaded');
-    if (!isManagerHealthy || !isProcessorHealthy) {
+    console.log('✅ Job processing modules loaded with dependency injection');
+    if (!isProcessorHealthy) {
       console.warn('⚠️ Worker starting with limited functionality - some services unavailable');
     }
     
@@ -124,60 +128,36 @@ async function validateJobSystem(): Promise<boolean> {
   }
 }
 
-// Main worker function with graceful error handling
+// Main worker function with service container
 async function processJobs(): Promise<void> {
   try {
-    console.log('🔄 Worker: Scanning for pending jobs...');
+    console.log('🔄 Worker: Scanning for pending jobs using service container...');
     
-    const { jobManager, jobProcessor } = await loadJobModules();
+    const { jobProcessor } = await loadJobModules();
     
-    // Check if job manager is available
-    if (!jobManager.isHealthy()) {
-      console.warn('⚠️ Worker: Job manager not available, skipping job scan');
+    // Check if job processor is available
+    const isHealthy = await jobProcessor.isHealthy();
+    if (!isHealthy) {
+      console.warn('⚠️ Worker: Job processor not healthy, skipping job scan');
       return;
     }
     
-    // Get pending jobs
-    const pendingJobs = await jobManager.getPendingJobs({}, 10);
+    // Process jobs using dependency injection
+    const processedAny = await jobProcessor.processNextJobStep();
     
-    if (pendingJobs.length === 0) {
-      console.log('📭 Worker: No pending jobs found');
+    if (!processedAny) {
+      console.log('📭 Worker: No pending jobs found or concurrency limit reached');
       return;
     }
     
-    console.log(`📋 Worker: Found ${pendingJobs.length} pending jobs`);
+    // Update statistics from processor
+    const processorStats = jobProcessor.getProcessingStats();
+    stats.totalProcessed = processorStats.totalProcessed || 0;
+    stats.successful = processorStats.successful || 0;
+    stats.failed = processorStats.failed || 0;
+    stats.lastProcessedAt = processorStats.lastProcessedAt || new Date();
     
-    // Process jobs with concurrency limit
-    const jobsToProcess = pendingJobs.slice(0, config.maxConcurrentJobs);
-    
-    const results = await Promise.allSettled(
-      jobsToProcess.map(async (job: JobData) => {
-        try {
-          console.log(`🔄 Worker: Starting job ${job.id} (${job.type})`);
-          
-          // Process the job
-          await jobProcessor.processJobAsync(job);
-          
-          console.log(`✅ Worker: Successfully completed job ${job.id}`);
-          stats.successful++;
-          return { jobId: job.id, status: 'completed' };
-        } catch (error: any) {
-          console.error(`❌ Worker: Failed to process job ${job.id}:`, error.message);
-          stats.failed++;
-          return { jobId: job.id, status: 'failed', error };
-        }
-      })
-    );
-    
-    // Update statistics
-    stats.totalProcessed += jobsToProcess.length;
-    stats.lastProcessedAt = new Date();
-    
-    // Log summary
-    const completed = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.filter(r => r.status === 'rejected').length;
-    
-    console.log(`📊 Worker: Batch complete - ${completed} succeeded, ${failed} failed`);
+    console.log(`📊 Worker: Batch processing complete`);
     console.log(`📈 Total stats: ${stats.successful} successful, ${stats.failed} failed`);
     
   } catch (error: any) {
@@ -186,10 +166,16 @@ async function processJobs(): Promise<void> {
   }
 }
 
-// Initialize worker with graceful startup sequence
+// Initialize worker with service registry
 async function initializeWorker(): Promise<void> {
   try {
-    console.log('🔧 Initializing job worker...');
+    console.log('🔧 Initializing job worker with service registry...');
+    
+    // Register all services with the container
+    ServiceRegistry.registerServices();
+    
+    // Initialize core services
+    await ServiceRegistry.initializeCoreServices();
     
     // Validate job processing system
     const isValid = await validateJobSystem();
@@ -216,7 +202,7 @@ async function initializeWorker(): Promise<void> {
     }, config.initialScanDelay);
     
     const mode = envConfig.isDevelopment ? 'development' : 'production';
-    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode`);
+    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode with dependency injection`);
     
   } catch (error: any) {
     console.error('❌ Failed to initialize worker:', error.message);
@@ -224,14 +210,16 @@ async function initializeWorker(): Promise<void> {
   }
 }
 
-// Graceful shutdown handling
-process.on('SIGTERM', () => {
+// Graceful shutdown handling with service cleanup
+process.on('SIGTERM', async () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
+  await ServiceRegistry.dispose();
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
+  await ServiceRegistry.dispose();
   process.exit(0);
 });
 
