@@ -28,7 +28,7 @@ export const Result = {
   success: <T>(data: T): Success<T> => ({
     success: true,
     data,
-  }),
+  }) as Success<T>,
 
   /**
    * Create a failure result
@@ -36,7 +36,7 @@ export const Result = {
   failure: <E extends BaseServiceError>(error: E): Failure<E> => ({
     success: false,
     error,
-  }),
+  }) as Failure<E>,
 
   /**
    * Wrap a function that might throw into a Result

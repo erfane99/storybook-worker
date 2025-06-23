@@ -17,6 +17,7 @@
     "isolatedModules": true,
     "noEmitOnError": true,
     "preserveConstEnums": true,
+    "experimentalDecorators": true,
     "baseUrl": "./src"
   },
   "include": [

@@ -1,6 +1,9 @@
 // Comprehensive error handling exports
 // Central export point for all error handling functionality
 
+// Import StructuredError for use in utility functions
+import { StructuredError } from './error-types.js';
+
 // ===== ERROR TYPES =====
 export {
   BaseServiceError,
