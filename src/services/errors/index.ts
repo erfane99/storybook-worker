@@ -1,16 +1,78 @@
 // Comprehensive error handling exports
 // Central export point for all error handling functionality
+// FIXED: Proper separation of type and value exports for isolatedModules
 
-// Import StructuredError for use in utility functions
-import { StructuredError } from './error-types.js';
+// ===== TYPE-ONLY EXPORTS =====
+// Using export type for all TypeScript types to satisfy isolatedModules
 
-// ===== ERROR TYPES =====
 export type {
-  BaseServiceError,
-  ErrorCategory,
-  ErrorSeverity,
   StructuredError,
   ServiceError,
+  BaseServiceError,
+  ValidationError,
+  NetworkError,
+  DatabaseError,
+  ExternalServiceError,
+  BusinessLogicError,
+  SystemError,
+  UnknownError,
+  ContainerError,
+  ServiceNotRegisteredError,
+  ServiceInitializationError,
+  CircularDependencyError,
+  ContainerDisposedError,
+  InvalidTokenError,
+  ServiceLifecycleError
+} from './error-types.js';
+
+export type {
+  Result,
+  Success,
+  Failure,
+} from './result-pattern.js';
+
+export type {
+  CorrelationContext,
+  ErrorCorrelation,
+} from './error-correlation.js';
+
+export type {
+  ErrorHandlerConfig,
+  ErrorHandlerMetrics,
+} from './error-handler.js';
+
+export type {
+  IEnhancedServiceHealth,
+  IEnhancedServiceMetrics,
+  IEnhancedDatabaseOperations,
+  IEnhancedAIOperations,
+  IEnhancedStorageOperations,
+  IEnhancedJobOperations,
+  IEnhancedAuthOperations,
+  IEnhancedDatabaseService,
+  IEnhancedAIService,
+  IEnhancedStorageService,
+  IEnhancedJobService,
+  IEnhancedAuthService,
+  IEnhancedServiceContainer,
+  IServiceHealthAggregator,
+  ErrorAwareServiceFactory,
+  EnhancedServiceOptions,
+  ENHANCED_SERVICE_TOKENS,
+  EnhancedServiceToken,
+} from '../interfaces/enhanced-service-contracts.js';
+
+export type {
+  ErrorAwareServiceConfig,
+} from '../base/error-aware-base-service.js';
+
+// ===== VALUE EXPORTS =====
+// These are actual classes, enums, and functions that exist at runtime
+
+export { 
+  ErrorCategory,
+  ErrorSeverity,
+  ErrorContext 
 } from './error-types.js';
 
 export {
@@ -63,22 +125,10 @@ export {
   UnknownError,
 } from './error-types.js';
 
-// ===== RESULT PATTERN =====
-export type {
-  Result,
-  Success,
-  Failure,
-} from './result-pattern.js';
-
 export {
+  Result,
   AsyncResult,
 } from './result-pattern.js';
-
-// ===== ERROR CORRELATION =====
-export type {
-  CorrelationContext,
-  ErrorCorrelation,
-} from './error-correlation.js';
 
 export {
   ErrorCorrelationManager,
@@ -91,12 +141,6 @@ export {
   getCorrelationStatistics,
 } from './error-correlation.js';
 
-// ===== ERROR HANDLER =====
-export type {
-  ErrorHandlerConfig,
-  ErrorHandlerMetrics,
-} from './error-handler.js';
-
 export {
   CentralizedErrorHandler,
   centralizedErrorHandler,
@@ -106,38 +150,16 @@ export {
   createServiceErrorHandler,
 } from './error-handler.js';
 
-// ===== ENHANCED CONTRACTS =====
-export type {
-  IEnhancedServiceHealth,
-  IEnhancedServiceMetrics,
-  IEnhancedDatabaseOperations,
-  IEnhancedAIOperations,
-  IEnhancedStorageOperations,
-  IEnhancedJobOperations,
-  IEnhancedAuthOperations,
-  IEnhancedDatabaseService,
-  IEnhancedAIService,
-  IEnhancedStorageService,
-  IEnhancedJobService,
-  IEnhancedAuthService,
-  IEnhancedServiceContainer,
-  IServiceHealthAggregator,
-  ErrorAwareServiceFactory,
-  EnhancedServiceOptions,
-  ENHANCED_SERVICE_TOKENS,
-  EnhancedServiceToken,
-} from '../interfaces/enhanced-service-contracts.js';
-
-// ===== ERROR-AWARE BASE SERVICE =====
-export type {
-  ErrorAwareServiceConfig,
-} from '../base/error-aware-base-service.js';
-
 export {
   ErrorAwareBaseService,
 } from '../base/error-aware-base-service.js';
 
+// ===== CONVENIENCE VALUE EXPORTS =====
+// Re-export the base class for instanceof checks
+export { BaseServiceError, ErrorSeverity } from './error-types.js';
+
 // ===== UTILITY FUNCTIONS =====
+// FIXED: Import dependencies locally to avoid circular dependencies
 
 /**
  * Create a standardized error for service operations
@@ -153,6 +175,8 @@ export function createServiceError(
     metadata?: Record<string, any>;
   }
 ): ServiceError {
+  // Import locally to avoid circular dependency
+  const { ErrorFactory } = require('./error-types.js');
   const factory = ErrorFactory[type as keyof typeof ErrorFactory];
   if (typeof factory === 'object' && subtype in factory) {
     return (factory as any)[subtype](message, context);
@@ -165,6 +189,8 @@ export function createServiceError(
  * Check if an error is retryable
  */
 export function isRetryableError(error: unknown): boolean {
+  // Import locally to avoid circular dependency
+  const { BaseServiceError } = require('./error-types.js');
   if (error instanceof BaseServiceError) {
     return error.shouldRetry();
   }
@@ -175,6 +201,8 @@ export function isRetryableError(error: unknown): boolean {
  * Get error severity level
  */
 export function getErrorSeverityLevel(error: unknown): number {
+  // Import locally to avoid circular dependency
+  const { BaseServiceError, ErrorSeverity } = require('./error-types.js');
   if (error instanceof BaseServiceError) {
     const levels = { 
       [ErrorSeverity.LOW]: 1, 
@@ -191,6 +219,8 @@ export function getErrorSeverityLevel(error: unknown): number {
  * Convert any error to a structured format
  */
 export function toStructuredError(error: unknown): StructuredError {
+  // Import locally to avoid circular dependency
+  const { BaseServiceError, ErrorFactory } = require('./error-types.js');
   if (error instanceof BaseServiceError) {
     return error.toStructured();
   }
@@ -210,6 +240,8 @@ export function safeExecute<T>(
     correlationId?: string;
   }
 ): Result<T, ServiceError> {
+  // Import locally to avoid circular dependency
+  const { Result } = require('./result-pattern.js');
   return Result.from(operation, errorContext);
 }
 
@@ -224,6 +256,8 @@ export function safeExecuteAsync<T>(
     correlationId?: string;
   }
 ): AsyncResult<T, ServiceError> {
+  // Import locally to avoid circular dependency
+  const { AsyncResult } = require('./result-pattern.js');
   return AsyncResult.fromAsync(operation, errorContext);
 }
 
@@ -233,6 +267,8 @@ export function safeExecuteAsync<T>(
 export function combineResults<T extends readonly unknown[]>(
   results: { [K in keyof T]: Result<T[K], ServiceError> }
 ): Result<T, ServiceError> {
+  // Import locally to avoid circular dependency
+  const { Result } = require('./result-pattern.js');
   return Result.combine(results);
 }
 
@@ -242,6 +278,8 @@ export function combineResults<T extends readonly unknown[]>(
 export async function combineAsyncResults<T extends readonly unknown[]>(
   operations: { [K in keyof T]: () => Promise<Result<T[K], ServiceError>> }
 ): Promise<Result<T, ServiceError>> {
+  // Import locally to avoid circular dependency
+  const { Result } = require('./result-pattern.js');
   return Result.combineAsync(operations);
 }
 
@@ -323,11 +361,3 @@ export const ERROR_HANDLING_BEST_PRACTICES = {
     }
   `,
 } as const;
-
-// Re-export Result for convenience
-import { Result } from './result-pattern.js';
-export { Result };
-
-// Re-export error types for convenience
-import { BaseServiceError, ErrorSeverity } from './error-types.js';
-export { BaseServiceError, ErrorSeverity };
