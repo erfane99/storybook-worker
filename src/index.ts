@@ -3,9 +3,9 @@ import express from 'express';
 import cron from 'node-cron';
 import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/types.js';
 import { environmentManager } from './lib/config/environment.js';
-import { ServiceRegistry } from './services/registry/service-registry.js';
-import { serviceContainer } from './services/container/service-container.js';
-import { SERVICE_TOKENS } from './services/interfaces/service-interfaces.js';
+import { EnhancedServiceRegistry } from './services/registry/enhanced-service-registry.js';
+import { enhancedServiceContainer } from './services/container/enhanced-service-container.js';
+import { SERVICE_TOKENS } from './services/interfaces/service-contracts.js';
 
 // Environment configuration with graceful degradation
 const envConfig = environmentManager.getConfig();
@@ -19,7 +19,8 @@ const app = express();
 
 app.get('/health', async (_req, res) => {
   const healthStatus = environmentManager.getHealthStatus();
-  const serviceHealth = await ServiceRegistry.getServiceHealth();
+  const serviceHealth = await EnhancedServiceRegistry.getServiceHealth();
+  const systemHealth = await EnhancedServiceRegistry.getSystemHealth();
   
   const response: HealthResponse = {
     status: serviceHealth.overall === 'healthy' ? 'healthy' : 'unhealthy',
@@ -39,18 +40,20 @@ app.get('/health', async (_req, res) => {
     }
   };
   
-  // Include detailed service status
+  // Include comprehensive health information
   res.json({
     ...response,
     services: serviceHealth.services,
     configuration: healthStatus.configuration,
-    containerStats: ServiceRegistry.getContainerStats(),
+    containerStats: EnhancedServiceRegistry.getContainerStats(),
+    systemHealth: systemHealth,
   });
 });
 
 app.get('/metrics', async (_req, res) => {
   const healthStatus = environmentManager.getHealthStatus();
-  const serviceHealth = await ServiceRegistry.getServiceHealth();
+  const serviceHealth = await EnhancedServiceRegistry.getServiceHealth();
+  const systemHealth = await EnhancedServiceRegistry.getSystemHealth();
   
   res.json({
     uptime: process.uptime(),
@@ -60,7 +63,8 @@ app.get('/metrics', async (_req, res) => {
     stats,
     services: serviceHealth.services,
     configuration: healthStatus.configuration,
-    containerStats: ServiceRegistry.getContainerStats(),
+    containerStats: EnhancedServiceRegistry.getContainerStats(),
+    systemHealth: systemHealth,
   });
 });
 
@@ -71,7 +75,7 @@ app.listen(config.port, () => {
   console.log(`📈 Metrics endpoint: http://localhost:${config.port}/metrics`);
 });
 
-console.log('🚀 StoryCanvas Job Worker Starting...');
+console.log('🚀 StoryCanvas Job Worker Starting with Clean Architecture...');
 console.log(`📊 Environment: ${config.environment}`);
 console.log(`⚙️ Config:`, config);
 
@@ -83,66 +87,66 @@ const stats: JobStats = {
   lastProcessedAt: null,
 };
 
-// Dynamic import function for job modules with dependency injection
+// Dynamic import function for clean architecture job processor
 async function loadJobModules() {
   try {
-    const jobProcessorModule = await import('./lib/background-jobs/job-processor-with-di.js');
+    const jobProcessorModule = await import('./lib/background-jobs/job-processor-clean-architecture.js');
     
     return {
-      jobProcessor: jobProcessorModule.dependencyInjectedJobProcessor || jobProcessorModule.default
+      jobProcessor: jobProcessorModule.cleanArchitectureJobProcessor || jobProcessorModule.default
     };
   } catch (error) {
-    console.error('❌ Failed to load job processing modules:', error);
+    console.error('❌ Failed to load clean architecture job processing modules:', error);
     throw error;
   }
 }
 
-// Validate job system with service container
+// Validate job system with enhanced service container
 async function validateJobSystem(): Promise<boolean> {
   try {
     const { jobProcessor } = await loadJobModules();
     
     // Basic validation that modules loaded
     if (!jobProcessor) {
-      console.error('❌ Job processor not properly loaded');
+      console.error('❌ Clean architecture job processor not properly loaded');
       return false;
     }
 
-    // Check if job processor can access services through container
-    const isProcessorHealthy = await jobProcessor.isHealthy();
+    // Check if job processor can access services through enhanced container
+    const isProcessorHealthy = jobProcessor.isHealthy();
     
     if (!isProcessorHealthy) {
-      console.warn('⚠️ Job processor not fully healthy (some services may be unavailable)');
+      console.warn('⚠️ Clean architecture job processor not fully healthy (some services may be unavailable)');
     }
 
     // Worker can start with partial functionality (graceful degradation)
-    console.log('✅ Job processing modules loaded with dependency injection');
+    console.log('✅ Clean architecture job processing modules loaded with Interface Segregation Principle');
     if (!isProcessorHealthy) {
       console.warn('⚠️ Worker starting with limited functionality - some services unavailable');
     }
     
     return true;
   } catch (error) {
-    console.error('❌ Failed to validate job processing modules:', error);
+    console.error('❌ Failed to validate clean architecture job processing modules:', error);
     return false;
   }
 }
 
-// Main worker function with service container
+// Main worker function with enhanced service container
 async function processJobs(): Promise<void> {
   try {
-    console.log('🔄 Worker: Scanning for pending jobs using service container...');
+    console.log('🔄 Worker: Scanning for pending jobs using enhanced service container...');
     
     const { jobProcessor } = await loadJobModules();
     
     // Check if job processor is available
-    const isHealthy = await jobProcessor.isHealthy();
+    const isHealthy = jobProcessor.isHealthy();
     if (!isHealthy) {
-      console.warn('⚠️ Worker: Job processor not healthy, skipping job scan');
+      console.warn('⚠️ Worker: Clean architecture job processor not healthy, skipping job scan');
       return;
     }
     
-    // Process jobs using dependency injection
+    // Process jobs using clean architecture
     const processedAny = await jobProcessor.processNextJobStep();
     
     if (!processedAny) {
@@ -150,7 +154,7 @@ async function processJobs(): Promise<void> {
       return;
     }
     
-    // Update statistics from processor
+    // Update statistics from processor (computed properties, not internal state)
     const processorStats = jobProcessor.getProcessingStats();
     stats.totalProcessed = processorStats.totalProcessed || 0;
     stats.successful = processorStats.successful || 0;
@@ -166,16 +170,16 @@ async function processJobs(): Promise<void> {
   }
 }
 
-// Initialize worker with service registry
+// Initialize worker with enhanced service registry
 async function initializeWorker(): Promise<void> {
   try {
-    console.log('🔧 Initializing job worker with service registry...');
+    console.log('🔧 Initializing job worker with Enhanced Service Registry and Interface Segregation Principle...');
     
-    // Register all services with the container
-    ServiceRegistry.registerServices();
+    // Register all services with the enhanced container
+    EnhancedServiceRegistry.registerServices();
     
     // Initialize core services
-    await ServiceRegistry.initializeCoreServices();
+    await EnhancedServiceRegistry.initializeCoreServices();
     
     // Validate job processing system
     const isValid = await validateJobSystem();
@@ -202,7 +206,7 @@ async function initializeWorker(): Promise<void> {
     }, config.initialScanDelay);
     
     const mode = envConfig.isDevelopment ? 'development' : 'production';
-    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode with dependency injection`);
+    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode with Clean Architecture and Interface Segregation Principle`);
     
   } catch (error: any) {
     console.error('❌ Failed to initialize worker:', error.message);
@@ -210,16 +214,16 @@ async function initializeWorker(): Promise<void> {
   }
 }
 
-// Graceful shutdown handling with service cleanup
+// Graceful shutdown handling with enhanced service cleanup
 process.on('SIGTERM', async () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
-  await ServiceRegistry.dispose();
+  await EnhancedServiceRegistry.dispose();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
-  await ServiceRegistry.dispose();
+  await EnhancedServiceRegistry.dispose();
   process.exit(0);
 });
 
