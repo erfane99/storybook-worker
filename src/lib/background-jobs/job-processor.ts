@@ -6,6 +6,7 @@ import { storyService } from '../services/story-service.js';
 import { sceneService } from '../services/scene-service.js';
 import { imageService } from '../services/image-service.js';
 import { storybookService } from '../services/storybook-service.js';
+import { PostgrestSingleResponse } from '@supabase/supabase-js';
 
 // ENHANCED: Timeout configuration for different service types
 interface ServiceTimeouts {
@@ -21,7 +22,7 @@ interface ServiceTimeouts {
 interface JobProcessingResult {
   success: boolean;
   jobId: string;
-  error?: {
+  error: {
     type: 'timeout' | 'ai_service' | 'database' | 'validation' | 'unknown';
     message: string;
     details?: any;
@@ -174,7 +175,7 @@ class BackgroundJobProcessor {
    * ENHANCED: Classify and handle different error types
    */
   private handleJobError(jobId: string, error: any, operation: string): JobProcessingResult {
-    let errorType: JobProcessingResult['error']['type'] = 'unknown';
+    let errorType: 'timeout' | 'ai_service' | 'database' | 'validation' | 'unknown' = 'unknown';
     let errorMessage = error.message || 'Unknown error occurred';
 
     // ENHANCED: Classify error types for better handling
@@ -263,11 +264,11 @@ class BackgroundJobProcessor {
         this.stats.failed++;
         
         // ENHANCED: Determine if job should be retried based on error type
-        const shouldRetry = result.error?.type !== 'validation' && result.error?.type !== 'timeout';
+        const shouldRetry = result.error.type !== 'validation' && result.error.type !== 'timeout';
         
         await jobManager.markJobFailed(
           job.id, 
-          result.error?.message || 'Job processing failed', 
+          result.error.message, 
           shouldRetry
         );
       }
@@ -276,7 +277,7 @@ class BackgroundJobProcessor {
       result = this.handleJobError(job.id, error, 'processJobWithCleanup');
       this.stats.failed++;
       
-      await jobManager.markJobFailed(job.id, result.error?.message || 'Unexpected error', true);
+      await jobManager.markJobFailed(job.id, result.error.message, true);
     } finally {
       // FIXED: GUARANTEED cleanup regardless of success/failure
       this.removeFromProcessing(job.id);
@@ -353,6 +354,10 @@ class BackgroundJobProcessor {
       return {
         success: true,
         jobId: job.id,
+        error: {
+          type: 'unknown',
+          message: '',
+        },
         duration: Date.now() - startTime,
       };
 
@@ -427,7 +432,7 @@ class BackgroundJobProcessor {
         process.env.SUPABASE_SERVICE_ROLE_KEY
       );
 
-      const { data: storybookEntry, error: supabaseError } = await this.withTimeout(
+      const response = await this.withTimeout(
         supabase
           .from('storybook_entries')
           .insert({
@@ -445,7 +450,9 @@ class BackgroundJobProcessor {
         this.serviceTimeouts.database,
         'saveStorybook',
         job.id
-      );
+      ) as PostgrestSingleResponse<any>;
+
+      const { data: storybookEntry, error: supabaseError } = response;
 
       if (supabaseError) {
         const error = new Error(`Database save failed: ${supabaseError.message}`);
@@ -539,7 +546,7 @@ class BackgroundJobProcessor {
         process.env.SUPABASE_SERVICE_ROLE_KEY
       );
 
-      const { data: storybook, error: supabaseError } = await this.withTimeout(
+      const response = await this.withTimeout(
         supabase
           .from('storybook_entries')
           .insert({
@@ -557,7 +564,9 @@ class BackgroundJobProcessor {
         this.serviceTimeouts.database,
         'saveAutoStory',
         job.id
-      );
+      ) as PostgrestSingleResponse<any>;
+
+      const { data: storybook, error: supabaseError } = response;
 
       if (supabaseError) {
         const error = new Error(`Database save failed: ${supabaseError.message}`);
