@@ -1,20 +1,34 @@
-// Database service implementation with dependency injection support
+// Enhanced Database Service - Production Implementation
 import { createClient, SupabaseClient, PostgrestSingleResponse } from '@supabase/supabase-js';
-import { BaseService, ServiceConfig, RetryConfig } from '../base/base-service.js';
-import { IDatabaseService, IServiceContainer, SERVICE_TOKENS } from '../interfaces/service-interfaces.js';
+import { EnhancedBaseService } from '../base/enhanced-base-service.js';
+import { 
+  IDatabaseService, 
+  StorybookEntryData, 
+  StorybookEntry, 
+  DatabaseOperation,
+  JobFilter,
+  ServiceConfig,
+  RetryConfig 
+} from '../interfaces/service-contracts.js';
+import { 
+  Result,
+  DatabaseConnectionError,
+  DatabaseQueryError,
+  DatabaseTimeoutError,
+  JobNotFoundError,
+  ErrorFactory
+} from '../errors/index.js';
 import { environmentManager } from '../../lib/config/environment.js';
-import { JobData, JobType, JobStatus, JobFilter, JobUpdateData } from '../../lib/types.js';
+import { JobData, JobType, JobStatus } from '../../lib/types.js';
 
-export interface DatabaseConfig extends ServiceConfig {
+interface DatabaseConfig extends ServiceConfig {
   maxConnections: number;
   connectionTimeout: number;
   queryTimeout: number;
 }
 
-export class DatabaseService extends BaseService implements IDatabaseService {
+export class DatabaseService extends EnhancedBaseService implements IDatabaseService {
   private supabase: SupabaseClient | null = null;
-  private connectionPool: Map<string, SupabaseClient> = new Map();
-  private container: IServiceContainer | null = null;
   private readonly defaultRetryConfig: RetryConfig = {
     attempts: 3,
     delay: 1000,
@@ -37,108 +51,59 @@ export class DatabaseService extends BaseService implements IDatabaseService {
     super(config);
   }
 
-  protected async initialize(): Promise<void> {
+  getName(): string {
+    return 'DatabaseService';
+  }
+
+  // ===== LIFECYCLE IMPLEMENTATION =====
+
+  protected async initializeService(): Promise<void> {
     const supabaseStatus = environmentManager.getServiceStatus('supabase');
     
     if (!supabaseStatus.isAvailable) {
-      this.log('warn', `Supabase not configured: ${supabaseStatus.message}`);
-      return;
+      throw new Error(`Supabase not configured: ${supabaseStatus.message}`);
     }
 
-    try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-      
-      this.supabase = createClient(supabaseUrl, supabaseKey, {
-        auth: { persistSession: false },
-        db: {
-          schema: 'public',
-        },
-        global: {
-          headers: {
-            'x-client-info': 'storybook-worker/1.0.0',
-          },
-        },
-      });
-
-      // Test connection
-      await this.testConnection();
-      this.log('info', 'Database service initialized successfully');
-      
-    } catch (error: any) {
-      this.log('error', 'Failed to initialize database service', error);
-      throw error;
-    }
-  }
-
-  private async testConnection(): Promise<void> {
-    if (!this.supabase) {
-      throw new Error('Supabase client not initialized');
-    }
-
-    const { error } = await this.supabase
-      .from('storybook_entries')
-      .select('id')
-      .limit(1);
-
-    if (error) {
-      throw new Error(`Database connection test failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Execute query with retry and timeout protection
-   */
-  private async executeQuery<T>(
-    operation: string,
-    queryFn: (supabase: SupabaseClient) => Promise<{ data: T | null; error: any }>
-  ): Promise<T | null> {
-    await this.ensureInitialized();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
     
-    if (!this.supabase) {
-      throw new Error('Database service not available');
-    }
+    this.supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false },
+      db: { schema: 'public' },
+      global: {
+        headers: { 'x-client-info': 'storybook-worker/1.0.0' },
+      },
+    });
 
-    if (this.isCircuitBreakerOpen()) {
-      throw new Error('Database service circuit breaker is open');
-    }
+    // Test connection
+    await this.testConnection();
+  }
 
-    try {
-      const result = await this.withRetry(
-        async () => {
-          const { data, error } = await this.withTimeout(
-            queryFn(this.supabase!),
-            (this.config as DatabaseConfig).queryTimeout,
-            operation
-          );
-          
-          if (error) {
-            const serviceError = this.classifyError(error);
-            const errorWithType = new Error(serviceError.message);
-            (errorWithType as any).type = serviceError.type;
-            (errorWithType as any).retryable = serviceError.retryable;
-            throw errorWithType;
-          }
-          
-          return data;
-        },
-        this.defaultRetryConfig,
-        operation
-      );
-
-      this.resetCircuitBreaker();
-      return result;
-      
-    } catch (error: any) {
-      this.recordCircuitBreakerFailure();
-      this.log('error', `Database operation failed: ${operation}`, error);
-      throw error;
+  protected async disposeService(): Promise<void> {
+    if (this.supabase) {
+      this.supabase = null;
     }
   }
 
-  /**
-   * Get pending jobs across all job tables
-   */
+  protected async checkServiceHealth(): Promise<boolean> {
+    if (!this.supabase) {
+      return false;
+    }
+
+    try {
+      const { error } = await this.supabase
+        .from('storybook_entries')
+        .select('id')
+        .limit(1);
+
+      return !error;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // ===== DATABASE OPERATIONS IMPLEMENTATION =====
+
   async getPendingJobs(filter: JobFilter = {}, limit: number = 50): Promise<JobData[]> {
     const allPendingJobs: JobData[] = [];
     const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
@@ -175,26 +140,17 @@ export class DatabaseService extends BaseService implements IDatabaseService {
     return allPendingJobs.slice(0, limit);
   }
 
-  /**
-   * Get job status from appropriate table
-   */
   async getJobStatus(jobId: string): Promise<JobData | null> {
-    await this.ensureInitialized();
-    
     if (!this.supabase) {
       throw new Error('Database service not available');
     }
 
     const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
     
-    this.log('info', `Searching for job ${jobId} across ${jobTypes.length} tables`);
-    
     for (const jobType of jobTypes) {
       const tableName = this.getTableName(jobType);
       
       try {
-        this.log('info', `Checking ${tableName} for job ${jobId}`);
-        
         const { data, error } = await this.supabase
           .from(tableName)
           .select('*')
@@ -203,8 +159,7 @@ export class DatabaseService extends BaseService implements IDatabaseService {
 
         if (error) {
           if (error.code === 'PGRST116') {
-            this.log('info', `Job ${jobId} not found in ${tableName} (expected - continuing search)`);
-            continue;
+            continue; // Job not in this table
           } else {
             this.log('warn', `Database error searching ${tableName} for job ${jobId}`, error.message);
             continue;
@@ -212,26 +167,17 @@ export class DatabaseService extends BaseService implements IDatabaseService {
         }
 
         if (data && data.id) {
-          this.log('info', `Found job ${jobId} in ${tableName}`);
           return this.mapFromTableFormat(jobType, data);
-        } else {
-          this.log('info', `Job ${jobId} query successful but no data in ${tableName} - continuing search`);
-          continue;
         }
-
       } catch (error: any) {
         this.log('warn', `Unexpected error searching ${tableName} for job ${jobId}`, error.message);
         continue;
       }
     }
 
-    this.log('warn', `Job not found: ${jobId} (searched all ${jobTypes.length} job tables)`);
     return null;
   }
 
-  /**
-   * Update job progress
-   */
   async updateJobProgress(jobId: string, progress: number, currentStep?: string): Promise<boolean> {
     const job = await this.getJobStatus(jobId);
     if (!job) {
@@ -268,17 +214,9 @@ export class DatabaseService extends BaseService implements IDatabaseService {
       }
     );
 
-    if (result?.id) {
-      this.log('info', `Updated job progress: ${jobId} -> ${progress}%`);
-      return true;
-    }
-
-    return false;
+    return !!result?.id;
   }
 
-  /**
-   * Mark job as completed
-   */
   async markJobCompleted(jobId: string, resultData: any): Promise<boolean> {
     const job = await this.getJobStatus(jobId);
     if (!job) {
@@ -312,17 +250,9 @@ export class DatabaseService extends BaseService implements IDatabaseService {
       }
     );
 
-    if (result?.id) {
-      this.log('info', `Marked job completed: ${jobId}`);
-      return true;
-    }
-
-    return false;
+    return !!result?.id;
   }
 
-  /**
-   * Mark job as failed
-   */
   async markJobFailed(jobId: string, errorMessage: string, shouldRetry: boolean = false): Promise<boolean> {
     const job = await this.getJobStatus(jobId);
     if (!job) {
@@ -362,20 +292,11 @@ export class DatabaseService extends BaseService implements IDatabaseService {
       }
     );
 
-    if (result?.id) {
-      const action = canRetry ? 'scheduled for retry' : 'marked as failed';
-      this.log('info', `Job ${action}: ${jobId} - ${errorMessage}`);
-      return true;
-    }
-
-    return false;
+    return !!result?.id;
   }
 
-  /**
-   * Save storybook entry
-   */
-  async saveStorybookEntry(data: any): Promise<any> {
-    const result = await this.executeQuery<any>(
+  async saveStorybookEntry(data: StorybookEntryData): Promise<StorybookEntry> {
+    const result = await this.executeQuery<StorybookEntry>(
       'Save storybook entry',
       async (supabase) => {
         const response = await supabase
@@ -403,36 +324,95 @@ export class DatabaseService extends BaseService implements IDatabaseService {
     return result;
   }
 
-  /**
-   * Execute transaction
-   */
-  async executeTransaction<T>(
-    operations: ((supabase: SupabaseClient) => Promise<T>)[],
-    options: any = {}
-  ): Promise<T[]> {
-    await this.ensureInitialized();
-    
+  async getStorybookEntry(id: string): Promise<StorybookEntry | null> {
+    const result = await this.executeQuery<StorybookEntry>(
+      'Get storybook entry',
+      async (supabase) => {
+        const response = await supabase
+          .from('storybook_entries')
+          .select('*')
+          .eq('id', id)
+          .single();
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    return result;
+  }
+
+  async executeTransaction<T>(operations: DatabaseOperation<T>[]): Promise<T[]> {
     if (!this.supabase) {
       throw new Error('Database service not available');
     }
-
-    const timeout = options.timeout || 60000;
-    const retries = options.retries || 1;
 
     return this.withRetry(
       async () => {
         return this.withTimeout(
           Promise.all(operations.map(op => op(this.supabase!))),
-          timeout,
+          (this.config as DatabaseConfig).queryTimeout,
           'transaction'
         );
       },
-      { ...this.defaultRetryConfig, attempts: retries },
+      this.defaultRetryConfig,
       'executeTransaction'
     );
   }
 
-  // Helper methods
+  // ===== PRIVATE HELPER METHODS =====
+
+  private async testConnection(): Promise<void> {
+    if (!this.supabase) {
+      throw new Error('Supabase client not initialized');
+    }
+
+    const { error } = await this.supabase
+      .from('storybook_entries')
+      .select('id')
+      .limit(1);
+
+    if (error) {
+      throw new Error(`Database connection test failed: ${error.message}`);
+    }
+  }
+
+  private async executeQuery<T>(
+    operation: string,
+    queryFn: (supabase: SupabaseClient) => Promise<{ data: T | null; error: any }>
+  ): Promise<T | null> {
+    if (!this.supabase) {
+      throw new Error('Database service not available');
+    }
+
+    try {
+      const result = await this.withRetry(
+        async () => {
+          const { data, error } = await this.withTimeout(
+            queryFn(this.supabase!),
+            (this.config as DatabaseConfig).queryTimeout,
+            operation
+          );
+          
+          if (error) {
+            const serviceError = this.classifyError(error);
+            const errorWithType = new Error(serviceError.message);
+            (errorWithType as any).type = serviceError.type;
+            (errorWithType as any).retryable = serviceError.retryable;
+            throw errorWithType;
+          }
+          
+          return data;
+        },
+        this.defaultRetryConfig,
+        operation
+      );
+
+      return result;
+    } catch (error: any) {
+      this.log('error', `Database operation failed: ${operation}`, error);
+      throw error;
+    }
+  }
+
   private getTableName(jobType: JobType): string {
     const tableMap: Record<JobType, string> = {
       'storybook': 'storybook_jobs',
@@ -445,7 +425,6 @@ export class DatabaseService extends BaseService implements IDatabaseService {
   }
 
   private mapFromTableFormat(jobType: JobType, tableData: any): JobData {
-    // Implementation matches existing job-manager logic
     const baseJob: any = {
       id: tableData.id?.toString() || '',
       type: jobType,
@@ -496,21 +475,8 @@ export class DatabaseService extends BaseService implements IDatabaseService {
     }
     // Add other job type result mappings as needed
   }
-
-  isHealthy(): boolean {
-    return this.isInitialized && this.supabase !== null && !this.isCircuitBreakerOpen();
-  }
-
-  getStatus() {
-    const supabaseStatus = environmentManager.getServiceStatus('supabase');
-    return {
-      name: this.config.name,
-      initialized: this.isInitialized,
-      available: this.isHealthy(),
-      circuitBreakerOpen: this.isCircuitBreakerOpen(),
-      circuitBreakerFailures: this.circuitBreakerFailures,
-      supabaseStatus: supabaseStatus.status,
-      connectionPoolSize: this.connectionPool.size,
-    };
-  }
 }
+
+// Export singleton instance
+export const databaseService = new DatabaseService();
+export default databaseService;

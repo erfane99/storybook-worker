@@ -1,5 +1,20 @@
-// Storage service for Cloudinary operations
-import { BaseService, ServiceConfig, RetryConfig } from '../base/base-service.js';
+// Enhanced Storage Service - Production Implementation
+import { EnhancedBaseService } from '../base/enhanced-base-service.js';
+import { 
+  IStorageService,
+  ServiceConfig,
+  RetryConfig,
+  UploadOptions,
+  UploadResult
+} from '../interfaces/service-contracts.js';
+import { 
+  Result,
+  StorageUploadError,
+  StorageQuotaExceededError,
+  StorageFileNotFoundError,
+  StorageConfigurationError,
+  ErrorFactory
+} from '../errors/index.js';
 
 export interface StorageConfig extends ServiceConfig {
   cloudName: string;
@@ -9,24 +24,7 @@ export interface StorageConfig extends ServiceConfig {
   maxFileSize: number;
 }
 
-export interface UploadOptions {
-  folder?: string;
-  publicId?: string;
-  transformation?: any;
-  resourceType?: 'image' | 'video' | 'raw' | 'auto';
-}
-
-export interface UploadResult {
-  url: string;
-  secureUrl: string;
-  publicId: string;
-  format: string;
-  width: number;
-  height: number;
-  bytes: number;
-}
-
-export class StorageService extends BaseService {
+export class StorageService extends EnhancedBaseService implements IStorageService {
   private cloudName: string | null = null;
   private apiKey: string | null = null;
   private apiSecret: string | null = null;
@@ -54,35 +52,39 @@ export class StorageService extends BaseService {
     super(config);
   }
 
-  protected async initialize(): Promise<void> {
+  getName(): string {
+    return 'StorageService';
+  }
+
+  // ===== LIFECYCLE IMPLEMENTATION =====
+
+  protected async initializeService(): Promise<void> {
     // Check for Cloudinary environment variables
     this.cloudName = process.env.CLOUDINARY_CLOUD_NAME || null;
     this.apiKey = process.env.CLOUDINARY_API_KEY || null;
     this.apiSecret = process.env.CLOUDINARY_API_SECRET || null;
 
     if (!this.cloudName || !this.apiKey || !this.apiSecret) {
-      this.log('warn', 'Cloudinary not configured - storage service will be unavailable');
-      return;
+      throw new Error('Cloudinary not configured - storage service will be unavailable');
     }
-
-    this.log('info', 'Storage service initialized successfully');
   }
 
-  /**
-   * Upload image to Cloudinary
-   */
+  protected async disposeService(): Promise<void> {
+    // No cleanup needed for Cloudinary
+  }
+
+  protected async checkServiceHealth(): Promise<boolean> {
+    return this.cloudName !== null && this.apiKey !== null && this.apiSecret !== null;
+  }
+
+  // ===== STORAGE OPERATIONS IMPLEMENTATION =====
+
   async uploadImage(
     imageData: Buffer | string,
     options: UploadOptions = {}
   ): Promise<UploadResult> {
-    await this.ensureInitialized();
-    
     if (!this.cloudName || !this.apiKey || !this.apiSecret) {
       throw new Error('Storage service not available - Cloudinary not configured');
-    }
-
-    if (this.isCircuitBreakerOpen()) {
-      throw new Error('Storage service circuit breaker is open');
     }
 
     return this.withRetry(
@@ -102,7 +104,6 @@ export class StorageService extends BaseService {
           bytes: 102400,
         };
 
-        this.resetCircuitBreaker();
         return mockResult;
       },
       this.uploadRetryConfig,
@@ -110,9 +111,6 @@ export class StorageService extends BaseService {
     );
   }
 
-  /**
-   * Generate transformation URL
-   */
   generateUrl(publicId: string, transformations: any = {}): string {
     if (!this.cloudName) {
       throw new Error('Storage service not available - Cloudinary not configured');
@@ -122,12 +120,7 @@ export class StorageService extends BaseService {
     return `https://res.cloudinary.com/${this.cloudName}/image/upload/${publicId}`;
   }
 
-  /**
-   * Delete image from Cloudinary
-   */
   async deleteImage(publicId: string): Promise<boolean> {
-    await this.ensureInitialized();
-    
     if (!this.cloudName || !this.apiKey || !this.apiSecret) {
       throw new Error('Storage service not available - Cloudinary not configured');
     }
@@ -137,7 +130,6 @@ export class StorageService extends BaseService {
         this.log('info', `Deleting image: ${publicId}`);
         
         // Mock implementation - replace with actual Cloudinary delete
-        this.resetCircuitBreaker();
         return true;
       },
       this.uploadRetryConfig,
@@ -145,9 +137,6 @@ export class StorageService extends BaseService {
     );
   }
 
-  /**
-   * Cleanup failed uploads
-   */
   async cleanupFailedUploads(publicIds: string[]): Promise<void> {
     if (publicIds.length === 0) return;
 
@@ -162,25 +151,6 @@ export class StorageService extends BaseService {
     });
 
     await Promise.allSettled(cleanupPromises);
-  }
-
-  isHealthy(): boolean {
-    return this.isInitialized && 
-           this.cloudName !== null && 
-           this.apiKey !== null && 
-           this.apiSecret !== null && 
-           !this.isCircuitBreakerOpen();
-  }
-
-  getStatus() {
-    return {
-      name: this.config.name,
-      initialized: this.isInitialized,
-      available: this.isHealthy(),
-      circuitBreakerOpen: this.isCircuitBreakerOpen(),
-      circuitBreakerFailures: this.circuitBreakerFailures,
-      configured: this.cloudName !== null && this.apiKey !== null && this.apiSecret !== null,
-    };
   }
 }
 

@@ -1,9 +1,9 @@
-// Enhanced Service Registry implementing Interface Segregation Principle
+// Enhanced Service Registry - Production Implementation
 import { enhancedServiceContainer } from '../container/enhanced-service-container.js';
 import { SERVICE_TOKENS, ContainerHealthReport } from '../interfaces/service-contracts.js';
 
 // Import enhanced service implementations
-import { EnhancedDatabaseService } from '../database/enhanced-database-service.js';
+import { DatabaseService } from '../database/database-service.js';
 import { AIService } from '../ai/ai-service.js';
 import { StorageService } from '../storage/storage-service.js';
 import { JobService } from '../job/job-service.js';
@@ -14,15 +14,15 @@ export class EnhancedServiceRegistry {
   private static registered = false;
 
   /**
-   * Register all services with the enhanced container
+   * Register all enhanced services with the container
    */
   static registerServices(): void {
     if (this.registered) {
-      console.log('⚠️ Services already registered, skipping...');
+      console.log('⚠️ Enhanced services already registered, skipping...');
       return;
     }
 
-    console.log('📋 Registering services with enhanced container...');
+    console.log('📋 Registering enhanced services with container...');
 
     // Register Configuration Service (no dependencies)
     enhancedServiceContainer.register(
@@ -39,7 +39,7 @@ export class EnhancedServiceRegistry {
     // Register Enhanced Database Service (depends on config)
     enhancedServiceContainer.register(
       SERVICE_TOKENS.DATABASE,
-      () => new EnhancedDatabaseService(),
+      () => new DatabaseService(),
       {
         singleton: true,
         lazy: true,
@@ -48,7 +48,7 @@ export class EnhancedServiceRegistry {
       }
     );
 
-    // Register AI Service (depends on config)
+    // Register Enhanced AI Service (depends on config)
     enhancedServiceContainer.register(
       SERVICE_TOKENS.AI,
       () => new AIService(),
@@ -60,7 +60,7 @@ export class EnhancedServiceRegistry {
       }
     );
 
-    // Register Storage Service (depends on config)
+    // Register Enhanced Storage Service (depends on config)
     enhancedServiceContainer.register(
       SERVICE_TOKENS.STORAGE,
       () => new StorageService(),
@@ -72,7 +72,7 @@ export class EnhancedServiceRegistry {
       }
     );
 
-    // Register Auth Service (depends on config)
+    // Register Enhanced Auth Service (depends on config)
     enhancedServiceContainer.register(
       SERVICE_TOKENS.AUTH,
       () => new AuthService(),
@@ -84,16 +84,11 @@ export class EnhancedServiceRegistry {
       }
     );
 
-    // Register Job Service (depends on database)
+    // Register Enhanced Job Service (depends on database)
     enhancedServiceContainer.register(
       SERVICE_TOKENS.JOB,
       async (container) => {
         const jobService = new JobService();
-        
-        // Inject database service dependency
-        const databaseService = await container.resolve(SERVICE_TOKENS.DATABASE);
-        (jobService as any).setDatabaseService(databaseService);
-        
         return jobService;
       },
       {
@@ -105,21 +100,21 @@ export class EnhancedServiceRegistry {
     );
 
     this.registered = true;
-    console.log('✅ All services registered successfully with enhanced container');
+    console.log('✅ All enhanced services registered successfully');
   }
 
   /**
    * Initialize core services that should be loaded immediately
    */
   static async initializeCoreServices(): Promise<void> {
-    console.log('🚀 Initializing core services with enhanced container...');
+    console.log('🚀 Initializing core enhanced services...');
     
     try {
       // Initialize configuration service first
       await enhancedServiceContainer.resolve(SERVICE_TOKENS.CONFIG);
-      console.log('✅ Core services initialized with enhanced container');
+      console.log('✅ Core enhanced services initialized');
     } catch (error: any) {
-      console.error('❌ Failed to initialize core services:', error.message);
+      console.error('❌ Failed to initialize core enhanced services:', error.message);
       throw error;
     }
   }
@@ -191,6 +186,9 @@ export class EnhancedServiceRegistry {
         metricsCollection: true,
         circuitBreakerPattern: true,
         gracefulDegradation: true,
+        enhancedErrorHandling: true,
+        resultPattern: true,
+        errorCorrelation: true,
       },
     };
   }

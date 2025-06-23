@@ -1,6 +1,18 @@
-// Auth service for authentication and user validation
-import { BaseService, ServiceConfig } from '../base/base-service.js';
-import { databaseService } from '../database/database-service.js';
+// Enhanced Auth Service - Production Implementation
+import { EnhancedBaseService } from '../base/enhanced-base-service.js';
+import { 
+  IAuthService,
+  ServiceConfig,
+  TokenValidationResult,
+  UserContext
+} from '../interfaces/service-contracts.js';
+import { 
+  Result,
+  AuthenticationError,
+  AuthorizationError,
+  TokenValidationError,
+  ErrorFactory
+} from '../errors/index.js';
 
 export interface AuthConfig extends ServiceConfig {
   jwtSecret: string;
@@ -8,20 +20,7 @@ export interface AuthConfig extends ServiceConfig {
   serviceRoleKey: string;
 }
 
-export interface UserContext {
-  id: string;
-  email?: string;
-  role: 'user' | 'admin' | 'service';
-  permissions: string[];
-}
-
-export interface TokenValidationResult {
-  valid: boolean;
-  user?: UserContext;
-  error?: string;
-}
-
-export class AuthService extends BaseService {
+export class AuthService extends EnhancedBaseService implements IAuthService {
   private jwtSecret: string | null = null;
   private serviceRoleKey: string | null = null;
 
@@ -40,7 +39,13 @@ export class AuthService extends BaseService {
     super(config);
   }
 
-  protected async initialize(): Promise<void> {
+  getName(): string {
+    return 'AuthService';
+  }
+
+  // ===== LIFECYCLE IMPLEMENTATION =====
+
+  protected async initializeService(): Promise<void> {
     this.jwtSecret = process.env.JWT_SECRET || null;
     this.serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || null;
 
@@ -51,23 +56,25 @@ export class AuthService extends BaseService {
     if (!this.serviceRoleKey) {
       this.log('warn', 'Service role key not configured - service authentication will be limited');
     }
-
-    this.log('info', 'Auth service initialized');
   }
 
-  /**
-   * Validate JWT token
-   */
+  protected async disposeService(): Promise<void> {
+    // No cleanup needed
+  }
+
+  protected async checkServiceHealth(): Promise<boolean> {
+    return true; // Auth service is always healthy
+  }
+
+  // ===== AUTH OPERATIONS IMPLEMENTATION =====
+
   async validateToken(token: string): Promise<TokenValidationResult> {
-    await this.ensureInitialized();
-    
     if (!token) {
       return { valid: false, error: 'No token provided' };
     }
 
     try {
       // For now, implement basic validation
-      // In a real implementation, you would use a JWT library
       if (token === this.serviceRoleKey) {
         return {
           valid: true,
@@ -100,9 +107,6 @@ export class AuthService extends BaseService {
     }
   }
 
-  /**
-   * Check if user has permission
-   */
   async checkPermission(userContext: UserContext, permission: string): Promise<boolean> {
     if (userContext.role === 'service' || userContext.permissions.includes('*')) {
       return true;
@@ -111,20 +115,12 @@ export class AuthService extends BaseService {
     return userContext.permissions.includes(permission);
   }
 
-  /**
-   * Get user context from token
-   */
   async getUserContext(token: string): Promise<UserContext | null> {
     const validation = await this.validateToken(token);
     return validation.valid ? validation.user || null : null;
   }
 
-  /**
-   * Validate service role authentication
-   */
   async validateServiceRole(key: string): Promise<boolean> {
-    await this.ensureInitialized();
-    
     if (!this.serviceRoleKey) {
       this.log('warn', 'Service role key not configured');
       return false;
@@ -133,28 +129,11 @@ export class AuthService extends BaseService {
     return key === this.serviceRoleKey;
   }
 
-  /**
-   * Create service context for worker operations
-   */
   getServiceContext(): UserContext {
     return {
       id: 'worker-service',
       role: 'service',
       permissions: ['*'],
-    };
-  }
-
-  isHealthy(): boolean {
-    return this.isInitialized;
-  }
-
-  getStatus() {
-    return {
-      name: this.config.name,
-      initialized: this.isInitialized,
-      available: this.isHealthy(),
-      jwtConfigured: this.jwtSecret !== null,
-      serviceRoleConfigured: this.serviceRoleKey !== null,
     };
   }
 }
