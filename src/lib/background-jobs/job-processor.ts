@@ -446,11 +446,11 @@ class BackgroundJobProcessor {
             created_at: new Date().toISOString(),
           })
           .select()
-          .single(),
+          .single() as Promise<PostgrestSingleResponse<any>>,
         this.serviceTimeouts.database,
         'saveStorybook',
         job.id
-      ) as PostgrestSingleResponse<any>;
+      );
 
       const { data: storybookEntry, error: supabaseError } = response;
 
@@ -560,11 +560,11 @@ class BackgroundJobProcessor {
             created_at: new Date().toISOString(),
           })
           .select()
-          .single(),
+          .single() as Promise<PostgrestSingleResponse<any>>,
         this.serviceTimeouts.database,
         'saveAutoStory',
         job.id
-      ) as PostgrestSingleResponse<any>;
+      );
 
       const { data: storybook, error: supabaseError } = response;
 
