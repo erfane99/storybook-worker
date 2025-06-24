@@ -366,7 +366,7 @@ export class StartupValidator {
     }, intervalMs);
 
     // Return a function to stop monitoring
-    return () => {
+    () => {
       clearInterval(interval);
       console.log('🛑 Continuous monitoring stopped');
     };
