@@ -1,12 +1,11 @@
 // Comprehensive error handling exports
 // Central export point for all error handling functionality
-// FIXED: Eliminated all duplicate exports and type/value conflicts
+// FIXED: Completely eliminated ALL duplicate exports
 
 // ===== VALUE IMPORTS (for runtime use) =====
 import { 
   ErrorCategory,
   ErrorSeverity,
-  ErrorContext,
   ErrorFactory,
   BaseServiceError,
   DatabaseConnectionError,
@@ -71,8 +70,6 @@ import {
 } from '../base/error-aware-base-service.js';
 
 // ===== TYPE-ONLY EXPORTS =====
-// FIXED: Remove Result from type exports since it's exported as value
-
 export type {
   StructuredError,
   ServiceError,
@@ -129,17 +126,15 @@ export type {
 } from '../base/error-aware-base-service.js';
 
 // ===== VALUE EXPORTS =====
-// FIXED: Single export section for each identifier
+// FIXED: Removed ErrorContext and BaseServiceError to eliminate duplicates
 
 export { 
   ErrorCategory,
-  ErrorSeverity,
-  ErrorContext 
+  ErrorSeverity
 };
 
 export {
   ErrorFactory,
-  BaseServiceError,
   
   // Database Errors
   DatabaseConnectionError,
@@ -245,6 +240,8 @@ export function createServiceError(
  * Check if an error is retryable
  */
 export function isRetryableError(error: unknown): boolean {
+  // Use import type for BaseServiceError check
+  const { BaseServiceError } = require('./error-types.js');
   if (error instanceof BaseServiceError) {
     return error.shouldRetry();
   }
@@ -255,6 +252,8 @@ export function isRetryableError(error: unknown): boolean {
  * Get error severity level
  */
 export function getErrorSeverityLevel(error: unknown): number {
+  // Use import type for BaseServiceError and ErrorSeverity check
+  const { BaseServiceError, ErrorSeverity } = require('./error-types.js');
   if (error instanceof BaseServiceError) {
     const levels = { 
       [ErrorSeverity.LOW]: 1, 
@@ -271,6 +270,8 @@ export function getErrorSeverityLevel(error: unknown): number {
  * Convert any error to a structured format
  */
 export function toStructuredError(error: unknown): import('./error-types.js').StructuredError {
+  // Use import type for BaseServiceError check
+  const { BaseServiceError, ErrorFactory } = require('./error-types.js');
   if (error instanceof BaseServiceError) {
     return error.toStructured();
   }
