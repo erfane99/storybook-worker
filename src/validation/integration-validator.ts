@@ -317,12 +317,13 @@ export class IntegrationValidator {
     });
 
     // Test 3: Result Integration with Error Correlation
+    // FIXED: Proper Result pattern usage
     await this.runTest('result-pattern', 'correlation_integration', async () => {
       const context = createServiceCorrelationContext('result-test', 'correlation-test');
       
       const resultPromise = errorCorrelationManager.withContextResult(context, async () => {
-        // Return a manual success result
-        return { success: true as const, data: 'correlation test data' };
+        // Return a proper Result object instead of manual success object
+        return Result.success('correlation test data');
       });
       
       const result = await resultPromise;
