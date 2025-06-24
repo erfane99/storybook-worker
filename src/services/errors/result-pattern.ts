@@ -183,7 +183,7 @@ export const Result = {
 
   /**
    * Combine multiple results into one
-   * FIXED: Simplified approach avoiding complex array constraints
+   * FIXED: Use tuple spread to properly construct T
    */
   combine: <T extends readonly unknown[], E extends BaseServiceError>(
     results: { [K in keyof T]: Result<T[K], E> }
@@ -198,8 +198,8 @@ export const Result = {
       data.push(result.data);
     }
     
-    // Safe cast since we know the structure matches
-    return Result.success(data as unknown as T);
+    // Safe: we know data has the same structure as T since we validated each element
+    return Result.success([...data] as T);
   },
 
   /**
@@ -317,12 +317,15 @@ export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
 
   /**
    * Unwrap the result or return default
-   * FIXED: Simplify constraint to avoid PromiseLike issues
+   * FIXED: Maintain original signature for backward compatibility
    */
   async unwrapOr(defaultValue: T): Promise<T> {
     try {
       const result = await this.promise;
-      return result.unwrapOr(defaultValue);
+      if (result.success) {
+        return result.data;
+      }
+      return defaultValue;
     } catch (error) {
       console.warn('Error in unwrapOr:', error);
       return defaultValue;
