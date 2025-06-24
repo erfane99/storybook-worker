@@ -97,7 +97,7 @@ export const TEST_SCENARIOS: Record<string, TestScenario> = {
 // ===== MOCK DATA GENERATORS =====
 
 export function generateMockJob(type: JobType, overrides: Partial<JobData> = {}): JobData {
-  const baseJob: JobData = {
+  const baseJob: any = {
     id: `test-${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     type,
     status: 'pending',
