@@ -183,7 +183,7 @@ export const Result = {
 
   /**
    * Combine multiple results into one
-   * FIXED: Use any cast - the only solution that actually works for this TypeScript issue
+   * FIXED: Cast the entire return to bypass all TypeScript inference issues
    */
   combine: <T extends readonly unknown[], E extends BaseServiceError>(
     results: { [K in keyof T]: Result<T[K], E> }
@@ -198,9 +198,8 @@ export const Result = {
       data.push(result.data);
     }
     
-    // REALITY CHECK: TypeScript's variance system cannot handle this case
-    // This any cast is the only solution that works - used by fp-ts, neverthrow, etc.
-    return Result.success(data as any);
+    // Nuclear option: Cast the entire Result.success call
+    return (Result.success(data) as any) as Result<T, E>;
   },
 
   /**
