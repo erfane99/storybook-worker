@@ -366,10 +366,10 @@ export class StartupValidator {
     }, intervalMs);
 
     // Return a function to stop monitoring
-    () => {
-      clearInterval(interval);
-      console.log('🛑 Continuous monitoring stopped');
-    };
+    return () => {
+  clearInterval(interval);
+  console.log('🛑 Continuous monitoring stopped');
+};
   }
 
   private async performQuickHealthCheck(): Promise<{
