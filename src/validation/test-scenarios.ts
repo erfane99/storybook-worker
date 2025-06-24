@@ -107,8 +107,8 @@ export function generateMockJob(type: JobType, overrides: Partial<JobData> = {})
     updated_at: new Date().toISOString(),
     retry_count: 0,
     max_retries: 3,
-    input_data: {},
-    result_data: {},
+input_data: { title: '', story: '', characterImage: '', pages: [], audience: 'children' as any },
+    result_data: { storybook_id: '', pages: [], has_errors: false },
     ...overrides,
   };
 
