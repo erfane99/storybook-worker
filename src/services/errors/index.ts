@@ -1,6 +1,6 @@
 // Comprehensive error handling exports
 // Central export point for all error handling functionality
-// FIXED: Completely eliminated ALL duplicate exports
+// FIXED: Completely eliminated ALL duplicate exports and type issues
 
 // ===== VALUE IMPORTS (for runtime use) =====
 import { 
@@ -126,7 +126,6 @@ export type {
 } from '../base/error-aware-base-service.js';
 
 // ===== VALUE EXPORTS =====
-// FIXED: Removed ErrorContext and BaseServiceError to eliminate duplicates
 
 export { 
   ErrorCategory,
@@ -213,6 +212,7 @@ export {
 };
 
 // ===== UTILITY FUNCTIONS =====
+// FIXED: Use static imports instead of require() for proper type narrowing
 
 /**
  * Create a standardized error for service operations
@@ -238,10 +238,9 @@ export function createServiceError(
 
 /**
  * Check if an error is retryable
+ * FIXED: Use static import for proper type narrowing
  */
 export function isRetryableError(error: unknown): boolean {
-  // Use import type for BaseServiceError check
-  const { BaseServiceError } = require('./error-types.js');
   if (error instanceof BaseServiceError) {
     return error.shouldRetry();
   }
@@ -250,10 +249,9 @@ export function isRetryableError(error: unknown): boolean {
 
 /**
  * Get error severity level
+ * FIXED: Use static import for proper type narrowing
  */
 export function getErrorSeverityLevel(error: unknown): number {
-  // Use import type for BaseServiceError and ErrorSeverity check
-  const { BaseServiceError, ErrorSeverity } = require('./error-types.js');
   if (error instanceof BaseServiceError) {
     const levels = { 
       [ErrorSeverity.LOW]: 1, 
@@ -268,10 +266,9 @@ export function getErrorSeverityLevel(error: unknown): number {
 
 /**
  * Convert any error to a structured format
+ * FIXED: Use static import for proper type narrowing
  */
 export function toStructuredError(error: unknown): import('./error-types.js').StructuredError {
-  // Use import type for BaseServiceError check
-  const { BaseServiceError, ErrorFactory } = require('./error-types.js');
   if (error instanceof BaseServiceError) {
     return error.toStructured();
   }
