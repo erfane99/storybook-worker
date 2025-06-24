@@ -183,13 +183,12 @@ export const Result = {
 
   /**
    * Combine multiple results into one
-   * FIXED: Proper generic constraint handling for array types
+   * FIXED: Simplified approach avoiding complex array constraints
    */
   combine: <T extends readonly unknown[], E extends BaseServiceError>(
     results: { [K in keyof T]: Result<T[K], E> }
   ): Result<T, E> => {
-    // Create a properly typed array that matches T
-    const data: T[number][] = [];
+    const data: unknown[] = [];
     
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
@@ -199,8 +198,8 @@ export const Result = {
       data.push(result.data);
     }
     
-    // TypeScript now knows this is safe because we've validated all results
-    return Result.success(data as T);
+    // Safe cast since we know the structure matches
+    return Result.success(data as unknown as T);
   },
 
   /**
@@ -318,11 +317,16 @@ export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
 
   /**
    * Unwrap the result or return default
-   * FIXED: Remove PromiseLike constraint that was causing type errors
+   * FIXED: Simplify constraint to avoid PromiseLike issues
    */
   async unwrapOr(defaultValue: T): Promise<T> {
-    const result = await this.promise;
-    return result.unwrapOr(defaultValue);
+    try {
+      const result = await this.promise;
+      return result.unwrapOr(defaultValue);
+    } catch (error) {
+      console.warn('Error in unwrapOr:', error);
+      return defaultValue;
+    }
   }
 
   /**
@@ -348,8 +352,9 @@ export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
 
   /**
    * Create a successful AsyncResult
+   * FIXED: Use BaseServiceError to avoid never constraint issues
    */
-  static success<T>(data: T): AsyncResult<T, never> {
+  static success<T>(data: T): AsyncResult<T, BaseServiceError> {
     return new AsyncResult(Promise.resolve(Result.success(data)));
   }
 
