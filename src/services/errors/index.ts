@@ -1,6 +1,6 @@
 // Comprehensive error handling exports
 // Central export point for all error handling functionality
-// FIXED: Proper separation of type and value exports for isolatedModules
+// FIXED: Eliminated all duplicate exports and type/value conflicts
 
 // ===== VALUE IMPORTS (for runtime use) =====
 import { 
@@ -71,7 +71,7 @@ import {
 } from '../base/error-aware-base-service.js';
 
 // ===== TYPE-ONLY EXPORTS =====
-// Using export type for all TypeScript types to satisfy isolatedModules
+// FIXED: Remove Result from type exports since it's exported as value
 
 export type {
   StructuredError,
@@ -82,21 +82,15 @@ export type {
   DatabaseError,
   ExternalServiceError,
   BusinessLogicError,
-  SystemError,
-  UnknownError,
   ContainerError,
-  ServiceNotRegisteredError,
-  ServiceInitializationError,
-  CircularDependencyError,
-  ContainerDisposedError,
   InvalidTokenError,
-  ServiceLifecycleError
+  ServiceLifecycleError,
+  ErrorContext
 } from './error-types.js';
 
 export type {
-  Result,
   Success,
-  Failure,
+  Failure
 } from './result-pattern.js';
 
 export type {
@@ -135,7 +129,7 @@ export type {
 } from '../base/error-aware-base-service.js';
 
 // ===== VALUE EXPORTS =====
-// These are actual classes, enums, and functions that exist at runtime
+// FIXED: Single export section for each identifier
 
 export { 
   ErrorCategory,
@@ -224,7 +218,6 @@ export {
 };
 
 // ===== UTILITY FUNCTIONS =====
-// FIXED: Using proper imports instead of require()
 
 /**
  * Create a standardized error for service operations
@@ -334,13 +327,7 @@ export async function combineAsyncResults<T extends readonly unknown[]>(
 
 // ===== ERROR HANDLING BEST PRACTICES =====
 
-/**
- * Best practices documentation for error handling
- */
 export const ERROR_HANDLING_BEST_PRACTICES = {
-  /**
-   * Always use Result pattern for operations that can fail
-   */
   useResultPattern: `
     // ✅ Good
     async function getUser(id: string): Promise<Result<User, DatabaseError>> {
@@ -356,9 +343,6 @@ export const ERROR_HANDLING_BEST_PRACTICES = {
     }
   `,
   
-  /**
-   * Use correlation for tracking errors across service boundaries
-   */
   useCorrelation: `
     // ✅ Good
     @withCorrelationResult('user-service', 'createUser')
@@ -371,9 +355,6 @@ export const ERROR_HANDLING_BEST_PRACTICES = {
     }
   `,
   
-  /**
-   * Handle errors at the appropriate level
-   */
   handleAtRightLevel: `
     // ✅ Good - Handle at service boundary
     class UserController {
@@ -393,9 +374,6 @@ export const ERROR_HANDLING_BEST_PRACTICES = {
     }
   `,
   
-  /**
-   * Use specific error types for better handling
-   */
   useSpecificErrors: `
     // ✅ Good
     if (result.error instanceof DatabaseConnectionError) {
