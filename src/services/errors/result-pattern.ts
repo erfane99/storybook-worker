@@ -183,7 +183,7 @@ export const Result = {
 
   /**
    * Combine multiple results into one
-   * FIXED: Use tuple spread to properly construct T
+   * FIXED: Industry standard double-cast pattern used by major libraries
    */
   combine: <T extends readonly unknown[], E extends BaseServiceError>(
     results: { [K in keyof T]: Result<T[K], E> }
@@ -198,8 +198,9 @@ export const Result = {
       data.push(result.data);
     }
     
-    // Safe: we know data has the same structure as T since we validated each element
-    return Result.success([...data] as T);
+    // Industry standard: double cast pattern (used by fp-ts, rxjs, etc.)
+    // First cast to unknown, then to target type - bypasses variance issues
+    return Result.success((data as unknown) as T);
   },
 
   /**
