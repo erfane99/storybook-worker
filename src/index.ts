@@ -23,9 +23,9 @@ app.get('/health', async (_req, res) => {
   const serviceHealth = await EnhancedServiceRegistry.getServiceHealth();
   const systemHealth = await EnhancedServiceRegistry.getSystemHealth();
   
-  // Get startup validation status - FIXED: Use actual available methods
+  // Get startup validation status - FIXED: Use actual available methods with null safety
   const startupValidator = StartupValidator.getInstance();
-  const validationResult = startupValidator.getLastValidationResult();
+  const validationResult = startupValidator.getLastValidationResult() || null;
   
   const response: HealthResponse = {
     status: serviceHealth.overall === 'healthy' ? 'healthy' : 'unhealthy',
@@ -45,7 +45,7 @@ app.get('/health', async (_req, res) => {
     }
   };
   
-  // Include comprehensive health information - FIXED: Use available properties
+  // Include comprehensive health information - FIXED: Use available properties with proper null checking
   res.json({
     ...response,
     services: serviceHealth.services,
@@ -79,7 +79,7 @@ app.get('/metrics', async (_req, res) => {
   });
 });
 
-// Validation endpoint - FIXED: No parameter needed for validateStartup
+// Validation endpoint - FIXED: Proper error handling
 app.get('/validate', async (_req, res) => {
   try {
     const startupValidator = StartupValidator.getInstance();
@@ -220,10 +220,10 @@ async function initializeWorker(): Promise<void> {
     
     if (!validationResult.ready) {
       console.error('❌ Startup validation failed - system not ready for production');
-      console.error('Errors:', validationResult.errors);
+      console.error('Errors:', validationResult.errors || []);
       
-      // FIXED: Check if rollback is needed using correct property structure
-      if (validationResult.report && validationResult.report.rollbackRequired) {
+      // FIXED: Check if rollback is needed using optional chaining
+      if (validationResult.report?.rollbackRequired) {
         console.log('🔄 Rollback recommended - disposing services...');
         await EnhancedServiceRegistry.dispose();
         throw new Error('Startup validation failed - rollback executed');
@@ -234,10 +234,21 @@ async function initializeWorker(): Promise<void> {
       console.log('✅ Startup validation passed - system ready for production');
     }
     
-    // FIXED: Remove continuous monitoring call since method doesn't exist
-    // Note: If you need continuous monitoring, you'd need to implement this method
-    // await startupValidator.startContinuousMonitoring(300000); // Every 5 minutes
-    console.log('ℹ️ Continuous monitoring not implemented - relying on periodic health checks');
+    // FIXED: Restore continuous monitoring since the method now exists
+    try {
+      const stopMonitoring = await startupValidator.startContinuousMonitoring(300000); // Every 5 minutes
+      console.log('✅ Continuous monitoring started');
+      
+      // Store the stop function for graceful shutdown
+      process.on('beforeExit', () => {
+        if (stopMonitoring) {
+          stopMonitoring();
+        }
+      });
+    } catch (monitoringError) {
+      console.warn('⚠️ Could not start continuous monitoring:', monitoringError);
+      console.log('ℹ️ Continuing without continuous monitoring - relying on periodic health checks');
+    }
     
     // Validate job processing system
     const isValid = await validateJobSystem();
