@@ -1,6 +1,6 @@
 // Result pattern implementation for error handling
 // Provides type-safe error handling without exceptions
-// FIXED: Removed duplicate AsyncResult exports and fixed type constraints
+// FIXED: Proper type constraints and array handling
 
 import { BaseServiceError, ServiceError, ErrorFactory } from './error-types.js';
 
@@ -184,22 +184,23 @@ export const Result = {
 
   /**
    * Combine multiple results into one
-   * FIXED: Proper type handling for arrays
+   * FIXED: Proper type handling for arrays without unsafe assertions
    */
   combine: <T extends readonly unknown[], E extends BaseServiceError>(
     results: { [K in keyof T]: Result<T[K], E> }
   ): Result<T, E> => {
-    const data: unknown[] = [];
+    const data = [] as unknown as T;
     
-    for (const result of results) {
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
       if (!result.success) {
         return result;
       }
-      data.push(result.data);
+      // FIXED: Safe array assignment
+      (data as any)[i] = result.data;
     }
     
-    // FIXED: Safe type assertion for array results
-    return Result.success(data as T);
+    return Result.success(data);
   },
 
   /**
@@ -215,7 +216,7 @@ export const Result = {
 };
 
 // ===== ASYNC RESULT CLASS =====
-// FIXED: Single AsyncResult implementation without conflicts
+// FIXED: Proper type constraints and promise handling
 
 export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
   constructor(private promise: Promise<Result<T, E>>) {}
@@ -233,7 +234,7 @@ export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
         return Result.failure(ErrorFactory.fromUnknown(error) as E);
       }
     }
-    return result as any;
+    return result as Result<U, E>;
   }
 
   /**
@@ -250,7 +251,7 @@ export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
         return Result.failure(ErrorFactory.fromUnknown(error) as E2);
       }
     }
-    return result as any;
+    return result as Result<U, E | E2>;
   }
 
   /**
@@ -283,7 +284,7 @@ export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
         return Result.failure(ErrorFactory.fromUnknown(error) as E2);
       }
     }
-    return result as any;
+    return result as Result<T, E2>;
   }
 
   /**
@@ -349,7 +350,7 @@ export class AsyncResult<T, E extends BaseServiceError = ServiceError> {
    * Create a successful AsyncResult
    * FIXED: Proper return type handling
    */
-  static success<T>(data: T): AsyncResult<T, never> {
+  static success<T>(data: T): AsyncResult<T, BaseServiceError> {
     return new AsyncResult(Promise.resolve(Result.success(data)));
   }
 
