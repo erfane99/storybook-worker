@@ -343,7 +343,7 @@ export class StartupValidator {
 
   // ===== CONTINUOUS MONITORING =====
 
-  async startContinuousMonitoring(intervalMs: number = 300000): Promise<void> {
+  async startContinuousMonitoring(intervalMs: number = 300000): Promise<() => void> {
     console.log(`🔄 Starting continuous monitoring (every ${intervalMs / 1000}s)...`);
     
     const interval = setInterval(async () => {
