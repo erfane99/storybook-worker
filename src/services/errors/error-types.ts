@@ -1,6 +1,6 @@
 // Comprehensive error type hierarchy for the service layer
 // Integrates with existing Service Registry and Interface Segregation architecture
-// FIXED: Added missing ErrorFactory methods and container-specific errors
+// FIXED: Type compatibility and proper error factory implementation
 
 // ===== BASE ERROR TYPES =====
 
@@ -123,6 +123,7 @@ export interface ErrorContext {
   userId?: string;
   requestId?: string;
   metadata?: Record<string, any>;
+  message?: string; // FIXED: Added missing message property
 }
 
 // ===== STRUCTURED ERROR INTERFACE =====
@@ -454,6 +455,7 @@ export type ServiceError =
 export class ErrorFactory {
   /**
    * Create appropriate error from unknown error
+   * FIXED: Proper type handling for BaseServiceError return
    */
   static fromUnknown(
     error: unknown,
@@ -463,8 +465,45 @@ export class ErrorFactory {
       correlationId?: string;
     } = {}
   ): ServiceError {
+    // FIXED: Proper type checking and conversion
     if (error instanceof BaseServiceError) {
-      return error;
+      // If it's already a ServiceError type, return it
+      if (error instanceof DatabaseConnectionError ||
+          error instanceof DatabaseQueryError ||
+          error instanceof DatabaseTimeoutError ||
+          error instanceof DatabaseTransactionError ||
+          error instanceof JobNotFoundError ||
+          error instanceof AIServiceUnavailableError ||
+          error instanceof AIRateLimitError ||
+          error instanceof AIContentPolicyError ||
+          error instanceof AITimeoutError ||
+          error instanceof AIAuthenticationError ||
+          error instanceof StorageUploadError ||
+          error instanceof StorageQuotaExceededError ||
+          error instanceof StorageFileNotFoundError ||
+          error instanceof StorageConfigurationError ||
+          error instanceof JobValidationError ||
+          error instanceof JobProcessingError ||
+          error instanceof JobTimeoutError ||
+          error instanceof JobConcurrencyLimitError ||
+          error instanceof AuthenticationError ||
+          error instanceof AuthorizationError ||
+          error instanceof TokenValidationError ||
+          error instanceof ConfigurationError ||
+          error instanceof EnvironmentVariableError ||
+          error instanceof ServiceNotRegisteredError ||
+          error instanceof ServiceInitializationError ||
+          error instanceof CircularDependencyError ||
+          error instanceof ContainerDisposedError ||
+          error instanceof InvalidTokenError ||
+          error instanceof ServiceLifecycleError ||
+          error instanceof CircuitBreakerOpenError ||
+          error instanceof SystemError ||
+          error instanceof UnknownError) {
+        return error;
+      }
+      // If it's a BaseServiceError but not a ServiceError, convert to UnknownError
+      return new UnknownError(error.message, context);
     }
 
     if (error instanceof Error) {
@@ -574,7 +613,7 @@ export class ErrorFactory {
   };
 
   /**
-   * FIXED: Create container-specific errors - Added missing methods
+   * Create container-specific errors
    */
   static container = {
     serviceNotRegistered: (token: string, context = {}) => new ServiceNotRegisteredError(`Service not registered: ${token}`, { service: 'container', ...context }),
@@ -587,23 +626,23 @@ export class ErrorFactory {
   };
 
   /**
-   * FIXED: Create external service-specific errors - Added missing methods
+   * Create external service-specific errors
    */
   static external = {
-    circuitBreakerOpen: (context = {}) => new CircuitBreakerOpenError(
+    circuitBreakerOpen: (context: ErrorContext = {}) => new CircuitBreakerOpenError(
       context.message || 'Circuit breaker is open', 
       { service: 'external', ...context }
     ),
-    timeout: (context = {}) => new AITimeoutError(
-      'External service timeout', 
+    timeout: (context: ErrorContext = {}) => new AITimeoutError(
+      context.message || 'External service timeout', 
       { service: 'external', ...context }
     ),
-    rateLimit: (context = {}) => new AIRateLimitError(
-      'Rate limit exceeded', 
+    rateLimit: (context: ErrorContext = {}) => new AIRateLimitError(
+      context.message || 'Rate limit exceeded', 
       { service: 'external', ...context }
     ),
-    networkError: (context = {}) => new DatabaseConnectionError(
-      'Network error occurred', 
+    networkError: (context: ErrorContext = {}) => new DatabaseConnectionError(
+      context.message || 'Network error occurred', 
       { service: 'external', ...context }
     ),
   };
