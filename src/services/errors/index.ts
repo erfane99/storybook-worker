@@ -305,24 +305,6 @@ export function safeExecuteAsync<T>(
   return AsyncResult.fromAsync(operation, errorContext);
 }
 
-/**
- * Combine multiple Results into one
- */
-export function combineResults<T extends readonly unknown[]>(
-  results: { [K in keyof T]: Result<T[K], import('./error-types.js').ServiceError> }
-): Result<T, import('./error-types.js').ServiceError> {
-  return Result.combine(results);
-}
-
-/**
- * Execute multiple async operations and combine their Results
- */
-export async function combineAsyncResults<T extends readonly unknown[]>(
-  operations: { [K in keyof T]: () => Promise<Result<T[K], import('./error-types.js').ServiceError>> }
-): Promise<Result<T, import('./error-types.js').ServiceError>> {
-  return Result.combineAsync(operations);
-}
-
 // ===== ERROR HANDLING BEST PRACTICES =====
 
 export const ERROR_HANDLING_BEST_PRACTICES = {
