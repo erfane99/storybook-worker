@@ -2,11 +2,73 @@
 // Central export point for all error handling functionality
 // FIXED: Proper separation of type and value exports for isolatedModules
 
-// ===== INTERNAL TYPE IMPORTS =====
-// Import types for use in function signatures
-import type { StructuredError, ServiceError } from './error-types.js';
-import type { Result } from './result-pattern.js';
-import type { AsyncResult } from './result-pattern.js';
+// ===== VALUE IMPORTS (for runtime use) =====
+import { 
+  ErrorCategory,
+  ErrorSeverity,
+  ErrorContext,
+  ErrorFactory,
+  BaseServiceError,
+  DatabaseConnectionError,
+  DatabaseQueryError,
+  DatabaseTimeoutError,
+  DatabaseTransactionError,
+  JobNotFoundError,
+  AIServiceUnavailableError,
+  AIRateLimitError,
+  AIContentPolicyError,
+  AITimeoutError,
+  AIAuthenticationError,
+  StorageUploadError,
+  StorageQuotaExceededError,
+  StorageFileNotFoundError,
+  StorageConfigurationError,
+  JobValidationError,
+  JobProcessingError,
+  JobTimeoutError,
+  JobConcurrencyLimitError,
+  AuthenticationError,
+  AuthorizationError,
+  TokenValidationError,
+  ConfigurationError,
+  EnvironmentVariableError,
+  ServiceNotRegisteredError,
+  ServiceInitializationError,
+  CircularDependencyError,
+  ContainerDisposedError,
+  CircuitBreakerOpenError,
+  SystemError,
+  UnknownError
+} from './error-types.js';
+
+import { 
+  Result,
+  AsyncResult
+} from './result-pattern.js';
+
+import {
+  ErrorCorrelationManager,
+  errorCorrelationManager,
+  withCorrelation,
+  withCorrelationResult,
+  createJobCorrelationContext,
+  createServiceCorrelationContext,
+  trackError,
+  getCorrelationStatistics,
+} from './error-correlation.js';
+
+import {
+  CentralizedErrorHandler,
+  centralizedErrorHandler,
+  handleError,
+  withErrorHandling,
+  withRetry,
+  createServiceErrorHandler,
+} from './error-handler.js';
+
+import {
+  ErrorAwareBaseService,
+} from '../base/error-aware-base-service.js';
 
 // ===== TYPE-ONLY EXPORTS =====
 // Using export type for all TypeScript types to satisfy isolatedModules
@@ -79,10 +141,11 @@ export {
   ErrorCategory,
   ErrorSeverity,
   ErrorContext 
-} from './error-types.js';
+};
 
 export {
   ErrorFactory,
+  BaseServiceError,
   
   // Database Errors
   DatabaseConnectionError,
@@ -129,12 +192,12 @@ export {
   CircuitBreakerOpenError,
   SystemError,
   UnknownError,
-} from './error-types.js';
+};
 
 export {
   Result,
   AsyncResult,
-} from './result-pattern.js';
+};
 
 export {
   ErrorCorrelationManager,
@@ -145,7 +208,7 @@ export {
   createServiceCorrelationContext,
   trackError,
   getCorrelationStatistics,
-} from './error-correlation.js';
+};
 
 export {
   CentralizedErrorHandler,
@@ -154,17 +217,14 @@ export {
   withErrorHandling,
   withRetry,
   createServiceErrorHandler,
-} from './error-handler.js';
+};
 
 export {
   ErrorAwareBaseService,
-} from '../base/error-aware-base-service.js';
-
-// ===== CONVENIENCE VALUE EXPORTS =====
-// Note: BaseServiceError and ErrorSeverity are already exported above in the value exports section
+};
 
 // ===== UTILITY FUNCTIONS =====
-// FIXED: Proper type imports and local value imports
+// FIXED: Using proper imports instead of require()
 
 /**
  * Create a standardized error for service operations
@@ -179,9 +239,7 @@ export function createServiceError(
     correlationId?: string;
     metadata?: Record<string, any>;
   }
-): ServiceError {
-  // Import locally to avoid circular dependency
-  const { ErrorFactory } = require('./error-types.js');
+): import('./error-types.js').ServiceError {
   const factory = ErrorFactory[type as keyof typeof ErrorFactory];
   if (typeof factory === 'object' && subtype in factory) {
     return (factory as any)[subtype](message, context);
@@ -194,8 +252,6 @@ export function createServiceError(
  * Check if an error is retryable
  */
 export function isRetryableError(error: unknown): boolean {
-  // Import locally to avoid circular dependency
-  const { BaseServiceError } = require('./error-types.js');
   if (error instanceof BaseServiceError) {
     return error.shouldRetry();
   }
@@ -206,8 +262,6 @@ export function isRetryableError(error: unknown): boolean {
  * Get error severity level
  */
 export function getErrorSeverityLevel(error: unknown): number {
-  // Import locally to avoid circular dependency
-  const { BaseServiceError, ErrorSeverity } = require('./error-types.js');
   if (error instanceof BaseServiceError) {
     const levels = { 
       [ErrorSeverity.LOW]: 1, 
@@ -222,11 +276,8 @@ export function getErrorSeverityLevel(error: unknown): number {
 
 /**
  * Convert any error to a structured format
- * FIXED: Now uses proper type import for return type
  */
-export function toStructuredError(error: unknown): StructuredError {
-  // Import locally to avoid circular dependency
-  const { BaseServiceError, ErrorFactory } = require('./error-types.js');
+export function toStructuredError(error: unknown): import('./error-types.js').StructuredError {
   if (error instanceof BaseServiceError) {
     return error.toStructured();
   }
@@ -245,9 +296,7 @@ export function safeExecute<T>(
     operation?: string;
     correlationId?: string;
   }
-): Result<T, ServiceError> {
-  // Import locally to avoid circular dependency
-  const { Result } = require('./result-pattern.js');
+): Result<T, import('./error-types.js').ServiceError> {
   return Result.from(operation, errorContext);
 }
 
@@ -261,9 +310,7 @@ export function safeExecuteAsync<T>(
     operation?: string;
     correlationId?: string;
   }
-): AsyncResult<T, ServiceError> {
-  // Import locally to avoid circular dependency
-  const { AsyncResult } = require('./result-pattern.js');
+): AsyncResult<T, import('./error-types.js').ServiceError> {
   return AsyncResult.fromAsync(operation, errorContext);
 }
 
@@ -271,10 +318,8 @@ export function safeExecuteAsync<T>(
  * Combine multiple Results into one
  */
 export function combineResults<T extends readonly unknown[]>(
-  results: { [K in keyof T]: Result<T[K], ServiceError> }
-): Result<T, ServiceError> {
-  // Import locally to avoid circular dependency
-  const { Result } = require('./result-pattern.js');
+  results: { [K in keyof T]: Result<T[K], import('./error-types.js').ServiceError> }
+): Result<T, import('./error-types.js').ServiceError> {
   return Result.combine(results);
 }
 
@@ -282,10 +327,8 @@ export function combineResults<T extends readonly unknown[]>(
  * Execute multiple async operations and combine their Results
  */
 export async function combineAsyncResults<T extends readonly unknown[]>(
-  operations: { [K in keyof T]: () => Promise<Result<T[K], ServiceError>> }
-): Promise<Result<T, ServiceError>> {
-  // Import locally to avoid circular dependency
-  const { Result } = require('./result-pattern.js');
+  operations: { [K in keyof T]: () => Promise<Result<T[K], import('./error-types.js').ServiceError>> }
+): Promise<Result<T, import('./error-types.js').ServiceError>> {
   return Result.combineAsync(operations);
 }
 
