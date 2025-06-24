@@ -18,7 +18,7 @@ import {
   ErrorFactory,
   ErrorCategory
 } from '../errors/index.js';
-import { JobData, JobType, JobStatus, JobUpdateData } from '../../lib/types.js';
+import type { JobData, JobType, JobStatus, JobUpdateData } from '../../lib/types.js';
 
 // ===== ENHANCED JOB CONFIG =====
 // FIXED: Extend ErrorAwareServiceConfig instead of ServiceConfig
@@ -124,7 +124,7 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
   // ===== JOB OPERATIONS IMPLEMENTATION =====
 
   async getPendingJobs(filter: JobFilter = {}, limit: number = 50): Promise<JobData[]> {
-    return this.withErrorHandling(
+    const result = await this.withErrorHandling(
       async () => {
         // Validate input
         if (limit <= 0 || limit > 1000) {
@@ -140,11 +140,13 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         return [];
       },
       'getPendingJobs'
-    ).then(result => result.success ? result.data : []);
+    );
+    
+    return result.success ? result.data : [];
   }
 
   async getJobStatus(jobId: string): Promise<JobData | null> {
-    return this.withErrorHandling(
+    const result = await this.withErrorHandling(
       async () => {
         if (!jobId || typeof jobId !== 'string') {
           throw new JobValidationError('Invalid job ID provided', {
@@ -158,7 +160,9 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         return null;
       },
       'getJobStatus'
-    ).then(result => result.success ? result.data : null);
+    );
+    
+    return result.success ? result.data : null;
   }
 
   async updateJobProgress(
@@ -166,7 +170,7 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
     progress: number,
     currentStep?: string
   ): Promise<boolean> {
-    return this.withErrorHandling(
+    const result = await this.withErrorHandling(
       async () => {
         // Validate inputs
         if (!jobId || typeof jobId !== 'string') {
@@ -196,11 +200,13 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         return true;
       },
       'updateJobProgress'
-    ).then(result => result.success ? result.data : false);
+    );
+    
+    return result.success ? result.data : false;
   }
 
   async markJobCompleted(jobId: string, resultData: any): Promise<boolean> {
-    return this.withErrorHandling(
+    const result = await this.withErrorHandling(
       async () => {
         if (!jobId || typeof jobId !== 'string') {
           throw new JobValidationError('Invalid job ID provided', {
@@ -231,7 +237,9 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         return true;
       },
       'markJobCompleted'
-    ).then(result => result.success ? result.data : false);
+    );
+    
+    return result.success ? result.data : false;
   }
 
   async markJobFailed(
@@ -239,7 +247,7 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
     errorMessage: string,
     shouldRetry: boolean = false
   ): Promise<boolean> {
-    return this.withErrorHandling(
+    const result = await this.withErrorHandling(
       async () => {
         if (!jobId || typeof jobId !== 'string') {
           throw new JobValidationError('Invalid job ID provided', {
@@ -265,11 +273,13 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         return true;
       },
       'markJobFailed'
-    ).then(result => result.success ? result.data : false);
+    );
+    
+    return result.success ? result.data : false;
   }
 
   async cancelJob(jobId: string, reason: string = 'Cancelled by user'): Promise<boolean> {
-    return this.withErrorHandling(
+    const result = await this.withErrorHandling(
       async () => {
         if (!jobId || typeof jobId !== 'string') {
           throw new JobValidationError('Invalid job ID provided', {
@@ -286,12 +296,14 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         return true;
       },
       'cancelJob'
-    ).then(result => result.success ? result.data : false);
+    );
+    
+    return result.success ? result.data : false;
   }
 
   // FIXED: Method signature to match interface exactly
   async getJobMetrics(jobType?: JobType): Promise<JobMetrics> {
-    return this.withErrorHandling(
+    const result = await this.withErrorHandling(
       async () => {
         if (jobType) {
           // Return metrics for specific job type
@@ -307,7 +319,9 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         }
       },
       'getJobMetrics'
-    ).then(result => result.success ? result.data : this.createDefaultMetrics());
+    );
+    
+    return result.success ? result.data : this.createDefaultMetrics();
   }
 
   // ===== ENHANCED METHODS WITH RESULT PATTERN =====
@@ -323,20 +337,20 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
           service: this.getName(),
           operation: 'getJobMetricsResult'
         });
-        return { success: false, error } as Result<JobMetrics, JobValidationError>;
+        return Result.failure(error);
       }
 
       const metrics = jobType ? 
         this.jobMetrics.get(jobType) || this.createDefaultMetrics() :
         this.calculateAggregatedMetrics();
         
-      return { success: true, data: metrics } as Result<JobMetrics, JobValidationError>;
+      return Result.success(metrics);
     } catch (error) {
       const jobError = new JobValidationError('Error getting job metrics', {
         service: this.getName(),
         operation: 'getJobMetricsResult'
       });
-      return { success: false, error: jobError } as Result<JobMetrics, JobValidationError>;
+      return Result.failure(jobError);
     }
   }
 
@@ -359,7 +373,7 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
       )
     };
 
-    return { success: true, data: stats } as Result<typeof stats, never>;
+    return Result.success(stats);
   }
 
   /**
@@ -373,7 +387,7 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
           service: this.getName(),
           operation: 'validateJobData'
         });
-        return { success: false, error } as Result<boolean, JobValidationError>;
+        return Result.failure(error);
       }
 
       const requiredFields = ['id', 'type', 'status', 'input_data'];
@@ -384,16 +398,16 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
           `Missing required fields: ${missingFields.join(', ')}`,
           { service: this.getName(), operation: 'validateJobData' }
         );
-        return { success: false, error } as Result<boolean, JobValidationError>;
+        return Result.failure(error);
       }
 
-      return { success: true, data: true } as Result<boolean, JobValidationError>;
+      return Result.success(true);
     } catch (error) {
       const serviceError = ErrorFactory.fromUnknown(error, {
         service: this.getName(),
         operation: 'validateJobData'
       }) as JobValidationError;
-      return { success: false, error: serviceError } as Result<boolean, JobValidationError>;
+      return Result.failure(serviceError);
     }
   }
 

@@ -1,6 +1,6 @@
 // Error-aware base service extending Enhanced Base Service with comprehensive error handling
 // Integrates Result pattern and error correlation with existing Interface Segregation
-// FIXED: Type safety, proper imports, and configuration handling
+// FIXED: Removed duplicate property definitions and proper config merging
 
 import { EnhancedBaseService } from './enhanced-base-service.js';
 import { 
@@ -68,7 +68,7 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
   constructor(config: ErrorAwareServiceConfig) {
     super(config);
     
-    // Define default error handling configuration
+    // FIXED: Define default error handling configuration separately
     const defaultErrorHandlingConfig: RequiredErrorHandlingConfig = {
       enableRetry: true,
       maxRetries: 3,
@@ -83,7 +83,7 @@ export abstract class ErrorAwareBaseService extends EnhancedBaseService implemen
       ],
     };
 
-    // FIXED: Proper config merging with guaranteed non-undefined result
+    // FIXED: Proper config merging without duplicate properties
     this.errorConfig = {
       ...defaultErrorHandlingConfig,
       ...(config.errorHandling || {}),
