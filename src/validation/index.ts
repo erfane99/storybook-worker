@@ -8,8 +8,6 @@ export { IntegrationValidator } from './integration-validator.js';
 // ===== EXPORT TYPES =====
 export type { 
   StartupValidationResult,
-  ValidationConfig,
-  ValidationReport 
 } from './startup-validator.js';
 
 export type {
