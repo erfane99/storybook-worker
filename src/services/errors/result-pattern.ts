@@ -191,37 +191,7 @@ export const Result = {
     }
   },
 
-  /**
-   * Combine multiple results into one
-   * FIXED: Use explicit generic type parameter to force correct inference
-   */
-  combine: <T extends readonly unknown[], E extends BaseServiceError>(
-    results: { [K in keyof T]: Result<T[K], E> }
-  ): Result<T, E> => {
-    const data: unknown[] = [];
-    
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      if (!result.success) {
-        return result as Result<T, E>;
-      }
-      data.push(result.data);
-    }
-    
-    // FIXED: Use explicit type assertion with helper function
-    return createSuccess(data as T);
-  },
 
-  /**
-   * Execute multiple async operations and combine results
-   * FIXED: Use explicit generic type parameter to force correct inference
-   */
-  combineAsync: async <T extends readonly unknown[], E extends BaseServiceError>(
-    operations: { [K in keyof T]: () => Promise<Result<T[K], E>> }
-  ): Promise<Result<T, E>> => {
-    const results = await Promise.all(operations.map(op => op()));
-    return Result.combine(results);
-  },
 };
 
 // ===== ASYNC RESULT CLASS =====
