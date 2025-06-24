@@ -183,7 +183,7 @@ export const Result = {
 
   /**
    * Combine multiple results into one
-   * FIXED: Return the cast result directly to avoid nested type issues
+   * FIXED: Use proper Success constructor without circular references
    */
   combine: <T extends readonly unknown[], E extends BaseServiceError>(
     results: { [K in keyof T]: Result<T[K], E> }
@@ -198,51 +198,13 @@ export const Result = {
       data.push(result.data);
     }
     
-    // Create the result directly with proper typing
-    const successResult: Success<T> = {
-      success: true as const,
-      data: (data as unknown) as T,
-      map: function<U>(fn: (data: T) => U): Result<U, never> {
-        try {
-          return Result.success(fn(this.data));
-        } catch (error) {
-          return Result.failure(ErrorFactory.fromUnknown(error) as never);
-        }
-      },
-      flatMap: function<U, E2 extends BaseServiceError>(fn: (data: T) => Result<U, E2>): Result<U, E2> {
-        try {
-          return fn(this.data);
-        } catch (error) {
-          return Result.failure(ErrorFactory.fromUnknown(error) as E2);
-        }
-      },
-      tap: function(fn: (data: T) => void): Success<T> {
-        try {
-          fn(this.data);
-        } catch (error) {
-          console.warn('Error in tap function:', error);
-        }
-        return this;
-      },
-      unwrap: function(): T {
-        return this.data;
-      },
-      unwrapOr: function(defaultValue: T): T {
-        return this.data;
-      },
-      isSuccess: function(): this is Success<T> {
-        return true;
-      },
-      isFailure: function(): this is never {
-        return false;
-      }
-    };
-    
-    return successResult;
+    // Use the existing Result.success method but cast the input
+    return Result.success((data as unknown) as T);
   },
 
   /**
    * Execute multiple async operations and combine results
+   * FIXED: Use simple approach without circular references
    */
   combineAsync: async <T extends readonly unknown[], E extends BaseServiceError>(
     operations: { [K in keyof T]: () => Promise<Result<T[K], E>> }
