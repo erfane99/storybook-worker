@@ -19,6 +19,8 @@ import {
   ErrorCategory
 } from '../errors/index.js';
 import type { JobData, JobType, JobStatus, JobUpdateData } from '../../lib/types.js';
+import { enhancedServiceContainer } from '../container/enhanced-service-container.js';
+import { SERVICE_TOKENS, IDatabaseService } from '../interfaces/service-contracts.js';
 
 // ===== ENHANCED JOB CONFIG =====
 // FIXED: Extend ErrorAwareServiceConfig instead of ServiceConfig
@@ -134,10 +136,39 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
           });
         }
 
-        // In a real implementation, this would query the database
-        // For now, return empty array as this delegates to database service
         this.log('info', `Getting pending jobs with filter: ${JSON.stringify(filter)}, limit: ${limit}`);
-        return [];
+
+        // FIXED: Delegate to DatabaseService for actual data access
+        try {
+          const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+          
+          if (!databaseService) {
+            this.log('warn', 'DatabaseService not available, returning empty array');
+            return [];
+          }
+
+          // Delegate the actual database query to DatabaseService
+          const pendingJobs = await databaseService.getPendingJobs(filter, limit);
+          
+          this.log('info', `Found ${pendingJobs.length} pending jobs from database`);
+          
+          // Update metrics for job discovery
+          this.recordMetric('jobDiscovery', pendingJobs.length);
+          
+          return pendingJobs;
+          
+        } catch (databaseError: any) {
+          this.log('error', 'Failed to get pending jobs from database', databaseError);
+          
+          // If database is unavailable, return empty array but log the issue
+          if (databaseError.message?.includes('not available') || databaseError.message?.includes('not configured')) {
+            this.log('warn', 'Database service unavailable for job discovery - returning empty array');
+            return [];
+          }
+          
+          // Re-throw other database errors
+          throw databaseError;
+        }
       },
       'getPendingJobs'
     );
@@ -155,9 +186,40 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
           });
         }
 
-        // In a real implementation, this would query the database
         this.log('info', `Getting status for job: ${jobId}`);
-        return null;
+
+        // FIXED: Delegate to DatabaseService for actual data access
+        try {
+          const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+          
+          if (!databaseService) {
+            this.log('warn', 'DatabaseService not available');
+            return null;
+          }
+
+          // Delegate the actual database query to DatabaseService
+          const jobData = await databaseService.getJobStatus(jobId);
+          
+          if (jobData) {
+            this.log('info', `Found job ${jobId} with status: ${jobData.status}`);
+          } else {
+            this.log('info', `Job ${jobId} not found`);
+          }
+          
+          return jobData;
+          
+        } catch (databaseError: any) {
+          this.log('error', 'Failed to get job status from database', databaseError);
+          
+          // If database is unavailable, return null
+          if (databaseError.message?.includes('not available') || databaseError.message?.includes('not configured')) {
+            this.log('warn', 'Database service unavailable for job status check');
+            return null;
+          }
+          
+          // Re-throw other database errors
+          throw databaseError;
+        }
       },
       'getJobStatus'
     );
@@ -193,11 +255,42 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
           this.currentlyProcessing.add(jobId);
         }
 
-        // Record metrics
-        this.recordMetric('progressUpdate');
+        this.log('info', `Updating job progress: ${jobId} -> ${progress}%${currentStep ? ` (${currentStep})` : ''}`);
 
-        this.log('info', `Updated job progress: ${jobId} -> ${progress}%${currentStep ? ` (${currentStep})` : ''}`);
-        return true;
+        // FIXED: Delegate to DatabaseService for actual data access
+        try {
+          const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+          
+          if (!databaseService) {
+            this.log('warn', 'DatabaseService not available for progress update');
+            return false;
+          }
+
+          // Delegate the actual database update to DatabaseService
+          const updated = await databaseService.updateJobProgress(jobId, progress, currentStep);
+          
+          if (updated) {
+            // Record metrics
+            this.recordMetric('progressUpdate');
+            this.log('info', `Successfully updated job progress: ${jobId}`);
+          } else {
+            this.log('warn', `Failed to update job progress: ${jobId}`);
+          }
+          
+          return updated;
+          
+        } catch (databaseError: any) {
+          this.log('error', 'Failed to update job progress in database', databaseError);
+          
+          // If database is unavailable, return false
+          if (databaseError.message?.includes('not available') || databaseError.message?.includes('not configured')) {
+            this.log('warn', 'Database service unavailable for progress update');
+            return false;
+          }
+          
+          // Re-throw other database errors
+          throw databaseError;
+        }
       },
       'updateJobProgress'
     );
@@ -231,10 +324,42 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         }
 
         this.currentlyProcessing.delete(jobId);
-        this.recordMetric('completion');
 
-        this.log('info', `Marked job completed: ${jobId}`);
-        return true;
+        this.log('info', `Marking job completed: ${jobId}`);
+
+        // FIXED: Delegate to DatabaseService for actual data access
+        try {
+          const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+          
+          if (!databaseService) {
+            this.log('warn', 'DatabaseService not available for job completion');
+            return false;
+          }
+
+          // Delegate the actual database update to DatabaseService
+          const completed = await databaseService.markJobCompleted(jobId, resultData);
+          
+          if (completed) {
+            this.recordMetric('completion');
+            this.log('info', `Successfully marked job completed: ${jobId}`);
+          } else {
+            this.log('warn', `Failed to mark job completed: ${jobId}`);
+          }
+          
+          return completed;
+          
+        } catch (databaseError: any) {
+          this.log('error', 'Failed to mark job completed in database', databaseError);
+          
+          // If database is unavailable, return false
+          if (databaseError.message?.includes('not available') || databaseError.message?.includes('not configured')) {
+            this.log('warn', 'Database service unavailable for job completion');
+            return false;
+          }
+          
+          // Re-throw other database errors
+          throw databaseError;
+        }
       },
       'markJobCompleted'
     );
@@ -266,11 +391,43 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         // Clean up processing tracking
         this.processingTimes.delete(jobId);
         this.currentlyProcessing.delete(jobId);
-        this.recordMetric('failure');
 
         const action = shouldRetry ? 'scheduled for retry' : 'marked as failed';
         this.log('info', `Job ${action}: ${jobId} - ${errorMessage}`);
-        return true;
+
+        // FIXED: Delegate to DatabaseService for actual data access
+        try {
+          const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+          
+          if (!databaseService) {
+            this.log('warn', 'DatabaseService not available for job failure marking');
+            return false;
+          }
+
+          // Delegate the actual database update to DatabaseService
+          const failed = await databaseService.markJobFailed(jobId, errorMessage, shouldRetry);
+          
+          if (failed) {
+            this.recordMetric('failure');
+            this.log('info', `Successfully marked job failed: ${jobId}`);
+          } else {
+            this.log('warn', `Failed to mark job failed: ${jobId}`);
+          }
+          
+          return failed;
+          
+        } catch (databaseError: any) {
+          this.log('error', 'Failed to mark job failed in database', databaseError);
+          
+          // If database is unavailable, return false
+          if (databaseError.message?.includes('not available') || databaseError.message?.includes('not configured')) {
+            this.log('warn', 'Database service unavailable for job failure marking');
+            return false;
+          }
+          
+          // Re-throw other database errors
+          throw databaseError;
+        }
       },
       'markJobFailed'
     );
@@ -478,9 +635,13 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
     });
   }
 
-  private recordMetric(operation: 'progressUpdate' | 'completion' | 'failure' | 'cancellation'): void {
+  private recordMetric(operation: 'progressUpdate' | 'completion' | 'failure' | 'cancellation' | 'jobDiscovery', count?: number): void {
     // Update internal metrics based on operation
-    this.log('info', `Recorded metric: ${operation}`);
+    if (operation === 'jobDiscovery' && typeof count === 'number') {
+      this.log('info', `Recorded metric: ${operation} - found ${count} jobs`);
+    } else {
+      this.log('info', `Recorded metric: ${operation}`);
+    }
   }
 
   private hasRecentActivity(): boolean {
