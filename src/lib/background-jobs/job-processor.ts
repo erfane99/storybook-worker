@@ -446,7 +446,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   // ===== JOB-SPECIFIC PROCESSORS USING SERVICE ABSTRACTIONS =====
 
   private async processStorybookJobWithServices(job: StorybookJobData, servicesUsed: string[]): Promise<void> {
-    const { title, story, characterImage, pages, audience, isReusedImage } = job.input_data;
+    const { title, story, characterImage, pages: initialPages, audience, isReusedImage, characterArtStyle = 'storybook', layoutType = 'comic-book-panels' } = job.input_data;
 
     // Get services through container (clean dependency injection)
     const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
@@ -467,18 +467,68 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       characterDescription = await aiService.describeCharacter(characterImage, prompt);
     }
 
-    await jobService.updateJobProgress(job.id, 30, 'Character analyzed, generating scenes');
+    await jobService.updateJobProgress(job.id, 30, 'Character analyzed, processing story structure');
+
+    // ✅ CRITICAL FIX: Handle story-to-comic-panels mode
+    let pages = initialPages || [];
+    
+    // Check if we need to generate pages from story (story-to-comic-panels mode)
+    if (!pages || pages.length === 0) {
+      console.log(`📖 Story-to-comic-panels mode detected - generating pages from story`);
+      console.log(`🎨 Using ${characterArtStyle} art style and ${layoutType} layout`);
+      
+      await jobService.updateJobProgress(job.id, 40, 'Generating comic book layout from story');
+      
+      try {
+        // Use the scene service to generate comic book pages from story
+        this.trackServiceUsage(job.id, 'ai');
+        if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
+        
+        // Generate scenes using the story-to-comic-panels approach
+        const systemPrompt = `Generate comic book scenes for ${audience} audience with ${characterArtStyle} art style`;
+        const sceneResult = await aiService.generateScenes(systemPrompt, `Create a comic book layout for this story with ${layoutType} layout: ${story}`);
+        
+        if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
+          pages = sceneResult.pages;
+          console.log(`✅ Generated ${pages.length} comic book pages with ${pages.reduce((total, page) => total + (page.scenes?.length || 0), 0)} total panels`);
+        } else {
+          throw new Error('Invalid scene generation result - no pages generated');
+        }
+        
+        await jobService.updateJobProgress(job.id, 50, `Generated ${pages.length} comic book pages`);
+        
+      } catch (sceneError) {
+        console.error('❌ Failed to generate pages from story:', sceneError);
+        throw new Error(`Failed to generate comic book layout: ${sceneError.message}`);
+      }
+    } else {
+      console.log(`📄 Predefined-pages mode detected - processing ${pages.length} existing pages`);
+      await jobService.updateJobProgress(job.id, 40, `Processing ${pages.length} predefined pages`);
+    }
+
+    // Validate that we have pages to process
+    if (!pages || pages.length === 0) {
+      throw new Error('No pages available for processing after story analysis');
+    }
 
     // Generate scenes for each page
     const updatedPages = [];
+    const totalScenes = pages.reduce((total, page) => total + (page.scenes?.length || 0), 0);
+    let processedScenes = 0;
+
+    console.log(`🎨 Processing ${pages.length} pages with ${totalScenes} total scenes/panels`);
+
     for (const [pageIndex, page] of pages.entries()) {
       const updatedScenes = [];
       
-      for (const [sceneIndex, scene] of (page.scenes || []).entries()) {
+      // Ensure page has scenes array
+      const pageScenes = page.scenes || [];
+      
+      for (const [sceneIndex, scene] of pageScenes.entries()) {
         await jobService.updateJobProgress(
           job.id, 
-          30 + ((pageIndex * page.scenes.length + sceneIndex) / pages.reduce((total, p) => total + p.scenes.length, 0)) * 50,
-          `Generating image for page ${pageIndex + 1}, scene ${sceneIndex + 1}`
+          50 + ((processedScenes / totalScenes) * 30),
+          `Generating image for page ${pageIndex + 1}, panel ${sceneIndex + 1}`
         );
 
         try {
@@ -490,23 +540,33 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
           updatedScenes.push({
             ...scene,
             generatedImage: imageUrl,
+            characterArtStyle,
+            layoutType,
           });
+          
+          console.log(`✅ Generated panel ${sceneIndex + 1} for page ${pageIndex + 1}`);
         } catch (error) {
           console.warn(`⚠️ Failed to generate image for scene, using fallback:`, error);
           updatedScenes.push({
             ...scene,
             generatedImage: characterImage,
+            characterArtStyle,
+            layoutType,
           });
         }
+        
+        processedScenes++;
       }
       
       updatedPages.push({
         pageNumber: pageIndex + 1,
         scenes: updatedScenes,
+        layoutType,
+        characterArtStyle,
       });
     }
 
-    await jobService.updateJobProgress(job.id, 80, 'Images generated, saving storybook');
+    await jobService.updateJobProgress(job.id, 85, 'Images generated, saving storybook');
 
     // Save to database using service abstraction
     this.trackServiceUsage(job.id, 'database');
@@ -529,9 +589,11 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       storybook_id: storybookEntry.id,
       pages: updatedPages,
       has_errors: false,
+      characterArtStyle,
+      layoutType,
     });
 
-    console.log(`✅ Storybook job completed: ${job.id}`);
+    console.log(`✅ Storybook job completed: ${job.id} with ${characterArtStyle} art style`);
   }
 
   private async processAutoStoryJobWithServices(job: AutoStoryJobData, servicesUsed: string[]): Promise<void> {
