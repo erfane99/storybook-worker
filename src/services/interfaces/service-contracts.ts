@@ -142,6 +142,22 @@ export interface IAuthOperations {
   getServiceContext(): UserContext;
 }
 
+// ===== SUBSCRIPTION OPERATIONS INTERFACE =====
+
+export interface ISubscriptionOperations {
+  // Subscription Limit Checking
+  checkUserLimits(userId: string, limitType?: string): Promise<LimitCheckResult>;
+  getUserSubscriptionData(userId: string, limitType: string): Promise<UserSubscriptionData>;
+  
+  // Cache Management
+  refreshUserCache(userId: string): Promise<boolean>;
+  clearCache(): void;
+  
+  // Configuration
+  getSubscriptionLimits(): SubscriptionLimits;
+  updateSubscriptionLimits(newLimits: Partial<SubscriptionLimits>): void;
+}
+
 // ===== CONFIGURATION INTERFACES =====
 
 export interface IServiceConfiguration {
@@ -202,6 +218,14 @@ export interface IJobService extends
 
 export interface IAuthService extends 
   IAuthOperations, 
+  IServiceHealth, 
+  IServiceMetrics, 
+  IServiceLifecycle {
+  getName(): string;
+}
+
+export interface ISubscriptionService extends 
+  ISubscriptionOperations, 
   IServiceHealth, 
   IServiceMetrics, 
   IServiceLifecycle {
@@ -349,6 +373,35 @@ export interface UserContext {
   permissions: string[];
 }
 
+// ===== SUBSCRIPTION TYPES =====
+
+export interface SubscriptionLimits {
+  free: number;
+  basic: number;
+  premium: number;
+  pro: number;
+  admin: number;
+}
+
+export interface UserSubscriptionData {
+  userId: string;
+  userType: 'free' | 'basic' | 'premium' | 'pro' | 'admin';
+  currentUsage: number;
+  tierLimit: number;
+  canCreate: boolean;
+  upgradeMessage?: string;
+  resetDate?: string;
+}
+
+export interface LimitCheckResult {
+  allowed: boolean;
+  currentUsage: number;
+  limit: number;
+  userType: string;
+  upgradeMessage?: string;
+  resetDate?: string;
+}
+
 export interface ServiceConfig {
   name: string;
   timeout: number;
@@ -371,6 +424,7 @@ export const SERVICE_TOKENS = {
   STORAGE: 'IStorageService',
   JOB: 'IJobService',
   AUTH: 'IAuthService',
+  SUBSCRIPTION: 'ISubscriptionService',
   CONFIG: 'IConfigService',
 } as const;
 

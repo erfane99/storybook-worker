@@ -8,6 +8,7 @@ import { AIService } from '../ai/ai-service.js';
 import { StorageService } from '../storage/storage-service.js';
 import { JobService } from '../job/job-service.js';
 import { AuthService } from '../auth/auth-service.js';
+import { SubscriptionService } from '../subscription/subscription-service.js';
 import { ServiceConfigManager } from '../config/service-config.js';
 
 export class EnhancedServiceRegistry {
@@ -80,6 +81,18 @@ export class EnhancedServiceRegistry {
         singleton: true,
         lazy: true,
         dependencies: [SERVICE_TOKENS.CONFIG],
+        healthCheck: true,
+      }
+    );
+
+    // Register Enhanced Subscription Service (depends on config and database)
+    enhancedServiceContainer.register(
+      SERVICE_TOKENS.SUBSCRIPTION,
+      () => new SubscriptionService(),
+      {
+        singleton: true,
+        lazy: true,
+        dependencies: [SERVICE_TOKENS.CONFIG, SERVICE_TOKENS.DATABASE],
         healthCheck: true,
       }
     );
@@ -189,6 +202,7 @@ export class EnhancedServiceRegistry {
         enhancedErrorHandling: true,
         resultPattern: true,
         errorCorrelation: true,
+        subscriptionManagement: true,
       },
     };
   }
