@@ -145,15 +145,20 @@ export interface IAuthOperations {
 // ===== SUBSCRIPTION OPERATIONS INTERFACE =====
 
 export interface ISubscriptionOperations {
-  // Subscription Limit Checking
+  // Core Subscription Limit Checking
   checkUserLimits(userId: string, limitType?: string): Promise<LimitCheckResult>;
   getUserSubscriptionData(userId: string, limitType: string): Promise<UserSubscriptionData>;
   
   // Cache Management
   refreshUserCache(userId: string): Promise<boolean>;
   clearCache(): void;
+  getCacheStats(): {
+    totalEntries: number;
+    oldestEntry: string | null;
+    newestEntry: string | null;
+  };
   
-  // Configuration
+  // Configuration Management
   getSubscriptionLimits(): SubscriptionLimits;
   updateSubscriptionLimits(newLimits: Partial<SubscriptionLimits>): void;
 }
@@ -375,6 +380,8 @@ export interface UserContext {
 
 // ===== SUBSCRIPTION TYPES =====
 
+export type UserTier = 'free' | 'basic' | 'premium' | 'pro' | 'admin';
+
 export interface SubscriptionLimits {
   free: number;
   basic: number;
@@ -385,7 +392,7 @@ export interface SubscriptionLimits {
 
 export interface UserSubscriptionData {
   userId: string;
-  userType: 'free' | 'basic' | 'premium' | 'pro' | 'admin';
+  userType: UserTier;
   currentUsage: number;
   tierLimit: number;
   canCreate: boolean;
