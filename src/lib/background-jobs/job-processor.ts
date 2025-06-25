@@ -499,7 +499,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         
       } catch (sceneError) {
         console.error('❌ Failed to generate pages from story:', sceneError);
-        throw new Error(`Failed to generate comic book layout: ${sceneError.message}`);
+        throw new Error(`Failed to generate comic book layout: ${sceneError instanceof Error ? sceneError.message : String(sceneError)}`);
       }
     } else {
       console.log(`📄 Predefined-pages mode detected - processing ${pages.length} existing pages`);
