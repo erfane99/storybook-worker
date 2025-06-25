@@ -10,6 +10,7 @@ import { JobService } from '../job/job-service.js';
 import { AuthService } from '../auth/auth-service.js';
 import { SubscriptionService } from '../subscription/subscription-service.js';
 import { ServiceConfigManager } from '../config/service-config.js';
+import { SubscriptionConfigService } from '../config/subscription-config.js';
 
 export class EnhancedServiceRegistry {
   private static registered = false;
@@ -32,6 +33,18 @@ export class EnhancedServiceRegistry {
       {
         singleton: true,
         lazy: false, // Load immediately
+        dependencies: [],
+        healthCheck: true,
+      }
+    );
+
+    // Register Subscription Configuration Service (no dependencies)
+    enhancedServiceContainer.register(
+      'ISubscriptionConfigService',
+      () => new SubscriptionConfigService(),
+      {
+        singleton: true,
+        lazy: false, // Load immediately for configuration
         dependencies: [],
         healthCheck: true,
       }
@@ -92,7 +105,7 @@ export class EnhancedServiceRegistry {
       {
         singleton: true,
         lazy: true,
-        dependencies: [SERVICE_TOKENS.CONFIG, SERVICE_TOKENS.DATABASE],
+        dependencies: [SERVICE_TOKENS.CONFIG, SERVICE_TOKENS.DATABASE, 'ISubscriptionConfigService'],
         healthCheck: true,
       }
     );
@@ -123,8 +136,9 @@ export class EnhancedServiceRegistry {
     console.log('🚀 Initializing core enhanced services...');
     
     try {
-      // Initialize configuration service first
+      // Initialize configuration services first
       await enhancedServiceContainer.resolve(SERVICE_TOKENS.CONFIG);
+      await enhancedServiceContainer.resolve('ISubscriptionConfigService');
       console.log('✅ Core enhanced services initialized');
     } catch (error: any) {
       console.error('❌ Failed to initialize core enhanced services:', error.message);
@@ -203,8 +217,45 @@ export class EnhancedServiceRegistry {
         resultPattern: true,
         errorCorrelation: true,
         subscriptionManagement: true,
+        configurationManagement: true,
+        environmentBasedConfig: true,
+        hotConfigReload: true,
       },
     };
+  }
+
+  /**
+   * Get subscription configuration status
+   */
+  static async getSubscriptionConfigStatus() {
+    try {
+      const subscriptionService = enhancedServiceContainer.resolveSync(SERVICE_TOKENS.SUBSCRIPTION);
+      if (subscriptionService && typeof (subscriptionService as any).getConfigurationSummary === 'function') {
+        const summary = (subscriptionService as any).getConfigurationSummary();
+        return summary.success ? summary.data : null;
+      }
+      return null;
+    } catch (error) {
+      console.warn('⚠️ Failed to get subscription configuration status:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Reload subscription configuration from environment
+   */
+  static async reloadSubscriptionConfig(): Promise<boolean> {
+    try {
+      const configService = enhancedServiceContainer.resolveSync('ISubscriptionConfigService');
+      if (configService && typeof (configService as any).reloadConfiguration === 'function') {
+        const result = await (configService as any).reloadConfiguration();
+        return result.success;
+      }
+      return false;
+    } catch (error) {
+      console.warn('⚠️ Failed to reload subscription configuration:', error);
+      return false;
+    }
   }
 
   /**

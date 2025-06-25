@@ -1,11 +1,18 @@
 // Enhanced Subscription Service - Production Implementation
+// Updated to use SubscriptionConfigService for environment-based configuration
+
 import { ErrorAwareBaseService, ErrorAwareServiceConfig } from '../base/error-aware-base-service.js';
 import { 
+  ISubscriptionService,
   IServiceHealth,
   IServiceMetrics,
   IServiceLifecycle,
   ServiceConfig,
-  RetryConfig
+  RetryConfig,
+  UserTier,
+  SubscriptionLimits,
+  LimitCheckResult,
+  UserSubscriptionData
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
@@ -13,55 +20,28 @@ import {
   DatabaseConnectionError,
   DatabaseQueryError,
   JobValidationError,
+  ConfigurationError,
   ErrorFactory,
   ErrorCategory
 } from '../errors/index.js';
 import { enhancedServiceContainer } from '../container/enhanced-service-container.js';
 import { SERVICE_TOKENS, IDatabaseService } from '../interfaces/service-contracts.js';
-import { environmentManager } from '../../lib/config/environment.js';
-
-// ===== SUBSCRIPTION INTERFACES =====
-
-export interface UserSubscriptionData {
-  userId: string;
-  userType: 'free' | 'basic' | 'premium' | 'pro' | 'admin';
-  currentUsage: number;
-  tierLimit: number;
-  canCreate: boolean;
-  upgradeMessage?: string;
-  resetDate?: string;
-}
-
-export interface SubscriptionLimits {
-  free: number;
-  basic: number;
-  premium: number;
-  pro: number;
-  admin: number;
-}
-
-export interface LimitCheckResult {
-  allowed: boolean;
-  currentUsage: number;
-  limit: number;
-  userType: string;
-  upgradeMessage?: string;
-  resetDate?: string;
-}
+import { SubscriptionConfigService } from '../config/subscription-config.js';
 
 // ===== SUBSCRIPTION SERVICE CONFIG =====
 
 export interface SubscriptionServiceConfig extends ErrorAwareServiceConfig {
-  defaultLimits: SubscriptionLimits;
   cacheTimeout: number;
   usageCountTimeout: number;
+  enableConfigHotReload: boolean;
 }
 
 // ===== SUBSCRIPTION SERVICE IMPLEMENTATION =====
 
-export class SubscriptionService extends ErrorAwareBaseService implements IServiceHealth, IServiceMetrics, IServiceLifecycle {
-  private subscriptionLimits: SubscriptionLimits;
+export class SubscriptionService extends ErrorAwareBaseService implements ISubscriptionService {
+  private configService: SubscriptionConfigService;
   private userCache: Map<string, { data: UserSubscriptionData; timestamp: number }> = new Map();
+  private configUnsubscribe?: () => void;
   private readonly defaultRetryConfig: RetryConfig = {
     attempts: 3,
     delay: 1000,
@@ -76,15 +56,9 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
       retryAttempts: 3,
       retryDelay: 1000,
       circuitBreakerThreshold: 5,
-      defaultLimits: {
-        free: 1,      // 1 storybook limit
-        basic: 3,     // 3 storybooks per month
-        premium: 10,  // Legacy tier - same as pro
-        pro: 10,      // 10 storybooks per month
-        admin: -1,    // Unlimited for internal use
-      },
       cacheTimeout: 300000, // 5 minutes
       usageCountTimeout: 60000, // 1 minute for usage counts
+      enableConfigHotReload: true,
       errorHandling: {
         enableRetry: true,
         maxRetries: 3,
@@ -102,8 +76,13 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
     const finalConfig = { ...defaultConfig, ...config };
     super(finalConfig);
     
-    // Initialize subscription limits from environment or defaults
-    this.subscriptionLimits = this.loadSubscriptionLimits(finalConfig.defaultLimits);
+    // Initialize configuration service
+    this.configService = new SubscriptionConfigService({
+      enableHotReload: finalConfig.enableConfigHotReload,
+      validationStrict: false, // Allow graceful degradation
+      reloadInterval: 30000, // 30 seconds
+      logConfigChanges: true,
+    });
   }
 
   getName(): string {
@@ -114,14 +93,26 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
 
   protected async initializeService(): Promise<void> {
     try {
+      // Initialize configuration service first
+      await this.configService.initialize();
+
+      // Set up configuration change monitoring
+      if ((this.config as SubscriptionServiceConfig).enableConfigHotReload) {
+        this.configUnsubscribe = this.configService.onConfigurationChange((newConfig) => {
+          this.handleConfigurationChange(newConfig);
+        });
+      }
+
       // Validate that we can access the database service
       const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
       if (!databaseService) {
         throw new Error('DatabaseService not available for subscription checks');
       }
 
-      // Log configuration
-      this.log('info', 'Subscription limits configured:', this.subscriptionLimits);
+      // Log current configuration
+      const currentLimits = this.configService.getSubscriptionLimits();
+      this.log('info', 'Subscription limits loaded from configuration:', currentLimits);
+      
       this.log('info', 'Subscription service initialized successfully');
     } catch (error) {
       this.log('error', 'Failed to initialize subscription service', error);
@@ -131,7 +122,18 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
 
   protected async disposeService(): Promise<void> {
     try {
+      // Unsubscribe from configuration changes
+      if (this.configUnsubscribe) {
+        this.configUnsubscribe();
+        this.configUnsubscribe = undefined;
+      }
+
+      // Dispose configuration service
+      await this.configService.dispose();
+
+      // Clear cache
       this.userCache.clear();
+      
       this.log('info', 'Subscription service disposed successfully');
     } catch (error) {
       this.log('error', 'Error during subscription service disposal', error);
@@ -147,8 +149,15 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
         return false;
       }
 
+      // Check configuration service health
+      const configHealthy = this.configService.isHealthy();
+      if (!configHealthy) {
+        return false;
+      }
+
       // Check if limits are properly configured
-      const hasValidLimits = Object.values(this.subscriptionLimits).every(limit => 
+      const limits = this.configService.getSubscriptionLimits();
+      const hasValidLimits = Object.values(limits).every(limit => 
         typeof limit === 'number' && (limit > 0 || limit === -1)
       );
 
@@ -240,8 +249,8 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
         // Get current usage count
         const currentUsage = await this.getCurrentUsage(userId, limitType, databaseService);
         
-        // Get tier limit
-        const tierLimit = this.getTierLimit(userType, limitType);
+        // Get tier limit from configuration service
+        const tierLimit = this.getTierLimit(userType as UserTier, limitType);
         
         // Determine if user can create more content
         const canCreate = tierLimit === -1 || currentUsage < tierLimit;
@@ -251,7 +260,7 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
         
         return {
           userId,
-          userType,
+          userType: userType as UserTier,
           currentUsage,
           tierLimit,
           canCreate,
@@ -268,11 +277,12 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
       this.log('error', 'Failed to get user subscription data:', result.error);
       
       // Return safe default (free tier, no creation allowed)
+      const freeTierLimit = this.configService.getTierLimit('free');
       return {
         userId,
         userType: 'free',
         currentUsage: 999, // High number to block creation
-        tierLimit: this.subscriptionLimits.free,
+        tierLimit: freeTierLimit,
         canCreate: false,
         upgradeMessage: 'Unable to verify subscription. Please try again.',
       };
@@ -296,32 +306,68 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
   }
 
   /**
-   * Get subscription limits for all tiers
+   * Get subscription limits for all tiers (from configuration service)
    */
   getSubscriptionLimits(): SubscriptionLimits {
-    return { ...this.subscriptionLimits };
+    return this.configService.getSubscriptionLimits();
   }
 
   /**
-   * Update subscription limits (for configuration changes)
+   * Update subscription limits (delegates to configuration service)
    */
   updateSubscriptionLimits(newLimits: Partial<SubscriptionLimits>): void {
-    this.subscriptionLimits = { ...this.subscriptionLimits, ...newLimits };
-    this.userCache.clear(); // Clear cache when limits change
-    this.log('info', 'Updated subscription limits:', this.subscriptionLimits);
+    const updateResult = this.configService.updateConfiguration(newLimits);
+    
+    if (updateResult.success) {
+      // Clear cache when limits change
+      this.userCache.clear();
+      this.log('info', 'Updated subscription limits via configuration service');
+    } else {
+      this.log('error', 'Failed to update subscription limits:', updateResult.error);
+      throw new Error(`Failed to update subscription limits: ${updateResult.error.message}`);
+    }
+  }
+
+  // ===== CACHE MANAGEMENT =====
+
+  /**
+   * Clear all cached subscription data
+   */
+  clearCache(): void {
+    this.userCache.clear();
+    this.log('info', 'Cleared all subscription cache');
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStats(): {
+    totalEntries: number;
+    oldestEntry: string | null;
+    newestEntry: string | null;
+  } {
+    const entries = Array.from(this.userCache.values());
+    
+    if (entries.length === 0) {
+      return {
+        totalEntries: 0,
+        oldestEntry: null,
+        newestEntry: null,
+      };
+    }
+
+    const timestamps = entries.map(entry => entry.timestamp);
+    const oldest = Math.min(...timestamps);
+    const newest = Math.max(...timestamps);
+
+    return {
+      totalEntries: entries.length,
+      oldestEntry: new Date(oldest).toISOString(),
+      newestEntry: new Date(newest).toISOString(),
+    };
   }
 
   // ===== PRIVATE HELPER METHODS =====
-
-  private loadSubscriptionLimits(defaults: SubscriptionLimits): SubscriptionLimits {
-    return {
-      free: Number(process.env.SUBSCRIPTION_LIMIT_FREE) || defaults.free,
-      basic: Number(process.env.SUBSCRIPTION_LIMIT_BASIC) || defaults.basic,
-      premium: Number(process.env.SUBSCRIPTION_LIMIT_PREMIUM) || defaults.premium,
-      pro: Number(process.env.SUBSCRIPTION_LIMIT_PRO) || defaults.pro,
-      admin: Number(process.env.SUBSCRIPTION_LIMIT_ADMIN) || defaults.admin,
-    };
-  }
 
   private async getUserType(userId: string, databaseService: IDatabaseService): Promise<string> {
     try {
@@ -361,18 +407,16 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
     }
   }
 
-  private getTierLimit(userType: string, limitType: string): number {
+  private getTierLimit(userType: UserTier, limitType: string): number {
     // For now, only handle storybook limits
     if (limitType !== 'storybook') {
       this.log('warn', `Unknown limit type: ${limitType}, defaulting to storybook limits`);
     }
 
-    const limit = this.subscriptionLimits[userType as keyof SubscriptionLimits];
-    if (limit === undefined) {
-      this.log('warn', `Unknown user type: ${userType}, defaulting to free tier`);
-      return this.subscriptionLimits.free;
-    }
-
+    // Get limit from configuration service
+    const limit = this.configService.getTierLimit(userType);
+    
+    this.log('info', `Tier limit for ${userType}: ${limit === -1 ? 'unlimited' : limit}`);
     return limit;
   }
 
@@ -436,43 +480,17 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
     };
   }
 
-  // ===== CACHE MANAGEMENT =====
-
-  /**
-   * Clear all cached subscription data
-   */
-  clearCache(): void {
-    this.userCache.clear();
-    this.log('info', 'Cleared all subscription cache');
-  }
-
-  /**
-   * Get cache statistics
-   */
-  getCacheStats(): {
-    totalEntries: number;
-    oldestEntry: string | null;
-    newestEntry: string | null;
-  } {
-    const entries = Array.from(this.userCache.values());
+  private handleConfigurationChange(newConfig: SubscriptionLimits): void {
+    this.log('info', 'Subscription configuration changed, clearing cache:', newConfig);
     
-    if (entries.length === 0) {
-      return {
-        totalEntries: 0,
-        oldestEntry: null,
-        newestEntry: null,
-      };
+    // Clear cache when configuration changes
+    this.userCache.clear();
+    
+    // Log the changes
+    const differences = this.configService.getConfigurationDifferences();
+    if (Object.keys(differences).length > 0) {
+      this.log('info', 'Configuration differences detected:', differences);
     }
-
-    const timestamps = entries.map(entry => entry.timestamp);
-    const oldest = Math.min(...timestamps);
-    const newest = Math.max(...timestamps);
-
-    return {
-      totalEntries: entries.length,
-      oldestEntry: new Date(oldest).toISOString(),
-      newestEntry: new Date(newest).toISOString(),
-    };
   }
 
   // ===== ENHANCED RESULT PATTERN METHODS =====
@@ -499,6 +517,41 @@ export class SubscriptionService extends ErrorAwareBaseService implements IServi
       },
       'getUserSubscriptionDataResult'
     );
+  }
+
+  /**
+   * Get subscription limits with Result pattern
+   */
+  getSubscriptionLimitsResult(): Result<SubscriptionLimits, ConfigurationError> {
+    try {
+      const limits = this.getSubscriptionLimits();
+      return Result.success(limits);
+    } catch (error: any) {
+      const configError = new ConfigurationError(
+        `Failed to get subscription limits: ${error.message}`,
+        { service: this.getName(), operation: 'getSubscriptionLimitsResult' }
+      );
+      return Result.failure(configError);
+    }
+  }
+
+  /**
+   * Get configuration summary for monitoring
+   */
+  getConfigurationSummary(): Result<{
+    current: SubscriptionLimits;
+    validation: any;
+    cacheStats: any;
+    configService: any;
+  }, never> {
+    const summary = {
+      current: this.getSubscriptionLimits(),
+      validation: this.configService.getValidationStatus().unwrap(),
+      cacheStats: this.getCacheStats(),
+      configService: this.configService.getConfigurationSummary(),
+    };
+    
+    return Result.success(summary);
   }
 }
 
