@@ -292,7 +292,7 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
       this.log('error', 'Failed to get user subscription data:', result.error);
       
       // Return safe default (free tier, no creation allowed)
-      const freeTierLimit = this.configService.getTierLimit('free');
+      const freeTierLimit = this.subscriptionLimits.free;
       return {
         userId,
         userType: 'free',
@@ -534,7 +534,7 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
           {
             service: this.getName(),
             operation: 'checkUserLimitsResult',
-            originalError: error
+            details: { originalError: error.message }
           }
         );
         return Result.failure(mappedError);
@@ -547,7 +547,7 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
           {
             service: this.getName(),
             operation: 'checkUserLimitsResult',
-            originalError: error
+            details: { originalError: error.message }
           }
         );
         return Result.failure(mappedError);
@@ -574,7 +574,7 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
           {
             service: this.getName(),
             operation: 'getUserSubscriptionDataResult',
-            originalError: error
+            details: { originalError: error.message }
           }
         );
         return Result.failure(mappedError);
@@ -587,7 +587,7 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
           {
             service: this.getName(),
             operation: 'getUserSubscriptionDataResult',
-            originalError: error
+            details: { originalError: error.message }
           }
         );
         return Result.failure(mappedError);
