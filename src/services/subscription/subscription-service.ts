@@ -26,9 +26,36 @@ import {
 } from '../errors/index.js';
 import { enhancedServiceContainer } from '../container/enhanced-service-container.js';
 import { SERVICE_TOKENS, IDatabaseService } from '../interfaces/service-contracts.js';
-import { SubscriptionConfigService } from '../config/subscription-config.js';
+import { createClient } from '@supabase/supabase-js';
 
-// ===== SUBSCRIPTION SERVICE CONFIG =====
+// ===== PRODUCTION CONFIGURATION =====
+
+interface SubscriptionLimitsConfig {
+  free: number;
+  basic: number;
+  premium: number;
+  pro: number;
+  admin: number;
+}
+
+const DEFAULT_LIMITS: SubscriptionLimitsConfig = {
+  free: 1,
+  basic: 3,
+  premium: 10,
+  pro: 10,
+  admin: -1, // unlimited
+};
+
+// Get limits from environment with fallbacks
+function getSubscriptionLimitsFromEnv(): SubscriptionLimitsConfig {
+  return {
+    free: parseInt(process.env.SUBSCRIPTION_LIMIT_FREE || '1') || DEFAULT_LIMITS.free,
+    basic: parseInt(process.env.SUBSCRIPTION_LIMIT_BASIC || '3') || DEFAULT_LIMITS.basic,
+    premium: parseInt(process.env.SUBSCRIPTION_LIMIT_PREMIUM || '10') || DEFAULT_LIMITS.premium,
+    pro: parseInt(process.env.SUBSCRIPTION_LIMIT_PRO || '10') || DEFAULT_LIMITS.pro,
+    admin: parseInt(process.env.SUBSCRIPTION_LIMIT_ADMIN || '-1') || DEFAULT_LIMITS.admin,
+  };
+}
 
 export interface SubscriptionServiceConfig extends ErrorAwareServiceConfig {
   cacheTimeout: number;
@@ -39,9 +66,9 @@ export interface SubscriptionServiceConfig extends ErrorAwareServiceConfig {
 // ===== SUBSCRIPTION SERVICE IMPLEMENTATION =====
 
 export class SubscriptionService extends ErrorAwareBaseService implements ISubscriptionService {
-  private configService: SubscriptionConfigService;
   private userCache: Map<string, { data: UserSubscriptionData; timestamp: number }> = new Map();
-  private configUnsubscribe?: () => void;
+  private subscriptionLimits: SubscriptionLimitsConfig;
+  private supabaseClient: any;
   private readonly defaultRetryConfig: RetryConfig = {
     attempts: 3,
     delay: 1000,
@@ -76,13 +103,18 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
     const finalConfig = { ...defaultConfig, ...config };
     super(finalConfig);
     
-    // Initialize configuration service
-    this.configService = new SubscriptionConfigService({
-      enableHotReload: finalConfig.enableConfigHotReload,
-      validationStrict: false, // Allow graceful degradation
-      reloadInterval: 30000, // 30 seconds
-      logConfigChanges: true,
-    });
+    // Initialize subscription limits from environment
+    this.subscriptionLimits = getSubscriptionLimitsFromEnv();
+    
+    // Initialize Supabase client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (supabaseUrl && supabaseServiceKey) {
+      this.supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    } else {
+      console.error('❌ Missing Supabase environment variables for SubscriptionService');
+    }
   }
 
   getName(): string {
@@ -93,14 +125,9 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
 
   protected async initializeService(): Promise<void> {
     try {
-      // Initialize configuration service first
-      await this.configService.initialize();
-
-      // Set up configuration change monitoring
-      if ((this.config as SubscriptionServiceConfig).enableConfigHotReload) {
-        this.configUnsubscribe = this.configService.onConfigurationChange((newConfig) => {
-          this.handleConfigurationChange(newConfig);
-        });
+      // Validate Supabase connection
+      if (!this.supabaseClient) {
+        throw new Error('Supabase client not initialized - missing environment variables');
       }
 
       // Validate that we can access the database service
@@ -110,8 +137,7 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
       }
 
       // Log current configuration
-      const currentLimits = this.configService.getSubscriptionLimits();
-      this.log('info', 'Subscription limits loaded from configuration:', currentLimits);
+      this.log('info', 'Subscription limits loaded from environment:', this.subscriptionLimits);
       
       this.log('info', 'Subscription service initialized successfully');
     } catch (error) {
@@ -122,15 +148,6 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
 
   protected async disposeService(): Promise<void> {
     try {
-      // Unsubscribe from configuration changes
-      if (this.configUnsubscribe) {
-        this.configUnsubscribe();
-        this.configUnsubscribe = undefined;
-      }
-
-      // Dispose configuration service
-      await this.configService.dispose();
-
       // Clear cache
       this.userCache.clear();
       
@@ -149,15 +166,13 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
         return false;
       }
 
-      // Check configuration service health
-      const configHealthy = this.configService.isHealthy();
-      if (!configHealthy) {
+      // Check Supabase connection
+      if (!this.supabaseClient) {
         return false;
       }
 
       // Check if limits are properly configured
-      const limits = this.configService.getSubscriptionLimits();
-      const hasValidLimits = Object.values(limits).every(limit => 
+      const hasValidLimits = Object.values(this.subscriptionLimits).every(limit => 
         typeof limit === 'number' && (limit > 0 || limit === -1)
       );
 
@@ -306,26 +321,21 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
   }
 
   /**
-   * Get subscription limits for all tiers (from configuration service)
+   * Get subscription limits for all tiers (from environment configuration)
    */
   getSubscriptionLimits(): SubscriptionLimits {
-    return this.configService.getSubscriptionLimits();
+    return { ...this.subscriptionLimits };
   }
 
   /**
-   * Update subscription limits (delegates to configuration service)
+   * Update subscription limits (updates in-memory config)
    */
   updateSubscriptionLimits(newLimits: Partial<SubscriptionLimits>): void {
-    const updateResult = this.configService.updateConfiguration(newLimits);
+    this.subscriptionLimits = { ...this.subscriptionLimits, ...newLimits };
     
-    if (updateResult.success) {
-      // Clear cache when limits change
-      this.userCache.clear();
-      this.log('info', 'Updated subscription limits via configuration service');
-    } else {
-      this.log('error', 'Failed to update subscription limits:', updateResult.error);
-      throw new Error(`Failed to update subscription limits: ${updateResult.error.message}`);
-    }
+    // Clear cache when limits change
+    this.userCache.clear();
+    this.log('info', 'Updated subscription limits:', this.subscriptionLimits);
   }
 
   // ===== CACHE MANAGEMENT =====
@@ -367,22 +377,27 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
     };
   }
 
-  // ===== PRIVATE HELPER METHODS =====
+  // ===== PRODUCTION DATABASE QUERIES =====
 
   private async getUserType(userId: string, databaseService: IDatabaseService): Promise<string> {
     try {
-      // Query user profile from database
-      // Note: This would need to be implemented in DatabaseService
-      // For now, we'll use a mock implementation
-      
       this.log('info', `Querying user type for user: ${userId}`);
       
-      // Mock implementation - in real system, this would query the profiles table
-      // const profile = await databaseService.getUserProfile(userId);
-      // return profile?.user_type || 'free';
-      
-      // For now, default to free tier
-      return 'free';
+      // Direct Supabase query to profiles table
+      const { data: profile, error } = await this.supabaseClient
+        .from('profiles')
+        .select('user_type')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        this.log('warn', `Database error getting user type for ${userId}:`, error);
+        return 'free'; // Safe default
+      }
+
+      const userType = profile?.user_type || 'free';
+      this.log('info', `User ${userId} has type: ${userType}`);
+      return userType;
       
     } catch (error) {
       this.log('warn', `Failed to get user type for ${userId}, defaulting to free:`, error);
@@ -394,12 +409,20 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
     try {
       this.log('info', `Counting current ${limitType} usage for user: ${userId}`);
       
-      // Mock implementation - in real system, this would count from storybook_entries table
-      // const count = await databaseService.countUserContent(userId, limitType);
-      // return count;
-      
-      // For now, return 0 usage
-      return 0;
+      // Direct Supabase query to count storybooks
+      const { count, error } = await this.supabaseClient
+        .from('storybook_entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      if (error) {
+        this.log('warn', `Database error counting usage for ${userId}:`, error);
+        return 0; // Safe default
+      }
+
+      const currentUsage = count || 0;
+      this.log('info', `User ${userId} has ${currentUsage} ${limitType}s`);
+      return currentUsage;
       
     } catch (error) {
       this.log('warn', `Failed to get usage count for ${userId}, defaulting to 0:`, error);
@@ -413,8 +436,8 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
       this.log('warn', `Unknown limit type: ${limitType}, defaulting to storybook limits`);
     }
 
-    // Get limit from configuration service
-    const limit = this.configService.getTierLimit(userType);
+    // Get limit from environment configuration
+    const limit = this.subscriptionLimits[userType] || this.subscriptionLimits.free;
     
     this.log('info', `Tier limit for ${userType}: ${limit === -1 ? 'unlimited' : limit}`);
     return limit;
@@ -480,43 +503,96 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
     };
   }
 
-  private handleConfigurationChange(newConfig: SubscriptionLimits): void {
+  private handleConfigurationChange(newConfig: SubscriptionLimitsConfig): void {
     this.log('info', 'Subscription configuration changed, clearing cache:', newConfig);
     
     // Clear cache when configuration changes
     this.userCache.clear();
     
-    // Log the changes
-    const differences = this.configService.getConfigurationDifferences();
-    if (Object.keys(differences).length > 0) {
-      this.log('info', 'Configuration differences detected:', differences);
-    }
+    // Update internal limits
+    this.subscriptionLimits = { ...newConfig };
   }
 
-  // ===== ENHANCED RESULT PATTERN METHODS =====
+  // ===== FIXED: PROPER ERROR MAPPING IN RESULT PATTERN METHODS =====
 
   /**
    * Check user limits with Result pattern for better error handling
+   * ✅ FIXED: Proper error mapping from service errors to expected interface errors
    */
   async checkUserLimitsResult(userId: string, limitType: string = 'storybook'): Promise<Result<LimitCheckResult, DatabaseConnectionError | JobValidationError>> {
-    return this.withErrorHandling(
-      async () => {
-        return this.checkUserLimits(userId, limitType);
-      },
-      'checkUserLimitsResult'
-    );
+    try {
+      const result = await this.checkUserLimits(userId, limitType);
+      return Result.success(result);
+    } catch (error: any) {
+      // ✅ PROPER ERROR MAPPING: Convert service errors to expected interface types
+      if (error instanceof DatabaseConnectionError) {
+        return Result.failure(error);
+      } else if (error instanceof DatabaseQueryError) {
+        // Map database query errors to job validation errors (business logic boundary)
+        const mappedError = new JobValidationError(
+          `User subscription validation failed: ${error.message}`,
+          {
+            service: this.getName(),
+            operation: 'checkUserLimitsResult',
+            originalError: error
+          }
+        );
+        return Result.failure(mappedError);
+      } else if (error instanceof JobValidationError) {
+        return Result.failure(error);
+      } else {
+        // Map unknown errors to connection errors (safest fallback)
+        const mappedError = new DatabaseConnectionError(
+          `Subscription service unavailable: ${error.message}`,
+          {
+            service: this.getName(),
+            operation: 'checkUserLimitsResult',
+            originalError: error
+          }
+        );
+        return Result.failure(mappedError);
+      }
+    }
   }
 
   /**
    * Get user subscription data with Result pattern
+   * ✅ FIXED: Proper error mapping from service errors to expected interface errors
    */
   async getUserSubscriptionDataResult(userId: string, limitType: string): Promise<Result<UserSubscriptionData, DatabaseConnectionError | JobValidationError>> {
-    return this.withErrorHandling(
-      async () => {
-        return this.getUserSubscriptionData(userId, limitType);
-      },
-      'getUserSubscriptionDataResult'
-    );
+    try {
+      const result = await this.getUserSubscriptionData(userId, limitType);
+      return Result.success(result);
+    } catch (error: any) {
+      // ✅ PROPER ERROR MAPPING: Convert service errors to expected interface types
+      if (error instanceof DatabaseConnectionError) {
+        return Result.failure(error);
+      } else if (error instanceof DatabaseQueryError) {
+        // Map database query errors to job validation errors (business logic boundary)
+        const mappedError = new JobValidationError(
+          `User subscription data validation failed: ${error.message}`,
+          {
+            service: this.getName(),
+            operation: 'getUserSubscriptionDataResult',
+            originalError: error
+          }
+        );
+        return Result.failure(mappedError);
+      } else if (error instanceof JobValidationError) {
+        return Result.failure(error);
+      } else {
+        // Map unknown errors to connection errors (safest fallback)
+        const mappedError = new DatabaseConnectionError(
+          `Subscription service unavailable: ${error.message}`,
+          {
+            service: this.getName(),
+            operation: 'getUserSubscriptionDataResult',
+            originalError: error
+          }
+        );
+        return Result.failure(mappedError);
+      }
+    }
   }
 
   /**
@@ -540,15 +616,13 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
    */
   getConfigurationSummary(): Result<{
     current: SubscriptionLimits;
-    validation: any;
     cacheStats: any;
-    configService: any;
+    supabaseConnected: boolean;
   }, never> {
     const summary = {
       current: this.getSubscriptionLimits(),
-      validation: this.configService.getValidationStatus().unwrap(),
       cacheStats: this.getCacheStats(),
-      configService: this.configService.getConfigurationSummary(),
+      supabaseConnected: !!this.supabaseClient,
     };
     
     return Result.success(summary);
