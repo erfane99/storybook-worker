@@ -1,4 +1,4 @@
-// Enhanced AI Service - Production Implementation
+// Enhanced AI Service - Production Implementation with Best Practice JSON Handling
 import { EnhancedBaseService } from '../base/enhanced-base-service.js';
 import { 
   IAIService,
@@ -108,13 +108,16 @@ export class AIService extends EnhancedBaseService implements IAIService {
     return result.choices[0].message.content;
   }
 
-  // ✅ CRITICAL FIX: Proper JSON keyword for OpenAI json_object format
+  // ✅ BEST PRACTICE: Robust scene generation with flexible JSON handling
   async generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult> {
     const result = await this.createChatCompletion({
       model: 'gpt-4o',
       messages: [
-        // ✅ FIXED: Added explicit JSON requirement that OpenAI's json_object format needs
-        { role: 'system', content: `${systemPrompt}\n\nYou MUST respond with valid JSON only. Do not include any text outside the JSON structure.` },
+        // ✅ FLEXIBLE PROMPT: Work with AI natural tendencies
+        { 
+          role: 'system', 
+          content: `${systemPrompt}\n\nRespond with valid JSON containing comic book content. Use clear structure with an array of pages/panels/scenes.` 
+        },
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.85,
@@ -128,16 +131,53 @@ export class AIService extends EnhancedBaseService implements IAIService {
     try {
       const parsed = JSON.parse(result.choices[0].message.content);
       
-      // ✅ ADDITIONAL VALIDATION: Ensure the response has the expected structure
-      if (!parsed.pages || !Array.isArray(parsed.pages)) {
-        throw new Error('OpenAI response missing required "pages" array');
+      // ✅ ROBUST NORMALIZATION: Handle any reasonable structure
+      const normalizedResult = this.normalizeSceneStructure(parsed);
+      
+      // ✅ VALIDATION: Ensure we have usable content
+      if (!normalizedResult.pages || !Array.isArray(normalizedResult.pages) || normalizedResult.pages.length === 0) {
+        console.error('❌ OpenAI response after normalization:', normalizedResult);
+        throw new Error('Could not extract valid scene structure from OpenAI response');
       }
       
-      return { pages: parsed.pages, metadata: parsed.metadata };
-    } catch (error) {
-      console.error('❌ Failed to parse OpenAI JSON response:', result.choices[0].message.content);
-      throw new Error('Invalid JSON response from OpenAI');
+      console.log(`✅ Successfully parsed ${normalizedResult.pages.length} pages from OpenAI response`);
+      return { pages: normalizedResult.pages, metadata: parsed.metadata || {} };
+      
+    } catch (parseError) {
+      console.error('❌ Failed to parse OpenAI JSON response:', {
+        error: parseError.message,
+        rawResponse: result.choices[0].message.content.substring(0, 500) + '...'
+      });
+      throw new Error(`Invalid JSON response from OpenAI: ${parseError.message}`);
     }
+  }
+
+  // ✅ ROBUST NORMALIZATION: Handle multiple possible structures
+  private normalizeSceneStructure(parsed: any): { pages: any[] } {
+    // Try different possible key names that OpenAI might use
+    const possibleArrayKeys = ['pages', 'panels', 'scenes', 'comic_pages', 'storyboards', 'frames'];
+    
+    for (const key of possibleArrayKeys) {
+      if (parsed[key] && Array.isArray(parsed[key]) && parsed[key].length > 0) {
+        console.log(`🔄 Found content under key: "${key}"`);
+        return { pages: parsed[key] };
+      }
+    }
+    
+    // Fallback: Look for any array in the response
+    const arrays = Object.entries(parsed)
+      .filter(([_, value]) => Array.isArray(value) && value.length > 0)
+      .sort(([, a], [, b]) => b.length - a.length); // Sort by length, largest first
+    
+    if (arrays.length > 0) {
+      const [foundKey, foundArray] = arrays[0];
+      console.log(`🔄 Using array found under key: "${foundKey}"`);
+      return { pages: foundArray };
+    }
+    
+    // Final fallback: Return empty structure (will be caught by validation)
+    console.warn('⚠️ No valid arrays found in OpenAI response');
+    return { pages: [] };
   }
 
   async generateCartoonImage(prompt: string): Promise<string> {
