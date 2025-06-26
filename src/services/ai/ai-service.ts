@@ -1,4 +1,4 @@
-// Enhanced AI Service - Production Implementation with Best Practice JSON Handling
+// Enhanced AI Service - Production Implementation with Deep Content Discovery System
 import { EnhancedBaseService } from '../base/enhanced-base-service.js';
 import { 
   IAIService,
@@ -29,6 +29,22 @@ export interface AIConfig extends ServiceConfig {
   rateLimitRpm: number;
 }
 
+// ===== DEEP CONTENT DISCOVERY INTERFACES =====
+
+interface ContentDiscoveryResult {
+  content: any[];
+  discoveryPath: string;
+  qualityScore: number;
+  patternType: 'direct' | 'nested' | 'discovered' | 'fallback';
+}
+
+interface DiscoveryPattern {
+  name: string;
+  path: string[];
+  validator: (obj: any) => boolean;
+  priority: number;
+}
+
 export class AIService extends EnhancedBaseService implements IAIService {
   private apiKey: string | null = null;
   private rateLimiter: Map<string, number[]> = new Map();
@@ -44,6 +60,61 @@ export class AIService extends EnhancedBaseService implements IAIService {
     backoffMultiplier: 2,
     maxDelay: 60000,
   };
+
+  // ===== ENTERPRISE CONTENT DISCOVERY PATTERNS =====
+  private readonly discoveryPatterns: DiscoveryPattern[] = [
+    // Direct patterns (highest priority)
+    {
+      name: 'direct_pages',
+      path: ['pages'],
+      validator: (obj: any) => Array.isArray(obj.pages) && obj.pages.length > 0,
+      priority: 100
+    },
+    {
+      name: 'direct_panels',
+      path: ['panels'],
+      validator: (obj: any) => Array.isArray(obj.panels) && obj.panels.length > 0,
+      priority: 95
+    },
+    {
+      name: 'direct_scenes',
+      path: ['scenes'],
+      validator: (obj: any) => Array.isArray(obj.scenes) && obj.scenes.length > 0,
+      priority: 90
+    },
+    
+    // Nested patterns (common OpenAI structures)
+    {
+      name: 'comicbook_pages',
+      path: ['comicBook', 'pages'],
+      validator: (obj: any) => obj.comicBook && Array.isArray(obj.comicBook.pages) && obj.comicBook.pages.length > 0,
+      priority: 85
+    },
+    {
+      name: 'story_panels',
+      path: ['story', 'panels'],
+      validator: (obj: any) => obj.story && Array.isArray(obj.story.panels) && obj.story.panels.length > 0,
+      priority: 80
+    },
+    {
+      name: 'result_pages',
+      path: ['result', 'pages'],
+      validator: (obj: any) => obj.result && Array.isArray(obj.result.pages) && obj.result.pages.length > 0,
+      priority: 75
+    },
+    {
+      name: 'layout_pages',
+      path: ['layout', 'pages'],
+      validator: (obj: any) => obj.layout && Array.isArray(obj.layout.pages) && obj.layout.pages.length > 0,
+      priority: 70
+    },
+    {
+      name: 'comic_scenes',
+      path: ['comic', 'scenes'],
+      validator: (obj: any) => obj.comic && Array.isArray(obj.comic.scenes) && obj.comic.scenes.length > 0,
+      priority: 65
+    }
+  ];
 
   constructor() {
     const config: AIConfig = {
@@ -108,12 +179,11 @@ export class AIService extends EnhancedBaseService implements IAIService {
     return result.choices[0].message.content;
   }
 
-  // ✅ BEST PRACTICE: Robust scene generation with flexible JSON handling
+  // ✅ ENTERPRISE-GRADE: Deep Content Discovery System
   async generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult> {
     const result = await this.createChatCompletion({
       model: 'gpt-4o',
       messages: [
-        // ✅ FLEXIBLE PROMPT: Work with AI natural tendencies
         { 
           role: 'system', 
           content: `${systemPrompt}\n\nRespond with valid JSON containing comic book content. Use clear structure with an array of pages/panels/scenes.` 
@@ -131,17 +201,29 @@ export class AIService extends EnhancedBaseService implements IAIService {
     try {
       const parsed = JSON.parse(result.choices[0].message.content);
       
-      // ✅ ROBUST NORMALIZATION: Handle any reasonable structure
-      const normalizedResult = this.normalizeSceneStructure(parsed);
+      // ✅ ENTERPRISE CONTENT DISCOVERY: Find content regardless of structure
+      const discoveryResult = this.discoverContent(parsed);
       
       // ✅ VALIDATION: Ensure we have usable content
-      if (!normalizedResult.pages || !Array.isArray(normalizedResult.pages) || normalizedResult.pages.length === 0) {
-        console.error('❌ OpenAI response after normalization:', normalizedResult);
-        throw new Error('Could not extract valid scene structure from OpenAI response');
+      if (!discoveryResult.content || discoveryResult.content.length === 0) {
+        console.error('❌ No valid content discovered in OpenAI response');
+        console.error('📄 Raw response structure:', JSON.stringify(parsed, null, 2).substring(0, 1000));
+        throw new Error('Could not extract valid comic book content from OpenAI response');
       }
       
-      console.log(`✅ Successfully parsed ${normalizedResult.pages.length} pages from OpenAI response`);
-      return { pages: normalizedResult.pages, metadata: parsed.metadata || {} };
+      console.log(`✅ Content discovered via ${discoveryResult.patternType} pattern: "${discoveryResult.discoveryPath}"`);
+      console.log(`📊 Quality score: ${discoveryResult.qualityScore}/100, Found ${discoveryResult.content.length} pages`);
+      
+      return { 
+        pages: discoveryResult.content, 
+        metadata: { 
+          discoveryPath: discoveryResult.discoveryPath,
+          patternType: discoveryResult.patternType,
+          qualityScore: discoveryResult.qualityScore,
+          originalStructure: Object.keys(parsed),
+          ...parsed.metadata 
+        } 
+      };
       
     } catch (parseError: any) {
       console.error('❌ Failed to parse OpenAI JSON response:', {
@@ -152,32 +234,156 @@ export class AIService extends EnhancedBaseService implements IAIService {
     }
   }
 
-  // ✅ ROBUST NORMALIZATION: Handle multiple possible structures
-  private normalizeSceneStructure(parsed: any): { pages: any[] } {
-    // Try different possible key names that OpenAI might use
-    const possibleArrayKeys = ['pages', 'panels', 'scenes', 'comic_pages', 'storyboards', 'frames'];
+  // ✅ ENTERPRISE DEEP CONTENT DISCOVERY SYSTEM
+  private discoverContent(parsed: any): ContentDiscoveryResult {
+    console.log('🔍 Starting deep content discovery...');
     
-    for (const key of possibleArrayKeys) {
-      if (parsed[key] && Array.isArray(parsed[key]) && parsed[key].length > 0) {
-        console.log(`🔄 Found content under key: "${key}"`);
-        return { pages: parsed[key] };
+    // Phase 1: Try known patterns (fastest, most reliable)
+    const patternResult = this.tryKnownPatterns(parsed);
+    if (patternResult) {
+      console.log(`✅ Pattern match: ${patternResult.discoveryPath}`);
+      return patternResult;
+    }
+    
+    // Phase 2: Deep recursive search (comprehensive fallback)
+    const searchResult = this.performDeepSearch(parsed);
+    if (searchResult) {
+      console.log(`✅ Deep search success: ${searchResult.discoveryPath}`);
+      return searchResult;
+    }
+    
+    // Phase 3: Emergency fallback (last resort)
+    console.warn('⚠️ Using emergency fallback - no comic content found');
+    return {
+      content: [],
+      discoveryPath: 'emergency_fallback',
+      qualityScore: 0,
+      patternType: 'fallback'
+    };
+  }
+
+  // ✅ PHASE 1: Known Pattern Recognition
+  private tryKnownPatterns(parsed: any): ContentDiscoveryResult | null {
+    // Sort patterns by priority (highest first)
+    const sortedPatterns = [...this.discoveryPatterns].sort((a, b) => b.priority - a.priority);
+    
+    for (const pattern of sortedPatterns) {
+      try {
+        if (pattern.validator(parsed)) {
+          const content = this.extractContentByPath(parsed, pattern.path);
+          if (content && Array.isArray(content) && content.length > 0) {
+            const qualityScore = this.calculateContentQuality(content);
+            
+            console.log(`🎯 Pattern "${pattern.name}" matched with quality ${qualityScore}/100`);
+            
+            return {
+              content,
+              discoveryPath: pattern.path.join('.'),
+              qualityScore,
+              patternType: pattern.path.length === 1 ? 'direct' : 'nested'
+            };
+          }
+        }
+      } catch (error) {
+        // Continue to next pattern if this one fails
+        console.debug(`Pattern ${pattern.name} validation failed:`, error);
       }
     }
     
-    // Fallback: Look for any array in the response
-    const arrays = Object.entries(parsed)
-      .filter(([_, value]) => Array.isArray(value) && value.length > 0)
-      .sort(([, a], [, b]) => (b as any[]).length - (a as any[]).length); // Sort by length, largest first
-    
-    if (arrays.length > 0) {
-      const [foundKey, foundArray] = arrays[0];
-      console.log(`🔄 Using array found under key: "${foundKey}"`);
-      return { pages: foundArray as any[] };
+    return null;
+  }
+
+  // ✅ PHASE 2: Deep Recursive Search
+  private performDeepSearch(obj: any, currentPath: string[] = []): ContentDiscoveryResult | null {
+    if (!obj || typeof obj !== 'object') {
+      return null;
     }
     
-    // Final fallback: Return empty structure (will be caught by validation)
-    console.warn('⚠️ No valid arrays found in OpenAI response');
-    return { pages: [] };
+    // Check if current object is an array of comic content
+    if (Array.isArray(obj)) {
+      const qualityScore = this.calculateContentQuality(obj);
+      if (qualityScore > 50) { // Threshold for acceptable content
+        return {
+          content: obj,
+          discoveryPath: currentPath.join('.') || 'root_array',
+          qualityScore,
+          patternType: 'discovered'
+        };
+      }
+    }
+    
+    // Recursively search object properties
+    const candidates: ContentDiscoveryResult[] = [];
+    
+    for (const [key, value] of Object.entries(obj)) {
+      if (value && typeof value === 'object') {
+        const result = this.performDeepSearch(value, [...currentPath, key]);
+        if (result) {
+          candidates.push(result);
+        }
+      }
+    }
+    
+    // Return the best candidate (highest quality score)
+    if (candidates.length > 0) {
+      return candidates.sort((a, b) => b.qualityScore - a.qualityScore)[0];
+    }
+    
+    return null;
+  }
+
+  // ✅ CONTENT QUALITY ASSESSMENT
+  private calculateContentQuality(content: any[]): number {
+    if (!Array.isArray(content) || content.length === 0) {
+      return 0;
+    }
+    
+    let score = 0;
+    const items = content.slice(0, 5); // Check first 5 items for performance
+    
+    // Size scoring (1-20 items is ideal for comic pages)
+    if (content.length >= 1 && content.length <= 20) {
+      score += 20;
+    } else if (content.length <= 50) {
+      score += 10;
+    }
+    
+    // Content structure scoring
+    for (const item of items) {
+      if (item && typeof item === 'object') {
+        score += 10; // Basic object structure
+        
+        // Comic-specific properties (higher weight)
+        const comicProperties = ['description', 'imagePrompt', 'scene', 'emotion', 'dialogue', 'panelNumber', 'pageNumber'];
+        const foundProperties = comicProperties.filter(prop => prop in item);
+        score += foundProperties.length * 8;
+        
+        // Generic useful properties
+        const genericProperties = ['text', 'content', 'prompt', 'action', 'character'];
+        const foundGeneric = genericProperties.filter(prop => prop in item);
+        score += foundGeneric.length * 3;
+        
+        // Nested structure bonus (pages with scenes)
+        if (item.scenes && Array.isArray(item.scenes)) {
+          score += 15;
+        }
+      }
+    }
+    
+    return Math.min(100, score);
+  }
+
+  // ✅ UTILITY: Extract content by path
+  private extractContentByPath(obj: any, path: string[]): any {
+    let current = obj;
+    for (const key of path) {
+      if (current && typeof current === 'object' && key in current) {
+        current = current[key];
+      } else {
+        return null;
+      }
+    }
+    return current;
   }
 
   async generateCartoonImage(prompt: string): Promise<string> {
