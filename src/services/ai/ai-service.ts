@@ -108,12 +108,13 @@ export class AIService extends EnhancedBaseService implements IAIService {
     return result.choices[0].message.content;
   }
 
-  // ✅ FIXED: Simple fix for OpenAI JSON requirement
+  // ✅ CRITICAL FIX: Proper JSON keyword for OpenAI json_object format
   async generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult> {
     const result = await this.createChatCompletion({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: `${systemPrompt}\n\nRespond in JSON format.` }, // ✅ Added required "json" keyword
+        // ✅ FIXED: Added explicit JSON requirement that OpenAI's json_object format needs
+        { role: 'system', content: `${systemPrompt}\n\nYou MUST respond with valid JSON only. Do not include any text outside the JSON structure.` },
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.85,
@@ -126,8 +127,15 @@ export class AIService extends EnhancedBaseService implements IAIService {
 
     try {
       const parsed = JSON.parse(result.choices[0].message.content);
+      
+      // ✅ ADDITIONAL VALIDATION: Ensure the response has the expected structure
+      if (!parsed.pages || !Array.isArray(parsed.pages)) {
+        throw new Error('OpenAI response missing required "pages" array');
+      }
+      
       return { pages: parsed.pages, metadata: parsed.metadata };
     } catch (error) {
+      console.error('❌ Failed to parse OpenAI JSON response:', result.choices[0].message.content);
       throw new Error('Invalid JSON response from OpenAI');
     }
   }
