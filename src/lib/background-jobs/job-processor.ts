@@ -533,7 +533,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   // ===== JOB-SPECIFIC PROCESSORS USING SERVICE ABSTRACTIONS =====
 
   private async processStorybookJobWithServices(job: StorybookJobData, servicesUsed: string[]): Promise<void> {
-    const { title, story, characterImage, pages: initialPages, audience, isReusedImage, characterArtStyle = 'storybook', layoutType = 'comic-book-panels' } = job.input_data;
+    const { story, characterImage, pages: initialPages, audience, isReusedImage, characterArtStyle = 'storybook', layoutType = 'comic-book-panels' } = job.input_data; const title = job.title;
 
     // Get services through container (clean dependency injection)
     const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
