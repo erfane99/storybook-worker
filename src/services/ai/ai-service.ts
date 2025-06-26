@@ -108,11 +108,12 @@ export class AIService extends EnhancedBaseService implements IAIService {
     return result.choices[0].message.content;
   }
 
+  // ✅ FIXED: Simple fix for OpenAI JSON requirement
   async generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult> {
     const result = await this.createChatCompletion({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: `${systemPrompt}\n\nRespond in JSON format.` }, // ✅ Added required "json" keyword
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.85,
