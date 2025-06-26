@@ -166,7 +166,7 @@ export class AIService extends EnhancedBaseService implements IAIService {
     
     // Fallback: Look for any array in the response
     const arrays = Object.entries(parsed)
-      .filter(([_, value]): value is any[] => Array.isArray(value) && value.length > 0)
+      .filter(([_, value]) => Array.isArray(value) && value.length > 0)
       .sort(([, a], [, b]) => (b as any[]).length - (a as any[]).length); // Sort by length, largest first
     
     if (arrays.length > 0) {
