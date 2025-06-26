@@ -143,12 +143,12 @@ export class AIService extends EnhancedBaseService implements IAIService {
       console.log(`✅ Successfully parsed ${normalizedResult.pages.length} pages from OpenAI response`);
       return { pages: normalizedResult.pages, metadata: parsed.metadata || {} };
       
-    } catch (parseError) {
+    } catch (parseError: any) {
       console.error('❌ Failed to parse OpenAI JSON response:', {
-        error: parseError.message,
+        error: parseError?.message || 'Unknown parsing error',
         rawResponse: result.choices[0].message.content.substring(0, 500) + '...'
       });
-      throw new Error(`Invalid JSON response from OpenAI: ${parseError.message}`);
+      throw new Error(`Invalid JSON response from OpenAI: ${parseError?.message || 'Unknown error'}`);
     }
   }
 
@@ -166,13 +166,13 @@ export class AIService extends EnhancedBaseService implements IAIService {
     
     // Fallback: Look for any array in the response
     const arrays = Object.entries(parsed)
-      .filter(([_, value]) => Array.isArray(value) && value.length > 0)
-      .sort(([, a], [, b]) => b.length - a.length); // Sort by length, largest first
+      .filter(([_, value]): value is any[] => Array.isArray(value) && value.length > 0)
+      .sort(([, a], [, b]) => (b as any[]).length - (a as any[]).length); // Sort by length, largest first
     
     if (arrays.length > 0) {
       const [foundKey, foundArray] = arrays[0];
       console.log(`🔄 Using array found under key: "${foundKey}"`);
-      return { pages: foundArray };
+      return { pages: foundArray as any[] };
     }
     
     // Final fallback: Return empty structure (will be caught by validation)
