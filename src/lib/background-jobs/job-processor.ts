@@ -1,6 +1,6 @@
 // Production-ready job processor using enhanced service architecture
 // FIXED: Resilient health checks with sliding window and auto-recovery
-// Consolidates all previous implementations with clean architecture principles
+// DATABASE-FIRST: Reads from individual job columns matching database schema
 
 import { enhancedServiceContainer } from '../../services/container/enhanced-service-container.js';
 import { 
@@ -533,7 +533,12 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   // ===== JOB-SPECIFIC PROCESSORS USING SERVICE ABSTRACTIONS =====
 
   private async processStorybookJobWithServices(job: StorybookJobData, servicesUsed: string[]): Promise<void> {
-    const { story, characterImage, pages: initialPages, audience, isReusedImage, characterArtStyle = 'storybook', layoutType = 'comic-book-panels' } = job.input_data; const title = job.input_data.title;
+    // ✅ DATABASE-FIRST: Read from individual job columns matching database schema
+    const { title, story, character_image, pages: initialPages, audience, is_reused_image, character_art_style = 'storybook', layout_type = 'comic-book-panels', character_description } = job;
+    const characterImage = character_image;
+    const isReusedImage = is_reused_image;
+    const characterArtStyle = character_art_style;
+    const layoutType = layout_type;
 
     // Get services through container (clean dependency injection)
     const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
@@ -544,14 +549,14 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     servicesUsed.push('job');
     await jobService.updateJobProgress(job.id, 10, 'Starting storybook creation');
 
-    // Character description if needed
-    let characterDescription = '';
-    if (!isReusedImage && characterImage) {
+    // Character description - use from job or generate if needed
+    let characterDescriptionToUse = character_description || '';
+    if (!isReusedImage && characterImage && !characterDescriptionToUse) {
       this.trackServiceUsage(job.id, 'ai');
       servicesUsed.push('ai');
       
       const prompt = 'You are a professional character artist. Describe this character for cartoon generation.';
-      characterDescription = await aiService.describeCharacter(characterImage, prompt);
+      characterDescriptionToUse = await aiService.describeCharacter(characterImage, prompt);
     }
 
     await jobService.updateJobProgress(job.id, 30, 'Character analyzed, processing story structure');
@@ -665,7 +670,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       pages: updatedPages,
       user_id: job.user_id,
       audience,
-      character_description: characterDescription,
+      character_description: characterDescriptionToUse,
       has_errors: false,
     });
 
@@ -684,6 +689,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   }
 
   private async processAutoStoryJobWithServices(job: AutoStoryJobData, servicesUsed: string[]): Promise<void> {
+    // For other job types, you may still use input_data if they have different table structures
+    // Update based on your actual database schema for each job type
     const { genre, characterDescription, cartoonImageUrl, audience } = job.input_data;
 
     const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
@@ -732,6 +739,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   }
 
   private async processSceneJobWithServices(job: SceneJobData, servicesUsed: string[]): Promise<void> {
+    // For other job types, you may still use input_data if they have different table structures
+    // Update based on your actual database schema for each job type
     const { story, characterImage, audience } = job.input_data;
 
     const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
@@ -757,6 +766,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   }
 
   private async processCartoonizeJobWithServices(job: CartoonizeJobData, servicesUsed: string[]): Promise<void> {
+    // For other job types, you may still use input_data if they have different table structures
+    // Update based on your actual database schema for each job type
     const { prompt, style, imageUrl } = job.input_data;
 
     const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
@@ -783,6 +794,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   }
 
   private async processImageJobWithServices(job: ImageJobData, servicesUsed: string[]): Promise<void> {
+    // For other job types, you may still use input_data if they have different table structures
+    // Update based on your actual database schema for each job type
     const { image_prompt, character_description, emotion, audience } = job.input_data;
 
     const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
