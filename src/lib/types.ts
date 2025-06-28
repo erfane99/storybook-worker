@@ -1,7 +1,7 @@
 // Shared type definitions for the worker service - DATABASE-FIRST APPROACH
-// Types now match actual database schema exactly
+// Types now match actual database schema exactly for ACTIVE job types only
 
-export type JobType = 'storybook' | 'auto-story' | 'scenes' | 'cartoonize' | 'image-generation';
+export type JobType = 'storybook' | 'cartoonize'; // Only active job types
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 export type AudienceType = 'children' | 'young_adults' | 'adults';
 export type CharacterArtStyle = 'storybook' | 'comic-book' | 'anime' | 'semi-realistic' | 'cartoon';
@@ -32,7 +32,7 @@ export interface StorybookJobData extends BaseJobData {
   // Individual database columns (NOT input_data)
   title: string;                    // matches database column
   story: string;                    // matches database column  
-  character_image: string;          // matches database column
+  character_image?: string;         // matches database column (OPTIONAL)
   pages: any[];                     // matches database column (jsonb)
   audience?: AudienceType;          // matches database column
   is_reused_image?: boolean;        // matches database column
@@ -43,62 +43,19 @@ export interface StorybookJobData extends BaseJobData {
   storybook_entry_id?: string;      // matches database column
 }
 
-// ✅ DATABASE-FIRST: Auto-story job (if you have similar table structure)
-export interface AutoStoryJobData extends BaseJobData {
-  type: 'auto-story';
-  // Map to your actual auto_story_jobs table columns
-  genre: string;
-  character_description: string;
-  cartoon_image_url: string;
-  audience: AudienceType;
-  character_art_style?: CharacterArtStyle;
-  layout_type?: LayoutType;
-  generated_story?: string;
-  storybook_entry_id?: string;
-}
-
-// ✅ DATABASE-FIRST: Scene job (if you have similar table structure)  
-export interface SceneJobData extends BaseJobData {
-  type: 'scenes';
-  // Map to your actual scene_jobs table columns
-  story: string;
-  character_image: string;
-  audience: AudienceType;
-  character_art_style?: CharacterArtStyle;
-  layout_type?: LayoutType;
-  generated_pages?: any[];
-}
-
-// ✅ DATABASE-FIRST: Cartoonize job (if you have similar table structure)
+// ✅ DATABASE-FIRST: Cartoonize job matches EXACT database schema
 export interface CartoonizeJobData extends BaseJobData {
   type: 'cartoonize';
-  // Map to your actual cartoonize_jobs table columns
-  prompt: string;
-  style: string;
-  image_url?: string;
-  generated_url?: string;
-  cached?: boolean;
+  // Individual database columns matching your exact schema
+  original_image_data?: string;        // matches database column
+  style?: string;                      // matches database column
+  original_cloudinary_url?: string;    // matches database column
+  generated_image_url?: string;        // matches database column
+  final_cloudinary_url?: string;       // matches database column
 }
 
-// ✅ DATABASE-FIRST: Image generation job (if you have similar table structure)
-export interface ImageJobData extends BaseJobData {
-  type: 'image-generation';
-  // Map to your actual image_jobs table columns
-  image_prompt: string;
-  character_description: string;
-  emotion: string;
-  audience: AudienceType;
-  is_reused_image?: boolean;
-  cartoon_image?: string;
-  style?: string;
-  character_art_style?: CharacterArtStyle;
-  layout_type?: LayoutType;
-  generated_url?: string;
-  prompt_used?: string;
-  reused?: boolean;
-}
-
-export type JobData = StorybookJobData | AutoStoryJobData | SceneJobData | CartoonizeJobData | ImageJobData;
+// Union type for active job types only
+export type JobData = StorybookJobData | CartoonizeJobData;
 
 export interface JobFilter {
   user_id?: string;
@@ -108,7 +65,6 @@ export interface JobFilter {
   offset?: number;
 }
 
-// ✅ DATABASE-FIRST: Job update data for database operations
 // ✅ DATABASE-FIRST: Job update data for database operations
 export interface JobUpdateData {
   status?: JobStatus;
@@ -123,6 +79,8 @@ export interface JobUpdateData {
   has_errors?: boolean;
   processed_pages?: any[];
   storybook_entry_id?: string;
+  generated_image_url?: string;
+  final_cloudinary_url?: string;
 }
 
 // Job metrics interface
@@ -149,38 +107,6 @@ export interface StorybookCreationOptions {
   layoutType?: LayoutType;
 }
 
-export interface AutoStoryCreationOptions {
-  genre: string;
-  characterDescription: string;
-  cartoonImageUrl: string;
-  audience: AudienceType;
-  userId?: string;
-  characterArtStyle?: CharacterArtStyle;
-  layoutType?: LayoutType;
-}
-
-export interface SceneGenerationOptions {
-  story: string;
-  characterImage: string;
-  audience: AudienceType;
-  characterArtStyle?: CharacterArtStyle;
-  layoutType?: LayoutType;
-}
-
-export interface ImageGenerationOptions {
-  image_prompt: string;
-  character_description: string;
-  emotion: string;
-  audience: AudienceType;
-  isReusedImage?: boolean;
-  cartoon_image?: string;
-  user_id?: string;
-  style?: string;
-  characterArtStyle?: CharacterArtStyle;
-  layoutType?: LayoutType;
-}
-
-// Additional worker-specific types
 export interface CartoonizeOptions {
   prompt: string;
   style: string;
