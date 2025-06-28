@@ -1,5 +1,5 @@
 // Test Scenarios for Integration Validation
-// Provides predefined test cases for different validation scenarios
+// FIXED: Database-first approach for active job types only
 
 import { JobData, JobType } from '../lib/types.js';
 import { ValidationConfig } from './integration-validator.js';
@@ -107,73 +107,39 @@ export function generateMockJob(type: JobType, overrides: Partial<JobData> = {})
     updated_at: new Date().toISOString(),
     retry_count: 0,
     max_retries: 3,
-input_data: { title: '', story: '', characterImage: '', pages: [], audience: 'children' as any },
-    result_data: { storybook_id: '', pages: [], has_errors: false },
+    result_data: {},
     ...overrides,
   };
 
-  // Add type-specific input data
+  // ✅ DATABASE-FIRST: Add type-specific individual columns (NOT input_data)
   switch (type) {
     case 'cartoonize':
-      baseJob.input_data = {
-        prompt: 'Test cartoon prompt',
-        style: 'cartoon',
-        imageUrl: 'https://example.com/test-image.jpg',
-        ...overrides.input_data,
-      };
+      baseJob.original_image_data = 'Test cartoon prompt';
+      baseJob.style = 'cartoon';
+      baseJob.original_cloudinary_url = 'https://example.com/test-image.jpg';
+      baseJob.cached = false;
       break;
 
     case 'storybook':
-      baseJob.input_data = {
-        title: 'Test Storybook',
-        story: 'Once upon a time in a test scenario...',
-        characterImage: 'https://example.com/character.jpg',
-        pages: [
-          {
-            pageNumber: 1,
-            scenes: [
-              {
-                description: 'Test scene',
-                emotion: 'happy',
-                imagePrompt: 'A test scene with characters',
-              },
-            ],
-          },
-        ],
-        audience: 'children',
-        isReusedImage: false,
-        ...overrides.input_data,
-      };
-      break;
-
-    case 'auto-story':
-      baseJob.input_data = {
-        genre: 'adventure',
-        characterDescription: 'A brave test character',
-        cartoonImageUrl: 'https://example.com/cartoon.jpg',
-        audience: 'children',
-        ...overrides.input_data,
-      };
-      break;
-
-    case 'scenes':
-      baseJob.input_data = {
-        story: 'A test story for scene generation',
-        characterImage: 'https://example.com/character.jpg',
-        audience: 'children',
-        ...overrides.input_data,
-      };
-      break;
-
-    case 'image-generation':
-      baseJob.input_data = {
-        image_prompt: 'A test image prompt',
-        character_description: 'Test character',
-        emotion: 'happy',
-        audience: 'children',
-        isReusedImage: false,
-        ...overrides.input_data,
-      };
+      baseJob.title = 'Test Storybook';
+      baseJob.story = 'Once upon a time in a test scenario...';
+      baseJob.character_image = 'https://example.com/character.jpg';
+      baseJob.pages = [
+        {
+          pageNumber: 1,
+          scenes: [
+            {
+              description: 'Test scene',
+              emotion: 'happy',
+              imagePrompt: 'A test scene with characters',
+            },
+          ],
+        },
+      ];
+      baseJob.audience = 'children';
+      baseJob.is_reused_image = false;
+      baseJob.character_art_style = 'storybook';
+      baseJob.layout_type = 'comic-book-panels';
       break;
   }
 
@@ -181,7 +147,8 @@ input_data: { title: '', story: '', characterImage: '', pages: [], audience: 'ch
 }
 
 export function generateMockJobBatch(count: number = 10): JobData[] {
-  const jobTypes: JobType[] = ['cartoonize', 'storybook', 'auto-story', 'scenes', 'image-generation'];
+  // ✅ ONLY ACTIVE JOB TYPES
+  const jobTypes: JobType[] = ['cartoonize', 'storybook'];
   const jobs: JobData[] = [];
 
   for (let i = 0; i < count; i++) {
