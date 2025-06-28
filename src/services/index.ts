@@ -1,7 +1,5 @@
-// Consolidated Service Layer Exports - Production Implementation
-// CONSOLIDATED: Single source of truth for all service exports
-
-import { ServiceHealthStatus } from './interfaces/service-contracts.js';
+// Consolidated Service Layer Exports - Pure Export-Only File
+// REFACTORED: Clean exports only, no business logic
 
 // ===== BASE SERVICE EXPORTS =====
 export { EnhancedBaseService } from './base/enhanced-base-service.js';
@@ -29,80 +27,3 @@ export { storageService } from './storage/storage-service.js';
 export { jobService } from './job/job-service.js';
 export { authService } from './auth/auth-service.js';
 export { subscriptionService } from './subscription/subscription-service.js';
-
-// ===== SERVICE HEALTH CHECK AGGREGATOR =====
-export async function checkAllServicesHealth(): Promise<{
-  overall: boolean;
-  services: Record<string, any>;
-}> {
-  const healthReport = await serviceContainer.getHealth();
-  
-  const services = Object.fromEntries(
-    Object.entries(healthReport.services).map(([name, status]) => [
-      name,
-      {
-        available: status.status === 'healthy',
-        status: status.status,
-        message: status.message,
-        availability: status.availability,
-      }
-    ])
-  );
-
-  const overall = healthReport.overall === 'healthy';
-
-  return { overall, services };
-}
-
-// ===== SERVICE LIFECYCLE MANAGEMENT =====
-export async function initializeServices(): Promise<void> {
-  console.log('🚀 Initializing consolidated service layer...');
-  
-  try {
-    // Register all services
-    ServiceRegistry.registerServices();
-    
-    // Initialize core services
-    await ServiceRegistry.initializeCoreServices();
-    
-    // Log configuration
-    serviceConfig.logConfiguration();
-    
-    console.log('✅ Consolidated service layer initialization complete');
-  } catch (error) {
-    console.error('❌ Consolidated service layer initialization failed:', error);
-    throw error;
-  }
-}
-
-export async function disposeServices(): Promise<void> {
-  console.log('🔄 Disposing consolidated service layer...');
-  
-  try {
-    await ServiceRegistry.dispose();
-    console.log('✅ Consolidated service layer disposed successfully');
-  } catch (error) {
-    console.error('❌ Consolidated service layer disposal failed:', error);
-    throw error;
-  }
-}
-
-// ===== DEVELOPMENT HELPERS =====
-export function getServiceConfiguration() {
-  return {
-    environment: serviceConfig.getEnvironment(),
-    logLevel: serviceConfig.getLogLevel(),
-    registeredServices: ['database', 'ai', 'storage', 'job', 'auth', 'subscription'],
-    containerStatus: 'initialized'
-  };
-}
-
-export async function validateServiceHealth(): Promise<boolean> {
-  try {
-    const health = await checkAllServicesHealth();
-    return health.overall;
-  } catch (error) {
-    console.error('Service health validation failed:', error);
-    return false;
-  }
-}

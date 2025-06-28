@@ -1,6 +1,5 @@
 // Startup Validation System
-// CONSOLIDATED: Updated to use consolidated service container
-
+// REFACTORED: Updated to use ServiceRegistry static methods
 import { IntegrationValidator, ValidationConfig, ValidationReport } from './integration-validator.js';
 
 export interface StartupValidationResult {
@@ -164,7 +163,7 @@ export class StartupValidator {
     try {
       // Check if we can import services
       try {
-        // CONSOLIDATED: Import from consolidated services
+        // REFACTORED: Import from consolidated services
         const { serviceContainer } = await import('../services/index.js');
         
         // Quick container health check
@@ -380,7 +379,7 @@ export class StartupValidator {
     
     try {
       // Check container health
-      // CONSOLIDATED: Import from consolidated services
+      // REFACTORED: Import from consolidated services
       const { serviceContainer } = await import('../services/index.js');
       const containerHealth = await serviceContainer.getHealth();
       

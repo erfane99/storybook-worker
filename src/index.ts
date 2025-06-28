@@ -1,12 +1,11 @@
-// Main worker entry point - Updated to use consolidated service architecture
-// CONSOLIDATED: Uses single service container and registry
+// Main worker entry point - Updated to use ServiceRegistry for lifecycle management
+// REFACTORED: Uses ServiceRegistry static methods for all lifecycle operations
 import 'dotenv/config';
 import express from 'express';
 import cron from 'node-cron';
 import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/types.js';
 import { environmentManager } from './lib/config/environment.js';
 import { ServiceRegistry } from './services/registry/service-registry.js';
-import { serviceContainer } from './services/container/service-container.js';
 import { SERVICE_TOKENS } from './services/interfaces/service-contracts.js';
 import { StartupValidator } from './validation/index.js';
 
@@ -209,11 +208,8 @@ async function initializeWorker(): Promise<void> {
   try {
     console.log('🔧 Initializing job worker with Consolidated Service Registry and Production Architecture...');
     
-    // Register all services with the consolidated container
-    ServiceRegistry.registerServices();
-    
-    // Initialize core services
-    await ServiceRegistry.initializeCoreServices();
+    // REFACTORED: Use ServiceRegistry static methods for lifecycle management
+    await ServiceRegistry.initializeServices();
     
     // Run startup validation
     console.log('🔍 Running startup validation...');
@@ -227,7 +223,7 @@ async function initializeWorker(): Promise<void> {
       // Check if rollback is needed using optional chaining
       if (validationResult.report?.rollbackRequired) {
         console.log('🔄 Rollback recommended - disposing services...');
-        await ServiceRegistry.dispose();
+        await ServiceRegistry.disposeServices();
         throw new Error('Startup validation failed - rollback executed');
       }
       
@@ -282,9 +278,9 @@ async function initializeWorker(): Promise<void> {
   } catch (error: any) {
     console.error('❌ Failed to initialize worker:', error.message);
     
-    // Attempt graceful shutdown
+    // Attempt graceful shutdown using ServiceRegistry
     try {
-      await ServiceRegistry.dispose();
+      await ServiceRegistry.disposeServices();
     } catch (disposeError) {
       console.error('❌ Failed to dispose services during error handling:', disposeError);
     }
@@ -296,13 +292,13 @@ async function initializeWorker(): Promise<void> {
 // Graceful shutdown handling with consolidated service cleanup
 process.on('SIGTERM', async () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
-  await ServiceRegistry.dispose();
+  await ServiceRegistry.disposeServices();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
-  await ServiceRegistry.dispose();
+  await ServiceRegistry.disposeServices();
   process.exit(0);
 });
 

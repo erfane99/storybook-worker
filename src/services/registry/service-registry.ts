@@ -1,7 +1,8 @@
 // Consolidated Service Registry - Production Implementation
-// CONSOLIDATED: Single registry with all enhanced features
+// REFACTORED: Added all lifecycle management functions as static methods
 import { serviceContainer } from '../container/service-container.js';
 import { SERVICE_TOKENS, ContainerHealthReport } from '../interfaces/service-contracts.js';
+import { serviceConfig } from '../config/service-config.js';
 
 // Import consolidated service implementations
 import { DatabaseService } from '../database/database-service.js';
@@ -146,6 +147,99 @@ export class ServiceRegistry {
       throw error;
     }
   }
+
+  // ===== LIFECYCLE MANAGEMENT FUNCTIONS =====
+
+  /**
+   * Initialize all services (moved from services/index.ts)
+   */
+  static async initializeServices(): Promise<void> {
+    console.log('🚀 Initializing consolidated service layer...');
+    
+    try {
+      // Register all services
+      this.registerServices();
+      
+      // Initialize core services
+      await this.initializeCoreServices();
+      
+      // Log configuration
+      serviceConfig.logConfiguration();
+      
+      console.log('✅ Consolidated service layer initialization complete');
+    } catch (error) {
+      console.error('❌ Consolidated service layer initialization failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Dispose all services (moved from services/index.ts)
+   */
+  static async disposeServices(): Promise<void> {
+    console.log('🔄 Disposing consolidated service layer...');
+    
+    try {
+      await this.dispose();
+      console.log('✅ Consolidated service layer disposed successfully');
+    } catch (error) {
+      console.error('❌ Consolidated service layer disposal failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check all services health (moved from services/index.ts)
+   */
+  static async checkAllServicesHealth(): Promise<{
+    overall: boolean;
+    services: Record<string, any>;
+  }> {
+    const healthReport = await serviceContainer.getHealth();
+    
+    const services = Object.fromEntries(
+      Object.entries(healthReport.services).map(([name, status]) => [
+        name,
+        {
+          available: status.status === 'healthy',
+          status: status.status,
+          message: status.message,
+          availability: status.availability,
+        }
+      ])
+    );
+
+    const overall = healthReport.overall === 'healthy';
+
+    return { overall, services };
+  }
+
+  /**
+   * Get service configuration (moved from services/index.ts)
+   */
+  static getServiceConfiguration() {
+    return {
+      environment: serviceConfig.getEnvironment(),
+      logLevel: serviceConfig.getLogLevel(),
+      registeredServices: ['database', 'ai', 'storage', 'job', 'auth', 'subscription'],
+      containerStatus: 'initialized'
+    };
+  }
+
+  /**
+   * Validate service health (moved from services/index.ts)
+   */
+  static async validateServiceHealth(): Promise<boolean> {
+    try {
+      const health = await this.checkAllServicesHealth();
+      return health.overall;
+    } catch (error) {
+      console.error('Service health validation failed:', error);
+      return false;
+    }
+  }
+
+  // ===== EXISTING METHODS =====
 
   /**
    * Get service health report (computed properties, not internal state)

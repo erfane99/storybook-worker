@@ -1,6 +1,5 @@
 // Comprehensive Integration Validation System
-// CONSOLIDATED: Updated to use consolidated service container
-
+// REFACTORED: Updated to use ServiceRegistry static methods
 import { 
   Result,
   ErrorFactory,
@@ -121,7 +120,7 @@ export class IntegrationValidator {
 
     // Test 1: Container Existence and Basic Health
     await this.runTest('service-container', 'container_health', async () => {
-      // CONSOLIDATED: Import from consolidated services
+      // REFACTORED: Import from consolidated services
       const { serviceContainer } = await import('../services/index.js');
       
       const health = await serviceContainer.getHealth();
@@ -138,7 +137,7 @@ export class IntegrationValidator {
 
     // Test 2: Service Resolution
     await this.runTest('service-container', 'service_resolution', async () => {
-      // CONSOLIDATED: Import from consolidated services
+      // REFACTORED: Import from consolidated services
       const { serviceContainer } = await import('../services/index.js');
       
       // Test resolving mock services
@@ -160,7 +159,7 @@ export class IntegrationValidator {
 
     // Test 3: Container Statistics
     await this.runTest('service-container', 'container_stats', async () => {
-      // CONSOLIDATED: Import from consolidated services
+      // REFACTORED: Import from consolidated services
       const { serviceContainer } = await import('../services/index.js');
       
       // Get health status as a proxy for stats
@@ -186,7 +185,7 @@ export class IntegrationValidator {
 
     // Test cross-service communication
     await this.runTest('consolidated-services', 'cross_service_communication', async () => {
-      // CONSOLIDATED: Import from consolidated services
+      // REFACTORED: Import from consolidated services
       const { serviceContainer } = await import('../services/index.js');
       
       const health = await serviceContainer.getHealth();
@@ -203,7 +202,7 @@ export class IntegrationValidator {
   private async validateIndividualService(serviceName: string): Promise<void> {
     // Test 1: Service Resolution
     await this.runTest('consolidated-services', `${serviceName}_resolution`, async () => {
-      // CONSOLIDATED: Import from consolidated services
+      // REFACTORED: Import from consolidated services
       const { serviceContainer } = await import('../services/index.js');
       
       try {
@@ -217,7 +216,7 @@ export class IntegrationValidator {
 
     // Test 2: Service Health (if available)
     await this.runTest('consolidated-services', `${serviceName}_health`, async () => {
-      // CONSOLIDATED: Import from consolidated services
+      // REFACTORED: Import from consolidated services
       const { serviceContainer } = await import('../services/index.js');
       
       try {
@@ -345,10 +344,10 @@ export class IntegrationValidator {
 
     // Test 1: Service Health Aggregation
     await this.runTest('integration', 'health_aggregation', async () => {
-      // CONSOLIDATED: Import from consolidated services
-      const { checkAllServicesHealth } = await import('../services/index.js');
+      // REFACTORED: Import ServiceRegistry and use static method
+      const { ServiceRegistry } = await import('../services/index.js');
       
-      const systemHealth = await checkAllServicesHealth();
+      const systemHealth = await ServiceRegistry.checkAllServicesHealth();
       
       return { 
         overall: systemHealth.overall,
@@ -358,11 +357,11 @@ export class IntegrationValidator {
 
     // Test 2: Service Initialization
     await this.runTest('integration', 'service_initialization', async () => {
-      // CONSOLIDATED: Import from consolidated services
-      const { initializeServices } = await import('../services/index.js');
+      // REFACTORED: Import ServiceRegistry and use static method
+      const { ServiceRegistry } = await import('../services/index.js');
       
       // Test initialization (this should be idempotent)
-      await initializeServices();
+      await ServiceRegistry.initializeServices();
       
       return { 
         initializationWorked: true,
@@ -372,10 +371,10 @@ export class IntegrationValidator {
 
     // Test 3: Configuration Consistency
     await this.runTest('integration', 'configuration_consistency', async () => {
-      // CONSOLIDATED: Import from consolidated services
-      const { getServiceConfiguration } = await import('../services/index.js');
+      // REFACTORED: Import ServiceRegistry and use static method
+      const { ServiceRegistry } = await import('../services/index.js');
       
-      const config = getServiceConfiguration();
+      const config = ServiceRegistry.getServiceConfiguration();
       
       if (!config.environment || !config.registeredServices) {
         throw new Error('Configuration not consistent');
@@ -395,7 +394,7 @@ export class IntegrationValidator {
 
     // Test 1: Service Resolution Performance
     await this.runTest('performance', 'service_resolution_speed', async () => {
-      // CONSOLIDATED: Import from consolidated services
+      // REFACTORED: Import from consolidated services
       const { serviceContainer } = await import('../services/index.js');
       
       const iterations = 10; // Reduced for testing
@@ -567,9 +566,9 @@ export class IntegrationValidator {
       
       // Dispose services if available
       try {
-        // CONSOLIDATED: Import from consolidated services
-        const { disposeServices } = await import('../services/index.js');
-        await disposeServices();
+        // REFACTORED: Import ServiceRegistry and use static method
+        const { ServiceRegistry } = await import('../services/index.js');
+        await ServiceRegistry.disposeServices();
       } catch (error) {
         console.warn('⚠️ Could not dispose services during rollback:', error);
       }
