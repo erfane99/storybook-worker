@@ -1,7 +1,7 @@
 // Shared type definitions for the worker service - DATABASE-FIRST APPROACH
-// Types now match actual database schema exactly for ACTIVE job types only
+// Types now match actual database schema exactly for ALL job types
 
-export type JobType = 'storybook' | 'cartoonize'; // Only active job types
+export type JobType = 'storybook' | 'auto-story' | 'scenes' | 'cartoonize' | 'image-generation';
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 export type AudienceType = 'children' | 'young_adults' | 'adults';
 export type CharacterArtStyle = 'storybook' | 'comic-book' | 'anime' | 'semi-realistic' | 'cartoon';
@@ -30,10 +30,10 @@ export interface BaseJobData {
 export interface StorybookJobData extends BaseJobData {
   type: 'storybook';
   // Individual database columns (NOT input_data)
-  title: string;                    // matches database column
-  story: string;                    // matches database column  
-  character_image?: string;         // matches database column (OPTIONAL)
-  pages: any[];                     // matches database column (jsonb)
+  title: string;                    // matches database column (NOT NULL)
+  story: string;                    // matches database column (NOT NULL)
+  character_image: string;          // matches database column (NOT NULL)
+  pages: any[];                     // matches database column (jsonb, NOT NULL)
   audience?: AudienceType;          // matches database column
   is_reused_image?: boolean;        // matches database column
   character_description?: string;   // matches database column
@@ -43,19 +43,59 @@ export interface StorybookJobData extends BaseJobData {
   storybook_entry_id?: string;      // matches database column
 }
 
-// ✅ DATABASE-FIRST: Cartoonize job matches EXACT database schema
+// ✅ DATABASE-FIRST: Auto-story job matches actual database schema
+export interface AutoStoryJobData extends BaseJobData {
+  type: 'auto-story';
+  // Individual database columns from auto_story_jobs table
+  genre: string;                    // matches database column (NOT NULL)
+  character_description: string;    // matches database column (NOT NULL)
+  cartoon_image_url: string;        // matches database column (NOT NULL)
+  audience?: AudienceType;          // matches database column
+  generated_story?: string;         // matches database column (result field)
+  generated_scenes?: any[];         // matches database column (jsonb, result field)
+  storybook_entry_id?: string;      // matches database column
+  character_art_style?: CharacterArtStyle; // matches database column
+  layout_type?: LayoutType;         // matches database column
+}
+
+// ✅ DATABASE-FIRST: Scene job matches actual database schema  
+export interface SceneJobData extends BaseJobData {
+  type: 'scenes';
+  // Individual database columns from scene_generation_jobs table
+  story: string;                    // matches database column (NOT NULL)
+  character_image?: string;         // matches database column
+  audience?: AudienceType;          // matches database column
+  character_description?: string;   // matches database column
+  generated_pages?: any[];          // matches database column (jsonb, result field)
+}
+
+// ✅ DATABASE-FIRST: Cartoonize job matches actual database schema
 export interface CartoonizeJobData extends BaseJobData {
   type: 'cartoonize';
-  // Individual database columns matching your exact schema
+  // Individual database columns from cartoonize_jobs table
   original_image_data?: string;        // matches database column
   style?: string;                      // matches database column
   original_cloudinary_url?: string;    // matches database column
-  generated_image_url?: string;        // matches database column
-  final_cloudinary_url?: string;       // matches database column
+  generated_image_url?: string;        // matches database column (result field)
+  final_cloudinary_url?: string;       // matches database column (result field)
 }
 
-// Union type for active job types only
-export type JobData = StorybookJobData | CartoonizeJobData;
+// ✅ DATABASE-FIRST: Image generation job matches actual database schema
+export interface ImageJobData extends BaseJobData {
+  type: 'image-generation';
+  // Individual database columns from image_generation_jobs table
+  image_prompt: string;             // matches database column (NOT NULL)
+  character_description: string;    // matches database column (NOT NULL)
+  emotion: string;                  // matches database column (NOT NULL)
+  audience?: AudienceType;          // matches database column
+  is_reused_image?: boolean;        // matches database column
+  cartoon_image?: string;           // matches database column
+  style?: string;                   // matches database column
+  generated_image_url?: string;     // matches database column (result field)
+  final_prompt_used?: string;       // matches database column (result field)
+}
+
+export type JobData = StorybookJobData | AutoStoryJobData | SceneJobData | CartoonizeJobData | ImageJobData;
 
 export interface JobFilter {
   user_id?: string;
@@ -79,8 +119,12 @@ export interface JobUpdateData {
   has_errors?: boolean;
   processed_pages?: any[];
   storybook_entry_id?: string;
+  generated_story?: string;
+  generated_scenes?: any[];
+  generated_pages?: any[];
   generated_image_url?: string;
   final_cloudinary_url?: string;
+  final_prompt_used?: string;
 }
 
 // Job metrics interface
@@ -105,6 +149,33 @@ export interface StorybookCreationOptions {
   userId?: string;
   characterArtStyle?: CharacterArtStyle;
   layoutType?: LayoutType;
+}
+
+export interface AutoStoryCreationOptions {
+  genre: string;
+  characterDescription: string;
+  cartoonImageUrl: string;
+  audience: AudienceType;
+  userId?: string;
+  characterArtStyle?: CharacterArtStyle;
+  layoutType?: LayoutType;
+}
+
+export interface SceneGenerationOptions {
+  story: string;
+  characterImage?: string;
+  audience: AudienceType;
+  characterDescription?: string;
+}
+
+export interface ImageGenerationOptions {
+  image_prompt: string;
+  character_description: string;
+  emotion: string;
+  audience: AudienceType;
+  isReusedImage?: boolean;
+  cartoon_image?: string;
+  style?: string;
 }
 
 export interface CartoonizeOptions {
