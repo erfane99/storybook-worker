@@ -122,6 +122,45 @@ export class ServiceConfigManager {
     return this.config.features[feature];
   }
 
+  // ===== STANDARD CONFIGURATION METHODS =====
+
+  /**
+   * Get current environment (development, staging, production)
+   */
+  getEnvironment(): string {
+    return process.env.NODE_ENV || 'development';
+  }
+
+  /**
+   * Get configured log level
+   */
+  getLogLevel(): string {
+    return process.env.LOG_LEVEL || 'info';
+  }
+
+  /**
+   * Check if running in development mode
+   */
+  isDevelopmentMode(): boolean {
+    return this.getEnvironment() === 'development';
+  }
+
+  /**
+   * Check if running in production mode
+   */
+  isProductionMode(): boolean {
+    return this.getEnvironment() === 'production';
+  }
+
+  /**
+   * Get application version
+   */
+  getApplicationVersion(): string {
+    return process.env.APP_VERSION || '1.0.0';
+  }
+
+  // ===== VALIDATION AND LOGGING =====
+
   validateConfiguration(): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
 
@@ -147,6 +186,18 @@ export class ServiceConfigManager {
       errors.push(`Invalid max concurrent jobs: ${this.config.limits.maxConcurrentJobs}`);
     }
 
+    // Validate environment
+    const validEnvironments = ['development', 'staging', 'production'];
+    if (!validEnvironments.includes(this.getEnvironment())) {
+      errors.push(`Invalid environment: ${this.getEnvironment()}`);
+    }
+
+    // Validate log level
+    const validLogLevels = ['error', 'warn', 'info', 'debug'];
+    if (!validLogLevels.includes(this.getLogLevel())) {
+      errors.push(`Invalid log level: ${this.getLogLevel()}`);
+    }
+
     return {
       valid: errors.length === 0,
       errors,
@@ -155,6 +206,9 @@ export class ServiceConfigManager {
 
   logConfiguration(): void {
     console.log('\n🔧 Service Configuration:');
+    console.log('📊 Environment:', this.getEnvironment());
+    console.log('📝 Log Level:', this.getLogLevel());
+    console.log('🏷️ Version:', this.getApplicationVersion());
     console.log('📊 Timeouts:', this.config.timeouts);
     console.log('🔄 Retry Configs:', this.config.retries);
     console.log('📏 Limits:', this.config.limits);
@@ -167,6 +221,21 @@ export class ServiceConfigManager {
     } else {
       console.log('✅ Configuration validation passed');
     }
+  }
+
+  // ===== CONFIGURATION SUMMARY =====
+
+  getConfigurationSummary() {
+    return {
+      environment: this.getEnvironment(),
+      logLevel: this.getLogLevel(),
+      version: this.getApplicationVersion(),
+      isDevelopment: this.isDevelopmentMode(),
+      isProduction: this.isProductionMode(),
+      serviceCount: Object.keys(this.config.timeouts).length,
+      featuresEnabled: Object.values(this.config.features).filter(Boolean).length,
+      validation: this.validateConfiguration(),
+    };
   }
 }
 
