@@ -1,13 +1,14 @@
 // Error-aware base service extending Enhanced Base Service with comprehensive error handling
 // Integrates Result pattern and error correlation with existing Interface Segregation
-// FIXED: Removed duplicate property definitions and proper config merging
+// CONSOLIDATED: Updated to use consolidated service contracts
 
 import { EnhancedBaseService } from './enhanced-base-service.js';
 import { 
-  IEnhancedServiceHealth, 
-  IEnhancedServiceMetrics,
-  EnhancedServiceOptions 
-} from '../interfaces/enhanced-service-contracts.js';
+  IServiceHealth, 
+  IServiceMetrics,
+  ServiceHealthStatus,
+  ServiceMetrics
+} from '../interfaces/service-contracts.js';
 // FIXED: Import Result and AsyncResult as values, not types
 import { Result, AsyncResult } from '../errors/index.js';
 import { 
@@ -23,7 +24,7 @@ import {
   CorrelationContext 
 } from '../errors/index.js';
 import { createServiceErrorHandler } from '../errors/index.js';
-import { ServiceConfig, ServiceHealthStatus, ServiceMetrics, RetryConfig } from '../interfaces/service-contracts.js';
+import { ServiceConfig, RetryConfig } from '../interfaces/service-contracts.js';
 
 // ===== ERROR-AWARE SERVICE CONFIGURATION =====
 
@@ -46,6 +47,39 @@ interface RequiredErrorHandlingConfig {
   enableCorrelation: boolean;
   enableMetrics: boolean;
   retryableCategories: ErrorCategory[];
+}
+
+// ===== ENHANCED HEALTH INTERFACE =====
+
+export interface IEnhancedServiceHealth extends IServiceHealth {
+  /**
+   * Get health status as Result (never fails)
+   */
+  getHealthStatusSafe(): Result<ServiceHealthStatus, never>;
+  
+  /**
+   * Perform deep health check with error details
+   */
+  performHealthCheck(): Promise<Result<ServiceHealthStatus, BaseServiceError>>;
+}
+
+// ===== ENHANCED METRICS INTERFACE =====
+
+export interface IEnhancedServiceMetrics extends IServiceMetrics {
+  /**
+   * Get metrics as Result (never fails)
+   */
+  getMetricsSafe(): Result<ServiceMetrics, never>;
+  
+  /**
+   * Get error statistics
+   */
+  getErrorMetrics(): Result<{
+    totalErrors: number;
+    errorsByType: Record<string, number>;
+    lastError?: string;
+    errorRate: number;
+  }, never>;
 }
 
 // ===== ERROR-AWARE BASE SERVICE =====

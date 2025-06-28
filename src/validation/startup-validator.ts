@@ -1,6 +1,5 @@
 // Startup Validation System
-// Validates system readiness before accepting requests
-// FIXED: Proper imports, error handling, and Result pattern integration
+// CONSOLIDATED: Updated to use consolidated service container
 
 import { IntegrationValidator, ValidationConfig, ValidationReport } from './integration-validator.js';
 
@@ -165,10 +164,11 @@ export class StartupValidator {
     try {
       // Check if we can import services
       try {
-        const { enhancedServiceContainer } = await import('../services/index.js');
+        // CONSOLIDATED: Import from consolidated services
+        const { serviceContainer } = await import('../services/index.js');
         
         // Quick container health check
-        const containerHealth = await enhancedServiceContainer.getHealth();
+        const containerHealth = await serviceContainer.getHealth();
         if (!containerHealth) {
           throw new Error('Container health check returned no data');
         }
@@ -213,7 +213,7 @@ export class StartupValidator {
     const criticalFailures = failedTests.filter(r => 
       r.component === 'service-container' || 
       r.component === 'error-handling' ||
-      (r.component === 'enhanced-services' && r.test.includes('resolution'))
+      (r.component === 'consolidated-services' && r.test.includes('resolution'))
     );
     
     // Add errors from failed tests
@@ -367,9 +367,9 @@ export class StartupValidator {
 
     // Return a function to stop monitoring
     return () => {
-  clearInterval(interval);
-  console.log('🛑 Continuous monitoring stopped');
-};
+      clearInterval(interval);
+      console.log('🛑 Continuous monitoring stopped');
+    };
   }
 
   private async performQuickHealthCheck(): Promise<{
@@ -380,8 +380,9 @@ export class StartupValidator {
     
     try {
       // Check container health
-      const { enhancedServiceContainer } = await import('../services/index.js');
-      const containerHealth = await enhancedServiceContainer.getHealth();
+      // CONSOLIDATED: Import from consolidated services
+      const { serviceContainer } = await import('../services/index.js');
+      const containerHealth = await serviceContainer.getHealth();
       
       if (containerHealth.overall === 'unhealthy') {
         issues.push('Container unhealthy');

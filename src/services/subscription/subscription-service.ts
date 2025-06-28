@@ -1,5 +1,5 @@
 // Enhanced Subscription Service - Production Implementation
-// Updated to use SubscriptionConfigService for environment-based configuration
+// CONSOLIDATED: Updated to use consolidated service container and interfaces
 
 import { ErrorAwareBaseService, ErrorAwareServiceConfig } from '../base/error-aware-base-service.js';
 import { 
@@ -24,7 +24,7 @@ import {
   ErrorFactory,
   ErrorCategory
 } from '../errors/index.js';
-import { enhancedServiceContainer } from '../container/enhanced-service-container.js';
+import { serviceContainer } from '../container/service-container.js';
 import { SERVICE_TOKENS, IDatabaseService } from '../interfaces/service-contracts.js';
 import { createClient } from '@supabase/supabase-js';
 
@@ -131,7 +131,7 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
       }
 
       // Validate that we can access the database service
-      const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+      const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
       if (!databaseService) {
         throw new Error('DatabaseService not available for subscription checks');
       }
@@ -161,7 +161,7 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
   protected async checkServiceHealth(): Promise<boolean> {
     try {
       // Check if we can resolve database service
-      const databaseService = enhancedServiceContainer.resolveSync<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+      const databaseService = serviceContainer.resolveSync<IDatabaseService>(SERVICE_TOKENS.DATABASE);
       if (!databaseService) {
         return false;
       }
@@ -249,7 +249,7 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
   async getUserSubscriptionData(userId: string, limitType: string): Promise<UserSubscriptionData> {
     const result = await this.withErrorHandling(
       async () => {
-        const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+        const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
         
         if (!databaseService) {
           throw new DatabaseConnectionError('DatabaseService not available for subscription check', {

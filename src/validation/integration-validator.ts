@@ -1,6 +1,5 @@
 // Comprehensive Integration Validation System
-// Tests the consolidated architecture end-to-end with rollback capabilities
-// FIXED: Proper imports, error handling, and Result pattern usage
+// CONSOLIDATED: Updated to use consolidated service container
 
 import { 
   Result,
@@ -77,8 +76,8 @@ export class IntegrationValidator {
       // Phase 1: Service Container Validation
       await this.validateServiceContainer();
 
-      // Phase 2: Enhanced Services Validation
-      await this.validateEnhancedServices();
+      // Phase 2: Consolidated Services Validation
+      await this.validateConsolidatedServices();
 
       // Phase 3: Error Handling Validation
       await this.validateErrorHandling();
@@ -122,10 +121,10 @@ export class IntegrationValidator {
 
     // Test 1: Container Existence and Basic Health
     await this.runTest('service-container', 'container_health', async () => {
-      // Import locally to avoid circular dependencies
-      const { enhancedServiceContainer } = await import('../services/index.js');
+      // CONSOLIDATED: Import from consolidated services
+      const { serviceContainer } = await import('../services/index.js');
       
-      const health = await enhancedServiceContainer.getHealth();
+      const health = await serviceContainer.getHealth();
       
       if (!health || !health.services) {
         throw new Error('Container health check returned invalid data');
@@ -139,13 +138,14 @@ export class IntegrationValidator {
 
     // Test 2: Service Resolution
     await this.runTest('service-container', 'service_resolution', async () => {
-      const { enhancedServiceContainer } = await import('../services/index.js');
+      // CONSOLIDATED: Import from consolidated services
+      const { serviceContainer } = await import('../services/index.js');
       
       // Test resolving mock services
       const services = await Promise.allSettled([
-        enhancedServiceContainer.resolve('database'),
-        enhancedServiceContainer.resolve('ai'),
-        enhancedServiceContainer.resolve('storage')
+        serviceContainer.resolve('database'),
+        serviceContainer.resolve('ai'),
+        serviceContainer.resolve('storage')
       ]);
       
       const resolved = services.filter(s => s.status === 'fulfilled').length;
@@ -160,10 +160,11 @@ export class IntegrationValidator {
 
     // Test 3: Container Statistics
     await this.runTest('service-container', 'container_stats', async () => {
-      const { enhancedServiceContainer } = await import('../services/index.js');
+      // CONSOLIDATED: Import from consolidated services
+      const { serviceContainer } = await import('../services/index.js');
       
       // Get health status as a proxy for stats
-      const health = await enhancedServiceContainer.getHealth();
+      const health = await serviceContainer.getHealth();
       
       return {
         servicesRegistered: Object.keys(health.services).length,
@@ -172,10 +173,10 @@ export class IntegrationValidator {
     });
   }
 
-  // ===== PHASE 2: ENHANCED SERVICES VALIDATION =====
+  // ===== PHASE 2: CONSOLIDATED SERVICES VALIDATION =====
 
-  private async validateEnhancedServices(): Promise<void> {
-    console.log('🔧 Phase 2: Validating Enhanced Services...');
+  private async validateConsolidatedServices(): Promise<void> {
+    console.log('🔧 Phase 2: Validating Consolidated Services...');
 
     const mockServices = ['database', 'ai', 'storage', 'job', 'auth'];
 
@@ -184,10 +185,11 @@ export class IntegrationValidator {
     }
 
     // Test cross-service communication
-    await this.runTest('enhanced-services', 'cross_service_communication', async () => {
-      const { enhancedServiceContainer } = await import('../services/index.js');
+    await this.runTest('consolidated-services', 'cross_service_communication', async () => {
+      // CONSOLIDATED: Import from consolidated services
+      const { serviceContainer } = await import('../services/index.js');
       
-      const health = await enhancedServiceContainer.getHealth();
+      const health = await serviceContainer.getHealth();
       const healthyServices = Object.values(health.services).filter(s => s.status === 'healthy').length;
       
       return { 
@@ -200,11 +202,12 @@ export class IntegrationValidator {
 
   private async validateIndividualService(serviceName: string): Promise<void> {
     // Test 1: Service Resolution
-    await this.runTest('enhanced-services', `${serviceName}_resolution`, async () => {
-      const { enhancedServiceContainer } = await import('../services/index.js');
+    await this.runTest('consolidated-services', `${serviceName}_resolution`, async () => {
+      // CONSOLIDATED: Import from consolidated services
+      const { serviceContainer } = await import('../services/index.js');
       
       try {
-        const service = await enhancedServiceContainer.resolve(serviceName);
+        const service = await serviceContainer.resolve(serviceName);
         return { resolved: !!service, serviceName };
       } catch (error) {
         // Expected for some services in mock environment
@@ -213,11 +216,12 @@ export class IntegrationValidator {
     });
 
     // Test 2: Service Health (if available)
-    await this.runTest('enhanced-services', `${serviceName}_health`, async () => {
-      const { enhancedServiceContainer } = await import('../services/index.js');
+    await this.runTest('consolidated-services', `${serviceName}_health`, async () => {
+      // CONSOLIDATED: Import from consolidated services
+      const { serviceContainer } = await import('../services/index.js');
       
       try {
-        const service = await enhancedServiceContainer.resolve(serviceName);
+        const service = await serviceContainer.resolve(serviceName);
         
         if (service && typeof (service as any).isHealthy === 'function') {
           const isHealthy = (service as any).isHealthy();
@@ -317,7 +321,6 @@ export class IntegrationValidator {
     });
 
     // Test 3: Result Integration with Error Correlation
-    // FIXED: Proper Result pattern usage
     await this.runTest('result-pattern', 'correlation_integration', async () => {
       const context = createServiceCorrelationContext('result-test', 'correlation-test');
       
@@ -342,6 +345,7 @@ export class IntegrationValidator {
 
     // Test 1: Service Health Aggregation
     await this.runTest('integration', 'health_aggregation', async () => {
+      // CONSOLIDATED: Import from consolidated services
       const { checkAllServicesHealth } = await import('../services/index.js');
       
       const systemHealth = await checkAllServicesHealth();
@@ -354,6 +358,7 @@ export class IntegrationValidator {
 
     // Test 2: Service Initialization
     await this.runTest('integration', 'service_initialization', async () => {
+      // CONSOLIDATED: Import from consolidated services
       const { initializeServices } = await import('../services/index.js');
       
       // Test initialization (this should be idempotent)
@@ -367,6 +372,7 @@ export class IntegrationValidator {
 
     // Test 3: Configuration Consistency
     await this.runTest('integration', 'configuration_consistency', async () => {
+      // CONSOLIDATED: Import from consolidated services
       const { getServiceConfiguration } = await import('../services/index.js');
       
       const config = getServiceConfiguration();
@@ -389,14 +395,15 @@ export class IntegrationValidator {
 
     // Test 1: Service Resolution Performance
     await this.runTest('performance', 'service_resolution_speed', async () => {
-      const { enhancedServiceContainer } = await import('../services/index.js');
+      // CONSOLIDATED: Import from consolidated services
+      const { serviceContainer } = await import('../services/index.js');
       
       const iterations = 10; // Reduced for testing
       const startTime = Date.now();
       
       for (let i = 0; i < iterations; i++) {
         try {
-          await enhancedServiceContainer.resolve('database');
+          await serviceContainer.resolve('database');
         } catch (error) {
           // Expected in mock environment
         }
@@ -560,6 +567,7 @@ export class IntegrationValidator {
       
       // Dispose services if available
       try {
+        // CONSOLIDATED: Import from consolidated services
         const { disposeServices } = await import('../services/index.js');
         await disposeServices();
       } catch (error) {

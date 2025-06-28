@@ -1,5 +1,5 @@
 // Enhanced Job Service - Production Implementation
-// FIXED: Method signatures, error handling, Result pattern integration, and industry standards
+// CONSOLIDATED: Updated to use consolidated service container and interfaces
 
 import { ErrorAwareBaseService, ErrorAwareServiceConfig } from '../base/error-aware-base-service.js';
 import { 
@@ -19,7 +19,7 @@ import {
   ErrorCategory
 } from '../errors/index.js';
 import type { JobData, JobType, JobStatus, JobUpdateData } from '../../lib/types.js';
-import { enhancedServiceContainer } from '../container/enhanced-service-container.js';
+import { serviceContainer } from '../container/service-container.js';
 import { SERVICE_TOKENS, IDatabaseService } from '../interfaces/service-contracts.js';
 
 // ===== ENHANCED JOB CONFIG =====
@@ -138,9 +138,9 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
 
         this.log('info', `Getting pending jobs with filter: ${JSON.stringify(filter)}, limit: ${limit}`);
 
-        // FIXED: Delegate to DatabaseService for actual data access
+        // CONSOLIDATED: Delegate to DatabaseService for actual data access
         try {
-          const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+          const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
           
           if (!databaseService) {
             this.log('warn', 'DatabaseService not available, returning empty array');
@@ -188,9 +188,9 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
 
         this.log('info', `Getting status for job: ${jobId}`);
 
-        // FIXED: Delegate to DatabaseService for actual data access
+        // CONSOLIDATED: Delegate to DatabaseService for actual data access
         try {
-          const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+          const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
           
           if (!databaseService) {
             this.log('warn', 'DatabaseService not available');
@@ -257,9 +257,9 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
 
         this.log('info', `Updating job progress: ${jobId} -> ${progress}%${currentStep ? ` (${currentStep})` : ''}`);
 
-        // FIXED: Delegate to DatabaseService for actual data access
+        // CONSOLIDATED: Delegate to DatabaseService for actual data access
         try {
-          const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+          const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
           
           if (!databaseService) {
             this.log('warn', 'DatabaseService not available for progress update');
@@ -327,9 +327,9 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
 
         this.log('info', `Marking job completed: ${jobId}`);
 
-        // FIXED: Delegate to DatabaseService for actual data access
+        // CONSOLIDATED: Delegate to DatabaseService for actual data access
         try {
-          const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+          const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
           
           if (!databaseService) {
             this.log('warn', 'DatabaseService not available for job completion');
@@ -395,9 +395,9 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         const action = shouldRetry ? 'scheduled for retry' : 'marked as failed';
         this.log('info', `Job ${action}: ${jobId} - ${errorMessage}`);
 
-        // FIXED: Delegate to DatabaseService for actual data access
+        // CONSOLIDATED: Delegate to DatabaseService for actual data access
         try {
-          const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+          const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
           
           if (!databaseService) {
             this.log('warn', 'DatabaseService not available for job failure marking');
@@ -547,7 +547,7 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         return Result.failure(error);
       }
 
-      const requiredFields = ['id', 'type', 'status', 'input_data'];
+      const requiredFields = ['id', 'type', 'status'];
       const missingFields = requiredFields.filter(field => !(field in jobData));
 
       if (missingFields.length > 0) {

@@ -1,5 +1,5 @@
 // Validation System Exports
-// FIXED: Export the full-featured StartupValidator and IntegrationValidator
+// CONSOLIDATED: Updated to use consolidated service container
 
 // ===== EXPORT FULL VALIDATORS =====
 export { StartupValidator } from './startup-validator.js';
@@ -81,8 +81,9 @@ export async function quickHealthCheck(): Promise<{
     
     // Try to import service container if available
     try {
-      const { enhancedServiceContainer } = await import('../services/index.js');
-      const health = await enhancedServiceContainer.getHealth();
+      // CONSOLIDATED: Updated to use consolidated service container
+      const { serviceContainer } = await import('../services/index.js');
+      const health = await serviceContainer.getHealth();
       if (health.overall !== 'healthy') {
         issues.push(`Container health: ${health.overall}`);
       }

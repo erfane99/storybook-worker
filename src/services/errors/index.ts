@@ -1,6 +1,6 @@
 // Comprehensive error handling exports
 // Central export point for all error handling functionality
-// FIXED: Completely eliminated ALL duplicate exports and type issues
+// CONSOLIDATED: Updated to use consolidated service contracts
 
 // ===== VALUE IMPORTS (for runtime use) =====
 import { 
@@ -100,28 +100,10 @@ export type {
   ErrorHandlerMetrics,
 } from './error-handler.js';
 
+// CONSOLIDATED: Updated to use consolidated service contracts
 export type {
   IEnhancedServiceHealth,
   IEnhancedServiceMetrics,
-  IEnhancedDatabaseOperations,
-  IEnhancedAIOperations,
-  IEnhancedStorageOperations,
-  IEnhancedJobOperations,
-  IEnhancedAuthOperations,
-  IEnhancedDatabaseService,
-  IEnhancedAIService,
-  IEnhancedStorageService,
-  IEnhancedJobService,
-  IEnhancedAuthService,
-  IEnhancedServiceContainer,
-  IServiceHealthAggregator,
-  ErrorAwareServiceFactory,
-  EnhancedServiceOptions,
-  ENHANCED_SERVICE_TOKENS,
-  EnhancedServiceToken,
-} from '../interfaces/enhanced-service-contracts.js';
-
-export type {
   ErrorAwareServiceConfig,
 } from '../base/error-aware-base-service.js';
 
