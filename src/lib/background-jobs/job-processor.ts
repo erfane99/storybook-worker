@@ -1,5 +1,5 @@
 // Production-ready job processor using enhanced service architecture
-// FIXED: Resilient health checks with sliding window and auto-recovery
+// FIXED: Clean database-first approach for active job types only
 // DATABASE-FIRST: Reads from individual job columns matching database schema
 
 import { enhancedServiceContainer } from '../../services/container/enhanced-service-container.js';
@@ -18,7 +18,7 @@ import {
   createJobCorrelationContext,
   withCorrelationResult
 } from '../../services/errors/index.js';
-import { JobData, JobType, StorybookJobData, AutoStoryJobData, SceneJobData, CartoonizeJobData, ImageJobData } from '../types.js';
+import { JobData, JobType, StorybookJobData, CartoonizeJobData } from '../types.js';
 
 // ===== JOB PROCESSING INTERFACES =====
 
@@ -498,21 +498,13 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       }
 
       // Route to appropriate processor using service abstractions
+      // ✅ ONLY ACTIVE JOB TYPES
       switch (job.type) {
         case 'storybook':
           await this.processStorybookJobWithServices(job as StorybookJobData, servicesUsed);
           break;
-        case 'auto-story':
-          await this.processAutoStoryJobWithServices(job as AutoStoryJobData, servicesUsed);
-          break;
-        case 'scenes':
-          await this.processSceneJobWithServices(job as SceneJobData, servicesUsed);
-          break;
         case 'cartoonize':
           await this.processCartoonizeJobWithServices(job as CartoonizeJobData, servicesUsed);
-          break;
-        case 'image-generation':
-          await this.processImageJobWithServices(job as ImageJobData, servicesUsed);
           break;
         default:
           throw new Error(`Unknown job type: ${(job as JobData).type}`);
@@ -535,10 +527,10 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   private async processStorybookJobWithServices(job: StorybookJobData, servicesUsed: string[]): Promise<void> {
     // ✅ DATABASE-FIRST: Read from individual job columns matching database schema
     const { title, story, character_image, pages: initialPages, audience, is_reused_image, character_art_style = 'storybook', layout_type = 'comic-book-panels', character_description } = job;
-    const characterImage = character_image;
-    const isReusedImage = is_reused_image;
-    const characterArtStyle = character_art_style;
-    const layoutType = layout_type;
+    const characterImage = character_image || ''; // ✅ FIXED: Handle optional field
+    const isReusedImage = is_reused_image || false;
+    const characterArtStyle = character_art_style || 'storybook';
+    const layoutType = layout_type || 'comic-book-panels';
 
     // Get services through container (clean dependency injection)
     const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
@@ -688,87 +680,11 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     console.log(`✅ Storybook job completed: ${job.id} with ${characterArtStyle} art style`);
   }
 
-  private async processAutoStoryJobWithServices(job: AutoStoryJobData, servicesUsed: string[]): Promise<void> {
-    // For other job types, you may still use input_data if they have different table structures
-    // Update based on your actual database schema for each job type
-    const { genre, characterDescription, cartoonImageUrl, audience } = job.input_data;
-
-    const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
-    const aiService = await enhancedServiceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
-    const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
-
-    await jobService.updateJobProgress(job.id, 10, 'Starting auto-story generation');
-
-    // Generate story
-    this.trackServiceUsage(job.id, 'ai');
-    servicesUsed.push('ai');
-    
-    const storyPrompt = `Create a ${genre} story for ${audience} audience featuring: ${characterDescription}`;
-    const generatedStory = await aiService.generateStory(storyPrompt);
-
-    await jobService.updateJobProgress(job.id, 50, 'Story generated, creating scenes');
-
-    // Generate scenes
-    const scenePrompt = `Create comic book scenes for this story: ${generatedStory}`;
-    const scenes = await aiService.generateScenes(scenePrompt, `Generate scenes for ${audience} audience`);
-
-    await jobService.updateJobProgress(job.id, 80, 'Scenes generated, saving to database');
-
-    // Save to database
-    this.trackServiceUsage(job.id, 'database');
-    servicesUsed.push('database');
-    
-    const storybook = await databaseService.saveStorybookEntry({
-      title: `${genre} Story`,
-      story: generatedStory,
-      pages: scenes.pages,
-      user_id: job.user_id,
-      audience,
-      character_description: characterDescription,
-      has_errors: false,
-    });
-
-    await jobService.updateJobProgress(job.id, 100, 'Auto-story generation complete');
-
-    await jobService.markJobCompleted(job.id, {
-      storybook_id: storybook.id,
-      generated_story: generatedStory,
-    });
-
-    console.log(`✅ Auto-story job completed: ${job.id}`);
-  }
-
-  private async processSceneJobWithServices(job: SceneJobData, servicesUsed: string[]): Promise<void> {
-    // For other job types, you may still use input_data if they have different table structures
-    // Update based on your actual database schema for each job type
-    const { story, characterImage, audience } = job.input_data;
-
-    const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
-    const aiService = await enhancedServiceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
-
-    await jobService.updateJobProgress(job.id, 20, 'Analyzing story for scene generation');
-
-    // Generate scenes
-    this.trackServiceUsage(job.id, 'ai');
-    servicesUsed.push('ai');
-    
-    const systemPrompt = `Generate comic book scenes for ${audience} audience`;
-    const scenes = await aiService.generateScenes(systemPrompt, story);
-
-    await jobService.updateJobProgress(job.id, 100, 'Scene generation complete');
-
-    await jobService.markJobCompleted(job.id, {
-      pages: scenes.pages,
-      character_description: 'Generated character',
-    });
-
-    console.log(`✅ Scene job completed: ${job.id}`);
-  }
-
   private async processCartoonizeJobWithServices(job: CartoonizeJobData, servicesUsed: string[]): Promise<void> {
-    // For other job types, you may still use input_data if they have different table structures
-    // Update based on your actual database schema for each job type
-    const { prompt, style, imageUrl } = job.input_data;
+    // ✅ DATABASE-FIRST: Read from individual job columns matching database schema
+    const { original_image_data, style, original_cloudinary_url } = job;
+    const prompt = original_image_data; // Database column name mapped to logical name
+    const imageUrl = original_cloudinary_url;
 
     const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
     const aiService = await enhancedServiceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
@@ -785,40 +701,12 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     await jobService.updateJobProgress(job.id, 100, 'Cartoonization complete');
 
     await jobService.markJobCompleted(job.id, {
-      url: generatedUrl,
+      generated_url: generatedUrl,
       cached: false,
       style: style,
     });
 
     console.log(`✅ Cartoonize job completed: ${job.id}`);
-  }
-
-  private async processImageJobWithServices(job: ImageJobData, servicesUsed: string[]): Promise<void> {
-    // For other job types, you may still use input_data if they have different table structures
-    // Update based on your actual database schema for each job type
-    const { image_prompt, character_description, emotion, audience } = job.input_data;
-
-    const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
-    const aiService = await enhancedServiceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
-
-    await jobService.updateJobProgress(job.id, 20, 'Starting image generation');
-
-    // Generate image
-    this.trackServiceUsage(job.id, 'ai');
-    servicesUsed.push('ai');
-    
-    const finalPrompt = `${image_prompt} featuring ${character_description} with ${emotion} emotion for ${audience} audience`;
-    const imageUrl = await aiService.generateCartoonImage(finalPrompt);
-
-    await jobService.updateJobProgress(job.id, 100, 'Image generation complete');
-
-    await jobService.markJobCompleted(job.id, {
-      url: imageUrl,
-      prompt_used: finalPrompt,
-      reused: false,
-    });
-
-    console.log(`✅ Image job completed: ${job.id}`);
   }
 }
 
