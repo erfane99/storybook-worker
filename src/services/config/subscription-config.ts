@@ -22,7 +22,6 @@ export interface SubscriptionTierConfig {
   free: number;
   basic: number;
   premium: number;
-  pro: number;
   admin: number;
 }
 
@@ -65,8 +64,7 @@ export class SubscriptionConfigService extends EnhancedBaseService implements IS
     this.defaultConfig = {
       free: 1,      // 1 storybook limit
       basic: 3,     // 3 storybooks per month ($10/month)
-      premium: 10,  // Legacy tier - same as pro
-      pro: 10,      // 10 storybooks per month ($18/month)
+      premium: 10,  // 10 storybooks per month ($18/month)
       admin: -1,    // Unlimited for internal use
     };
 
@@ -315,13 +313,13 @@ export class SubscriptionConfigService extends EnhancedBaseService implements IS
       }
     });
 
-    // Validate tier progression (basic should be >= free, pro should be >= basic, etc.)
+    // Validate tier progression (basic should be >= free, premium should be >= basic, etc.)
     if (config.basic < config.free && config.basic !== -1) {
       warnings.push(`Basic tier limit (${config.basic}) is less than free tier (${config.free})`);
     }
 
-    if (config.pro < config.basic && config.pro !== -1 && config.basic !== -1) {
-      warnings.push(`Pro tier limit (${config.pro}) is less than basic tier (${config.basic})`);
+    if (config.premium < config.basic && config.premium !== -1 && config.basic !== -1) {
+      warnings.push(`Premium tier limit (${config.premium}) is less than basic tier (${config.basic})`);
     }
 
     return {
@@ -347,7 +345,6 @@ export class SubscriptionConfigService extends EnhancedBaseService implements IS
       free: this.parseEnvNumber('SUBSCRIPTION_LIMIT_FREE', this.defaultConfig.free),
       basic: this.parseEnvNumber('SUBSCRIPTION_LIMIT_BASIC', this.defaultConfig.basic),
       premium: this.parseEnvNumber('SUBSCRIPTION_LIMIT_PREMIUM', this.defaultConfig.premium),
-      pro: this.parseEnvNumber('SUBSCRIPTION_LIMIT_PRO', this.defaultConfig.pro),
       admin: this.parseEnvNumber('SUBSCRIPTION_LIMIT_ADMIN', this.defaultConfig.admin),
     };
 
@@ -442,7 +439,6 @@ export class SubscriptionConfigService extends EnhancedBaseService implements IS
         SUBSCRIPTION_LIMIT_FREE: process.env.SUBSCRIPTION_LIMIT_FREE,
         SUBSCRIPTION_LIMIT_BASIC: process.env.SUBSCRIPTION_LIMIT_BASIC,
         SUBSCRIPTION_LIMIT_PREMIUM: process.env.SUBSCRIPTION_LIMIT_PREMIUM,
-        SUBSCRIPTION_LIMIT_PRO: process.env.SUBSCRIPTION_LIMIT_PRO,
         SUBSCRIPTION_LIMIT_ADMIN: process.env.SUBSCRIPTION_LIMIT_ADMIN,
       },
     };

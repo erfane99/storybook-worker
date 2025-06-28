@@ -34,7 +34,6 @@ interface SubscriptionLimitsConfig {
   free: number;
   basic: number;
   premium: number;
-  pro: number;
   admin: number;
 }
 
@@ -42,7 +41,6 @@ const DEFAULT_LIMITS: SubscriptionLimitsConfig = {
   free: 1,
   basic: 3,
   premium: 10,
-  pro: 10,
   admin: -1, // unlimited
 };
 
@@ -52,7 +50,6 @@ function getSubscriptionLimitsFromEnv(): SubscriptionLimitsConfig {
     free: parseInt(process.env.SUBSCRIPTION_LIMIT_FREE || '1') || DEFAULT_LIMITS.free,
     basic: parseInt(process.env.SUBSCRIPTION_LIMIT_BASIC || '3') || DEFAULT_LIMITS.basic,
     premium: parseInt(process.env.SUBSCRIPTION_LIMIT_PREMIUM || '10') || DEFAULT_LIMITS.premium,
-    pro: parseInt(process.env.SUBSCRIPTION_LIMIT_PRO || '10') || DEFAULT_LIMITS.pro,
     admin: parseInt(process.env.SUBSCRIPTION_LIMIT_ADMIN || '-1') || DEFAULT_LIMITS.admin,
   };
 }
@@ -448,9 +445,8 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
       case 'free':
         return "You've already created your free storybook. Upgrade to unlock more.";
       case 'basic':
-        return "You've reached your monthly limit of 3 storybooks. Upgrade to Pro for more.";
+        return "You've reached your monthly limit of 3 storybooks. Upgrade to Premium for more.";
       case 'premium':
-      case 'pro':
         return "You've reached your monthly limit of 10 storybooks.";
       default:
         return `You've reached your limit of ${limit} storybooks.`;

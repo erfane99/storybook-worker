@@ -378,13 +378,12 @@ export interface UserContext {
 
 // ===== SUBSCRIPTION TYPES =====
 
-export type UserTier = 'free' | 'basic' | 'premium' | 'pro' | 'admin';
+export type UserTier = 'free' | 'basic' | 'premium' | 'admin';
 
 export interface SubscriptionLimits {
   free: number;
   basic: number;
   premium: number;
-  pro: number;
   admin: number;
 }
 
