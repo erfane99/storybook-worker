@@ -1,8 +1,9 @@
-// Enhanced Service Registry - Production Implementation
-import { enhancedServiceContainer } from '../container/enhanced-service-container.js';
+// Consolidated Service Registry - Production Implementation
+// CONSOLIDATED: Single registry with all enhanced features
+import { serviceContainer } from '../container/service-container.js';
 import { SERVICE_TOKENS, ContainerHealthReport } from '../interfaces/service-contracts.js';
 
-// Import enhanced service implementations
+// Import consolidated service implementations
 import { DatabaseService } from '../database/database-service.js';
 import { AIService } from '../ai/ai-service.js';
 import { StorageService } from '../storage/storage-service.js';
@@ -12,22 +13,22 @@ import { SubscriptionService } from '../subscription/subscription-service.js';
 import { ServiceConfigManager } from '../config/service-config.js';
 import { SubscriptionConfigService } from '../config/subscription-config.js';
 
-export class EnhancedServiceRegistry {
+export class ServiceRegistry {
   private static registered = false;
 
   /**
-   * Register all enhanced services with the container
+   * Register all services with the container
    */
   static registerServices(): void {
     if (this.registered) {
-      console.log('⚠️ Enhanced services already registered, skipping...');
+      console.log('⚠️ Services already registered, skipping...');
       return;
     }
 
-    console.log('📋 Registering enhanced services with container...');
+    console.log('📋 Registering services with container...');
 
     // Register Configuration Service (no dependencies)
-    enhancedServiceContainer.register(
+    serviceContainer.register(
       SERVICE_TOKENS.CONFIG,
       () => new ServiceConfigManager(),
       {
@@ -39,7 +40,7 @@ export class EnhancedServiceRegistry {
     );
 
     // Register Subscription Configuration Service (no dependencies)
-    enhancedServiceContainer.register(
+    serviceContainer.register(
       'ISubscriptionConfigService',
       () => new SubscriptionConfigService(),
       {
@@ -50,8 +51,8 @@ export class EnhancedServiceRegistry {
       }
     );
 
-    // Register Enhanced Database Service (depends on config)
-    enhancedServiceContainer.register(
+    // Register Database Service (depends on config)
+    serviceContainer.register(
       SERVICE_TOKENS.DATABASE,
       () => new DatabaseService(),
       {
@@ -62,8 +63,8 @@ export class EnhancedServiceRegistry {
       }
     );
 
-    // Register Enhanced AI Service (depends on config)
-    enhancedServiceContainer.register(
+    // Register AI Service (depends on config)
+    serviceContainer.register(
       SERVICE_TOKENS.AI,
       () => new AIService(),
       {
@@ -74,8 +75,8 @@ export class EnhancedServiceRegistry {
       }
     );
 
-    // Register Enhanced Storage Service (depends on config)
-    enhancedServiceContainer.register(
+    // Register Storage Service (depends on config)
+    serviceContainer.register(
       SERVICE_TOKENS.STORAGE,
       () => new StorageService(),
       {
@@ -86,8 +87,8 @@ export class EnhancedServiceRegistry {
       }
     );
 
-    // Register Enhanced Auth Service (depends on config)
-    enhancedServiceContainer.register(
+    // Register Auth Service (depends on config)
+    serviceContainer.register(
       SERVICE_TOKENS.AUTH,
       () => new AuthService(),
       {
@@ -98,8 +99,8 @@ export class EnhancedServiceRegistry {
       }
     );
 
-    // Register Enhanced Subscription Service (depends on config and database)
-    enhancedServiceContainer.register(
+    // Register Subscription Service (depends on config and database)
+    serviceContainer.register(
       SERVICE_TOKENS.SUBSCRIPTION,
       () => new SubscriptionService(),
       {
@@ -110,8 +111,8 @@ export class EnhancedServiceRegistry {
       }
     );
 
-    // Register Enhanced Job Service (depends on database)
-    enhancedServiceContainer.register(
+    // Register Job Service (depends on database)
+    serviceContainer.register(
       SERVICE_TOKENS.JOB,
       async (container) => {
         const jobService = new JobService();
@@ -126,22 +127,22 @@ export class EnhancedServiceRegistry {
     );
 
     this.registered = true;
-    console.log('✅ All enhanced services registered successfully');
+    console.log('✅ All services registered successfully');
   }
 
   /**
    * Initialize core services that should be loaded immediately
    */
   static async initializeCoreServices(): Promise<void> {
-    console.log('🚀 Initializing core enhanced services...');
+    console.log('🚀 Initializing core services...');
     
     try {
       // Initialize configuration services first
-      await enhancedServiceContainer.resolve(SERVICE_TOKENS.CONFIG);
-      await enhancedServiceContainer.resolve('ISubscriptionConfigService');
-      console.log('✅ Core enhanced services initialized');
+      await serviceContainer.resolve(SERVICE_TOKENS.CONFIG);
+      await serviceContainer.resolve('ISubscriptionConfigService');
+      console.log('✅ Core services initialized');
     } catch (error: any) {
-      console.error('❌ Failed to initialize core enhanced services:', error.message);
+      console.error('❌ Failed to initialize core services:', error.message);
       throw error;
     }
   }
@@ -150,14 +151,14 @@ export class EnhancedServiceRegistry {
    * Get service health report (computed properties, not internal state)
    */
   static async getServiceHealth(): Promise<ContainerHealthReport> {
-    return enhancedServiceContainer.getHealth();
+    return serviceContainer.getHealth();
   }
 
   /**
    * Get container statistics (computed properties)
    */
   static getContainerStats() {
-    return enhancedServiceContainer.getStats();
+    return serviceContainer.getStats();
   }
 
   /**
@@ -165,7 +166,7 @@ export class EnhancedServiceRegistry {
    */
   static async getServiceMetrics(serviceToken: string) {
     try {
-      const service = enhancedServiceContainer.resolveSync(serviceToken);
+      const service = serviceContainer.resolveSync(serviceToken);
       if (service && typeof (service as any).getMetrics === 'function') {
         return (service as any).getMetrics();
       }
@@ -181,7 +182,7 @@ export class EnhancedServiceRegistry {
    */
   static async resetServiceMetrics(serviceToken: string): Promise<boolean> {
     try {
-      const service = enhancedServiceContainer.resolveSync(serviceToken);
+      const service = serviceContainer.resolveSync(serviceToken);
       if (service && typeof (service as any).resetMetrics === 'function') {
         (service as any).resetMetrics();
         return true;
@@ -229,7 +230,7 @@ export class EnhancedServiceRegistry {
    */
   static async getSubscriptionConfigStatus() {
     try {
-      const subscriptionService = enhancedServiceContainer.resolveSync(SERVICE_TOKENS.SUBSCRIPTION);
+      const subscriptionService = serviceContainer.resolveSync(SERVICE_TOKENS.SUBSCRIPTION);
       if (subscriptionService && typeof (subscriptionService as any).getConfigurationSummary === 'function') {
         const summary = (subscriptionService as any).getConfigurationSummary();
         return summary.success ? summary.data : null;
@@ -246,7 +247,7 @@ export class EnhancedServiceRegistry {
    */
   static async reloadSubscriptionConfig(): Promise<boolean> {
     try {
-      const configService = enhancedServiceContainer.resolveSync('ISubscriptionConfigService');
+      const configService = serviceContainer.resolveSync('ISubscriptionConfigService');
       if (configService && typeof (configService as any).reloadConfiguration === 'function') {
         const result = await (configService as any).reloadConfiguration();
         return result.success;
@@ -262,9 +263,9 @@ export class EnhancedServiceRegistry {
    * Dispose all services with proper cleanup
    */
   static async dispose(): Promise<void> {
-    await enhancedServiceContainer.dispose();
+    await serviceContainer.dispose();
     this.registered = false;
   }
 }
 
-export default EnhancedServiceRegistry;
+export default ServiceRegistry;

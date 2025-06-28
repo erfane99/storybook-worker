@@ -1,3 +1,5 @@
+// Job Manager - Updated to use consolidated service architecture
+// CONSOLIDATED: Uses single service container and interfaces
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { 
   JobData, 
@@ -86,51 +88,29 @@ class BackgroundJobManager {
       completed_at: jobData.completed_at
     };
 
-    // Add job-type specific fields
+    // Add job-type specific fields based on database schema
     if (jobType === 'cartoonize') {
-      tableData.original_image_data = jobData.input_data?.prompt || '';
-      tableData.style = jobData.input_data?.style || 'cartoon';
-      tableData.original_cloudinary_url = jobData.input_data?.imageUrl;
-      if (jobData.result_data?.url) {
-        tableData.generated_image_url = jobData.result_data.url;
-      }
-    } else if (jobType === 'auto-story') {
-      tableData.genre = jobData.input_data?.genre;
-      tableData.character_description = jobData.input_data?.characterDescription;
-      tableData.cartoon_image_url = jobData.input_data?.cartoonImageUrl;
-      tableData.audience = jobData.input_data?.audience;
-      if (jobData.result_data?.storybook_id) {
-        tableData.storybook_entry_id = jobData.result_data.storybook_id;
-      }
-    } else if (jobType === 'image-generation') {
-      tableData.image_prompt = jobData.input_data?.image_prompt;
-      tableData.character_description = jobData.input_data?.character_description;
-      tableData.emotion = jobData.input_data?.emotion;
-      tableData.audience = jobData.input_data?.audience;
-      tableData.is_reused_image = jobData.input_data?.isReusedImage;
-      tableData.cartoon_image = jobData.input_data?.cartoon_image;
-      tableData.style = jobData.input_data?.style;
-      if (jobData.result_data?.url) {
-        tableData.generated_image_url = jobData.result_data.url;
+      tableData.original_image_data = jobData.original_image_data || '';
+      tableData.style = jobData.style || 'cartoon';
+      tableData.original_cloudinary_url = jobData.original_cloudinary_url;
+      if (jobData.generated_image_url) {
+        tableData.generated_image_url = jobData.generated_image_url;
       }
     } else if (jobType === 'storybook') {
-      tableData.title = jobData.input_data?.title;
-      tableData.story = jobData.input_data?.story;
-      tableData.character_image = jobData.input_data?.characterImage;
-      tableData.pages = jobData.input_data?.pages;
-      tableData.audience = jobData.input_data?.audience;
-      tableData.is_reused_image = jobData.input_data?.isReusedImage;
-      if (jobData.result_data?.storybook_id) {
-        tableData.storybook_entry_id = jobData.result_data.storybook_id;
-      }
-    } else if (jobType === 'scenes') {
-      tableData.story = jobData.input_data?.story;
-      tableData.character_image = jobData.input_data?.characterImage;
-      tableData.audience = jobData.input_data?.audience;
-      if (jobData.result_data?.pages) {
-        tableData.generated_scenes = jobData.result_data.pages;
+      tableData.title = jobData.title;
+      tableData.story = jobData.story;
+      tableData.character_image = jobData.character_image;
+      tableData.pages = jobData.pages;
+      tableData.audience = jobData.audience;
+      tableData.is_reused_image = jobData.is_reused_image;
+      tableData.character_description = jobData.character_description;
+      tableData.character_art_style = jobData.character_art_style;
+      tableData.layout_type = jobData.layout_type;
+      if (jobData.storybook_entry_id) {
+        tableData.storybook_entry_id = jobData.storybook_entry_id;
       }
     }
+    // Add other job type mappings as needed
 
     return tableData;
   }
@@ -151,82 +131,29 @@ class BackgroundJobManager {
       error_message: tableData.error_message,
       retry_count: tableData.retry_count || 0,
       max_retries: tableData.max_retries || 3,
-      input_data: {},
-      result_data: {}
     };
 
     // Map job-type specific fields back to unified format
     if (jobType === 'cartoonize') {
-      baseJob.input_data = {
-        prompt: tableData.original_image_data || '',
-        style: tableData.style || 'cartoon',
-        imageUrl: tableData.original_cloudinary_url
-      };
-      if (tableData.generated_image_url) {
-        baseJob.result_data = {
-          url: tableData.generated_image_url,
-          cached: !!tableData.final_cloudinary_url
-        };
-      }
-    } else if (jobType === 'auto-story') {
-      baseJob.input_data = {
-        genre: tableData.genre,
-        characterDescription: tableData.character_description,
-        cartoonImageUrl: tableData.cartoon_image_url,
-        audience: tableData.audience
-      };
-      if (tableData.storybook_entry_id) {
-        baseJob.result_data = {
-          storybook_id: tableData.storybook_entry_id,
-          generated_story: tableData.generated_story
-        };
-      }
-    } else if (jobType === 'image-generation') {
-      baseJob.input_data = {
-        image_prompt: tableData.image_prompt,
-        character_description: tableData.character_description,
-        emotion: tableData.emotion,
-        audience: tableData.audience,
-        isReusedImage: tableData.is_reused_image,
-        cartoon_image: tableData.cartoon_image,
-        style: tableData.style
-      };
-      if (tableData.generated_image_url) {
-        baseJob.result_data = {
-          url: tableData.generated_image_url,
-          prompt_used: tableData.final_prompt_used || tableData.image_prompt,
-          reused: tableData.is_reused_image || false
-        };
-      }
+      baseJob.original_image_data = tableData.original_image_data || '';
+      baseJob.style = tableData.style || 'cartoon';
+      baseJob.original_cloudinary_url = tableData.original_cloudinary_url;
+      baseJob.generated_image_url = tableData.generated_image_url;
+      baseJob.final_cloudinary_url = tableData.final_cloudinary_url;
     } else if (jobType === 'storybook') {
-      baseJob.input_data = {
-        title: tableData.title,
-        story: tableData.story,
-        characterImage: tableData.character_image,
-        pages: tableData.pages,
-        audience: tableData.audience,
-        isReusedImage: tableData.is_reused_image
-      };
-      if (tableData.storybook_entry_id) {
-        baseJob.result_data = {
-          storybook_id: tableData.storybook_entry_id,
-          pages: tableData.pages,
-          has_errors: false
-        };
-      }
-    } else if (jobType === 'scenes') {
-      baseJob.input_data = {
-        story: tableData.story,
-        characterImage: tableData.character_image,
-        audience: tableData.audience
-      };
-      if (tableData.generated_scenes) {
-        baseJob.result_data = {
-          pages: tableData.generated_scenes,
-          character_description: tableData.character_description
-        };
-      }
+      baseJob.title = tableData.title;
+      baseJob.story = tableData.story;
+      baseJob.character_image = tableData.character_image;
+      baseJob.pages = tableData.pages || [];
+      baseJob.audience = tableData.audience;
+      baseJob.is_reused_image = tableData.is_reused_image;
+      baseJob.character_description = tableData.character_description;
+      baseJob.character_art_style = tableData.character_art_style;
+      baseJob.layout_type = tableData.layout_type;
+      baseJob.processed_pages = tableData.processed_pages;
+      baseJob.storybook_entry_id = tableData.storybook_entry_id;
     }
+    // Add other job type mappings as needed
 
     return baseJob as JobData;
   }
@@ -299,7 +226,7 @@ class BackgroundJobManager {
     return finalJobs;
   }
 
-  // FIXED: Get job status from appropriate table - now properly searches all tables
+  // Get job status from appropriate table
   async getJobStatus(jobId: string): Promise<JobData | null> {
     if (!this.initialized || !this.supabase) {
       console.error('❌ Cannot get job status - job manager not initialized');
@@ -323,7 +250,7 @@ class BackgroundJobManager {
           .eq('id', jobId)
           .single();
 
-        // CRITICAL FIX: Properly classify errors
+        // Properly classify errors
         if (error) {
           // PGRST116 = "The result contains 0 rows" - this is expected when job not in this table
           if (error.code === 'PGRST116') {
@@ -336,7 +263,7 @@ class BackgroundJobManager {
           }
         }
 
-        // CRITICAL FIX: Only return when we have ACTUAL data with an ID
+        // Only return when we have ACTUAL data with an ID
         if (data && data.id) {
           console.log(`✅ Found job ${jobId} in ${tableName}`);
           const jobData = this.mapFromTableFormat(jobType, data);
@@ -432,17 +359,16 @@ class BackgroundJobManager {
     };
 
     // Add job-type specific result fields
-    if (job.type === 'cartoonize' && resultData?.url) {
-      updateData.generated_image_url = resultData.url;
-      if (resultData.cached) {
-        updateData.final_cloudinary_url = resultData.url;
+    if (job.type === 'cartoonize' && resultData?.generated_image_url) {
+      updateData.generated_image_url = resultData.generated_image_url;
+      if (resultData.final_cloudinary_url) {
+        updateData.final_cloudinary_url = resultData.final_cloudinary_url;
       }
-    } else if (job.type === 'auto-story' && resultData?.storybook_id) {
+    } else if (job.type === 'storybook' && resultData?.storybook_id) {
       updateData.storybook_entry_id = resultData.storybook_id;
-      updateData.generated_story = resultData.generated_story;
-    } else if (job.type === 'image-generation' && resultData?.url) {
-      updateData.generated_image_url = resultData.url;
-      updateData.final_prompt_used = resultData.prompt_used;
+      if (resultData.pages) {
+        updateData.processed_pages = resultData.pages;
+      }
     }
 
     const result = await this.executeQuery<{ id: string }>(

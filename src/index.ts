@@ -1,10 +1,12 @@
+// Main worker entry point - Updated to use consolidated service architecture
+// CONSOLIDATED: Uses single service container and registry
 import 'dotenv/config';
 import express from 'express';
 import cron from 'node-cron';
 import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/types.js';
 import { environmentManager } from './lib/config/environment.js';
-import { EnhancedServiceRegistry } from './services/registry/enhanced-service-registry.js';
-import { enhancedServiceContainer } from './services/container/enhanced-service-container.js';
+import { ServiceRegistry } from './services/registry/service-registry.js';
+import { serviceContainer } from './services/container/service-container.js';
 import { SERVICE_TOKENS } from './services/interfaces/service-contracts.js';
 import { StartupValidator } from './validation/index.js';
 
@@ -20,10 +22,10 @@ const app = express();
 
 app.get('/health', async (_req, res) => {
   const healthStatus = environmentManager.getHealthStatus();
-  const serviceHealth = await EnhancedServiceRegistry.getServiceHealth();
-  const systemHealth = await EnhancedServiceRegistry.getSystemHealth();
+  const serviceHealth = await ServiceRegistry.getServiceHealth();
+  const systemHealth = await ServiceRegistry.getSystemHealth();
   
-  // Get startup validation status - FIXED: Use actual available methods with null safety
+  // Get startup validation status
   const startupValidator = StartupValidator.getInstance();
   const validationResult = startupValidator.getLastValidationResult() || null;
   
@@ -45,12 +47,12 @@ app.get('/health', async (_req, res) => {
     }
   };
   
-  // Include comprehensive health information - FIXED: Use available properties with proper null checking
+  // Include comprehensive health information
   res.json({
     ...response,
     services: serviceHealth.services,
     configuration: healthStatus.configuration,
-    containerStats: EnhancedServiceRegistry.getContainerStats(),
+    containerStats: ServiceRegistry.getContainerStats(),
     systemHealth: systemHealth,
     validation: {
       ready: validationResult?.ready || false,
@@ -63,8 +65,8 @@ app.get('/health', async (_req, res) => {
 
 app.get('/metrics', async (_req, res) => {
   const healthStatus = environmentManager.getHealthStatus();
-  const serviceHealth = await EnhancedServiceRegistry.getServiceHealth();
-  const systemHealth = await EnhancedServiceRegistry.getSystemHealth();
+  const serviceHealth = await ServiceRegistry.getServiceHealth();
+  const systemHealth = await ServiceRegistry.getSystemHealth();
   
   res.json({
     uptime: process.uptime(),
@@ -74,12 +76,12 @@ app.get('/metrics', async (_req, res) => {
     stats,
     services: serviceHealth.services,
     configuration: healthStatus.configuration,
-    containerStats: EnhancedServiceRegistry.getContainerStats(),
+    containerStats: ServiceRegistry.getContainerStats(),
     systemHealth: systemHealth,
   });
 });
 
-// Validation endpoint - FIXED: Proper error handling
+// Validation endpoint
 app.get('/validate', async (_req, res) => {
   try {
     const startupValidator = StartupValidator.getInstance();
@@ -107,7 +109,7 @@ app.listen(config.port, () => {
   console.log(`🔍 Validation endpoint: http://localhost:${config.port}/validate`);
 });
 
-console.log('🚀 StoryCanvas Job Worker Starting with Production Architecture...');
+console.log('🚀 StoryCanvas Job Worker Starting with Consolidated Architecture...');
 console.log(`📊 Environment: ${config.environment}`);
 console.log(`⚙️ Config:`, config);
 
@@ -133,7 +135,7 @@ async function loadJobProcessor() {
   }
 }
 
-// Validate job system with enhanced service container
+// Validate job system with consolidated service container
 async function validateJobSystem(): Promise<boolean> {
   try {
     const { jobProcessor } = await loadJobProcessor();
@@ -144,7 +146,7 @@ async function validateJobSystem(): Promise<boolean> {
       return false;
     }
 
-    // Check if job processor can access services through enhanced container
+    // Check if job processor can access services through consolidated container
     const isProcessorHealthy = jobProcessor.isHealthy();
     
     if (!isProcessorHealthy) {
@@ -152,7 +154,7 @@ async function validateJobSystem(): Promise<boolean> {
     }
 
     // Worker can start with partial functionality (graceful degradation)
-    console.log('✅ Production job processing system loaded with Enhanced Service Architecture');
+    console.log('✅ Production job processing system loaded with Consolidated Service Architecture');
     if (!isProcessorHealthy) {
       console.warn('⚠️ Worker starting with limited functionality - some services unavailable');
     }
@@ -164,10 +166,10 @@ async function validateJobSystem(): Promise<boolean> {
   }
 }
 
-// Main worker function with enhanced service container
+// Main worker function with consolidated service container
 async function processJobs(): Promise<void> {
   try {
-    console.log('🔄 Worker: Scanning for pending jobs using enhanced service container...');
+    console.log('🔄 Worker: Scanning for pending jobs using consolidated service container...');
     
     const { jobProcessor } = await loadJobProcessor();
     
@@ -202,18 +204,18 @@ async function processJobs(): Promise<void> {
   }
 }
 
-// Initialize worker with enhanced service registry and validation
+// Initialize worker with consolidated service registry and validation
 async function initializeWorker(): Promise<void> {
   try {
-    console.log('🔧 Initializing job worker with Enhanced Service Registry and Production Architecture...');
+    console.log('🔧 Initializing job worker with Consolidated Service Registry and Production Architecture...');
     
-    // Register all services with the enhanced container
-    EnhancedServiceRegistry.registerServices();
+    // Register all services with the consolidated container
+    ServiceRegistry.registerServices();
     
     // Initialize core services
-    await EnhancedServiceRegistry.initializeCoreServices();
+    await ServiceRegistry.initializeCoreServices();
     
-    // Run startup validation - FIXED: Use actual method signature
+    // Run startup validation
     console.log('🔍 Running startup validation...');
     const startupValidator = StartupValidator.getInstance();
     const validationResult = await startupValidator.validateStartup();
@@ -222,10 +224,10 @@ async function initializeWorker(): Promise<void> {
       console.error('❌ Startup validation failed - system not ready for production');
       console.error('Errors:', validationResult.errors || []);
       
-      // FIXED: Check if rollback is needed using optional chaining
+      // Check if rollback is needed using optional chaining
       if (validationResult.report?.rollbackRequired) {
         console.log('🔄 Rollback recommended - disposing services...');
-        await EnhancedServiceRegistry.dispose();
+        await ServiceRegistry.dispose();
         throw new Error('Startup validation failed - rollback executed');
       }
       
@@ -234,7 +236,7 @@ async function initializeWorker(): Promise<void> {
       console.log('✅ Startup validation passed - system ready for production');
     }
     
-    // FIXED: Restore continuous monitoring since the method now exists
+    // Restore continuous monitoring since the method now exists
     try {
       const stopMonitoring = await startupValidator.startContinuousMonitoring(300000); // Every 5 minutes
       console.log('✅ Continuous monitoring started');
@@ -275,14 +277,14 @@ async function initializeWorker(): Promise<void> {
     }, config.initialScanDelay);
     
     const mode = envConfig.isDevelopment ? 'development' : 'production';
-    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode with Production Architecture`);
+    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode with Consolidated Architecture`);
     
   } catch (error: any) {
     console.error('❌ Failed to initialize worker:', error.message);
     
     // Attempt graceful shutdown
     try {
-      await EnhancedServiceRegistry.dispose();
+      await ServiceRegistry.dispose();
     } catch (disposeError) {
       console.error('❌ Failed to dispose services during error handling:', disposeError);
     }
@@ -291,16 +293,16 @@ async function initializeWorker(): Promise<void> {
   }
 }
 
-// Graceful shutdown handling with enhanced service cleanup
+// Graceful shutdown handling with consolidated service cleanup
 process.on('SIGTERM', async () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
-  await EnhancedServiceRegistry.dispose();
+  await ServiceRegistry.dispose();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
-  await EnhancedServiceRegistry.dispose();
+  await ServiceRegistry.dispose();
   process.exit(0);
 });
 

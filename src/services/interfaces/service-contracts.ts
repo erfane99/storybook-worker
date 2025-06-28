@@ -1,9 +1,8 @@
 // Service contracts implementing Interface Segregation Principle
-// Separates different concerns into focused interfaces
-// FIXED: Proper type exports for isolatedModules compatibility
+// CONSOLIDATED: Single source of truth for all service interfaces
+// Combines enhanced functionality with standard interfaces
 
 // ===== IMPORT AND RE-EXPORT JOB TYPES =====
-// FIXED: Use export type for type-only re-exports to satisfy isolatedModules
 import type { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types.js';
 
 // Re-export job types so other modules can import them from here
@@ -76,7 +75,7 @@ export interface IServiceLifecycle {
 // ===== BUSINESS OPERATION INTERFACES =====
 
 export interface IDatabaseOperations {
-  // Job Management - FIXED: Now properly typed with imported JobData
+  // Job Management
   getPendingJobs(filter?: JobFilter, limit?: number): Promise<JobData[]>;
   getJobStatus(jobId: string): Promise<JobData | null>;
   updateJobProgress(jobId: string, progress: number, currentStep?: string): Promise<boolean>;
@@ -117,7 +116,7 @@ export interface IStorageOperations {
 }
 
 export interface IJobOperations {
-  // Job Lifecycle - FIXED: Now properly typed with imported JobData and JobType
+  // Job Lifecycle
   getPendingJobs(filter?: JobFilter, limit?: number): Promise<JobData[]>;
   getJobStatus(jobId: string): Promise<JobData | null>;
   updateJobProgress(jobId: string, progress: number, currentStep?: string): Promise<boolean>;
@@ -125,7 +124,7 @@ export interface IJobOperations {
   markJobFailed(jobId: string, errorMessage: string, shouldRetry?: boolean): Promise<boolean>;
   cancelJob(jobId: string, reason?: string): Promise<boolean>;
   
-  // Metrics and Monitoring - FIXED: Now properly typed with imported JobType and JobMetrics
+  // Metrics and Monitoring
   getJobMetrics(jobType?: JobType): Promise<JobMetrics>;
 }
 
@@ -287,7 +286,6 @@ export interface ServiceOptions {
   healthCheck?: boolean;
 }
 
-// FIXED: JobFilter now properly typed with imported JobType and JobStatus
 export interface JobFilter {
   user_id?: string;
   type?: JobType;

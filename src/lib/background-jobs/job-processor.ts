@@ -1,8 +1,8 @@
-// Production-ready job processor using enhanced service architecture
-// FIXED: Complete database-first approach with proper optional field handling
+// Production-ready job processor using consolidated service architecture
+// CONSOLIDATED: Uses single service container and interfaces
 // DATABASE-FIRST: Reads from individual job columns matching database schema
 
-import { enhancedServiceContainer } from '../../services/container/enhanced-service-container.js';
+import { serviceContainer } from '../../services/container/service-container.js';
 import { 
   SERVICE_TOKENS, 
   IDatabaseService, 
@@ -71,7 +71,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     servicesUsed: Set<string>;
   }>();
 
-  // ✅ FIXED: Enhanced metrics with sliding window for health calculation
+  // Enhanced metrics with sliding window for health calculation
   private internalStats = {
     totalProcessed: 0,
     successful: 0,
@@ -81,26 +81,26 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     lastProcessedAt: null as Date | null,
     errorsByService: new Map<string, number>(),
     serviceUsageStats: new Map<string, number>(),
-    // ✅ NEW: Sliding window for recent results (last 10 operations)
+    // Sliding window for recent results (last 10 operations)
     recentResults: [] as { success: boolean; timestamp: number }[],
     lastHealthRecovery: Date.now(),
   };
 
-  // ✅ NEW: Health configuration for resilient behavior
+  // Health configuration for resilient behavior
   private readonly healthConfig = {
     slidingWindowSize: 10,
-    maxFailureRate: 0.7, // Allow up to 70% failure rate (was 50%)
+    maxFailureRate: 0.7, // Allow up to 70% failure rate
     recoveryTimeMs: 300000, // 5 minutes
     minSampleSize: 3, // Need at least 3 jobs before calculating failure rate
   };
 
   constructor() {
-    console.log('🏗️ Production job processor initialized with enhanced service architecture');
+    console.log('🏗️ Production job processor initialized with consolidated service architecture');
     
     // Periodic cleanup of stale jobs
     setInterval(() => this.cleanupStaleJobs(), 300000); // Every 5 minutes
     
-    // ✅ NEW: Periodic health recovery check
+    // Periodic health recovery check
     setInterval(() => this.checkAutoRecovery(), 60000); // Every minute
   }
 
@@ -111,7 +111,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       // Check basic processor health
       const baseHealth = this.currentlyProcessing.size < this.maxConcurrentJobs;
       
-      // ✅ FIXED: Use sliding window failure rate instead of total failure rate
+      // Use sliding window failure rate instead of total failure rate
       const slidingWindowFailureRate = this.calculateSlidingWindowFailureRate();
       const healthyFailureRate = slidingWindowFailureRate <= this.healthConfig.maxFailureRate;
       
@@ -121,14 +121,14 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         : 0;
       const healthyTimeoutRate = timeoutRate < 0.2;
       
-      // ✅ NEW: Auto-recovery logic - if enough time has passed since last failure, allow recovery
+      // Auto-recovery logic - if enough time has passed since last failure, allow recovery
       const timeSinceLastRecovery = Date.now() - this.internalStats.lastHealthRecovery;
       const autoRecoveryEnabled = timeSinceLastRecovery > this.healthConfig.recoveryTimeMs;
       
-      // ✅ FIXED: More resilient health calculation
+      // More resilient health calculation
       const isHealthy = baseHealth && (healthyFailureRate || autoRecoveryEnabled) && healthyTimeoutRate;
       
-      // ✅ NEW: Log health status for debugging
+      // Log health status for debugging
       if (!isHealthy) {
         console.warn(`⚠️ Worker health check details:`, {
           baseHealth,
@@ -151,7 +151,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   getHealthStatus(): ProcessorHealthStatus {
     const concurrencyUtilization = (this.currentlyProcessing.size / this.maxConcurrentJobs) * 100;
     
-    // ✅ FIXED: Use sliding window failure rate for status
+    // Use sliding window failure rate for status
     const slidingWindowFailureRate = this.calculateSlidingWindowFailureRate();
     const slidingWindowFailurePercent = slidingWindowFailureRate * 100;
     
@@ -185,7 +185,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     };
   }
 
-  // ===== NEW: SLIDING WINDOW FAILURE RATE CALCULATION =====
+  // ===== SLIDING WINDOW FAILURE RATE CALCULATION =====
 
   private calculateSlidingWindowFailureRate(): number {
     const recentResults = this.internalStats.recentResults;
@@ -206,7 +206,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     const result = { success, timestamp: Date.now() };
     this.internalStats.recentResults.push(result);
     
-    // ✅ Maintain sliding window size
+    // Maintain sliding window size
     if (this.internalStats.recentResults.length > this.healthConfig.slidingWindowSize) {
       this.internalStats.recentResults.shift(); // Remove oldest result
     }
@@ -251,7 +251,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       lastProcessedAt: null,
       errorsByService: new Map(),
       serviceUsageStats: new Map(),
-      // ✅ RESET: Also reset sliding window
+      // Also reset sliding window
       recentResults: [],
       lastHealthRecovery: Date.now(),
     };
@@ -288,7 +288,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   }
 
   /**
-   * Process next job step using enhanced service architecture
+   * Process next job step using consolidated service architecture
    */
   async processNextJobStep(): Promise<boolean> {
     if (this.isProcessing || this.currentlyProcessing.size >= this.maxConcurrentJobs) {
@@ -300,7 +300,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
 
     try {
       // Get pending jobs using service abstraction
-      const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+      const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
       const pendingJobs = await jobService.getPendingJobs({}, 10);
       
       for (const job of pendingJobs) {
@@ -442,12 +442,12 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       
       if (result.success) {
         this.internalStats.successful++;
-        // ✅ NEW: Track successful result in sliding window
+        // Track successful result in sliding window
         this.addToRecentResults(true);
         console.log(`✅ Job ${job.id} completed successfully in ${Date.now() - startTime}ms using services: ${result.servicesUsed?.join(', ')}`);
       } else {
         this.internalStats.failed++;
-        // ✅ NEW: Track failed result in sliding window
+        // Track failed result in sliding window
         this.addToRecentResults(false);
         
         // Determine if job should be retried based on error type and service
@@ -456,18 +456,18 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
                            result.error?.type !== 'JOB_TIMEOUT_ERROR';
         
         this.trackServiceUsage(job.id, 'job');
-        const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+        const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
         await jobService.markJobFailed(job.id, result.error?.message || 'Unknown error', shouldRetry);
       }
     } catch (error: any) {
       result = this.handleJobError(job.id, error, 'processJobWithCleanup');
       this.internalStats.failed++;
-      // ✅ NEW: Track failed result in sliding window
+      // Track failed result in sliding window
       this.addToRecentResults(false);
       
       try {
         this.trackServiceUsage(job.id, 'job');
-        const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+        const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
         await jobService.markJobFailed(job.id, result.error?.message || 'Unknown error', true);
       } catch (serviceError) {
         console.error(`❌ Failed to mark job as failed: ${job.id}`, serviceError);
@@ -485,12 +485,12 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     const servicesUsed: string[] = [];
     
     try {
-      console.log(`🔄 Processing job: ${job.id} (${job.type}) using enhanced service architecture`);
+      console.log(`🔄 Processing job: ${job.id} (${job.type}) using consolidated service architecture`);
 
       // Get job service through container (dependency injection)
       this.trackServiceUsage(job.id, 'job');
       servicesUsed.push('job');
-      const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+      const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
 
       // Update job to processing status
       if (job.status === 'pending') {
@@ -498,7 +498,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       }
 
       // Route to appropriate processor using service abstractions
-      // ✅ ALL JOB TYPES - DATABASE-FIRST with proper optional field handling
+      // DATABASE-FIRST with proper optional field handling
       switch (job.type) {
         case 'storybook':
           await this.processStorybookJobWithServices(job as StorybookJobData, servicesUsed);
@@ -534,7 +534,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   // ===== JOB-SPECIFIC PROCESSORS USING SERVICE ABSTRACTIONS =====
 
   private async processStorybookJobWithServices(job: StorybookJobData, servicesUsed: string[]): Promise<void> {
-    // ✅ DATABASE-FIRST: Read from individual job columns with proper optional field handling
+    // DATABASE-FIRST: Read from individual job columns with proper optional field handling
     const { 
       title, 
       story, 
@@ -548,9 +548,9 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     } = job;
 
     // Get services through container (clean dependency injection)
-    const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
-    const aiService = await enhancedServiceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
-    const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+    const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+    const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
+    const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
 
     this.trackServiceUsage(job.id, 'job');
     servicesUsed.push('job');
@@ -568,7 +568,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
 
     await jobService.updateJobProgress(job.id, 30, 'Character analyzed, processing story structure');
 
-    // ✅ Handle story-to-comic-panels mode
+    // Handle story-to-comic-panels mode
     let pages = initialPages || [];
     
     // Check if we need to generate pages from story (story-to-comic-panels mode)
@@ -696,7 +696,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   }
 
   private async processAutoStoryJobWithServices(job: AutoStoryJobData, servicesUsed: string[]): Promise<void> {
-    // ✅ DATABASE-FIRST: Read from individual job columns with proper optional field handling
+    // DATABASE-FIRST: Read from individual job columns with proper optional field handling
     const { 
       genre, 
       character_description, 
@@ -706,9 +706,9 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       layout_type = 'comic-book-panels' 
     } = job;
 
-    const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
-    const aiService = await enhancedServiceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
-    const databaseService = await enhancedServiceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+    const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+    const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
+    const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
 
     await jobService.updateJobProgress(job.id, 10, 'Starting auto-story generation');
 
@@ -753,7 +753,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   }
 
   private async processSceneJobWithServices(job: SceneJobData, servicesUsed: string[]): Promise<void> {
-    // ✅ DATABASE-FIRST: Read from individual job columns with proper optional field handling
+    // DATABASE-FIRST: Read from individual job columns with proper optional field handling
     const { 
       story, 
       character_image = '', 
@@ -761,8 +761,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       character_description = '' 
     } = job;
 
-    const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
-    const aiService = await enhancedServiceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
+    const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+    const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
 
     await jobService.updateJobProgress(job.id, 20, 'Analyzing story for scene generation');
 
@@ -784,15 +784,15 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   }
 
   private async processCartoonizeJobWithServices(job: CartoonizeJobData, servicesUsed: string[]): Promise<void> {
-    // ✅ DATABASE-FIRST: Read from individual job columns with proper optional field handling
+    // DATABASE-FIRST: Read from individual job columns with proper optional field handling
     const { 
       original_image_data = '', 
       style = 'cartoon', 
       original_cloudinary_url = '' 
     } = job;
 
-    const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
-    const aiService = await enhancedServiceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
+    const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+    const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
 
     await jobService.updateJobProgress(job.id, 20, 'Preparing image for cartoonization');
 
@@ -815,7 +815,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   }
 
   private async processImageJobWithServices(job: ImageJobData, servicesUsed: string[]): Promise<void> {
-    // ✅ DATABASE-FIRST: Read from individual job columns with proper optional field handling
+    // DATABASE-FIRST: Read from individual job columns with proper optional field handling
     const { 
       image_prompt, 
       character_description, 
@@ -826,8 +826,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       style = 'cartoon' 
     } = job;
 
-    const jobService = await enhancedServiceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
-    const aiService = await enhancedServiceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
+    const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+    const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
 
     await jobService.updateJobProgress(job.id, 20, 'Starting image generation');
 

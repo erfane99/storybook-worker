@@ -1,4 +1,5 @@
-// Enhanced Database Service - Production Implementation
+// Consolidated Database Service - Production Implementation
+// CONSOLIDATED: Single database service with all enhanced features
 import { createClient, SupabaseClient, PostgrestSingleResponse } from '@supabase/supabase-js';
 import { EnhancedBaseService } from '../base/enhanced-base-service.js';
 import { 
@@ -439,8 +440,6 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       error_message: tableData.error_message,
       retry_count: tableData.retry_count || 0,
       max_retries: tableData.max_retries || 3,
-      input_data: {},
-      result_data: {}
     };
 
     // Map job-type specific fields
@@ -451,26 +450,41 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
 
   private mapJobSpecificFields(jobType: JobType, baseJob: any, tableData: any): void {
     if (jobType === 'cartoonize') {
-      baseJob.input_data = {
-        prompt: tableData.original_image_data || '',
-        style: tableData.style || 'cartoon',
-        imageUrl: tableData.original_cloudinary_url
-      };
-      if (tableData.generated_image_url) {
-        baseJob.result_data = {
-          url: tableData.generated_image_url,
-          cached: !!tableData.final_cloudinary_url
-        };
-      }
+      baseJob.original_image_data = tableData.original_image_data || '';
+      baseJob.style = tableData.style || 'cartoon';
+      baseJob.original_cloudinary_url = tableData.original_cloudinary_url;
+      baseJob.generated_image_url = tableData.generated_image_url;
+      baseJob.final_cloudinary_url = tableData.final_cloudinary_url;
+    } else if (jobType === 'storybook') {
+      baseJob.title = tableData.title;
+      baseJob.story = tableData.story;
+      baseJob.character_image = tableData.character_image;
+      baseJob.pages = tableData.pages || [];
+      baseJob.audience = tableData.audience;
+      baseJob.is_reused_image = tableData.is_reused_image;
+      baseJob.character_description = tableData.character_description;
+      baseJob.character_art_style = tableData.character_art_style;
+      baseJob.layout_type = tableData.layout_type;
+      baseJob.processed_pages = tableData.processed_pages;
+      baseJob.storybook_entry_id = tableData.storybook_entry_id;
     }
     // Add other job type mappings as needed
   }
 
   private addJobSpecificResultFields(jobType: JobType, updateData: any, resultData: any): void {
-    if (jobType === 'cartoonize' && resultData?.url) {
-      updateData.generated_image_url = resultData.url;
-      if (resultData.cached) {
-        updateData.final_cloudinary_url = resultData.url;
+    if (jobType === 'cartoonize') {
+      if (resultData?.generated_image_url) {
+        updateData.generated_image_url = resultData.generated_image_url;
+      }
+      if (resultData?.final_cloudinary_url) {
+        updateData.final_cloudinary_url = resultData.final_cloudinary_url;
+      }
+    } else if (jobType === 'storybook') {
+      if (resultData?.storybook_id) {
+        updateData.storybook_entry_id = resultData.storybook_id;
+      }
+      if (resultData?.pages) {
+        updateData.processed_pages = resultData.pages;
       }
     }
     // Add other job type result mappings as needed

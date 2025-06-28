@@ -1,4 +1,5 @@
-// Enhanced Service Container implementing Interface Segregation Principle
+// Consolidated Service Container implementing Interface Segregation Principle
+// CONSOLIDATED: Single container implementation with all enhanced features
 import { 
   IServiceContainer,
   ServiceFactory, 
@@ -20,7 +21,7 @@ interface ServiceRegistration<T> {
   healthStatus?: ServiceHealthStatus;
 }
 
-export class EnhancedServiceContainer implements IServiceContainer {
+export class ServiceContainer implements IServiceContainer {
   private services = new Map<string, ServiceRegistration<any>>();
   private initializationPromises = new Map<string, Promise<any>>();
   private disposed = false;
@@ -365,5 +366,5 @@ export class EnhancedServiceContainer implements IServiceContainer {
 }
 
 // Global container instance
-export const enhancedServiceContainer = new EnhancedServiceContainer();
-export default enhancedServiceContainer;
+export const serviceContainer = new ServiceContainer();
+export default serviceContainer;
