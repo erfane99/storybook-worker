@@ -9,7 +9,9 @@ import {
   DatabaseOperation,
   JobFilter,
   ServiceConfig,
-  RetryConfig 
+  RetryConfig,
+  IEnvironmentService,
+  SERVICE_TOKENS
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
@@ -19,7 +21,7 @@ import {
   JobNotFoundError,
   ErrorFactory
 } from '../errors/index.js';
-import { environmentManager } from '../../lib/config/environment.js';
+import { serviceContainer } from '../container/service-container.js';
 import { JobData, JobType, JobStatus } from '../../lib/types.js';
 
 interface DatabaseConfig extends ServiceConfig {
@@ -30,6 +32,7 @@ interface DatabaseConfig extends ServiceConfig {
 
 export class DatabaseService extends EnhancedBaseService implements IDatabaseService {
   private supabase: SupabaseClient | null = null;
+  private environmentService: IEnvironmentService | null = null; // ✅ NEW: Injected environment service
   private readonly defaultRetryConfig: RetryConfig = {
     attempts: 3,
     delay: 1000,
@@ -59,7 +62,32 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
   // ===== LIFECYCLE IMPLEMENTATION =====
 
   protected async initializeService(): Promise<void> {
-    const supabaseStatus = environmentManager.getServiceStatus('supabase');
+    // ✅ NEW: Use dependency injection for environment service
+    try {
+      this.environmentService = await serviceContainer.resolve<IEnvironmentService>(SERVICE_TOKENS.ENVIRONMENT);
+      this.log('info', 'Environment service injected successfully');
+    } catch (error) {
+      this.log('warn', 'Environment service not available, falling back to direct import');
+      // Fallback to direct import for backward compatibility during transition
+      const { environmentManager } = await import('../../lib/config/environment.js');
+      this.environmentService = {
+        getServiceStatus: (serviceName: 'openai' | 'supabase') => environmentManager.getServiceStatus(serviceName),
+        isServiceAvailable: (serviceName: 'openai' | 'supabase') => environmentManager.isServiceAvailable(serviceName),
+        getConfig: () => environmentManager.getConfig(),
+        logConfigurationStatus: () => environmentManager.logConfigurationStatus(),
+        getHealthStatus: () => environmentManager.getHealthStatus(),
+        // Lifecycle methods (not used in this context)
+        initialize: async () => {},
+        dispose: async () => {},
+        isInitialized: () => true,
+        isHealthy: () => true,
+        getHealthStatus: () => ({ status: 'healthy' as const, message: 'OK', lastCheck: new Date().toISOString(), availability: 100 }),
+        getMetrics: () => ({ requestCount: 0, successCount: 0, errorCount: 0, averageResponseTime: 0, uptime: 0, lastActivity: new Date().toISOString() }),
+        resetMetrics: () => {}
+      } as IEnvironmentService;
+    }
+
+    const supabaseStatus = this.environmentService.getServiceStatus('supabase');
     
     if (!supabaseStatus.isAvailable) {
       throw new Error(`Supabase not configured: ${supabaseStatus.message}`);
@@ -78,17 +106,27 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
 
     // Test connection
     await this.testConnection();
+    this.log('info', 'Database service initialized with environment service integration');
   }
 
   protected async disposeService(): Promise<void> {
     if (this.supabase) {
       this.supabase = null;
     }
+    this.environmentService = null; // ✅ NEW: Clean up environment service reference
   }
 
   protected async checkServiceHealth(): Promise<boolean> {
     if (!this.supabase) {
       return false;
+    }
+
+    // ✅ NEW: Use environment service for health check
+    if (this.environmentService) {
+      const isAvailable = this.environmentService.isServiceAvailable('supabase');
+      if (!isAvailable) {
+        return false;
+      }
     }
 
     try {

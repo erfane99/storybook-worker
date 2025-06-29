@@ -1,5 +1,9 @@
 // Centralized configuration system for all services
-import { environmentManager } from '../../lib/config/environment.js';
+import { 
+  IEnvironmentService,
+  SERVICE_TOKENS
+} from '../interfaces/service-contracts.js';
+import { serviceContainer } from '../container/service-container.js';
 
 export interface ServiceTimeouts {
   database: number;
@@ -40,13 +44,47 @@ export interface ServiceConfiguration {
 
 export class ServiceConfigManager {
   private config: ServiceConfiguration;
+  private environmentService: IEnvironmentService | null = null; // ✅ NEW: Injected environment service
 
   constructor() {
     this.config = this.loadConfiguration();
   }
 
+  // ✅ NEW: Initialize with environment service dependency injection
+  async initialize(): Promise<void> {
+    try {
+      this.environmentService = await serviceContainer.resolve<IEnvironmentService>(SERVICE_TOKENS.ENVIRONMENT);
+      console.log('✅ ServiceConfigManager initialized with environment service integration');
+    } catch (error) {
+      console.warn('⚠️ Environment service not available, using fallback configuration');
+      // Fallback to direct import for backward compatibility during transition
+      const { environmentManager } = await import('../../lib/config/environment.js');
+      this.environmentService = {
+        getServiceStatus: (serviceName: 'openai' | 'supabase') => environmentManager.getServiceStatus(serviceName),
+        isServiceAvailable: (serviceName: 'openai' | 'supabase') => environmentManager.isServiceAvailable(serviceName),
+        getConfig: () => environmentManager.getConfig(),
+        logConfigurationStatus: () => environmentManager.logConfigurationStatus(),
+        getHealthStatus: () => environmentManager.getHealthStatus(),
+        // Lifecycle methods (not used in this context)
+        initialize: async () => {},
+        dispose: async () => {},
+        isInitialized: () => true,
+        isHealthy: () => true,
+        getHealthStatus: () => ({ status: 'healthy' as const, message: 'OK', lastCheck: new Date().toISOString(), availability: 100 }),
+        getMetrics: () => ({ requestCount: 0, successCount: 0, errorCount: 0, averageResponseTime: 0, uptime: 0, lastActivity: new Date().toISOString() }),
+        resetMetrics: () => {}
+      } as IEnvironmentService;
+    }
+  }
+
   private loadConfiguration(): ServiceConfiguration {
-    const isDevelopment = environmentManager.getConfig().isDevelopment;
+    // ✅ NEW: Use environment service if available, otherwise fallback to direct access
+    let isDevelopment = process.env.NODE_ENV === 'development';
+    
+    if (this.environmentService) {
+      const envConfig = this.environmentService.getConfig();
+      isDevelopment = envConfig.isDevelopment;
+    }
     
     return {
       timeouts: {
@@ -128,6 +166,12 @@ export class ServiceConfigManager {
    * Get current environment (development, staging, production)
    */
   getEnvironment(): string {
+    // ✅ NEW: Use environment service if available
+    if (this.environmentService) {
+      const envConfig = this.environmentService.getConfig();
+      return envConfig.worker.environment;
+    }
+    
     return process.env.NODE_ENV || 'development';
   }
 
@@ -214,6 +258,16 @@ export class ServiceConfigManager {
     console.log('📏 Limits:', this.config.limits);
     console.log('🎛️ Features:', this.config.features);
 
+    // ✅ NEW: Log environment service status if available
+    if (this.environmentService) {
+      const healthStatus = this.environmentService.getHealthStatus();
+      console.log('🌍 Environment Service Status:', {
+        overall: healthStatus.overall,
+        fullyConfigured: healthStatus.configuration.fullyConfigured,
+        degradedMode: healthStatus.configuration.degradedMode
+      });
+    }
+
     const validation = this.validateConfiguration();
     if (!validation.valid) {
       console.warn('⚠️ Configuration validation errors:');
@@ -235,6 +289,7 @@ export class ServiceConfigManager {
       serviceCount: Object.keys(this.config.timeouts).length,
       featuresEnabled: Object.values(this.config.features).filter(Boolean).length,
       validation: this.validateConfiguration(),
+      environmentServiceIntegrated: !!this.environmentService, // ✅ NEW: Environment service integration status
     };
   }
 }

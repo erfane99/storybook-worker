@@ -104,6 +104,70 @@ export interface SceneGenerationResult {
   metadata?: SceneMetadata;
 }
 
+// ===== ENVIRONMENT SERVICE INTERFACES =====
+
+export interface ServiceConfig {
+  name: string;
+  isConfigured: boolean;
+  isAvailable: boolean;
+  status: 'configured' | 'not_configured' | 'placeholder' | 'invalid';
+  message: string;
+  requiredVars: string[];
+  missingVars: string[];
+}
+
+export interface EnvironmentConfig {
+  isDevelopment: boolean;
+  isProduction: boolean;
+  services: {
+    openai: ServiceConfig;
+    supabase: ServiceConfig;
+  };
+  worker: {
+    port: number;
+    environment: string;
+    jobScanInterval: string;
+    maxConcurrentJobs: number;
+    initialScanDelay: number;
+  };
+}
+
+export interface IEnvironmentService extends IServiceHealth, IServiceLifecycle {
+  /**
+   * Get complete environment configuration
+   */
+  getConfig(): EnvironmentConfig;
+  
+  /**
+   * Check if specific service is available
+   */
+  isServiceAvailable(serviceName: 'openai' | 'supabase'): boolean;
+  
+  /**
+   * Get service status details
+   */
+  getServiceStatus(serviceName: 'openai' | 'supabase'): ServiceConfig;
+  
+  /**
+   * Log current configuration status
+   */
+  logConfigurationStatus(): void;
+  
+  /**
+   * Get health status for monitoring
+   */
+  getHealthStatus(): {
+    overall: string;
+    services: Record<string, any>;
+    configuration: {
+      mode: string;
+      servicesAvailable: string;
+      fullyConfigured: boolean;
+      degradedMode: boolean;
+    };
+  };
+}
+
 // ===== HEALTH MONITORING INTERFACES =====
 
 export interface IServiceHealth {
@@ -526,6 +590,7 @@ export const SERVICE_TOKENS = {
   AUTH: 'IAuthService',
   SUBSCRIPTION: 'ISubscriptionService',
   CONFIG: 'IConfigService',
+  ENVIRONMENT: 'IEnvironmentService', // ✅ NEW: Environment service token
 } as const;
 
 export type ServiceToken = typeof SERVICE_TOKENS[keyof typeof SERVICE_TOKENS];

@@ -18,7 +18,9 @@ import {
   StoryGenerationResult,
   AudienceType,
   GenreType,
-  SceneMetadata
+  SceneMetadata,
+  IEnvironmentService,
+  SERVICE_TOKENS
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
@@ -29,7 +31,7 @@ import {
   AIAuthenticationError,
   ErrorFactory
 } from '../errors/index.js';
-import { environmentManager } from '../../lib/config/environment.js';
+import { serviceContainer } from '../container/service-container.js';
 
 export interface AIConfig extends ServiceConfig {
   apiKey: string;
@@ -84,6 +86,7 @@ function cleanStoryPrompt(prompt: string): string {
 
 export class AIService extends EnhancedBaseService implements IAIService {
   private apiKey: string | null = null;
+  private environmentService: IEnvironmentService | null = null; // ✅ NEW: Injected environment service
   private rateLimiter: Map<string, number[]> = new Map();
   private readonly gptRetryConfig: RetryConfig = {
     attempts: 3,
@@ -178,21 +181,57 @@ export class AIService extends EnhancedBaseService implements IAIService {
   // ===== LIFECYCLE IMPLEMENTATION =====
 
   protected async initializeService(): Promise<void> {
-    const openaiStatus = environmentManager.getServiceStatus('openai');
+    // ✅ NEW: Use dependency injection for environment service
+    try {
+      this.environmentService = await serviceContainer.resolve<IEnvironmentService>(SERVICE_TOKENS.ENVIRONMENT);
+      this.log('info', 'Environment service injected successfully');
+    } catch (error) {
+      this.log('warn', 'Environment service not available, falling back to direct import');
+      // Fallback to direct import for backward compatibility during transition
+      const { environmentManager } = await import('../../lib/config/environment.js');
+      this.environmentService = {
+        getServiceStatus: (serviceName: 'openai' | 'supabase') => environmentManager.getServiceStatus(serviceName),
+        isServiceAvailable: (serviceName: 'openai' | 'supabase') => environmentManager.isServiceAvailable(serviceName),
+        getConfig: () => environmentManager.getConfig(),
+        logConfigurationStatus: () => environmentManager.logConfigurationStatus(),
+        getHealthStatus: () => environmentManager.getHealthStatus(),
+        // Lifecycle methods (not used in this context)
+        initialize: async () => {},
+        dispose: async () => {},
+        isInitialized: () => true,
+        isHealthy: () => true,
+        getHealthStatus: () => ({ status: 'healthy' as const, message: 'OK', lastCheck: new Date().toISOString(), availability: 100 }),
+        getMetrics: () => ({ requestCount: 0, successCount: 0, errorCount: 0, averageResponseTime: 0, uptime: 0, lastActivity: new Date().toISOString() }),
+        resetMetrics: () => {}
+      } as IEnvironmentService;
+    }
+
+    const openaiStatus = this.environmentService.getServiceStatus('openai');
     
     if (!openaiStatus.isAvailable) {
       throw new Error(`OpenAI not configured: ${openaiStatus.message}`);
     }
 
     this.apiKey = process.env.OPENAI_API_KEY!;
+    this.log('info', 'AI service initialized with environment service integration');
   }
 
   protected async disposeService(): Promise<void> {
     this.rateLimiter.clear();
+    this.environmentService = null; // ✅ NEW: Clean up environment service reference
   }
 
   protected async checkServiceHealth(): Promise<boolean> {
-    return this.apiKey !== null;
+    if (!this.apiKey) {
+      return false;
+    }
+
+    // ✅ NEW: Use environment service for health check
+    if (this.environmentService) {
+      return this.environmentService.isServiceAvailable('openai');
+    }
+
+    return true;
   }
 
   // ===== AI OPERATIONS IMPLEMENTATION =====
