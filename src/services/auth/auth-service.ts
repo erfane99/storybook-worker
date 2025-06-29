@@ -137,7 +137,3 @@ export class AuthService extends EnhancedBaseService implements IAuthService {
     };
   }
 }
-
-// Export singleton instance
-export const authService = new AuthService();
-export default authService;
