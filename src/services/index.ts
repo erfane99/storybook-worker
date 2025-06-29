@@ -19,11 +19,3 @@ export { ServiceRegistry } from './registry/service-registry.js';
 
 // ===== CONSOLIDATED SERVICE CONFIG =====
 export { serviceConfig } from './config/service-config.js';
-
-// ===== CONSOLIDATED SERVICE IMPLEMENTATIONS =====
-export { databaseService } from './database/database-service.js';
-export { aiService } from './ai/ai-service.js';
-export { storageService } from './storage/storage-service.js';
-export { jobService } from './job/job-service.js';
-export { authService } from './auth/auth-service.js';
-export { subscriptionService } from './subscription/subscription-service.js';
