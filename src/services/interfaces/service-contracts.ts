@@ -8,6 +8,18 @@ import type { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types.js
 // Re-export job types so other modules can import them from here
 export type { JobData, JobType, JobStatus, JobMetrics };
 
+// ===== CONSOLIDATED AI SERVICE TYPES - SINGLE SOURCE OF TRUTH =====
+export type AudienceType = 'children' | 'young_adults' | 'adults';
+export type GenreType = 'adventure' | 'siblings' | 'bedtime' | 'fantasy' | 'history';
+
+export interface SceneMetadata {
+  discoveryPath: string;
+  patternType: 'direct' | 'nested' | 'discovered' | 'fallback';
+  qualityScore: number;
+  originalStructure: string[];
+  [key: string]: any; // Allow additional metadata properties
+}
+
 // ===== CHARACTER DESCRIPTION INTERFACES =====
 
 export interface CharacterDescriptionOptions {
@@ -23,9 +35,9 @@ export interface CharacterDescriptionResult {
 // ===== STORY GENERATION INTERFACES =====
 
 export interface StoryGenerationOptions {
-  genre?: string;
+  genre?: GenreType;
   characterDescription?: string;
-  audience?: string;
+  audience?: AudienceType;
   temperature?: number;
   maxTokens?: number;
   model?: string;
@@ -43,7 +55,7 @@ export interface ImageGenerationOptions {
   image_prompt: string;
   character_description: string;
   emotion: string;
-  audience: string;
+  audience: AudienceType;
   isReusedImage?: boolean;
   cartoon_image?: string;
   user_id?: string;
@@ -77,7 +89,7 @@ export interface CartoonizeResult {
 
 export interface SceneGenerationOptions {
   story: string;
-  audience: string;
+  audience: AudienceType;
   characterImage?: string;
   characterArtStyle?: string;
   layoutType?: string;
@@ -85,11 +97,11 @@ export interface SceneGenerationOptions {
 
 export interface SceneGenerationResult {
   pages: any[];
-  audience: string;
+  audience: AudienceType;
   characterImage?: string;
   layoutType?: string;
   characterArtStyle?: string;
-  metadata?: any;
+  metadata?: SceneMetadata;
 }
 
 // ===== HEALTH MONITORING INTERFACES =====

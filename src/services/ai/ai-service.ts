@@ -15,7 +15,10 @@ import {
   CartoonizeOptions,
   CartoonizeResult,
   SceneGenerationOptions,
-  StoryGenerationResult
+  StoryGenerationResult,
+  AudienceType,
+  GenreType,
+  SceneMetadata
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
@@ -52,10 +55,6 @@ interface DiscoveryPattern {
   validator: (obj: any) => boolean;
   priority: number;
 }
-
-// ===== AUDIENCE TYPE DEFINITIONS =====
-
-export type AudienceType = 'children' | 'young_adults' | 'adults';
 
 // ===== STYLE PROMPTS AND CONFIGURATIONS =====
 
@@ -450,6 +449,10 @@ Return your output in this strict format:
         layoutType: layoutType,               // ✅ Add missing layoutType parameter
         characterArtStyle: characterArtStyle, // ✅ Add missing characterArtStyle parameter
         metadata: {
+          discoveryPath: 'direct_generation',
+          patternType: 'direct',
+          qualityScore: 100,
+          originalStructure: ['pages'],
           audienceConfig: audienceConfig[audience],
           systemPrompt: systemPrompt.substring(0, 200) + '...',
           generatedAt: new Date().toISOString()
