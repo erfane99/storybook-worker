@@ -1,4 +1,4 @@
-// Enhanced AI Service - Production Implementation with Independent Health Checking
+// Enhanced AI Service - Production Implementation with Direct Environment Variable Access
 import { EnhancedBaseService } from '../base/enhanced-base-service.js';
 import { 
   IAIService,
@@ -151,11 +151,16 @@ export class AIService extends EnhancedBaseService implements IAIService {
   // ===== LIFECYCLE IMPLEMENTATION =====
 
   protected async initializeService(): Promise<void> {
-    // ✅ ENTERPRISE HEALTH: Direct environment variable validation
+    // ✅ DIRECT ENV VAR ACCESS: No environment service dependency
     const apiKey = process.env.OPENAI_API_KEY;
     
     if (!apiKey) {
       throw new Error('OpenAI API key not configured: OPENAI_API_KEY environment variable is missing');
+    }
+
+    // ✅ DIRECT VALIDATION: Simple API key validation
+    if (!apiKey || apiKey.length < 20) {
+      throw new Error('Valid OPENAI_API_KEY required - key appears to be invalid or too short');
     }
 
     if (this.isPlaceholderValue(apiKey)) {
@@ -178,17 +183,12 @@ export class AIService extends EnhancedBaseService implements IAIService {
   // ✅ ENTERPRISE HEALTH: Independent service health checking
   protected async checkServiceHealth(): Promise<boolean> {
     try {
-      // Check 1: API key availability
-      if (!this.apiKey) {
+      // Check 1: API key availability and format
+      if (!this.apiKey || !this.apiKey.startsWith('sk-') || this.apiKey.length < 20) {
         return false;
       }
 
-      // Check 2: API key format validation
-      if (!this.apiKey.startsWith('sk-') || this.apiKey.length < 20) {
-        return false;
-      }
-
-      // Check 3: Rate limiting status
+      // Check 2: Rate limiting status
       const recentRequests = this.rateLimiter.get('/chat/completions') || [];
       const now = Date.now();
       const windowMs = 60000; // 1 minute
@@ -198,7 +198,7 @@ export class AIService extends EnhancedBaseService implements IAIService {
         return false; // Rate limited
       }
 
-      // Check 4: Optional connectivity test (lightweight)
+      // Check 3: Optional connectivity test (lightweight)
       if (Math.random() < 0.1) { // 10% chance for periodic connectivity test
         try {
           await this.testAPIConnectivity();
@@ -1068,3 +1068,7 @@ ${config.prompt}
     );
   }
 }
+
+// Export singleton instance
+export const aiService = new AIService();
+export default aiService;

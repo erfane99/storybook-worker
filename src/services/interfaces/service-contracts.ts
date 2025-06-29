@@ -104,66 +104,6 @@ export interface SceneGenerationResult {
   metadata?: SceneMetadata;
 }
 
-// ===== ENVIRONMENT SERVICE INTERFACES =====
-// ✅ REFACTORED: Environment service only handles environment variables, not service health
-
-export interface EnvironmentServiceInfo {
-  name: string;
-  isConfigured: boolean;
-  isAvailable: boolean;
-  status: 'configured' | 'not_configured' | 'placeholder' | 'invalid';
-  message: string;
-  requiredVars: string[];
-  missingVars: string[];
-}
-
-export interface EnvironmentConfig {
-  isDevelopment: boolean;
-  isProduction: boolean;
-  services: {
-    openai: EnvironmentServiceInfo;
-    supabase: EnvironmentServiceInfo;
-  };
-  worker: {
-    port: number;
-    environment: string;
-    jobScanInterval: string;
-    maxConcurrentJobs: number;
-    initialScanDelay: number;
-  };
-}
-
-// ✅ REFACTORED: Environment service interface focused only on environment configuration
-export interface IEnvironmentService extends IServiceHealth, IServiceLifecycle {
-  /**
-   * Get complete environment configuration
-   */
-  getConfig(): EnvironmentConfig;
-  
-  /**
-   * Get environment service info (environment variables only)
-   */
-  getEnvironmentServiceInfo(serviceName: 'openai' | 'supabase'): EnvironmentServiceInfo;
-  
-  /**
-   * Log current configuration status
-   */
-  logConfigurationStatus(): void;
-  
-  /**
-   * Get environment status (configuration only, not service health)
-   */
-  getEnvironmentStatus(): {
-    environment: {
-      mode: string;
-      variablesConfigured: string;
-      fullyConfigured: boolean;
-      degradedMode: boolean;
-    };
-    services: Record<string, any>;
-  };
-}
-
 // ===== HEALTH MONITORING INTERFACES =====
 
 export interface IServiceHealth {
@@ -586,7 +526,6 @@ export const SERVICE_TOKENS = {
   AUTH: 'IAuthService',
   SUBSCRIPTION: 'ISubscriptionService',
   CONFIG: 'IConfigService',
-  ENVIRONMENT: 'IEnvironmentService', // ✅ NEW: Environment service token
 } as const;
 
 export type ServiceToken = typeof SERVICE_TOKENS[keyof typeof SERVICE_TOKENS];

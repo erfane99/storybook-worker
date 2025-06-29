@@ -1,5 +1,5 @@
 // Consolidated Service Registry - Production Implementation
-// REFACTORED: Added all lifecycle management functions as static methods
+// REFACTORED: Removed environment service dependencies, direct env var access
 import { serviceContainer } from '../container/service-container.js';
 import { SERVICE_TOKENS, ContainerHealthReport } from '../interfaces/service-contracts.js';
 import { serviceConfig } from '../config/service-config.js';
@@ -13,7 +13,6 @@ import { AuthService } from '../auth/auth-service.js';
 import { SubscriptionService } from '../subscription/subscription-service.js';
 import { ServiceConfigManager } from '../config/service-config.js';
 import { SubscriptionConfigService } from '../config/subscription-config.js';
-import { EnvironmentService } from '../environment/environment-service.js'; // ✅ NEW: Environment service
 
 export class ServiceRegistry {
   private static registered = false;
@@ -29,103 +28,91 @@ export class ServiceRegistry {
 
     console.log('📋 Registering services with container...');
 
-    // ✅ NEW: Register Environment Service (highest priority - no dependencies)
-    serviceContainer.register(
-      SERVICE_TOKENS.ENVIRONMENT,
-      () => new EnvironmentService(),
-      {
-        singleton: true,
-        lazy: false, // Load immediately - needed by all other services
-        dependencies: [],
-        healthCheck: true,
-      }
-    );
-
-    // Register Configuration Service (depends on environment)
+    // Register Configuration Service (no dependencies)
     serviceContainer.register(
       SERVICE_TOKENS.CONFIG,
       () => new ServiceConfigManager(),
       {
         singleton: true,
         lazy: false, // Load immediately
-        dependencies: [SERVICE_TOKENS.ENVIRONMENT], // ✅ NEW: Depends on environment
+        dependencies: [],
         healthCheck: true,
       }
     );
 
-    // Register Subscription Configuration Service (depends on environment)
+    // Register Subscription Configuration Service (no dependencies)
     serviceContainer.register(
       'ISubscriptionConfigService',
       () => new SubscriptionConfigService(),
       {
         singleton: true,
         lazy: false, // Load immediately for configuration
-        dependencies: [SERVICE_TOKENS.ENVIRONMENT], // ✅ NEW: Depends on environment
+        dependencies: [],
         healthCheck: true,
       }
     );
 
-    // Register Database Service (depends on config and environment)
+    // Register Database Service (depends on config)
     serviceContainer.register(
       SERVICE_TOKENS.DATABASE,
       () => new DatabaseService(),
       {
         singleton: true,
         lazy: true,
-        dependencies: [SERVICE_TOKENS.CONFIG, SERVICE_TOKENS.ENVIRONMENT], // ✅ NEW: Added environment dependency
+        dependencies: [SERVICE_TOKENS.CONFIG],
         healthCheck: true,
       }
     );
 
-    // Register AI Service (depends on config and environment)
+    // Register AI Service (depends on config)
     serviceContainer.register(
       SERVICE_TOKENS.AI,
       () => new AIService(),
       {
         singleton: true,
         lazy: true,
-        dependencies: [SERVICE_TOKENS.CONFIG, SERVICE_TOKENS.ENVIRONMENT], // ✅ NEW: Added environment dependency
+        dependencies: [SERVICE_TOKENS.CONFIG],
         healthCheck: true,
       }
     );
 
-    // Register Storage Service (depends on config and environment)
+    // Register Storage Service (depends on config)
     serviceContainer.register(
       SERVICE_TOKENS.STORAGE,
       () => new StorageService(),
       {
         singleton: true,
         lazy: true,
-        dependencies: [SERVICE_TOKENS.CONFIG, SERVICE_TOKENS.ENVIRONMENT], // ✅ NEW: Added environment dependency
+        dependencies: [SERVICE_TOKENS.CONFIG],
         healthCheck: true,
       }
     );
 
-    // Register Auth Service (depends on config and environment)
+    // Register Auth Service (depends on config)
     serviceContainer.register(
       SERVICE_TOKENS.AUTH,
       () => new AuthService(),
       {
         singleton: true,
         lazy: true,
-        dependencies: [SERVICE_TOKENS.CONFIG, SERVICE_TOKENS.ENVIRONMENT], // ✅ NEW: Added environment dependency
+        dependencies: [SERVICE_TOKENS.CONFIG],
         healthCheck: true,
       }
     );
 
-    // Register Subscription Service (depends on config, database, and environment)
+    // Register Subscription Service (depends on config and database)
     serviceContainer.register(
       SERVICE_TOKENS.SUBSCRIPTION,
       () => new SubscriptionService(),
       {
         singleton: true,
         lazy: true,
-        dependencies: [SERVICE_TOKENS.CONFIG, SERVICE_TOKENS.DATABASE, SERVICE_TOKENS.ENVIRONMENT, 'ISubscriptionConfigService'], // ✅ NEW: Added environment dependency
+        dependencies: [SERVICE_TOKENS.CONFIG, SERVICE_TOKENS.DATABASE, 'ISubscriptionConfigService'],
         healthCheck: true,
       }
     );
 
-    // Register Job Service (depends on database, config, and environment)
+    // Register Job Service (depends on database)
     serviceContainer.register(
       SERVICE_TOKENS.JOB,
       async (container) => {
@@ -135,13 +122,13 @@ export class ServiceRegistry {
       {
         singleton: true,
         lazy: true,
-        dependencies: [SERVICE_TOKENS.CONFIG, SERVICE_TOKENS.DATABASE, SERVICE_TOKENS.ENVIRONMENT], // ✅ NEW: Added environment dependency
+        dependencies: [SERVICE_TOKENS.CONFIG, SERVICE_TOKENS.DATABASE],
         healthCheck: true,
       }
     );
 
     this.registered = true;
-    console.log('✅ All services registered successfully with environment service integration');
+    console.log('✅ All services registered successfully');
   }
 
   /**
@@ -151,14 +138,10 @@ export class ServiceRegistry {
     console.log('🚀 Initializing core services...');
     
     try {
-      // ✅ NEW: Initialize environment service first (highest priority)
-      await serviceContainer.resolve(SERVICE_TOKENS.ENVIRONMENT);
-      console.log('✅ Environment service initialized');
-      
-      // Initialize configuration services
+      // Initialize configuration services first
       await serviceContainer.resolve(SERVICE_TOKENS.CONFIG);
       await serviceContainer.resolve('ISubscriptionConfigService');
-      console.log('✅ Core services initialized with environment integration');
+      console.log('✅ Core services initialized');
     } catch (error: any) {
       console.error('❌ Failed to initialize core services:', error.message);
       throw error;
@@ -171,7 +154,7 @@ export class ServiceRegistry {
    * Initialize all services (moved from services/index.ts)
    */
   static async initializeServices(): Promise<void> {
-    console.log('🚀 Initializing consolidated service layer with environment integration...');
+    console.log('🚀 Initializing consolidated service layer...');
     
     try {
       // Register all services
@@ -183,7 +166,7 @@ export class ServiceRegistry {
       // Log configuration
       serviceConfig.logConfiguration();
       
-      console.log('✅ Consolidated service layer initialization complete with environment service');
+      console.log('✅ Consolidated service layer initialization complete');
     } catch (error) {
       console.error('❌ Consolidated service layer initialization failed:', error);
       throw error;
@@ -238,7 +221,7 @@ export class ServiceRegistry {
     return {
       environment: serviceConfig.getEnvironment(),
       logLevel: serviceConfig.getLogLevel(),
-      registeredServices: ['environment', 'database', 'ai', 'storage', 'job', 'auth', 'subscription'], // ✅ NEW: Added environment
+      registeredServices: ['database', 'ai', 'storage', 'job', 'auth', 'subscription'],
       containerStatus: 'initialized'
     };
   }
@@ -321,7 +304,6 @@ export class ServiceRegistry {
         encapsulationCompliance: true,
         cleanArchitecture: true,
         dependencyInjection: true,
-        environmentService: true, // ✅ NEW: Environment service feature
         healthMonitoring: true,
         metricsCollection: true,
         circuitBreakerPattern: true,
@@ -335,52 +317,6 @@ export class ServiceRegistry {
         hotConfigReload: true,
       },
     };
-  }
-
-  /**
-   * ✅ NEW: Get environment service status
-   */
-  static async getEnvironmentServiceStatus() {
-    try {
-      const environmentService = serviceContainer.resolveSync(SERVICE_TOKENS.ENVIRONMENT);
-      if (environmentService && typeof (environmentService as any).getServiceAvailabilitySummary === 'function') {
-        return (environmentService as any).getServiceAvailabilitySummary();
-      }
-      return null;
-    } catch (error) {
-      console.warn('⚠️ Failed to get environment service status:', error);
-      return null;
-    }
-  }
-
-  /**
-   * ✅ NEW: Validate environment configuration
-   */
-  static async validateEnvironmentConfiguration(): Promise<{
-    valid: boolean;
-    issues: string[];
-    recommendations: string[];
-  }> {
-    try {
-      const environmentService = serviceContainer.resolveSync(SERVICE_TOKENS.ENVIRONMENT);
-      if (environmentService && typeof (environmentService as any).validateServiceConfiguration === 'function') {
-        const openaiValidation = (environmentService as any).validateServiceConfiguration('openai');
-        const supabaseValidation = (environmentService as any).validateServiceConfiguration('supabase');
-        
-        const allIssues = [...openaiValidation.issues, ...supabaseValidation.issues];
-        const allRecommendations = [...openaiValidation.recommendations, ...supabaseValidation.recommendations];
-        
-        return {
-          valid: openaiValidation.valid && supabaseValidation.valid,
-          issues: allIssues,
-          recommendations: allRecommendations
-        };
-      }
-      return { valid: false, issues: ['Environment service not available'], recommendations: ['Initialize environment service'] };
-    } catch (error) {
-      console.warn('⚠️ Failed to validate environment configuration:', error);
-      return { valid: false, issues: ['Environment validation failed'], recommendations: ['Check environment service'] };
-    }
   }
 
   /**
