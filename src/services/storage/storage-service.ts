@@ -153,7 +153,3 @@ export class StorageService extends EnhancedBaseService implements IStorageServi
     await Promise.allSettled(cleanupPromises);
   }
 }
-
-// Export singleton instance
-export const storageService = new StorageService();
-export default storageService;
