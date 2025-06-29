@@ -23,9 +23,12 @@ export interface CharacterDescriptionResult {
 // ===== STORY GENERATION INTERFACES =====
 
 export interface StoryGenerationOptions {
-  genre: string;
-  characterDescription: string;
-  audience: string;
+  genre?: string;
+  characterDescription?: string;
+  audience?: string;
+  temperature?: number;
+  maxTokens?: number;
+  model?: string;
 }
 
 export interface StoryGenerationResult {
@@ -86,6 +89,7 @@ export interface SceneGenerationResult {
   characterImage?: string;
   layoutType?: string;
   characterArtStyle?: string;
+  metadata?: any;
 }
 
 // ===== HEALTH MONITORING INTERFACES =====
