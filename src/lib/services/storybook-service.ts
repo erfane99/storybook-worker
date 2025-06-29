@@ -4,8 +4,10 @@
 import { environmentManager } from '../config/environment.js';
 import { characterService } from './character-service.js';
 import { storyService, type GenreType } from './story-service.js';
-import { sceneService, type Scene, type Page } from './scene-service.js';
 import { imageService, type AudienceType } from './image-service.js';
+
+// ✅ FIXED: Import from consolidated AI service instead of deleted scene-service
+import { aiService, type Scene, type Page, type EnhancedSceneGenerationOptions } from '../../services/ai/ai-service.js';
 
 // ENHANCED: Comic book support interfaces
 export interface StorybookCreationOptions {
@@ -227,7 +229,9 @@ export class StorybookService {
 
       // Step 2: Generate comic book scenes from story
       console.log('🎬 Generating comic book layout...');
-      const sceneResult = await sceneService.generateScenes({
+      
+      // ✅ FIXED: Use consolidated AI service with enhanced scene generation
+      const sceneResult = await aiService.generateScenesWithAudience({
         story: storyResult.story,
         audience,
         characterImage: cartoonImageUrl,
@@ -301,8 +305,8 @@ export class StorybookService {
         }
       }
 
-      // ENHANCED: Generate comic book scenes with art style context
-      const sceneResult = await sceneService.generateScenes({
+      // ✅ FIXED: Use consolidated AI service with enhanced scene generation
+      const sceneResult = await aiService.generateScenesWithAudience({
         story,
         audience,
         characterImage,
@@ -331,7 +335,7 @@ export class StorybookService {
     return (
       characterService.isHealthy() &&
       storyService.isHealthy() &&
-      sceneService.isHealthy() &&
+      aiService.isHealthy() && // ✅ FIXED: Use consolidated AI service
       imageService.isHealthy()
     );
   }
@@ -350,7 +354,7 @@ export class StorybookService {
       services: {
         character: characterService.getStatus(),
         story: storyService.getStatus(),
-        scene: sceneService.getStatus(),
+        ai: aiService.getStatus(), // ✅ FIXED: Use consolidated AI service
         image: imageService.getStatus(),
       },
       features: {
