@@ -579,13 +579,18 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       await jobService.updateJobProgress(job.id, 40, 'Generating comic book layout from story');
       
       try {
-        // Use the scene service to generate comic book pages from story
+        // ✅ UPDATED: Use enhanced scene generation with audience-based configuration
         this.trackServiceUsage(job.id, 'ai');
         if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
         
-        // Generate scenes using the story-to-comic-panels approach
-        const systemPrompt = `Generate comic book scenes for ${audience} audience with ${character_art_style} art style`;
-        const sceneResult = await aiService.generateScenes(systemPrompt, `Create a comic book layout for this story with ${layout_type} layout: ${story}`);
+        // Use the enhanced scene generation method with proper options
+        const sceneResult = await (aiService as any).generateScenesWithAudience({
+          story: story,
+          audience: audience as any,
+          characterImage: character_image,
+          characterArtStyle: character_art_style,
+          layoutType: layout_type
+        });
         
         if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
           pages = sceneResult.pages;
@@ -721,9 +726,14 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
 
     await jobService.updateJobProgress(job.id, 50, 'Story generated, creating scenes');
 
-    // Generate scenes
-    const scenePrompt = `Create comic book scenes for this story: ${generatedStory}`;
-    const scenes = await aiService.generateScenes(scenePrompt, `Generate scenes for ${audience} audience`);
+    // ✅ UPDATED: Use enhanced scene generation with audience-based configuration
+    const sceneResult = await (aiService as any).generateScenesWithAudience({
+      story: generatedStory,
+      audience: audience as any,
+      characterImage: cartoon_image_url,
+      characterArtStyle: character_art_style,
+      layoutType: layout_type
+    });
 
     await jobService.updateJobProgress(job.id, 80, 'Scenes generated, saving to database');
 
@@ -734,7 +744,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     const storybook = await databaseService.saveStorybookEntry({
       title: `${genre} Story`,
       story: generatedStory,
-      pages: scenes.pages,
+      pages: sceneResult.pages,
       user_id: job.user_id,
       audience,
       character_description: character_description,
@@ -746,7 +756,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     await jobService.markJobCompleted(job.id, {
       storybook_id: storybook.id,
       generated_story: generatedStory,
-      generated_scenes: scenes.pages,
+      generated_scenes: sceneResult.pages,
     });
 
     console.log(`✅ Auto-story job completed: ${job.id}`);
@@ -766,17 +776,22 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
 
     await jobService.updateJobProgress(job.id, 20, 'Analyzing story for scene generation');
 
-    // Generate scenes
+    // ✅ UPDATED: Use enhanced scene generation with audience-based configuration
     this.trackServiceUsage(job.id, 'ai');
     servicesUsed.push('ai');
     
-    const systemPrompt = `Generate comic book scenes for ${audience} audience`;
-    const scenes = await aiService.generateScenes(systemPrompt, story);
+    const sceneResult = await (aiService as any).generateScenesWithAudience({
+      story: story,
+      audience: audience as any,
+      characterImage: character_image,
+      characterArtStyle: 'storybook',
+      layoutType: 'comic-book-panels'
+    });
 
     await jobService.updateJobProgress(job.id, 100, 'Scene generation complete');
 
     await jobService.markJobCompleted(job.id, {
-      generated_pages: scenes.pages,
+      generated_pages: sceneResult.pages,
       character_description: character_description || 'Generated character',
     });
 
