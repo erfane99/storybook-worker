@@ -8,6 +8,86 @@ import type { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types.js
 // Re-export job types so other modules can import them from here
 export type { JobData, JobType, JobStatus, JobMetrics };
 
+// ===== CHARACTER DESCRIPTION INTERFACES =====
+
+export interface CharacterDescriptionOptions {
+  imageUrl: string;
+  style?: string;
+}
+
+export interface CharacterDescriptionResult {
+  description: string;
+  cached: boolean;
+}
+
+// ===== STORY GENERATION INTERFACES =====
+
+export interface StoryGenerationOptions {
+  genre: string;
+  characterDescription: string;
+  audience: string;
+}
+
+export interface StoryGenerationResult {
+  story: string;
+  title: string;
+  wordCount: number;
+}
+
+// ===== IMAGE GENERATION INTERFACES =====
+
+export interface ImageGenerationOptions {
+  image_prompt: string;
+  character_description: string;
+  emotion: string;
+  audience: string;
+  isReusedImage?: boolean;
+  cartoon_image?: string;
+  user_id?: string;
+  style?: string;
+  characterArtStyle?: string;
+  layoutType?: string;
+  panelType?: string;
+}
+
+export interface ImageGenerationResult {
+  url: string;
+  prompt_used: string;
+  reused: boolean;
+}
+
+// ===== CARTOONIZE INTERFACES =====
+
+export interface CartoonizeOptions {
+  prompt: string;
+  style: string;
+  imageUrl?: string;
+  userId?: string;
+}
+
+export interface CartoonizeResult {
+  url: string;
+  cached: boolean;
+}
+
+// ===== SCENE GENERATION INTERFACES =====
+
+export interface SceneGenerationOptions {
+  story: string;
+  audience: string;
+  characterImage?: string;
+  characterArtStyle?: string;
+  layoutType?: string;
+}
+
+export interface SceneGenerationResult {
+  pages: any[];
+  audience: string;
+  characterImage?: string;
+  layoutType?: string;
+  characterArtStyle?: string;
+}
+
 // ===== HEALTH MONITORING INTERFACES =====
 
 export interface IServiceHealth {
@@ -95,11 +175,22 @@ export interface IAIOperations {
   generateStory(prompt: string, options?: StoryGenerationOptions): Promise<string>;
   generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult>;
   
+  // Enhanced Scene Generation with Audience Support
+  generateScenesWithAudience(options: SceneGenerationOptions): Promise<SceneGenerationResult>;
+  
   // Image Generation
   generateCartoonImage(prompt: string): Promise<string>;
+  generateSceneImage(options: ImageGenerationOptions): Promise<ImageGenerationResult>;
   
-  // Vision Analysis
+  // Vision Analysis - Method Overloading for Different Use Cases
   describeCharacter(imageUrl: string, prompt: string): Promise<string>;
+  describeCharacter(options: CharacterDescriptionOptions): Promise<CharacterDescriptionResult>;
+  
+  // Story Generation
+  generateStoryWithOptions(options: StoryGenerationOptions): Promise<StoryGenerationResult>;
+  
+  // Cartoonize Operations
+  processCartoonize(options: CartoonizeOptions): Promise<CartoonizeResult>;
   
   // Chat Completion
   createChatCompletion(options: ChatCompletionOptions): Promise<ChatCompletionResult>;
@@ -319,17 +410,6 @@ export interface StorybookEntry {
 
 export interface DatabaseOperation<T> {
   (client: any): Promise<T>;
-}
-
-export interface StoryGenerationOptions {
-  temperature?: number;
-  maxTokens?: number;
-  model?: string;
-}
-
-export interface SceneGenerationResult {
-  pages: any[];
-  metadata?: any;
 }
 
 export interface ChatCompletionOptions {
