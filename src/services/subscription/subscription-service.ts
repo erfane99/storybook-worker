@@ -624,8 +624,3 @@ export class SubscriptionService extends ErrorAwareBaseService implements ISubsc
     return Result.success(summary);
   }
 }
-
-// ===== EXPORT SINGLETON INSTANCE =====
-
-export const subscriptionService = new SubscriptionService();
-export default subscriptionService;
