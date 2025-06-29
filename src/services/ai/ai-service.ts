@@ -29,10 +29,36 @@ export interface AIConfig extends ServiceConfig {
   rateLimitRpm: number;
 }
 
-// ===== ENHANCED SCENE GENERATION INTERFACES =====
+// ===== CONSOLIDATED TYPE DEFINITIONS =====
 
+// Character Service Types
+export interface CharacterDescriptionOptions {
+  imageUrl: string;
+  style?: string;
+}
+
+export interface CharacterDescriptionResult {
+  description: string;
+  cached: boolean;
+}
+
+// Story Service Types
+export type GenreType = 'adventure' | 'siblings' | 'bedtime' | 'fantasy' | 'history';
 export type AudienceType = 'children' | 'young_adults' | 'adults';
 
+export interface StoryGenerationOptionsEnhanced {
+  genre: GenreType;
+  characterDescription: string;
+  audience: AudienceType;
+}
+
+export interface StoryGenerationResult {
+  story: string;
+  title: string;
+  wordCount: number;
+}
+
+// Scene Service Types
 export interface Scene {
   description: string;
   emotion: string;
@@ -64,39 +90,9 @@ export interface EnhancedSceneGenerationResult {
   characterImage?: string;
   layoutType?: string;
   characterArtStyle?: string;
-  metadata?: any;
 }
 
-// ===== CHARACTER SERVICE INTERFACES (PRESERVED) =====
-
-export interface CharacterDescriptionOptions {
-  imageUrl: string;
-  style?: string;
-}
-
-export interface CharacterDescriptionResult {
-  description: string;
-  cached: boolean;
-}
-
-// ===== STORY SERVICE INTERFACES (PRESERVED) =====
-
-export type GenreType = 'adventure' | 'siblings' | 'bedtime' | 'fantasy' | 'history';
-
-export interface StoryGenerationOptionsEnhanced {
-  genre: GenreType;
-  characterDescription: string;
-  audience: AudienceType;
-}
-
-export interface StoryGenerationResult {
-  story: string;
-  title: string;
-  wordCount: number;
-}
-
-// ===== IMAGE SERVICE INTERFACES (PRESERVED) =====
-
+// Image Service Types
 export interface ImageGenerationOptions {
   image_prompt: string;
   character_description: string;
@@ -117,8 +113,7 @@ export interface ImageGenerationResult {
   reused: boolean;
 }
 
-// ===== CARTOONIZE SERVICE INTERFACES (PRESERVED) =====
-
+// Cartoonize Service Types
 export interface CartoonizeOptions {
   prompt: string;
   style: string;
@@ -260,7 +255,7 @@ export class AIService extends EnhancedBaseService implements IAIService {
     return this.apiKey !== null;
   }
 
-  // ===== AI OPERATIONS IMPLEMENTATION =====
+  // ===== CORE AI OPERATIONS IMPLEMENTATION =====
 
   async generateStory(prompt: string, options: StoryGenerationOptions = {}): Promise<string> {
     const result = await this.createChatCompletion({
@@ -281,7 +276,7 @@ export class AIService extends EnhancedBaseService implements IAIService {
     return result.choices[0].message.content;
   }
 
-  // ✅ ENHANCED: Comic book style scenes with audience-based configuration
+  // ✅ ENTERPRISE-GRADE: Deep Content Discovery System
   async generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult> {
     const result = await this.createChatCompletion({
       model: 'gpt-4o',
@@ -336,207 +331,44 @@ export class AIService extends EnhancedBaseService implements IAIService {
     }
   }
 
-  // ✅ NEW: Enhanced scene generation with audience-based configuration
-  async generateScenesWithAudience(options: EnhancedSceneGenerationOptions): Promise<EnhancedSceneGenerationResult> {
-    if (!this.apiKey) {
-      throw new Error('AI service not available - OpenAI API key missing');
+  async generateCartoonImage(prompt: string): Promise<string> {
+    const result = await this.generateImage({
+      model: 'dall-e-3',
+      prompt,
+      n: 1,
+      size: '1024x1024',
+      quality: 'standard',
+      style: 'vivid',
+    });
+
+    if (!result?.data?.[0]?.url) {
+      throw new Error('Invalid response from OpenAI API - no image URL received');
     }
 
-    const { 
-      story, 
-      audience = 'children', 
-      characterImage,
-      characterArtStyle = 'storybook',
-      layoutType = 'comic-book-panels'
-    } = options;
-
-    console.log('🎬 Starting enhanced comic book scene generation...');
-    console.log(`📋 Audience: ${audience}, Art Style: ${characterArtStyle}, Layout: ${layoutType}`);
-
-    if (!story || story.trim().length < 50) {
-      throw new Error('Story must be at least 50 characters long.');
-    }
-
-    // ✅ PRESERVED: Enhanced audience configuration from scene-service
-    const audienceConfig = {
-      children: { 
-        scenes: 8, 
-        pages: 3, 
-        panelsPerPage: '2-3',
-        notes: 'Simple comic book panels. 2-3 large, clear panels per page with minimal text.' 
-      },
-      young_adults: { 
-        scenes: 12, 
-        pages: 4, 
-        panelsPerPage: '3-4',
-        notes: '3-4 panels per page with dynamic layouts and speech bubbles.' 
-      },
-      adults: { 
-        scenes: 16, 
-        pages: 5, 
-        panelsPerPage: '3-5',
-        notes: '3-5 panels per page, sophisticated comic book layouts with varied panel sizes.' 
-      }
-    };
-
-    const { scenes, pages, panelsPerPage, notes } = audienceConfig[audience];
-
-    // ✅ PRESERVED: Superior comic book focused system prompt from scene-service
-    const systemPrompt = `
-You are a professional comic book layout designer for a storybook app that creates COMIC BOOK STYLE layouts.
-
-CRITICAL: You must create comic book PAGES with multiple PANELS, not individual scenes.
-
-Audience: ${audience.toUpperCase()}
-Target: ${scenes} total panels arranged across ${pages} comic book pages
-Panels per page: ${panelsPerPage}
-Character Art Style: ${characterArtStyle} (maintain this art style in all panels)
-
-COMIC BOOK REQUIREMENTS:
-- Each page contains multiple panels (like a real comic book)
-- Panels show sequential story moments
-- Each panel has a specific action/dialogue moment
-- Focus on visual storytelling with minimal text
-- Panels should flow naturally from one to the next
-
-Panel Structure:
-- description: Brief action happening in this panel
-- emotion: Character's emotional state in this panel  
-- imagePrompt: Detailed visual description for panel generation (exclude character description - focus on environment, action, composition, lighting)
-- panelType: 'standard', 'wide', 'tall', or 'splash' (for layout variety)
-
-Visual pacing notes: ${notes}
-
-Return your output in this strict format:
-{
-  "pages": [
-    {
-      "pageNumber": 1,
-      "scenes": [
-        {
-          "description": "...",
-          "emotion": "...",
-          "imagePrompt": "...",
-          "panelType": "standard"
-        }
-      ]
-    }
-  ]
-}
-`;
-
-    try {
-      console.log('📝 Making request to OpenAI GPT-4o API for enhanced comic book layout...');
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          temperature: 0.85,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { 
-              role: 'user', 
-              content: `Create a comic book layout for this story. Remember: Multiple panels per page, ${characterArtStyle} art style, ${panelsPerPage} panels per page.\n\nStory: ${story}` 
-            }
-          ],
-          response_format: { type: 'json_object' }
-        }),
-      });
-
-      console.log('📥 OpenAI response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorData;
-        
-        try {
-          errorData = JSON.parse(errorText);
-        } catch (parseError) {
-          console.error('❌ Failed to parse OpenAI error response:', errorText);
-          throw new Error(`OpenAI API request failed with status ${response.status}: ${errorText}`);
-        }
-
-        console.error('❌ OpenAI API Error:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData
-        });
-
-        const errorMessage = errorData?.error?.message || `OpenAI API request failed with status ${response.status}`;
-        throw new Error(errorMessage);
-      }
-
-      const rawData = await response.json();
-
-      if (!rawData?.choices?.[0]?.message?.content) {
-        console.error('❌ Invalid OpenAI response structure:', rawData);
-        throw new Error('Invalid response from OpenAI API - no content received');
-      }
-
-      const result = rawData.choices[0].message.content;
-      
-      let parsed;
-      try {
-        parsed = JSON.parse(result);
-      } catch (parseError) {
-        console.error('❌ Failed to parse OpenAI JSON response:', result);
-        throw new Error('Invalid JSON response from OpenAI');
-      }
-
-      // ✅ PRESERVED: Enhanced comic book metadata from scene-service
-      const updatedPages = parsed.pages.map((page: any) => ({
-        ...page,
-        layoutType: 'comic-book-panels',
-        characterArtStyle: characterArtStyle,
-        scenes: page.scenes.map((scene: any) => ({
-          ...scene,
-          panelType: scene.panelType || 'standard',
-          generatedImage: characterImage, // Placeholder until panel generation
-          layoutType: 'comic-book-panels',
-          characterArtStyle: characterArtStyle
-        }))
-      }));
-
-      console.log('✅ Successfully generated enhanced comic book layout');
-      console.log(`📊 Generated ${updatedPages.length} comic book pages with ${updatedPages.reduce((total: number, page: any) => total + page.scenes.length, 0)} panels total`);
-
-      return {
-        pages: updatedPages,
-        audience,
-        characterImage,
-        layoutType: 'comic-book-panels',
-        characterArtStyle: characterArtStyle
-      };
-
-    } catch (error: any) {
-      console.error('❌ Enhanced comic book scene generation error:', error);
-      throw new Error(`Failed to generate enhanced comic book scenes: ${error.message}`);
-    }
+    return result.data[0].url;
   }
 
-  // ===== CHARACTER SERVICE METHODS (PRESERVED) =====
+  // ✅ CONSOLIDATED: Single describeCharacter method handling all use cases
+  async describeCharacter(imageUrlOrOptions: string | CharacterDescriptionOptions, prompt?: string): Promise<string | CharacterDescriptionResult> {
+    // Handle both legacy string parameter and new options object
+    let imageUrl: string;
+    let style: string = 'storybook';
+    let returnFullResult: boolean = false;
 
-  /**
-   * Generate character description from image using GPT-4o Vision
-   * ✅ PRESERVED: All existing OpenAI prompts and functionality from character-service
-   */
-  async describeCharacter(options: CharacterDescriptionOptions): Promise<CharacterDescriptionResult> {
-    if (!this.apiKey) {
-      throw new Error('AI service not available - OpenAI API key missing');
-    }
-
-    const { imageUrl, style = 'storybook' } = options;
-
-    console.log('🔍 Starting character description...');
-    console.log('🌐 Image URL:', imageUrl);
-
-    // ✅ PRESERVED: Exact character prompt from character-service
-    const characterPrompt = `You are a professional character artist. Your task is to observe a real image of a person and return a precise, vivid, factual description of only the clearly visible physical traits. 
+    if (typeof imageUrlOrOptions === 'string') {
+      // Legacy usage: describeCharacter(imageUrl, prompt)
+      imageUrl = imageUrlOrOptions;
+      if (!prompt) {
+        throw new Error('Prompt is required when using legacy string parameter');
+      }
+    } else {
+      // New usage: describeCharacter(options)
+      imageUrl = imageUrlOrOptions.imageUrl;
+      style = imageUrlOrOptions.style || 'storybook';
+      returnFullResult = true;
+      
+      // Use default character prompt for new usage
+      prompt = `You are a professional character artist. Your task is to observe a real image of a person and return a precise, vivid, factual description of only the clearly visible physical traits. 
 
 Never include disclaimers or apologies. Never say "I'm sorry" or "I can't help with that". Focus solely on what you can observe with high confidence. Only describe traits that are unambiguous and clearly visible in the image, such as:
 
@@ -549,6 +381,10 @@ Never include disclaimers or apologies. Never say "I'm sorry" or "I can't help w
 - Facial expression (e.g., "smiling", "neutral", "angry")
 
 Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid all subjectivity.`;
+    }
+
+    console.log('🔍 Starting character description...');
+    console.log('🌐 Image URL:', imageUrl);
 
     try {
       // GPT-4o Vision request
@@ -563,7 +399,7 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
           messages: [
             {
               role: 'system',
-              content: characterPrompt,
+              content: prompt,
             },
             {
               role: 'user',
@@ -608,10 +444,15 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
       const description = data.choices[0].message.content;
       console.log('✅ Character described successfully');
 
-      return {
-        description,
-        cached: false,
-      };
+      // Return appropriate format based on usage
+      if (returnFullResult) {
+        return {
+          description,
+          cached: false,
+        };
+      } else {
+        return description;
+      }
 
     } catch (error: any) {
       console.error('❌ Character description error:', error);
@@ -621,11 +462,10 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
 
   /**
    * Simple character description for scenes (with fallback)
-   * ✅ PRESERVED: All existing functionality from character-service
    */
   async describeCharacterForScenes(imageUrl: string): Promise<string> {
     if (!this.apiKey) {
-      console.warn('⚠️ AI service not available, using default description');
+      console.warn('⚠️ AI Service not available, using default description');
       return 'a young protagonist';
     }
 
@@ -680,23 +520,15 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
     }
   }
 
-  // ===== STORY SERVICE METHODS (PRESERVED) =====
+  // ===== ENHANCED STORY GENERATION =====
 
-  /**
-   * Generate a story using GPT-4
-   * ✅ PRESERVED: All existing OpenAI prompts and functionality from story-service
-   */
   async generateStoryEnhanced(options: StoryGenerationOptionsEnhanced): Promise<StoryGenerationResult> {
-    if (!this.apiKey) {
-      throw new Error('AI service not available - OpenAI API key missing');
-    }
-
     const { genre, characterDescription, audience } = options;
 
-    console.log('📝 Starting story generation...');
+    console.log('📝 Starting enhanced story generation...');
     console.log(`📋 Genre: ${genre}, Audience: ${audience}`);
 
-    // ✅ PRESERVED: Genre-specific prompts from story-service
+    // Genre-specific prompts
     const genrePrompts = {
       adventure: 'Create an exciting adventure story filled with discovery, challenges to overcome, and personal growth.',
       siblings: 'Write a heartwarming story about the joys and challenges of sibling relationships, focusing on sharing, understanding, and family bonds.',
@@ -705,7 +537,7 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
       history: 'Tell an engaging historical story that brings the past to life while weaving in educational elements naturally.',
     };
 
-    // ✅ PRESERVED: Audience-specific configuration from story-service
+    // Audience-specific configuration
     const audienceConfig = {
       children: {
         prompt: `
@@ -796,7 +628,6 @@ Avoid vague words like "appears to", "seems to", "probably", "possibly". Avoid a
       throw new Error(`Invalid genre: ${genre}`);
     }
 
-    // ✅ PRESERVED: Complete story prompt from story-service
     const storyPrompt = `You are a professional story writer crafting a high-quality, imaginative, and emotionally engaging story in the ${genre} genre.
 This story is for a ${audience} audience and will be turned into a cartoon storybook with illustrations.
 
@@ -894,17 +725,189 @@ ${config.prompt}
     }
   }
 
-  // ===== IMAGE SERVICE METHODS (PRESERVED) =====
+  // ===== ENHANCED SCENE GENERATION WITH AUDIENCE CONFIGURATION =====
 
-  /**
-   * Generate comic book panel image using DALL-E 3 with character consistency
-   * ✅ PRESERVED: All existing OpenAI prompts and functionality from image-service
-   */
-  async generateSceneImage(options: ImageGenerationOptions): Promise<ImageGenerationResult> {
-    if (!this.apiKey) {
-      throw new Error('AI service not available - OpenAI API key missing');
+  async generateScenesWithAudience(options: EnhancedSceneGenerationOptions): Promise<EnhancedSceneGenerationResult> {
+    const { 
+      story, 
+      audience = 'children', 
+      characterImage,
+      characterArtStyle = 'storybook',
+      layoutType = 'comic-book-panels'
+    } = options;
+
+    console.log('🎬 Starting enhanced comic book scene generation...');
+    console.log(`📋 Audience: ${audience}, Art Style: ${characterArtStyle}, Layout: ${layoutType}`);
+
+    if (!story || story.trim().length < 50) {
+      throw new Error('Story must be at least 50 characters long.');
     }
 
+    // ENHANCED: Comic book specific audience configuration
+    const audienceConfig = {
+      children: { 
+        scenes: 8, 
+        pages: 3, 
+        panelsPerPage: '2-3',
+        notes: 'Simple comic book panels. 2-3 large, clear panels per page with minimal text.' 
+      },
+      young_adults: { 
+        scenes: 12, 
+        pages: 4, 
+        panelsPerPage: '3-4',
+        notes: '3-4 panels per page with dynamic layouts and speech bubbles.' 
+      },
+      adults: { 
+        scenes: 16, 
+        pages: 5, 
+        panelsPerPage: '3-5',
+        notes: '3-5 panels per page, sophisticated comic book layouts with varied panel sizes.' 
+      }
+    };
+
+    const { scenes, pages, panelsPerPage, notes } = audienceConfig[audience];
+
+    // ENHANCED: Comic book focused system prompt
+    const systemPrompt = `
+You are a professional comic book layout designer for a storybook app that creates COMIC BOOK STYLE layouts.
+
+CRITICAL: You must create comic book PAGES with multiple PANELS, not individual scenes.
+
+Audience: ${audience.toUpperCase()}
+Target: ${scenes} total panels arranged across ${pages} comic book pages
+Panels per page: ${panelsPerPage}
+Character Art Style: ${characterArtStyle} (maintain this art style in all panels)
+
+COMIC BOOK REQUIREMENTS:
+- Each page contains multiple panels (like a real comic book)
+- Panels show sequential story moments
+- Each panel has a specific action/dialogue moment
+- Focus on visual storytelling with minimal text
+- Panels should flow naturally from one to the next
+
+Panel Structure:
+- description: Brief action happening in this panel
+- emotion: Character's emotional state in this panel  
+- imagePrompt: Detailed visual description for panel generation (exclude character description - focus on environment, action, composition, lighting)
+- panelType: 'standard', 'wide', 'tall', or 'splash' (for layout variety)
+
+Visual pacing notes: ${notes}
+
+Return your output in this strict format:
+{
+  "pages": [
+    {
+      "pageNumber": 1,
+      "scenes": [
+        {
+          "description": "...",
+          "emotion": "...",
+          "imagePrompt": "...",
+          "panelType": "standard"
+        }
+      ]
+    }
+  ]
+}
+`;
+
+    try {
+      console.log('📝 Making request to OpenAI GPT-4o API for comic book layout...');
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          temperature: 0.85,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { 
+              role: 'user', 
+              content: `Create a comic book layout for this story. Remember: Multiple panels per page, ${characterArtStyle} art style, ${panelsPerPage} panels per page.\n\nStory: ${story}` 
+            }
+          ],
+          response_format: { type: 'json_object' }
+        }),
+      });
+
+      console.log('📥 OpenAI response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorData;
+        
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (parseError) {
+          console.error('❌ Failed to parse OpenAI error response:', errorText);
+          throw new Error(`OpenAI API request failed with status ${response.status}: ${errorText}`);
+        }
+
+        console.error('❌ OpenAI API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+
+        const errorMessage = errorData?.error?.message || `OpenAI API request failed with status ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      const rawData = await response.json();
+
+      if (!rawData?.choices?.[0]?.message?.content) {
+        console.error('❌ Invalid OpenAI response structure:', rawData);
+        throw new Error('Invalid response from OpenAI API - no content received');
+      }
+
+      const result = rawData.choices[0].message.content;
+      
+      let parsed;
+      try {
+        parsed = JSON.parse(result);
+      } catch (parseError) {
+        console.error('❌ Failed to parse OpenAI JSON response:', result);
+        throw new Error('Invalid JSON response from OpenAI');
+      }
+
+      // ENHANCED: Add comic book metadata to each panel
+      const updatedPages = parsed.pages.map((page: any) => ({
+        ...page,
+        layoutType: 'comic-book-panels',
+        characterArtStyle: characterArtStyle,
+        scenes: page.scenes.map((scene: any) => ({
+          ...scene,
+          panelType: scene.panelType || 'standard',
+          generatedImage: characterImage, // Placeholder until panel generation
+          layoutType: 'comic-book-panels',
+          characterArtStyle: characterArtStyle
+        }))
+      }));
+
+      console.log('✅ Successfully generated comic book layout');
+      console.log(`📊 Generated ${updatedPages.length} comic book pages with ${updatedPages.reduce((total: number, page: any) => total + page.scenes.length, 0)} panels total`);
+
+      return {
+        pages: updatedPages,
+        audience,
+        characterImage,
+        layoutType: 'comic-book-panels',
+        characterArtStyle: characterArtStyle
+      };
+
+    } catch (error: any) {
+      console.error('❌ Comic book scene generation error:', error);
+      throw new Error(`Failed to generate comic book scenes: ${error.message}`);
+    }
+  }
+
+  // ===== ENHANCED IMAGE GENERATION =====
+
+  async generateSceneImage(options: ImageGenerationOptions): Promise<ImageGenerationResult> {
     const {
       image_prompt,
       character_description,
@@ -940,14 +943,14 @@ ${config.prompt}
       }
     }
 
-    // ✅ PRESERVED: Audience-specific comic book styling from image-service
+    // ENHANCED: Audience-specific comic book styling
     const audienceStyles = {
       children: 'Create a bright, colorful comic book panel with simple, bold shapes and clear action. Use vibrant colors and friendly compositions suitable for young readers.',
       young_adults: 'Design a dynamic comic book panel with detailed backgrounds and expressive character poses. Use sophisticated color palettes and engaging visual storytelling.',
       adults: 'Craft a mature comic book panel with complex compositions, nuanced lighting, and detailed artistic elements. Employ sophisticated visual narrative techniques.',
     };
 
-    // ✅ PRESERVED: Character art style integration from image-service
+    // ENHANCED: Character art style integration
     const artStylePrompts = {
       'storybook': 'soft, whimsical art style with gentle colors and clean lines',
       'semi-realistic': 'semi-realistic style with smooth shading and detailed facial features',
@@ -956,7 +959,7 @@ ${config.prompt}
       'anime': 'anime art style with expressive features, stylized proportions, and crisp linework'
     };
 
-    // ✅ PRESERVED: Panel type specifications from image-service
+    // ENHANCED: Panel type specifications
     const panelSpecs = {
       'standard': 'Create a standard rectangular comic book panel with balanced composition',
       'wide': 'Create a wide panoramic comic book panel that spans horizontally, perfect for establishing shots or action sequences',
@@ -964,7 +967,7 @@ ${config.prompt}
       'splash': 'Create a dramatic splash panel that could span most of a page, with dynamic composition and high impact'
     };
 
-    // ✅ PRESERVED: Complete comic book panel prompt from image-service
+    // ENHANCED: Build the comprehensive comic book panel prompt
     const characterConsistencyPrompt = isReusedImage && character_description 
       ? `CRITICAL: Use this EXACT character appearance consistently: ${character_description}. Do not create a new character - use this specific character description exactly.`
       : `Character: ${character_description}`;
@@ -1057,17 +1060,34 @@ ${config.prompt}
     }
   }
 
-  // ===== CARTOONIZE SERVICE METHODS (PRESERVED) =====
+  // ===== CARTOONIZE FUNCTIONALITY =====
 
-  /**
-   * Process cartoonize request with style prompts and caching
-   * ✅ PRESERVED: All existing OpenAI prompts and functionality from cartoonize-service
-   */
+  // Inline style prompts to avoid import issues
+  private readonly stylePrompts = {
+    'storybook': 'Use a soft, whimsical storybook style with gentle colors and clean lines.',
+    'semi-realistic': 'Use a semi-realistic cartoon style with smooth shading and facial detail accuracy.',
+    'comic-book': 'Use a bold comic book style with strong outlines, vivid colors, and dynamic shading.',
+    'flat-illustration': 'Use a modern flat illustration style with minimal shading, clean vector lines, and vibrant flat colors.',
+    'anime': 'Use anime style with expressive eyes, stylized proportions, and crisp linework inspired by Japanese animation.'
+  };
+
+  // Inline prompt cleaning function
+  private cleanStoryPrompt(prompt: string): string {
+    return prompt
+      .trim()
+      .replace(/\b(adorable|cute|precious|delightful|charming|lovely|beautiful|perfect)\s/gi, '')
+      .replace(/\b(gazing|peering|staring)\s+(?:curiously|intently|lovingly|sweetly)\s+at\b/gi, 'looking at')
+      .replace(/\badding a touch of\s+\w+\b/gi, '')
+      .replace(/\bwith a hint of\s+\w+\b/gi, '')
+      .replace(/\bexuding\s+(?:innocence|wonder|joy|happiness)\b/gi, '')
+      .replace(/\b(cozy|perfect for|wonderfully|overall cuteness)\s/gi, '')
+      .replace(/\b(?:filled with|radiating|emanating)\s+(?:warmth|joy|happiness|wonder)\b/gi, '')
+      .replace(/\b(a|an)\s+(baby|toddler|child|teen|adult)\s+(boy|girl|man|woman)\b/gi, '$2 $3')
+      .replace(/\s+/g, ' ')
+      .replace(/[.!]+$/, '');
+  }
+
   async processCartoonize(options: CartoonizeOptions): Promise<CartoonizeResult> {
-    if (!this.apiKey) {
-      throw new Error('AI service not available - OpenAI API key missing');
-    }
-
     const { prompt, style = 'semi-realistic', imageUrl, userId } = options;
 
     console.log('🎨 Starting cartoonize processing...');
@@ -1086,34 +1106,9 @@ ${config.prompt}
       }
     }
 
-    // ✅ PRESERVED: Style prompts from cartoonize-service
-    const stylePrompts = {
-      'storybook': 'Use a soft, whimsical storybook style with gentle colors and clean lines.',
-      'semi-realistic': 'Use a semi-realistic cartoon style with smooth shading and facial detail accuracy.',
-      'comic-book': 'Use a bold comic book style with strong outlines, vivid colors, and dynamic shading.',
-      'flat-illustration': 'Use a modern flat illustration style with minimal shading, clean vector lines, and vibrant flat colors.',
-      'anime': 'Use anime style with expressive eyes, stylized proportions, and crisp linework inspired by Japanese animation.'
-    };
-
-    // ✅ PRESERVED: Prompt cleaning function from cartoonize-service
-    const cleanStoryPrompt = (prompt: string): string => {
-      return prompt
-        .trim()
-        .replace(/\b(adorable|cute|precious|delightful|charming|lovely|beautiful|perfect)\s/gi, '')
-        .replace(/\b(gazing|peering|staring)\s+(?:curiously|intently|lovingly|sweetly)\s+at\b/gi, 'looking at')
-        .replace(/\badding a touch of\s+\w+\b/gi, '')
-        .replace(/\bwith a hint of\s+\w+\b/gi, '')
-        .replace(/\bexuding\s+(?:innocence|wonder|joy|happiness)\b/gi, '')
-        .replace(/\b(cozy|perfect for|wonderfully|overall cuteness)\s/gi, '')
-        .replace(/\b(?:filled with|radiating|emanating)\s+(?:warmth|joy|happiness|wonder)\b/gi, '')
-        .replace(/\b(a|an)\s+(baby|toddler|child|teen|adult)\s+(boy|girl|man|woman)\b/gi, '$2 $3')
-        .replace(/\s+/g, ' ')
-        .replace(/[.!]+$/, '');
-    };
-
     // Clean and prepare prompt
-    const cleanPrompt = cleanStoryPrompt(prompt);
-    const stylePrompt = stylePrompts[style as keyof typeof stylePrompts] || stylePrompts['semi-realistic'];
+    const cleanPrompt = this.cleanStoryPrompt(prompt);
+    const stylePrompt = this.stylePrompts[style as keyof typeof this.stylePrompts] || this.stylePrompts['semi-realistic'];
     const finalPrompt = `Create a cartoon-style portrait of the person described below. Focus on accurate facial features and clothing details. ${cleanPrompt}. ${stylePrompt}`;
 
     console.log('🎨 Making request to OpenAI DALL-E API...');
@@ -1184,48 +1179,6 @@ ${config.prompt}
     };
   }
 
-  // ===== EXISTING METHODS (PRESERVED) =====
-
-  async generateCartoonImage(prompt: string): Promise<string> {
-    const result = await this.generateImage({
-      model: 'dall-e-3',
-      prompt,
-      n: 1,
-      size: '1024x1024',
-      quality: 'standard',
-      style: 'vivid',
-    });
-
-    if (!result?.data?.[0]?.url) {
-      throw new Error('Invalid response from OpenAI API - no image URL received');
-    }
-
-    return result.data[0].url;
-  }
-
-  async describeCharacter(imageUrl: string, prompt: string): Promise<string> {
-    const result = await this.analyzeImage({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: prompt },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Describe this image for cartoon generation. Only include clearly visible and objective features.' },
-            { type: 'image_url', image_url: { url: imageUrl } }
-          ]
-        }
-      ],
-      maxTokens: 500,
-    });
-
-    if (!result?.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from OpenAI API - no content received');
-    }
-
-    return result.choices[0].message.content;
-  }
-
   async createChatCompletion(options: ChatCompletionOptions): Promise<ChatCompletionResult> {
     return this.withRetry(
       async () => {
@@ -1250,7 +1203,111 @@ ${config.prompt}
     );
   }
 
-  // ===== ENTERPRISE-GRADE: Deep Content Discovery System =====
+  // ===== PRIVATE HELPER METHODS =====
+
+  private checkRateLimit(endpoint: string): boolean {
+    const now = Date.now();
+    const windowMs = 60000; // 1 minute
+    const requests = this.rateLimiter.get(endpoint) || [];
+    
+    // Remove old requests outside the window
+    const recentRequests = requests.filter(time => now - time < windowMs);
+    
+    if (recentRequests.length >= (this.config as AIConfig).rateLimitRpm) {
+      return false;
+    }
+    
+    recentRequests.push(now);
+    this.rateLimiter.set(endpoint, recentRequests);
+    return true;
+  }
+
+  private async makeRequest<T>(
+    endpoint: string,
+    options: RequestInit,
+    timeout: number,
+    operationName: string
+  ): Promise<T> {
+    if (!this.apiKey) {
+      throw new Error('AI service not available - OpenAI API key missing');
+    }
+
+    if (!this.checkRateLimit(endpoint)) {
+      throw new Error('Rate limit exceeded for OpenAI API');
+    }
+
+    const url = `${(this.config as AIConfig).baseUrl}${endpoint}`;
+    const requestOptions: RequestInit = {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    };
+
+    try {
+      const response = await this.withTimeout(
+        fetch(url, requestOptions),
+        timeout,
+        operationName
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorData;
+        
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          throw new Error(`OpenAI API request failed with status ${response.status}: ${errorText}`);
+        }
+
+        const errorMessage = errorData?.error?.message || `OpenAI API request failed with status ${response.status}`;
+        const error = new Error(errorMessage);
+        
+        // Classify error for retry logic
+        if (response.status === 429) {
+          (error as any).type = 'rate_limit';
+        } else if (response.status >= 500) {
+          (error as any).type = 'connection';
+        } else if (response.status === 401 || response.status === 403) {
+          (error as any).type = 'authentication';
+        } else {
+          (error as any).type = 'validation';
+        }
+        
+        throw error;
+      }
+
+      const data = await response.json();
+      return data;
+      
+    } catch (error: any) {
+      this.log('error', `AI API request failed: ${operationName}`, error);
+      throw error;
+    }
+  }
+
+  private async generateImage(options: any): Promise<any> {
+    return this.withRetry(
+      async () => {
+        return this.makeRequest<any>(
+          '/images/generations',
+          {
+            method: 'POST',
+            body: JSON.stringify(options),
+          },
+          (this.config as AIConfig).dalleTimeout,
+          'generateImage'
+        );
+      },
+      this.dalleRetryConfig,
+      'generateImage'
+    );
+  }
+
+  // ✅ ENTERPRISE DEEP CONTENT DISCOVERY SYSTEM
   private discoverContent(parsed: any): ContentDiscoveryResult {
     console.log('🔍 Starting deep content discovery...');
     
@@ -1402,126 +1459,16 @@ ${config.prompt}
     return current;
   }
 
-  // ===== PRIVATE HELPER METHODS =====
+  // ===== STATUS METHODS =====
 
-  private checkRateLimit(endpoint: string): boolean {
-    const now = Date.now();
-    const windowMs = 60000; // 1 minute
-    const requests = this.rateLimiter.get(endpoint) || [];
-    
-    // Remove old requests outside the window
-    const recentRequests = requests.filter(time => now - time < windowMs);
-    
-    if (recentRequests.length >= (this.config as AIConfig).rateLimitRpm) {
-      return false;
-    }
-    
-    recentRequests.push(now);
-    this.rateLimiter.set(endpoint, recentRequests);
-    return true;
-  }
-
-  private async makeRequest<T>(
-    endpoint: string,
-    options: RequestInit,
-    timeout: number,
-    operationName: string
-  ): Promise<T> {
-    if (!this.apiKey) {
-      throw new Error('AI service not available - OpenAI API key missing');
-    }
-
-    if (!this.checkRateLimit(endpoint)) {
-      throw new Error('Rate limit exceeded for OpenAI API');
-    }
-
-    const url = `${(this.config as AIConfig).baseUrl}${endpoint}`;
-    const requestOptions: RequestInit = {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+  getStatus() {
+    const openaiStatus = environmentManager.getServiceStatus('openai');
+    return {
+      configured: this.apiKey !== null,
+      available: this.isHealthy(),
+      status: openaiStatus.status,
+      message: openaiStatus.message
     };
-
-    try {
-      const response = await this.withTimeout(
-        fetch(url, requestOptions),
-        timeout,
-        operationName
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorData;
-        
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          throw new Error(`OpenAI API request failed with status ${response.status}: ${errorText}`);
-        }
-
-        const errorMessage = errorData?.error?.message || `OpenAI API request failed with status ${response.status}`;
-        const error = new Error(errorMessage);
-        
-        // Classify error for retry logic
-        if (response.status === 429) {
-          (error as any).type = 'rate_limit';
-        } else if (response.status >= 500) {
-          (error as any).type = 'connection';
-        } else if (response.status === 401 || response.status === 403) {
-          (error as any).type = 'authentication';
-        } else {
-          (error as any).type = 'validation';
-        }
-        
-        throw error;
-      }
-
-      const data = await response.json();
-      return data;
-      
-    } catch (error: any) {
-      this.log('error', `AI API request failed: ${operationName}`, error);
-      throw error;
-    }
-  }
-
-  private async generateImage(options: any): Promise<any> {
-    return this.withRetry(
-      async () => {
-        return this.makeRequest<any>(
-          '/images/generations',
-          {
-            method: 'POST',
-            body: JSON.stringify(options),
-          },
-          (this.config as AIConfig).dalleTimeout,
-          'generateImage'
-        );
-      },
-      this.dalleRetryConfig,
-      'generateImage'
-    );
-  }
-
-  private async analyzeImage(options: any): Promise<any> {
-    return this.withRetry(
-      async () => {
-        return this.makeRequest<any>(
-          '/chat/completions',
-          {
-            method: 'POST',
-            body: JSON.stringify(options),
-          },
-          (this.config as AIConfig).gptTimeout,
-          'analyzeImage'
-        );
-      },
-      this.gptRetryConfig,
-      'analyzeImage'
-    );
   }
 }
 

@@ -346,9 +346,7 @@ export class StorybookService {
       overall: this.isHealthy(),
       openai: openaiStatus,
       supabase: supabaseStatus,
-      services: {
-        ai: aiService.getStatus(), // ✅ UPDATED: Use consolidated AI service
-      },
+      // ✅ FIXED: Remove infrastructure status monitoring from business logic
       features: {
         comicBookSupport: true,
         characterConsistency: true,
