@@ -1,11 +1,12 @@
 // Environment Service - Enterprise Dependency Injection Implementation
-// Wraps environment manager for proper service container integration
+// ✅ REFACTORED: Focused only on environment variables, removed service health coupling
 
 import { EnhancedBaseService } from '../base/enhanced-base-service.js';
 import { 
   IEnvironmentService,
   ServiceConfig as ServiceConfigInterface,
-  EnvironmentConfig
+  EnvironmentConfig,
+  EnvironmentServiceInfo
 } from '../interfaces/service-contracts.js';
 import { environmentManager } from '../../lib/config/environment.js';
 
@@ -40,13 +41,13 @@ export class EnvironmentService extends EnhancedBaseService implements IEnvironm
 
   protected async initializeService(): Promise<void> {
     try {
-      // Validate environment configuration
-      const healthStatus = this.environmentManager.getHealthStatus();
+      // ✅ ENTERPRISE HEALTH: Only validate environment configuration
+      const environmentStatus = this.environmentManager.getEnvironmentStatus();
       
-      if (healthStatus.overall !== 'healthy') {
-        this.log('warn', 'Environment service initialized with degraded configuration');
+      if (!environmentStatus.environment.fullyConfigured) {
+        this.log('warn', 'Environment service initialized with incomplete configuration');
       } else {
-        this.log('info', 'Environment service initialized with full configuration');
+        this.log('info', 'Environment service initialized with complete configuration');
       }
       
       // Log configuration status
@@ -63,10 +64,24 @@ export class EnvironmentService extends EnhancedBaseService implements IEnvironm
     this.log('info', 'Environment service disposed');
   }
 
+  // ✅ ENTERPRISE HEALTH: Independent environment service health checking
   protected async checkServiceHealth(): Promise<boolean> {
     try {
-      const healthStatus = this.environmentManager.getHealthStatus();
-      return healthStatus.overall === 'healthy';
+      // Check 1: Environment configuration completeness
+      const environmentStatus = this.environmentManager.getEnvironmentStatus();
+      
+      // Check 2: Required environment variables presence
+      const openaiInfo = this.environmentManager.getEnvironmentServiceInfo('openai');
+      const supabaseInfo = this.environmentManager.getEnvironmentServiceInfo('supabase');
+      
+      // Environment service is healthy if at least one service is configured
+      // (allows for graceful degradation)
+      const hasMinimalConfig = openaiInfo.isConfigured || supabaseInfo.isConfigured;
+      
+      // Check 3: No critical environment issues
+      const noCriticalIssues = environmentStatus.environment.mode !== 'unknown';
+      
+      return hasMinimalConfig && noCriticalIssues;
     } catch (error) {
       this.log('error', 'Environment service health check failed', error);
       return false;
@@ -74,34 +89,30 @@ export class EnvironmentService extends EnhancedBaseService implements IEnvironm
   }
 
   // ===== ENVIRONMENT SERVICE INTERFACE IMPLEMENTATION =====
+  // ✅ REFACTORED: Only environment configuration methods, no service health
 
   getConfig(): EnvironmentConfig {
     return this.environmentManager.getConfig();
   }
 
-  isServiceAvailable(serviceName: 'openai' | 'supabase'): boolean {
-    return this.environmentManager.isServiceAvailable(serviceName);
-  }
-
-  getServiceStatus(serviceName: 'openai' | 'supabase'): ServiceConfigInterface {
-    return this.environmentManager.getServiceStatus(serviceName);
+  getEnvironmentServiceInfo(serviceName: 'openai' | 'supabase'): EnvironmentServiceInfo {
+    return this.environmentManager.getEnvironmentServiceInfo(serviceName);
   }
 
   logConfigurationStatus(): void {
     this.environmentManager.logConfigurationStatus();
   }
 
-  getHealthStatus(): {
-    overall: string;
-    services: Record<string, any>;
-    configuration: {
+  getEnvironmentStatus(): {
+    environment: {
       mode: string;
-      servicesAvailable: string;
+      variablesConfigured: string;
       fullyConfigured: boolean;
       degradedMode: boolean;
     };
+    services: Record<string, any>;
   } {
-    return this.environmentManager.getHealthStatus();
+    return this.environmentManager.getEnvironmentStatus();
   }
 
   // ===== ENHANCED METHODS FOR SERVICE CONTAINER =====
@@ -111,13 +122,13 @@ export class EnvironmentService extends EnhancedBaseService implements IEnvironm
    */
   getValidatedConfig(): EnvironmentConfig {
     const config = this.getConfig();
-    const healthStatus = this.getHealthStatus();
+    const environmentStatus = this.getEnvironmentStatus();
     
-    if (!healthStatus.configuration.fullyConfigured) {
+    if (!environmentStatus.environment.fullyConfigured) {
       this.log('warn', 'Environment configuration is not fully configured', {
-        mode: healthStatus.configuration.mode,
-        servicesAvailable: healthStatus.configuration.servicesAvailable,
-        degradedMode: healthStatus.configuration.degradedMode
+        mode: environmentStatus.environment.mode,
+        variablesConfigured: environmentStatus.environment.variablesConfigured,
+        degradedMode: environmentStatus.environment.degradedMode
       });
     }
     
@@ -129,76 +140,76 @@ export class EnvironmentService extends EnhancedBaseService implements IEnvironm
    */
   isProductionReady(): boolean {
     const config = this.getConfig();
-    const healthStatus = this.getHealthStatus();
+    const environmentStatus = this.getEnvironmentStatus();
     
     return config.isProduction && 
-           healthStatus.configuration.fullyConfigured && 
-           !healthStatus.configuration.degradedMode;
+           environmentStatus.environment.fullyConfigured && 
+           !environmentStatus.environment.degradedMode;
   }
 
   /**
-   * Get service availability summary
+   * Get environment variable availability summary
    */
-  getServiceAvailabilitySummary(): {
-    openai: { available: boolean; status: string; message: string };
-    supabase: { available: boolean; status: string; message: string };
+  getEnvironmentVariablesSummary(): {
+    openai: { configured: boolean; status: string; message: string };
+    supabase: { configured: boolean; status: string; message: string };
     overall: { fullyConfigured: boolean; degradedMode: boolean };
   } {
-    const openaiStatus = this.getServiceStatus('openai');
-    const supabaseStatus = this.getServiceStatus('supabase');
-    const healthStatus = this.getHealthStatus();
+    const openaiInfo = this.getEnvironmentServiceInfo('openai');
+    const supabaseInfo = this.getEnvironmentServiceInfo('supabase');
+    const environmentStatus = this.getEnvironmentStatus();
     
     return {
       openai: {
-        available: openaiStatus.isAvailable,
-        status: openaiStatus.status,
-        message: openaiStatus.message
+        configured: openaiInfo.isConfigured,
+        status: openaiInfo.status,
+        message: openaiInfo.message
       },
       supabase: {
-        available: supabaseStatus.isAvailable,
-        status: supabaseStatus.status,
-        message: supabaseStatus.message
+        configured: supabaseInfo.isConfigured,
+        status: supabaseInfo.status,
+        message: supabaseInfo.message
       },
       overall: {
-        fullyConfigured: healthStatus.configuration.fullyConfigured,
-        degradedMode: healthStatus.configuration.degradedMode
+        fullyConfigured: environmentStatus.environment.fullyConfigured,
+        degradedMode: environmentStatus.environment.degradedMode
       }
     };
   }
 
   /**
-   * Validate specific service configuration
+   * Validate specific service environment configuration
    */
-  validateServiceConfiguration(serviceName: 'openai' | 'supabase'): {
+  validateServiceEnvironmentConfiguration(serviceName: 'openai' | 'supabase'): {
     valid: boolean;
-    available: boolean;
+    configured: boolean;
     issues: string[];
     recommendations: string[];
   } {
-    const serviceStatus = this.getServiceStatus(serviceName);
+    const serviceInfo = this.getEnvironmentServiceInfo(serviceName);
     const issues: string[] = [];
     const recommendations: string[] = [];
     
-    if (!serviceStatus.isConfigured) {
-      issues.push(`${serviceName} service is not configured`);
+    if (!serviceInfo.isConfigured) {
+      issues.push(`${serviceName} environment variables are not configured`);
       recommendations.push(`Configure ${serviceName} environment variables`);
     }
     
-    if (!serviceStatus.isAvailable) {
-      issues.push(`${serviceName} service is not available`);
-      if (serviceStatus.status === 'placeholder') {
+    if (!serviceInfo.isAvailable) {
+      issues.push(`${serviceName} environment variables are not available`);
+      if (serviceInfo.status === 'placeholder') {
         recommendations.push(`Replace placeholder values with real ${serviceName} credentials`);
       }
     }
     
-    if (serviceStatus.missingVars.length > 0) {
-      issues.push(`Missing environment variables: ${serviceStatus.missingVars.join(', ')}`);
-      recommendations.push(`Set the following environment variables: ${serviceStatus.missingVars.join(', ')}`);
+    if (serviceInfo.missingVars.length > 0) {
+      issues.push(`Missing environment variables: ${serviceInfo.missingVars.join(', ')}`);
+      recommendations.push(`Set the following environment variables: ${serviceInfo.missingVars.join(', ')}`);
     }
     
     return {
-      valid: serviceStatus.isConfigured && serviceStatus.isAvailable,
-      available: serviceStatus.isAvailable,
+      valid: serviceInfo.isConfigured && serviceInfo.isAvailable,
+      configured: serviceInfo.isConfigured,
       issues,
       recommendations
     };

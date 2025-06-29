@@ -1,7 +1,7 @@
 // Environment Configuration Manager
-// Implements graceful degradation pattern for enterprise microservices
+// REFACTORED: Focused only on environment variables, removed service health coupling
 
-export interface ServiceConfig {
+export interface EnvironmentServiceInfo {
   name: string;
   isConfigured: boolean;
   isAvailable: boolean;
@@ -15,8 +15,8 @@ export interface EnvironmentConfig {
   isDevelopment: boolean;
   isProduction: boolean;
   services: {
-    openai: ServiceConfig;
-    supabase: ServiceConfig;
+    openai: EnvironmentServiceInfo;
+    supabase: EnvironmentServiceInfo;
   };
   worker: {
     port: number;
@@ -43,7 +43,6 @@ class EnvironmentManager {
       'example',
       'test_key',
       'demo_',
-      // 'sk-proj-',  // REMOVED: This is a valid OpenAI key format!
       'localhost',
       'http://localhost'
     ];
@@ -57,7 +56,7 @@ class EnvironmentManager {
     name: string, 
     requiredVars: string[], 
     description: string
-  ): ServiceConfig {
+  ): EnvironmentServiceInfo {
     const missingVars: string[] = [];
     const placeholderVars: string[] = [];
     
@@ -71,7 +70,7 @@ class EnvironmentManager {
       }
     }
 
-    let status: ServiceConfig['status'];
+    let status: EnvironmentServiceInfo['status'];
     let message: string;
     let isConfigured: boolean;
     let isAvailable: boolean;
@@ -88,7 +87,7 @@ class EnvironmentManager {
       isAvailable = false;
     } else {
       status = 'configured';
-      message = `${description} service properly configured`;
+      message = `${description} environment variables properly configured`;
       isConfigured = true;
       isAvailable = true;
     }
@@ -109,14 +108,14 @@ class EnvironmentManager {
     const isDevelopment = nodeEnv === 'development';
     const isProduction = nodeEnv === 'production';
 
-    // Validate OpenAI service
+    // Validate OpenAI environment variables
     const openaiConfig = this.validateService(
       'OpenAI',
       ['OPENAI_API_KEY'],
       'OpenAI API'
     );
 
-    // Validate Supabase service
+    // Validate Supabase environment variables
     const supabaseConfig = this.validateService(
       'Supabase',
       ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'],
@@ -144,11 +143,10 @@ class EnvironmentManager {
     return this.config;
   }
 
-  isServiceAvailable(serviceName: 'openai' | 'supabase'): boolean {
-    return this.config.services[serviceName].isAvailable;
-  }
+  // ✅ REMOVED: isServiceAvailable() - services handle their own health
+  // ✅ REMOVED: getServiceStatus() - services handle their own health
 
-  getServiceStatus(serviceName: 'openai' | 'supabase'): ServiceConfig {
+  getEnvironmentServiceInfo(serviceName: 'openai' | 'supabase'): EnvironmentServiceInfo {
     return this.config.services[serviceName];
   }
 
@@ -158,12 +156,12 @@ class EnvironmentManager {
     console.log('\n🔧 Environment Configuration Status:');
     console.log(`📊 Mode: ${isDevelopment ? 'Development' : isProduction ? 'Production' : 'Unknown'}`);
     
-    // Log service statuses with appropriate levels
+    // Log environment variable status only
     Object.values(services).forEach(service => {
       const icon = service.isAvailable ? '✅' : service.status === 'placeholder' ? '⚠️' : '❌';
       
       if (service.isAvailable) {
-        console.log(`${icon} ${service.name}: ${service.message}`);
+        console.log(`${icon} ${service.name}: Environment variables configured`);
       } else {
         console.warn(`${icon} ${service.name}: ${service.message}`);
       }
@@ -172,9 +170,8 @@ class EnvironmentManager {
     // Provide guidance based on environment
     const unconfiguredServices = Object.values(services).filter(s => !s.isAvailable);
     if (unconfiguredServices.length > 0) {
-      console.log('\n💡 Service Configuration Status:');
-      console.log('   Worker will start with partial functionality.');
-      console.log('   To enable full functionality, configure the following services:');
+      console.log('\n💡 Environment Variable Configuration:');
+      console.log('   To enable services, configure the following environment variables:');
       
       unconfiguredServices.forEach(service => {
         service.missingVars.forEach(varName => {
@@ -191,31 +188,30 @@ class EnvironmentManager {
     }
   }
 
-  getHealthStatus() {
+  // ✅ REFACTORED: Only report environment configuration, not service health
+  getEnvironmentStatus() {
     const { services, isDevelopment } = this.config;
-    const availableServices = Object.values(services).filter(s => s.isAvailable).length;
+    const configuredServices = Object.values(services).filter(s => s.isAvailable).length;
     const totalServices = Object.values(services).length;
     
-    // Worker is healthy if it can start (graceful degradation)
-    // Individual services may be unavailable
     return {
-      overall: 'healthy', // Always healthy - services degrade gracefully
+      environment: {
+        mode: this.config.isDevelopment ? 'development' : 'production',
+        variablesConfigured: `${configuredServices}/${totalServices}`,
+        fullyConfigured: configuredServices === totalServices,
+        degradedMode: configuredServices < totalServices
+      },
       services: Object.fromEntries(
         Object.entries(services).map(([key, service]) => [
           key, 
           {
             status: service.status,
-            available: service.isAvailable,
-            message: service.message
+            configured: service.isAvailable,
+            message: service.message,
+            missingVars: service.missingVars
           }
         ])
-      ),
-      configuration: {
-        mode: this.config.isDevelopment ? 'development' : 'production',
-        servicesAvailable: `${availableServices}/${totalServices}`,
-        fullyConfigured: availableServices === totalServices,
-        degradedMode: availableServices < totalServices
-      }
+      )
     };
   }
 }

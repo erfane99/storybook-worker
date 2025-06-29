@@ -105,8 +105,9 @@ export interface SceneGenerationResult {
 }
 
 // ===== ENVIRONMENT SERVICE INTERFACES =====
+// ✅ REFACTORED: Environment service only handles environment variables, not service health
 
-export interface ServiceConfig {
+export interface EnvironmentServiceInfo {
   name: string;
   isConfigured: boolean;
   isAvailable: boolean;
@@ -120,8 +121,8 @@ export interface EnvironmentConfig {
   isDevelopment: boolean;
   isProduction: boolean;
   services: {
-    openai: ServiceConfig;
-    supabase: ServiceConfig;
+    openai: EnvironmentServiceInfo;
+    supabase: EnvironmentServiceInfo;
   };
   worker: {
     port: number;
@@ -132,6 +133,7 @@ export interface EnvironmentConfig {
   };
 }
 
+// ✅ REFACTORED: Environment service interface focused only on environment configuration
 export interface IEnvironmentService extends IServiceHealth, IServiceLifecycle {
   /**
    * Get complete environment configuration
@@ -139,14 +141,9 @@ export interface IEnvironmentService extends IServiceHealth, IServiceLifecycle {
   getConfig(): EnvironmentConfig;
   
   /**
-   * Check if specific service is available
+   * Get environment service info (environment variables only)
    */
-  isServiceAvailable(serviceName: 'openai' | 'supabase'): boolean;
-  
-  /**
-   * Get service status details
-   */
-  getServiceStatus(serviceName: 'openai' | 'supabase'): ServiceConfig;
+  getEnvironmentServiceInfo(serviceName: 'openai' | 'supabase'): EnvironmentServiceInfo;
   
   /**
    * Log current configuration status
@@ -154,17 +151,16 @@ export interface IEnvironmentService extends IServiceHealth, IServiceLifecycle {
   logConfigurationStatus(): void;
   
   /**
-   * Get health status for monitoring
+   * Get environment status (configuration only, not service health)
    */
-  getHealthStatus(): {
-    overall: string;
-    services: Record<string, any>;
-    configuration: {
+  getEnvironmentStatus(): {
+    environment: {
       mode: string;
-      servicesAvailable: string;
+      variablesConfigured: string;
       fullyConfigured: boolean;
       degradedMode: boolean;
     };
+    services: Record<string, any>;
   };
 }
 
