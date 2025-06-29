@@ -20,7 +20,8 @@ environmentManager.logConfigurationStatus();
 const app = express();
 
 app.get('/health', async (_req, res) => {
-  const healthStatus = environmentManager.getHealthStatus();
+  // ✅ UPDATED: Use new environment status method
+  const environmentStatus = environmentManager.getEnvironmentStatus();
   const serviceHealth = await ServiceRegistry.getServiceHealth();
   const systemHealth = await ServiceRegistry.getSystemHealth();
   
@@ -50,7 +51,9 @@ app.get('/health', async (_req, res) => {
   res.json({
     ...response,
     services: serviceHealth.services,
-    configuration: healthStatus.configuration,
+    // ✅ UPDATED: Use new environment status format
+    environment: environmentStatus.environment,
+    environmentServices: environmentStatus.services,
     containerStats: ServiceRegistry.getContainerStats(),
     systemHealth: systemHealth,
     validation: {
@@ -63,7 +66,8 @@ app.get('/health', async (_req, res) => {
 });
 
 app.get('/metrics', async (_req, res) => {
-  const healthStatus = environmentManager.getHealthStatus();
+  // ✅ UPDATED: Use new environment status method
+  const environmentStatus = environmentManager.getEnvironmentStatus();
   const serviceHealth = await ServiceRegistry.getServiceHealth();
   const systemHealth = await ServiceRegistry.getSystemHealth();
   
@@ -74,7 +78,9 @@ app.get('/metrics', async (_req, res) => {
     timestamp: new Date().toISOString(),
     stats,
     services: serviceHealth.services,
-    configuration: healthStatus.configuration,
+    // ✅ UPDATED: Use new environment status format
+    environment: environmentStatus.environment,
+    environmentServices: environmentStatus.services,
     containerStats: ServiceRegistry.getContainerStats(),
     systemHealth: systemHealth,
   });

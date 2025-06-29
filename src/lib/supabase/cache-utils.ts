@@ -6,10 +6,11 @@ let supabaseClient: ReturnType<typeof createClient> | null = null;
 
 function getSupabaseClient() {
   if (!supabaseClient) {
-    const supabaseStatus = environmentManager.getServiceStatus('supabase');
+    // ✅ UPDATED: Use new environment service info method
+    const supabaseInfo = environmentManager.getEnvironmentServiceInfo('supabase');
     
-    if (!supabaseStatus.isAvailable) {
-      console.warn('⚠️ Supabase not configured for caching:', supabaseStatus.message);
+    if (!supabaseInfo.isAvailable) {
+      console.warn('⚠️ Supabase not configured for caching:', supabaseInfo.message);
       return null;
     }
 
