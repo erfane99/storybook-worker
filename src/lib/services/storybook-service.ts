@@ -2,12 +2,8 @@
 // Implements graceful degradation pattern
 
 import { environmentManager } from '../config/environment.js';
-import { characterService } from './character-service.js';
-import { storyService, type GenreType } from './story-service.js';
-import { imageService, type AudienceType } from './image-service.js';
-
-// ✅ FIXED: Import from consolidated AI service instead of deleted scene-service
-import { aiService, type Scene, type Page, type EnhancedSceneGenerationOptions } from '../../services/ai/ai-service.js';
+// ✅ UPDATED: Import from consolidated AI service instead of legacy services
+import { aiService, type GenreType, type AudienceType, type Scene, type Page, type EnhancedSceneGenerationOptions } from '../../services/ai/ai-service.js';
 
 // ENHANCED: Comic book support interfaces
 export interface StorybookCreationOptions {
@@ -98,7 +94,8 @@ export class StorybookService {
       if (!isReusedImage) {
         console.log('🔍 Analyzing character image...');
         try {
-          const result = await characterService.describeCharacter({
+          // ✅ UPDATED: Use consolidated AI service
+          const result = await aiService.describeCharacter({
             imageUrl: characterImage
           });
           characterDescription = result.description;
@@ -125,8 +122,8 @@ export class StorybookService {
           console.log(`Processing Panel ${sceneIndex + 1} of Page ${pageIndex + 1} (${characterArtStyle} style)`);
 
           try {
-            // ENHANCED: Pass comic book context to image generation
-            const imageResult = await imageService.generateSceneImage({
+            // ✅ UPDATED: Use consolidated AI service
+            const imageResult = await aiService.generateSceneImage({
               image_prompt: scene.imagePrompt,
               character_description: characterDescription,
               emotion: scene.emotion,
@@ -219,7 +216,8 @@ export class StorybookService {
     try {
       // Step 1: Generate story
       console.log('📝 Generating story...');
-      const storyResult = await storyService.generateStory({
+      // ✅ UPDATED: Use consolidated AI service
+      const storyResult = await aiService.generateStoryEnhanced({
         genre,
         characterDescription,
         audience,
@@ -230,7 +228,7 @@ export class StorybookService {
       // Step 2: Generate comic book scenes from story
       console.log('🎬 Generating comic book layout...');
       
-      // ✅ FIXED: Use consolidated AI service with enhanced scene generation
+      // ✅ UPDATED: Use consolidated AI service with enhanced scene generation
       const sceneResult = await aiService.generateScenesWithAudience({
         story: storyResult.story,
         audience,
@@ -298,14 +296,15 @@ export class StorybookService {
       let characterDescription = 'a young protagonist';
       if (characterImage) {
         try {
-          characterDescription = await characterService.describeCharacterForScenes(characterImage);
+          // ✅ UPDATED: Use consolidated AI service
+          characterDescription = await aiService.describeCharacterForScenes(characterImage);
           console.log('✅ Generated character description:', characterDescription);
         } catch (error: any) {
           console.warn('⚠️ Failed to describe character, using default:', error.message);
         }
       }
 
-      // ✅ FIXED: Use consolidated AI service with enhanced scene generation
+      // ✅ UPDATED: Use consolidated AI service with enhanced scene generation
       const sceneResult = await aiService.generateScenesWithAudience({
         story,
         audience,
@@ -332,12 +331,8 @@ export class StorybookService {
    * Health check - verify all services are ready with comic book support
    */
   isHealthy(): boolean {
-    return (
-      characterService.isHealthy() &&
-      storyService.isHealthy() &&
-      aiService.isHealthy() && // ✅ FIXED: Use consolidated AI service
-      imageService.isHealthy()
-    );
+    // ✅ UPDATED: Use consolidated AI service only
+    return aiService.isHealthy();
   }
 
   /**
@@ -352,10 +347,7 @@ export class StorybookService {
       openai: openaiStatus,
       supabase: supabaseStatus,
       services: {
-        character: characterService.getStatus(),
-        story: storyService.getStatus(),
-        ai: aiService.getStatus(), // ✅ FIXED: Use consolidated AI service
-        image: imageService.getStatus(),
+        ai: aiService.getStatus(), // ✅ UPDATED: Use consolidated AI service
       },
       features: {
         comicBookSupport: true,
