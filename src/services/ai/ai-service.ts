@@ -1352,7 +1352,3 @@ ${config.prompt}
     );
   }
 }
-
-// Export singleton instance
-export const aiService = new AIService();
-export default aiService;
