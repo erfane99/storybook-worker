@@ -490,7 +490,3 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     // Add other job type result mappings as needed
   }
 }
-
-// Export singleton instance
-export const databaseService = new DatabaseService();
-export default databaseService;
