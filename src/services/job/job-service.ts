@@ -675,8 +675,3 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
     }
   }
 }
-
-// ===== EXPORT SINGLETON INSTANCE =====
-
-export const jobService = new JobService();
-export default jobService;
