@@ -19,7 +19,7 @@ import {
   SceneGenerationOptions,
   AudienceType,
   GenreType,
-  SceneMetadata
+  SceneMetadata,
   PanelType
 } from '../interfaces/service-contracts.js';
 import { 
