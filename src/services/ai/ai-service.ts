@@ -809,7 +809,7 @@ VERIFICATION: Character must be identical to previous panels in this comic book 
       ? `CRITICAL CHARACTER CONSISTENCY: This character has appeared in previous panels. Use this EXACT character appearance: "${characterDescription}". Maintain identical facial features, clothing, and all distinctive characteristics. NO variations allowed.`
       : `CHARACTER DESIGN: ${characterDescription} (establish consistent appearance for future panels)`;
 
-    const panelSpecs = {
+    const panelSpecs: { [key: string]: string } = {
       'standard': 'Standard rectangular comic panel with balanced composition and clear panel borders',
       'wide': 'Wide panoramic comic panel perfect for establishing shots or action sequences',
       'tall': 'Tall vertical comic panel emphasizing dramatic moments or character emotions',
