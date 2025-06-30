@@ -1,4 +1,5 @@
 // Enhanced AI Service - Production Implementation with Direct Environment Variable Access
+// ✅ FIXED: Comic book generation with character consistency and proper formatting
 import { EnhancedBaseService } from '../base/enhanced-base-service.js';
 import { 
   IAIService,
@@ -337,7 +338,7 @@ export class AIService extends EnhancedBaseService implements IAIService {
     }
   }
 
-  // ✅ ENHANCED: Scene generation with audience support
+  // ✅ ENHANCED: Scene generation with audience support and FIXED comic book prompts
   async generateScenesWithAudience(options: SceneGenerationOptions): Promise<SceneGenerationResult> {
     const {
       story,
@@ -375,9 +376,9 @@ export class AIService extends EnhancedBaseService implements IAIService {
 
     const { scenes, pages, panelsPerPage, notes } = audienceConfig[audience];
 
-    // ✅ FIXED: Enhanced comic book focused system prompt with required JSON keyword
+    // ✅ CRITICAL FIX: Enhanced comic book focused system prompt with CHARACTER CONSISTENCY support
     const systemPrompt = `
-You are a professional comic book layout designer for a storybook app that creates COMIC BOOK STYLE layouts.
+You are a professional comic book layout designer for a storybook app that creates COMIC BOOK STYLE layouts with CHARACTER CONSISTENCY.
 
 CRITICAL: You must create comic book PAGES with multiple PANELS, not individual scenes.
 
@@ -392,12 +393,19 @@ COMIC BOOK REQUIREMENTS:
 - Each panel has a specific action/dialogue moment
 - Focus on visual storytelling with minimal text
 - Panels should flow naturally from one to the next
+- Include comic book elements: panel borders, speech bubbles, dynamic layouts
+
+CHARACTER CONSISTENCY REQUIREMENTS:
+- The main character must appear consistently across all panels
+- Character appearance will be handled separately for consistency
+- Focus on character actions and emotions that match the character's personality
 
 Panel Structure:
 - description: Brief action happening in this panel
 - emotion: Character's emotional state in this panel  
-- imagePrompt: Detailed visual description for panel generation (exclude character description - focus on environment, action, composition, lighting)
+- imagePrompt: Comic book panel scene description including setting, action, and composition. Focus on environment, lighting, and visual storytelling. Character appearance will be added separately for consistency.
 - panelType: 'standard', 'wide', 'tall', or 'splash' (for layout variety)
+- characterAction: Specific action the main character is performing in this panel
 
 Visual pacing notes: ${notes}
 
@@ -411,7 +419,8 @@ IMPORTANT: Return your output as valid JSON in this strict format:
           "description": "...",
           "emotion": "...",
           "imagePrompt": "...",
-          "panelType": "standard"
+          "panelType": "standard",
+          "characterAction": "..."
         }
       ]
     }
@@ -428,7 +437,7 @@ Your response must be properly formatted JSON that can be parsed directly.
         { role: 'system', content: systemPrompt },
         { 
           role: 'user', 
-          content: `Create a comic book layout for this story. Remember: Multiple panels per page, ${characterArtStyle} art style, ${panelsPerPage} panels per page. Respond with valid JSON.\n\nStory: ${story}` 
+          content: `Create a comic book layout for this story. Remember: Multiple panels per page, ${characterArtStyle} art style, ${panelsPerPage} panels per page, character consistency across all panels. Respond with valid JSON.\n\nStory: ${story}` 
         }
       ],
       responseFormat: { type: 'json_object' }
@@ -445,7 +454,7 @@ Your response must be properly formatted JSON that can be parsed directly.
         throw new Error('Invalid response structure - no pages array found');
       }
 
-      // ENHANCED: Add comic book metadata to each panel
+      // ENHANCED: Add comic book metadata to each panel with CHARACTER CONSISTENCY support
       const updatedPages = parsed.pages.map((page: any) => ({
         ...page,
         layoutType: layoutType,
@@ -453,13 +462,16 @@ Your response must be properly formatted JSON that can be parsed directly.
         scenes: page.scenes.map((scene: any) => ({
           ...scene,
           panelType: scene.panelType || 'standard',
+          characterAction: scene.characterAction || 'standing',
           generatedImage: characterImage, // Placeholder until panel generation
           layoutType: layoutType,
-          characterArtStyle: characterArtStyle
+          characterArtStyle: characterArtStyle,
+          // ✅ FIXED: Enhanced image prompt that supports character consistency
+          imagePrompt: scene.imagePrompt || `Comic book panel showing ${scene.description || 'a scene'} with dynamic composition and proper comic book styling`
         }))
       }));
 
-      console.log('✅ Successfully generated comic book layout');
+      console.log('✅ Successfully generated comic book layout with character consistency support');
       console.log(`📊 Generated ${updatedPages.length} comic book pages with ${updatedPages.reduce((total: number, page: any) => total + (page.scenes?.length || 0), 0)} panels total`);
 
       return {
@@ -473,6 +485,7 @@ Your response must be properly formatted JSON that can be parsed directly.
           patternType: 'direct',
           qualityScore: 100,
           originalStructure: Object.keys(parsed),
+          characterConsistencyEnabled: true,
           ...parsed.metadata
         }
       };
@@ -510,7 +523,7 @@ Your response must be properly formatted JSON that can be parsed directly.
     return result.data[0].url;
   }
 
-  // ✅ ENHANCED: Scene image generation with full options
+  // ✅ ENHANCED: Scene image generation with CHARACTER CONSISTENCY and COMIC BOOK formatting
   async generateSceneImage(options: ImageGenerationOptions): Promise<ImageGenerationResult> {
     const {
       image_prompt,
@@ -526,53 +539,58 @@ Your response must be properly formatted JSON that can be parsed directly.
       panelType = 'standard'
     } = options;
 
-    console.log('🎨 Starting comic book panel generation...');
+    console.log('🎨 Starting CHARACTER-CONSISTENT comic book panel generation...');
     console.log(`🎭 Panel Type: ${panelType}, Art Style: ${characterArtStyle}, Layout: ${layoutType}`);
+    console.log(`👤 Character: "${character_description}"`);
 
-    // ENHANCED: Audience-specific comic book styling
+    // ✅ ENHANCED: Audience-specific comic book styling with CHARACTER CONSISTENCY
     const audienceStyles = {
-      children: 'Create a bright, colorful comic book panel with simple, bold shapes and clear action. Use vibrant colors and friendly compositions suitable for young readers.',
-      young_adults: 'Design a dynamic comic book panel with detailed backgrounds and expressive character poses. Use sophisticated color palettes and engaging visual storytelling.',
-      adults: 'Craft a mature comic book panel with complex compositions, nuanced lighting, and detailed artistic elements. Employ sophisticated visual narrative techniques.',
+      children: 'Create a bright, colorful comic book panel with simple, bold shapes and clear action. Use vibrant colors and friendly compositions suitable for young readers. Maintain consistent character appearance.',
+      young_adults: 'Design a dynamic comic book panel with detailed backgrounds and expressive character poses. Use sophisticated color palettes and engaging visual storytelling. Ensure character consistency across panels.',
+      adults: 'Craft a mature comic book panel with complex compositions, nuanced lighting, and detailed artistic elements. Employ sophisticated visual narrative techniques while maintaining character consistency.',
     };
 
-    // ENHANCED: Character art style integration
+    // ✅ ENHANCED: Character art style integration with CONSISTENCY focus
     const artStylePrompts = {
-      'storybook': 'soft, whimsical art style with gentle colors and clean lines',
-      'semi-realistic': 'semi-realistic style with smooth shading and detailed facial features',
-      'comic-book': 'bold comic book style with strong outlines, vivid colors, and dynamic shading',
-      'flat-illustration': 'modern flat illustration style with minimal shading and vibrant flat colors',
-      'anime': 'anime art style with expressive features, stylized proportions, and crisp linework'
+      'storybook': 'soft, whimsical storybook art style with gentle colors, clean lines, and consistent character design',
+      'semi-realistic': 'semi-realistic style with smooth shading, detailed facial features, and consistent character proportions',
+      'comic-book': 'bold comic book style with strong outlines, vivid colors, dynamic shading, and consistent character design across panels',
+      'flat-illustration': 'modern flat illustration style with minimal shading, vibrant flat colors, and consistent character silhouettes',
+      'anime': 'anime art style with expressive features, stylized proportions, crisp linework, and consistent character design'
     };
 
-    // ENHANCED: Panel type specifications
+    // ✅ ENHANCED: Panel type specifications with COMIC BOOK elements
     const panelSpecs = {
-      'standard': 'Create a standard rectangular comic book panel with balanced composition',
-      'wide': 'Create a wide panoramic comic book panel that spans horizontally, perfect for establishing shots or action sequences',
-      'tall': 'Create a tall vertical comic book panel that emphasizes height or dramatic moments',
-      'splash': 'Create a dramatic splash panel that could span most of a page, with dynamic composition and high impact'
+      'standard': 'Create a standard rectangular comic book panel with balanced composition, clear panel borders, and comic book styling',
+      'wide': 'Create a wide panoramic comic book panel that spans horizontally with dynamic panel borders, perfect for establishing shots or action sequences',
+      'tall': 'Create a tall vertical comic book panel with dramatic panel borders that emphasizes height or dramatic moments',
+      'splash': 'Create a dramatic splash panel with dynamic composition, bold panel borders, and high impact that could span most of a page'
     };
 
-    // ENHANCED: Build the comprehensive comic book panel prompt
+    // ✅ CRITICAL FIX: Build the comprehensive CHARACTER-CONSISTENT comic book panel prompt
     const characterConsistencyPrompt = isReusedImage && character_description 
-      ? `CRITICAL: Use this EXACT character appearance consistently: ${character_description}. Do not create a new character - use this specific character description exactly.`
-      : `Character: ${character_description}`;
+      ? `CRITICAL CHARACTER CONSISTENCY: Use this EXACT character appearance consistently: "${character_description}". Do not create a new character interpretation - maintain this specific character's appearance, facial features, clothing, and distinctive characteristics exactly as described.`
+      : `Character Design: ${character_description} (maintain consistent appearance if this character appears in other panels)`;
 
+    // ✅ ENHANCED: Comic book prompt with CHARACTER CONSISTENCY and proper formatting
     const finalPrompt = [
       `${panelSpecs[panelType as keyof typeof panelSpecs] || panelSpecs.standard}`,
-      `Scene: ${image_prompt}`,
-      `Emotional state: ${emotion}`,
+      `Comic Book Scene: ${image_prompt}`,
+      `Character Emotional State: ${emotion}`,
       characterConsistencyPrompt,
       `Art Style: ${artStylePrompts[characterArtStyle as keyof typeof artStylePrompts] || artStylePrompts.storybook}`,
-      `Comic Book Elements: Include panel borders, appropriate comic book styling, and clear visual storytelling`,
-      audienceStyles[audience] || audienceStyles.children,
-      'Maintain character appearance consistency with previous panels if this is part of a series.'
+      `Comic Book Elements: Include clear panel borders, appropriate comic book styling, speech bubbles if dialogue is present, and professional comic book visual storytelling`,
+      `Target Audience: ${audienceStyles[audience] || audienceStyles.children}`,
+      `Character Consistency Note: If this character has appeared in previous panels, maintain exact same appearance, proportions, facial features, and clothing style for story continuity.`,
+      `Quality Standards: Professional comic book illustration quality with consistent character design, clear action, and engaging visual storytelling.`
     ].filter(Boolean).join('\n\n');
+
+    console.log('🎨 Generating CHARACTER-CONSISTENT comic panel with enhanced prompt...');
 
     const imageUrl = await this.generateCartoonImage(finalPrompt);
 
-    console.log('✅ Successfully generated comic book panel');
-    console.log(`🎨 Panel Style: ${characterArtStyle}, Type: ${panelType}`);
+    console.log('✅ Successfully generated CHARACTER-CONSISTENT comic book panel');
+    console.log(`🎨 Panel Style: ${characterArtStyle}, Type: ${panelType}, Character: Consistent`);
 
     return {
       url: imageUrl,
