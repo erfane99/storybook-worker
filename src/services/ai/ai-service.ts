@@ -144,6 +144,14 @@ interface DiscoveryPattern {
 }
 
 export class AIService extends EnhancedBaseService implements IAIService {
+  // ===== PANEL TYPE CONSTANTS =====
+  private static readonly PANEL_CONSTANTS = {
+    STANDARD: 'standard',
+    WIDE: 'wide',
+    TALL: 'tall',
+    SPLASH: 'splash'
+  } as const satisfies Record<string, PanelType>;
+
   private apiKey: string | null = null;
   private rateLimiter: Map<string, number[]> = new Map();
   private readonly gptRetryConfig: RetryConfig = {
@@ -1179,7 +1187,6 @@ VERIFICATION: Character must be identical to previous panels in this comic book 
   } else if (totalPanels <= 4) {
     return panelIndex === totalPanels - 1 ? WIDE : STANDARD;
   } else {
-    // More sophisticated panel variety for complex layouts
     const panelTypes = [STANDARD, WIDE, TALL, STANDARD] as const;
     return panelTypes[panelIndex % panelTypes.length];
   }
