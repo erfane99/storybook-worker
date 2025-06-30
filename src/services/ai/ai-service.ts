@@ -1,5 +1,5 @@
-// Enhanced AI Service - Production Implementation with Direct Environment Variable Access
-// ✅ FIXED: Comic book generation with character consistency and proper formatting
+// Enhanced AI Service - Production Implementation with Professional Comic Book Generation
+// ✅ ENHANCED: Character DNA system, story beat analysis, and professional comic formatting
 import { EnhancedBaseService } from '../base/enhanced-base-service.js';
 import { 
   IAIService,
@@ -40,6 +40,55 @@ export interface AIConfig extends ServiceConfig {
   rateLimitRpm: number;
 }
 
+// ===== PROFESSIONAL CHARACTER DNA INTERFACES =====
+
+interface CharacterDNA {
+  physicalStructure: {
+    faceShape: string;
+    eyeDetails: string;
+    hairSpecifics: string;
+    skinTone: string;
+    bodyType: string;
+    facialMarks: string;
+  };
+  clothingSignature: {
+    primaryOutfit: string;
+    accessories: string;
+    colorPalette: string;
+    footwear: string;
+  };
+  uniqueIdentifiers: {
+    distinctiveFeatures: string;
+    expressions: string;
+    posture: string;
+    mannerisms: string;
+  };
+  artStyleAdaptation: {
+    [key: string]: string;
+  };
+  consistencyEnforcers: string[];
+  negativePrompts: string[];
+}
+
+interface StoryBeat {
+  beat: string;
+  emotion: string;
+  visualPriority: string;
+  panelPurpose: string;
+  narrativeFunction: string;
+  characterAction: string;
+  environment: string;
+  dialogue?: string;
+}
+
+interface StoryAnalysis {
+  storyBeats: StoryBeat[];
+  characterArc: string[];
+  visualFlow: string[];
+  totalPanels: number;
+  pagesRequired: number;
+}
+
 // ===== DEEP CONTENT DISCOVERY INTERFACES =====
 
 interface ContentDiscoveryResult {
@@ -70,6 +119,46 @@ export class AIService extends EnhancedBaseService implements IAIService {
     delay: 5000,
     backoffMultiplier: 2,
     maxDelay: 60000,
+  };
+
+  // ===== PROFESSIONAL COMIC BOOK CONFIGURATION =====
+  private readonly audienceConfig = {
+    children: {
+      pagesPerStory: 4,
+      panelsPerPage: 2,
+      totalPanels: 8,
+      panelLayout: 'two_panel_vertical',
+      readingFlow: 'simple_left_to_right',
+      complexityLevel: 'simple',
+      dialogueStyle: 'minimal_text',
+      visualStyle: 'large_clear_panels',
+      colorScheme: 'bright_vibrant',
+      analysisInstructions: 'Focus on clear, simple story progression with obvious emotional beats. Each panel should advance the story clearly for young readers.'
+    },
+    young_adults: {
+      pagesPerStory: 5,
+      panelsPerPage: 3,
+      totalPanels: 15,
+      panelLayout: 'three_panel_dynamic',
+      readingFlow: 'varied_with_emphasis',
+      complexityLevel: 'moderate',
+      dialogueStyle: 'conversational',
+      visualStyle: 'dynamic_panels',
+      colorScheme: 'balanced_palette',
+      analysisInstructions: 'Create engaging story progression with character development. Include varied panel sizes and dynamic visual storytelling.'
+    },
+    adults: {
+      pagesPerStory: 6,
+      panelsPerPage: 4,
+      totalPanels: 24,
+      panelLayout: 'four_panel_sophisticated',
+      readingFlow: 'complex_visual_storytelling',
+      complexityLevel: 'advanced',
+      dialogueStyle: 'rich_dialogue',
+      visualStyle: 'varied_panel_composition',
+      colorScheme: 'sophisticated_palette',
+      analysisInstructions: 'Develop complex narrative structure with nuanced character development. Use sophisticated visual storytelling techniques and varied panel compositions.'
+    }
   };
 
   // ===== ENTERPRISE CONTENT DISCOVERY PATTERNS =====
@@ -106,24 +195,6 @@ export class AIService extends EnhancedBaseService implements IAIService {
       path: ['story', 'panels'],
       validator: (obj: any) => obj.story && Array.isArray(obj.story.panels) && obj.story.panels.length > 0,
       priority: 80
-    },
-    {
-      name: 'result_pages',
-      path: ['result', 'pages'],
-      validator: (obj: any) => obj.result && Array.isArray(obj.result.pages) && obj.result.pages.length > 0,
-      priority: 75
-    },
-    {
-      name: 'layout_pages',
-      path: ['layout', 'pages'],
-      validator: (obj: any) => obj.layout && Array.isArray(obj.layout.pages) && obj.layout.pages.length > 0,
-      priority: 70
-    },
-    {
-      name: 'comic_scenes',
-      path: ['comic', 'scenes'],
-      validator: (obj: any) => obj.comic && Array.isArray(obj.comic.scenes) && obj.comic.scenes.length > 0,
-      priority: 65
     }
   ];
 
@@ -152,14 +223,12 @@ export class AIService extends EnhancedBaseService implements IAIService {
   // ===== LIFECYCLE IMPLEMENTATION =====
 
   protected async initializeService(): Promise<void> {
-    // ✅ DIRECT ENV VAR ACCESS: No environment service dependency
     const apiKey = process.env.OPENAI_API_KEY;
     
     if (!apiKey) {
       throw new Error('OpenAI API key not configured: OPENAI_API_KEY environment variable is missing');
     }
 
-    // ✅ DIRECT VALIDATION: Simple API key validation
     if (!apiKey || apiKey.length < 20) {
       throw new Error('Valid OPENAI_API_KEY required - key appears to be invalid or too short');
     }
@@ -169,11 +238,9 @@ export class AIService extends EnhancedBaseService implements IAIService {
     }
 
     this.apiKey = apiKey;
-    
-    // ✅ ENTERPRISE HEALTH: Test actual API connectivity
     await this.testAPIConnectivity();
     
-    this.log('info', 'AI service initialized with verified OpenAI API connectivity');
+    this.log('info', 'AI service initialized with professional comic book generation capabilities');
   }
 
   protected async disposeService(): Promise<void> {
@@ -181,26 +248,22 @@ export class AIService extends EnhancedBaseService implements IAIService {
     this.apiKey = null;
   }
 
-  // ✅ ENTERPRISE HEALTH: Independent service health checking
   protected async checkServiceHealth(): Promise<boolean> {
     try {
-      // Check 1: API key availability and format
       if (!this.apiKey || !this.apiKey.startsWith('sk-') || this.apiKey.length < 20) {
         return false;
       }
 
-      // Check 2: Rate limiting status
       const recentRequests = this.rateLimiter.get('/chat/completions') || [];
       const now = Date.now();
-      const windowMs = 60000; // 1 minute
+      const windowMs = 60000;
       const activeRequests = recentRequests.filter(time => now - time < windowMs);
       
       if (activeRequests.length >= (this.config as AIConfig).rateLimitRpm) {
-        return false; // Rate limited
+        return false;
       }
 
-      // Check 3: Optional connectivity test (lightweight)
-      if (Math.random() < 0.1) { // 10% chance for periodic connectivity test
+      if (Math.random() < 0.1) {
         try {
           await this.testAPIConnectivity();
         } catch (error) {
@@ -213,6 +276,237 @@ export class AIService extends EnhancedBaseService implements IAIService {
     } catch (error) {
       this.log('error', 'AI service health check failed', error);
       return false;
+    }
+  }
+
+  // ===== ENHANCED CHARACTER DNA SYSTEM =====
+
+  async createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA> {
+    console.log('🧬 Creating professional character DNA for maximum consistency...');
+
+    const characterAnalysis = await this.analyzeImage({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a professional comic book character designer creating a detailed character model sheet for consistent comic book illustration.
+
+CRITICAL MISSION: Analyze this person's appearance with extreme detail to ensure 100% character consistency across all comic book panels.
+
+REQUIRED ANALYSIS DEPTH:
+1. FACIAL STRUCTURE: Exact face shape, jawline definition, cheekbone structure, forehead characteristics
+2. EYE DETAILS: Precise color, shape, size, eyebrow style, eyelash length, eye spacing
+3. HAIR SPECIFICATIONS: Exact color with highlights/lowlights, texture (straight/wavy/curly), length, style, hairline shape
+4. SKIN CHARACTERISTICS: Tone, texture, any distinctive marks, freckles, scars, birthmarks
+5. BODY TYPE: Height estimation, build, proportions, posture tendencies
+6. CLOTHING ANALYSIS: Specific garments, exact colors, patterns, fit, accessories
+7. UNIQUE IDENTIFIERS: Any distinctive features that make this person immediately recognizable
+8. EXPRESSION PATTERNS: Default facial expression, smile characteristics, eyebrow position
+
+COMIC BOOK ADAPTATION REQUIREMENTS:
+- How to maintain these exact features in ${artStyle} art style
+- Key features that must NEVER change across panels
+- Specific details that ensure immediate character recognition
+- Consistency enforcers to prevent AI variations
+
+OUTPUT REQUIREMENTS:
+Create a comprehensive character DNA that prevents any character variations in comic generation.
+Focus on features that are most likely to vary and provide specific prevention measures.
+
+This character model sheet will be used to ensure identical appearance across all comic book panels.`
+        },
+        {
+          role: 'user',
+          content: [
+            { 
+              type: 'text', 
+              text: 'Create a detailed professional character model sheet from this image. Focus on preventing character variations in comic book generation.' 
+            },
+            { type: 'image_url', image_url: { url: imageUrl } }
+          ]
+        }
+      ],
+      maxTokens: 800,
+    });
+
+    if (!characterAnalysis?.choices?.[0]?.message?.content) {
+      throw new Error('Failed to generate character DNA - no analysis received');
+    }
+
+    const analysisText = characterAnalysis.choices[0].message.content;
+    
+    // Parse the analysis into structured DNA
+    const characterDNA: CharacterDNA = {
+      physicalStructure: {
+        faceShape: this.extractDetail(analysisText, 'face shape', 'oval face with defined features'),
+        eyeDetails: this.extractDetail(analysisText, 'eye', 'medium brown eyes with natural arch eyebrows'),
+        hairSpecifics: this.extractDetail(analysisText, 'hair', 'shoulder-length brown hair with natural texture'),
+        skinTone: this.extractDetail(analysisText, 'skin', 'medium skin tone with healthy complexion'),
+        bodyType: this.extractDetail(analysisText, 'body', 'average height with proportional build'),
+        facialMarks: this.extractDetail(analysisText, 'marks|freckle|scar', 'natural facial features')
+      },
+      clothingSignature: {
+        primaryOutfit: this.extractDetail(analysisText, 'clothing|shirt|jacket', 'casual comfortable clothing'),
+        accessories: this.extractDetail(analysisText, 'accessory|jewelry|watch', 'minimal accessories'),
+        colorPalette: this.extractDetail(analysisText, 'color', 'earth tone color palette'),
+        footwear: this.extractDetail(analysisText, 'shoe|foot', 'casual footwear')
+      },
+      uniqueIdentifiers: {
+        distinctiveFeatures: this.extractDetail(analysisText, 'distinctive|unique', 'friendly approachable appearance'),
+        expressions: this.extractDetail(analysisText, 'expression|smile', 'warm genuine smile'),
+        posture: this.extractDetail(analysisText, 'posture|stance', 'confident relaxed posture'),
+        mannerisms: this.extractDetail(analysisText, 'manner|gesture', 'natural friendly demeanor')
+      },
+      artStyleAdaptation: {
+        [artStyle]: `Maintain all physical features in ${artStyle} style while preserving character identity`,
+        consistencyRule: `Adapt to ${artStyle} art style without changing core character features`,
+        styleGuideline: `${artStyle} interpretation must keep character immediately recognizable`
+      },
+      consistencyEnforcers: [
+        'IDENTICAL character across all panels',
+        'EXACT same facial features and expressions',
+        'CONSISTENT clothing and accessories', 
+        'UNCHANGING character proportions',
+        'MAINTAINED character identity',
+        'SAME character throughout story'
+      ],
+      negativePrompts: [
+        'no aging or age changes',
+        'no facial hair additions or changes',
+        'no clothing variations or outfit changes',
+        'no facial feature alterations',
+        'no body type modifications',
+        'no personality changes',
+        'no style inconsistencies'
+      ]
+    };
+
+    console.log('✅ Professional character DNA created with maximum consistency protocols');
+    return characterDNA;
+  }
+
+  private extractDetail(text: string, pattern: string, fallback: string): string {
+    const regex = new RegExp(`(${pattern}).*?[.!]`, 'gi');
+    const matches = text.match(regex);
+    if (matches && matches.length > 0) {
+      return matches[0].replace(/^[^a-zA-Z]*/, '').trim();
+    }
+    return fallback;
+  }
+
+  // ===== PROFESSIONAL STORY BEAT ANALYSIS =====
+
+  async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
+    console.log(`📖 Analyzing story structure for ${audience} audience using professional comic book methodology...`);
+
+    const config = this.audienceConfig[audience];
+    
+    const storyAnalysisPrompt = `You are an award-winning comic book writer following industry-standard narrative structure from Stan Lee, Alan Moore, and Grant Morrison.
+
+PROFESSIONAL STORY ANALYSIS MISSION:
+Analyze this story using proven comic book creation methodology where story beats drive visual choices.
+
+AUDIENCE: ${audience.toUpperCase()}
+TARGET: ${config.totalPanels} total panels across ${config.pagesPerStory} pages (${config.panelsPerPage} panels per page)
+COMPLEXITY: ${config.complexityLevel}
+
+ANALYSIS REQUIREMENTS:
+${config.analysisInstructions}
+
+STORY BEAT ANALYSIS:
+1. Break story into ${config.totalPanels} distinct narrative beats
+2. Each beat serves specific story function (setup, rising action, climax, resolution)
+3. Map character's emotional journey through beats
+4. Identify visual storytelling moments that advance narrative
+5. Ensure each panel has clear purpose in story progression
+
+COMIC BOOK PROFESSIONAL STANDARDS:
+- Every panel advances the story
+- Character actions serve narrative purpose
+- Visual flow guides reader through story
+- Emotional beats create character arc
+- Panel purposes build toward story resolution
+
+STORY TO ANALYZE:
+${story}
+
+REQUIRED JSON OUTPUT:
+{
+  "storyBeats": [
+    {
+      "beat": "specific_story_moment",
+      "emotion": "character_emotional_state", 
+      "visualPriority": "what_reader_should_focus_on",
+      "panelPurpose": "why_this_panel_exists",
+      "narrativeFunction": "setup|rising_action|climax|resolution",
+      "characterAction": "what_character_is_doing",
+      "environment": "where_action_takes_place",
+      "dialogue": "optional_character_speech"
+    }
+  ],
+  "characterArc": ["emotional_progression_through_story"],
+  "visualFlow": ["visual_storytelling_progression"],
+  "totalPanels": ${config.totalPanels},
+  "pagesRequired": ${config.pagesPerStory}
+}
+
+CRITICAL: Must generate exactly ${config.totalPanels} story beats for ${config.pagesPerStory} comic book pages.
+Follow professional comic creation: Story purpose drives every visual choice.`;
+
+    const result = await this.createChatCompletion({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: storyAnalysisPrompt },
+        { role: 'user', content: 'Analyze this story using professional comic book methodology. Return structured JSON.' }
+      ],
+      temperature: 0.7,
+      responseFormat: { type: 'json_object' }
+    });
+
+    if (!result?.choices?.[0]?.message?.content) {
+      throw new Error('Failed to analyze story structure');
+    }
+
+    try {
+      const storyAnalysis = JSON.parse(result.choices[0].message.content);
+      
+      // Validate story beats count
+      if (!storyAnalysis.storyBeats || storyAnalysis.storyBeats.length !== config.totalPanels) {
+        console.warn(`⚠️ Story beat count mismatch: expected ${config.totalPanels}, got ${storyAnalysis.storyBeats?.length || 0}`);
+        // Adjust beats to match required count
+        storyAnalysis.storyBeats = this.adjustStoryBeats(storyAnalysis.storyBeats || [], config.totalPanels);
+      }
+
+      console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} beats for professional comic book progression`);
+      return storyAnalysis;
+
+    } catch (parseError) {
+      console.error('❌ Failed to parse story analysis:', parseError);
+      throw new Error('Invalid story analysis response format');
+    }
+  }
+
+  private adjustStoryBeats(beats: StoryBeat[], targetCount: number): StoryBeat[] {
+    if (beats.length === targetCount) return beats;
+    
+    if (beats.length > targetCount) {
+      // Too many beats - keep most important ones
+      return beats.slice(0, targetCount);
+    } else {
+      // Too few beats - expand key moments
+      const expandedBeats = [...beats];
+      while (expandedBeats.length < targetCount) {
+        // Duplicate and modify key emotional moments
+        const indexToExpand = Math.floor(expandedBeats.length / 2);
+        const beatToExpand = expandedBeats[indexToExpand];
+        expandedBeats.splice(indexToExpand + 1, 0, {
+          ...beatToExpand,
+          beat: `${beatToExpand.beat}_reaction`,
+          panelPurpose: `reaction_to_${beatToExpand.panelPurpose}`,
+          visualPriority: 'character_reaction'
+        });
+      }
+      return expandedBeats;
     }
   }
 
@@ -237,7 +531,6 @@ export class AIService extends EnhancedBaseService implements IAIService {
     return result.choices[0].message.content;
   }
 
-  // ✅ ENHANCED: Story generation with full options support
   async generateStoryWithOptions(options: StoryGenerationOptions): Promise<StoryGenerationResult> {
     const {
       genre = 'adventure',
@@ -248,7 +541,6 @@ export class AIService extends EnhancedBaseService implements IAIService {
       model = 'gpt-4'
     } = options;
 
-    // Build comprehensive story prompt
     const storyPrompt = this.buildStoryPrompt(genre, characterDescription, audience);
     
     const result = await this.createChatCompletion({
@@ -275,70 +567,8 @@ export class AIService extends EnhancedBaseService implements IAIService {
     };
   }
 
-  // ✅ ENTERPRISE-GRADE: Deep Content Discovery System
-  async generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult> {
-    // ✅ FIXED: Add JSON keyword to system prompt for OpenAI API compliance
-    const jsonSystemPrompt = `${systemPrompt}\n\nIMPORTANT: Respond with valid JSON containing comic book content. Use clear structure with an array of pages/panels/scenes. Your response must be properly formatted JSON.`;
-    
-    const result = await this.createChatCompletion({
-      model: 'gpt-4o',
-      messages: [
-        { 
-          role: 'system', 
-          content: jsonSystemPrompt
-        },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.85,
-      responseFormat: { type: 'json_object' },
-    });
+  // ===== PROFESSIONAL COMIC BOOK SCENE GENERATION =====
 
-    if (!result?.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from OpenAI API - no content received');
-    }
-
-    try {
-      const parsed = JSON.parse(result.choices[0].message.content);
-      
-      // ✅ ENTERPRISE CONTENT DISCOVERY: Find content regardless of structure
-      const discoveryResult = this.discoverContent(parsed);
-      
-      // ✅ VALIDATION: Ensure we have usable content
-      if (!discoveryResult.content || discoveryResult.content.length === 0) {
-        console.error('❌ No valid content discovered in OpenAI response');
-        console.error('📄 Raw response structure:', JSON.stringify(parsed, null, 2).substring(0, 1000));
-        throw new Error('Could not extract valid comic book content from OpenAI response');
-      }
-      
-      console.log(`✅ Content discovered via ${discoveryResult.patternType} pattern: "${discoveryResult.discoveryPath}"`);
-      console.log(`📊 Quality score: ${discoveryResult.qualityScore}/100, Found ${discoveryResult.content.length} pages`);
-      
-      // ✅ FIXED: Return complete business data with all required properties
-      return { 
-        pages: discoveryResult.content,
-        audience: 'children', // Default audience
-        characterImage: undefined,
-        layoutType: 'comic-book-panels',
-        characterArtStyle: 'storybook',
-        metadata: { 
-          discoveryPath: discoveryResult.discoveryPath,
-          patternType: discoveryResult.patternType,
-          qualityScore: discoveryResult.qualityScore,
-          originalStructure: Object.keys(parsed),
-          ...parsed.metadata 
-        } 
-      };
-      
-    } catch (parseError: any) {
-      console.error('❌ Failed to parse OpenAI JSON response:', {
-        error: parseError?.message || 'Unknown parsing error',
-        rawResponse: result.choices[0].message.content.substring(0, 500) + '...'
-      });
-      throw new Error(`Invalid JSON response from OpenAI: ${parseError?.message || 'Unknown error'}`);
-    }
-  }
-
-  // ✅ ENHANCED: Scene generation with audience support and FIXED comic book prompts
   async generateScenesWithAudience(options: SceneGenerationOptions): Promise<SceneGenerationResult> {
     const {
       story,
@@ -352,178 +582,177 @@ export class AIService extends EnhancedBaseService implements IAIService {
       throw new Error('Story must be at least 50 characters long.');
     }
 
-    // ENHANCED: Comic book specific audience configuration
-    const audienceConfig = {
-      children: { 
-        scenes: 8, 
-        pages: 3, 
-        panelsPerPage: '2-3',
-        notes: 'Simple comic book panels. 2-3 large, clear panels per page with minimal text.' 
-      },
-      young_adults: { 
-        scenes: 12, 
-        pages: 4, 
-        panelsPerPage: '3-4',
-        notes: '3-4 panels per page with dynamic layouts and speech bubbles.' 
-      },
-      adults: { 
-        scenes: 16, 
-        pages: 5, 
-        panelsPerPage: '3-5',
-        notes: '3-5 panels per page, sophisticated comic book layouts with varied panel sizes.' 
+    console.log(`🎨 Generating professional comic book layout for ${audience} audience...`);
+
+    // Step 1: Analyze story structure using professional methodology
+    const storyAnalysis = await this.analyzeStoryStructure(story, audience);
+    
+    // Step 2: Create character DNA if character image provided
+    let characterDNA: CharacterDNA | null = null;
+    if (characterImage) {
+      characterDNA = await this.createMasterCharacterDNA(characterImage, characterArtStyle);
+    }
+
+    // Step 3: Generate professional comic book pages
+    const config = this.audienceConfig[audience];
+    const pages = await this.generateComicBookPages(storyAnalysis, characterDNA, config, characterArtStyle);
+
+    console.log(`✅ Professional comic book layout generated: ${pages.length} pages with ${config.totalPanels} total panels`);
+
+    return {
+      pages,
+      audience,
+      characterImage,
+      layoutType,
+      characterArtStyle,
+      metadata: {
+        discoveryPath: 'professional_comic_generation',
+        patternType: 'direct',
+        qualityScore: 100,
+        originalStructure: ['professional_story_analysis', 'character_dna_system', 'comic_book_pages'],
+        storyBeats: storyAnalysis.storyBeats.length,
+        characterConsistencyEnabled: !!characterDNA,
+        professionalStandards: true
       }
     };
+  }
 
-    const { scenes, pages, panelsPerPage, notes } = audienceConfig[audience];
+  private async generateComicBookPages(
+    storyAnalysis: StoryAnalysis, 
+    characterDNA: CharacterDNA | null, 
+    config: any, 
+    artStyle: string
+  ): Promise<any[]> {
+    const pages = [];
+    const beatsPerPage = Math.ceil(storyAnalysis.storyBeats.length / config.pagesPerStory);
 
-    // ✅ CRITICAL FIX: Enhanced comic book focused system prompt with CHARACTER CONSISTENCY support
-    const systemPrompt = `
-You are a professional comic book layout designer for a storybook app that creates COMIC BOOK STYLE layouts with CHARACTER CONSISTENCY.
+    for (let pageNum = 1; pageNum <= config.pagesPerStory; pageNum++) {
+      const startBeat = (pageNum - 1) * beatsPerPage;
+      const endBeat = Math.min(startBeat + beatsPerPage, storyAnalysis.storyBeats.length);
+      const pageBeats = storyAnalysis.storyBeats.slice(startBeat, endBeat);
 
-CRITICAL: You must create comic book PAGES with multiple PANELS, not individual scenes.
-
-Audience: ${audience.toUpperCase()}
-Target: ${scenes} total panels arranged across ${pages} comic book pages
-Panels per page: ${panelsPerPage}
-Character Art Style: ${characterArtStyle} (maintain this art style in all panels)
-
-COMIC BOOK REQUIREMENTS:
-- Each page contains multiple panels (like a real comic book)
-- Panels show sequential story moments
-- Each panel has a specific action/dialogue moment
-- Focus on visual storytelling with minimal text
-- Panels should flow naturally from one to the next
-- Include comic book elements: panel borders, speech bubbles, dynamic layouts
-
-CHARACTER CONSISTENCY REQUIREMENTS:
-- The main character must appear consistently across all panels
-- Character appearance will be handled separately for consistency
-- Focus on character actions and emotions that match the character's personality
-
-Panel Structure:
-- description: Brief action happening in this panel
-- emotion: Character's emotional state in this panel  
-- imagePrompt: Comic book panel scene description including setting, action, and composition. Focus on environment, lighting, and visual storytelling. Character appearance will be added separately for consistency.
-- panelType: 'standard', 'wide', 'tall', or 'splash' (for layout variety)
-- characterAction: Specific action the main character is performing in this panel
-
-Visual pacing notes: ${notes}
-
-IMPORTANT: Return your output as valid JSON in this strict format:
-{
-  "pages": [
-    {
-      "pageNumber": 1,
-      "scenes": [
-        {
-          "description": "...",
-          "emotion": "...",
-          "imagePrompt": "...",
-          "panelType": "standard",
-          "characterAction": "..."
-        }
-      ]
-    }
-  ]
-}
-
-Your response must be properly formatted JSON that can be parsed directly.
-`;
-
-    const result = await this.createChatCompletion({
-      model: 'gpt-4o',
-      temperature: 0.85,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { 
-          role: 'user', 
-          content: `Create a comic book layout for this story. Remember: Multiple panels per page, ${characterArtStyle} art style, ${panelsPerPage} panels per page, character consistency across all panels. Respond with valid JSON.\n\nStory: ${story}` 
-        }
-      ],
-      responseFormat: { type: 'json_object' }
-    });
-
-    if (!result?.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from OpenAI API - no content received');
-    }
-
-    try {
-      const parsed = JSON.parse(result.choices[0].message.content);
+      // Ensure exactly the right number of panels per page
+      while (pageBeats.length < config.panelsPerPage && storyAnalysis.storyBeats.length > endBeat) {
+        pageBeats.push(storyAnalysis.storyBeats[endBeat + pageBeats.length - beatsPerPage]);
+      }
       
-      if (!parsed.pages || !Array.isArray(parsed.pages)) {
-        throw new Error('Invalid response structure - no pages array found');
+      if (pageBeats.length > config.panelsPerPage) {
+        pageBeats.splice(config.panelsPerPage);
       }
 
-      // ENHANCED: Add comic book metadata to each panel with CHARACTER CONSISTENCY support
-      const updatedPages = parsed.pages.map((page: any) => ({
-        ...page,
-        layoutType: layoutType,
-        characterArtStyle: characterArtStyle,
-        scenes: page.scenes.map((scene: any) => ({
-          ...scene,
-          panelType: scene.panelType || 'standard',
-          characterAction: scene.characterAction || 'standing',
-          generatedImage: characterImage, // Placeholder until panel generation
-          layoutType: layoutType,
-          characterArtStyle: characterArtStyle,
-          // ✅ FIXED: Enhanced image prompt that supports character consistency
-          imagePrompt: scene.imagePrompt || `Comic book panel showing ${scene.description || 'a scene'} with dynamic composition and proper comic book styling`
-        }))
+      const pageScenes = pageBeats.map((beat, panelIndex) => ({
+        description: beat.beat,
+        emotion: beat.emotion,
+        imagePrompt: this.buildProfessionalPanelPrompt(beat, characterDNA, artStyle, config),
+        panelType: this.determinePanelType(panelIndex, config.panelsPerPage),
+        characterAction: beat.characterAction,
+        narrativePurpose: beat.panelPurpose,
+        visualPriority: beat.visualPriority,
+        dialogue: beat.dialogue,
+        panelNumber: panelIndex + 1,
+        pageNumber: pageNum
       }));
 
-      console.log('✅ Successfully generated comic book layout with character consistency support');
-      console.log(`📊 Generated ${updatedPages.length} comic book pages with ${updatedPages.reduce((total: number, page: any) => total + (page.scenes?.length || 0), 0)} panels total`);
+      pages.push({
+        pageNumber: pageNum,
+        scenes: pageScenes,
+        layoutType: config.panelLayout,
+        characterArtStyle: artStyle,
+        panelCount: pageScenes.length
+      });
+    }
 
-      return {
-        pages: updatedPages,
-        audience,
-        characterImage,
-        layoutType,
-        characterArtStyle,
-        metadata: {
-          discoveryPath: 'direct_generation',
-          patternType: 'direct',
-          qualityScore: 100,
-          originalStructure: Object.keys(parsed),
-          characterConsistencyEnabled: true,
-          ...parsed.metadata
-        }
-      };
+    return pages;
+  }
 
-    } catch (parseError: any) {
-      console.error('❌ Failed to parse comic book scene generation response:', parseError);
-      
-      // ✅ ENHANCED ERROR HANDLING: Provide detailed error information
-      const errorDetails = {
-        parseError: parseError?.message || 'Unknown parsing error',
-        rawResponse: result.choices[0].message.content.substring(0, 500) + '...',
-        responseLength: result.choices[0].message.content.length,
-        containsJSON: result.choices[0].message.content.includes('{') && result.choices[0].message.content.includes('}')
-      };
-      
-      console.error('❌ JSON parsing error details:', errorDetails);
-      throw new Error(`Invalid JSON response from OpenAI: ${parseError?.message || 'Unknown error'}. Response may not be valid JSON format.`);
+  private buildProfessionalPanelPrompt(
+    beat: StoryBeat, 
+    characterDNA: CharacterDNA | null, 
+    artStyle: string, 
+    config: any
+  ): string {
+    const characterPrompt = characterDNA ? this.buildCharacterDNAPrompt(characterDNA, artStyle) : '';
+    
+    return `PROFESSIONAL COMIC BOOK PANEL:
+
+NARRATIVE PURPOSE: ${beat.panelPurpose}
+STORY MOMENT: ${beat.beat}
+CHARACTER ACTION: ${beat.characterAction}
+EMOTIONAL STATE: ${beat.emotion}
+VISUAL FOCUS: ${beat.visualPriority}
+ENVIRONMENT: ${beat.environment}
+
+${characterPrompt}
+
+COMIC BOOK PRODUCTION STANDARDS:
+- Panel Style: ${config.panelLayout} for ${config.complexityLevel} storytelling
+- Visual Flow: ${config.readingFlow}
+- Art Style: ${artStyle} with professional comic book formatting
+- Color Scheme: ${config.colorScheme}
+- Panel Borders: Professional comic book gutters and panel separation
+- Speech Bubbles: Include if dialogue present: "${beat.dialogue || 'None'}"
+
+TECHNICAL SPECIFICATIONS:
+- Format: Professional comic book panel illustration
+- Quality: Publication-ready comic book artwork
+- Composition: ${config.visualStyle}
+- Target Audience: Appropriate for ${config.complexityLevel} readers
+
+CRITICAL REQUIREMENTS:
+- Character consistency across all panels
+- Clear visual storytelling that advances narrative
+- Professional comic book production quality`;
+  }
+
+  private buildCharacterDNAPrompt(characterDNA: CharacterDNA, artStyle: string): string {
+    return `CHARACTER CONSISTENCY PROTOCOL - MAXIMUM IMPORTANCE:
+
+PHYSICAL STRUCTURE (NEVER ALTER):
+- Face: ${characterDNA.physicalStructure.faceShape}
+- Eyes: ${characterDNA.physicalStructure.eyeDetails}
+- Hair: ${characterDNA.physicalStructure.hairSpecifics}
+- Skin: ${characterDNA.physicalStructure.skinTone}
+- Body: ${characterDNA.physicalStructure.bodyType}
+- Features: ${characterDNA.physicalStructure.facialMarks}
+
+CLOTHING SIGNATURE (IDENTICAL EVERY PANEL):
+- Outfit: ${characterDNA.clothingSignature.primaryOutfit}
+- Accessories: ${characterDNA.clothingSignature.accessories}
+- Colors: ${characterDNA.clothingSignature.colorPalette}
+- Footwear: ${characterDNA.clothingSignature.footwear}
+
+UNIQUE IDENTIFIERS (MAINTAIN EXACTLY):
+- Distinctive: ${characterDNA.uniqueIdentifiers.distinctiveFeatures}
+- Expression: ${characterDNA.uniqueIdentifiers.expressions}
+- Posture: ${characterDNA.uniqueIdentifiers.posture}
+- Mannerisms: ${characterDNA.uniqueIdentifiers.mannerisms}
+
+ART STYLE ADAPTATION:
+${characterDNA.artStyleAdaptation[artStyle] || `Maintain all features in ${artStyle} style`}
+
+CONSISTENCY ENFORCEMENT:
+${characterDNA.consistencyEnforcers.join('\n- ')}
+
+STRICTLY FORBIDDEN:
+${characterDNA.negativePrompts.join('\n- ')}
+
+VERIFICATION: Character must be identical to previous panels in this comic book story.`;
+  }
+
+  private determinePanelType(panelIndex: number, totalPanels: number): string {
+    if (totalPanels <= 2) {
+      return panelIndex === 0 ? 'wide' : 'standard';
+    } else if (totalPanels <= 4) {
+      return panelIndex === totalPanels - 1 ? 'wide' : 'standard';
+    } else {
+      // More sophisticated panel variety for complex layouts
+      const panelTypes = ['standard', 'wide', 'tall', 'standard'];
+      return panelTypes[panelIndex % panelTypes.length];
     }
   }
 
-  async generateCartoonImage(prompt: string): Promise<string> {
-    const result = await this.generateImage({
-      model: 'dall-e-3',
-      prompt,
-      n: 1,
-      size: '1024x1024',
-      quality: 'standard',
-      style: 'vivid',
-    });
+  // ===== ENHANCED SCENE IMAGE GENERATION =====
 
-    if (!result?.data?.[0]?.url) {
-      throw new Error('Invalid response from OpenAI API - no image URL received');
-    }
-
-    return result.data[0].url;
-  }
-
-  // ✅ ENHANCED: Scene image generation with CHARACTER CONSISTENCY and COMIC BOOK formatting
   async generateSceneImage(options: ImageGenerationOptions): Promise<ImageGenerationResult> {
     const {
       image_prompt,
@@ -532,81 +761,104 @@ Your response must be properly formatted JSON that can be parsed directly.
       audience,
       isReusedImage = false,
       cartoon_image,
-      user_id,
       style = 'storybook',
       characterArtStyle = 'storybook',
       layoutType = 'comic-book-panels',
       panelType = 'standard'
     } = options;
 
-    console.log('🎨 Starting CHARACTER-CONSISTENT comic book panel generation...');
-    console.log(`🎭 Panel Type: ${panelType}, Art Style: ${characterArtStyle}, Layout: ${layoutType}`);
-    console.log(`👤 Character: "${character_description}"`);
+    console.log('🎨 Generating professional character-consistent comic panel...');
 
-    // ✅ ENHANCED: Audience-specific comic book styling with CHARACTER CONSISTENCY
-    const audienceStyles = {
-      children: 'Create a bright, colorful comic book panel with simple, bold shapes and clear action. Use vibrant colors and friendly compositions suitable for young readers. Maintain consistent character appearance.',
-      young_adults: 'Design a dynamic comic book panel with detailed backgrounds and expressive character poses. Use sophisticated color palettes and engaging visual storytelling. Ensure character consistency across panels.',
-      adults: 'Craft a mature comic book panel with complex compositions, nuanced lighting, and detailed artistic elements. Employ sophisticated visual narrative techniques while maintaining character consistency.',
-    };
+    const config = this.audienceConfig[audience] || this.audienceConfig.children;
+    
+    const professionalPrompt = this.buildProfessionalImagePrompt({
+      imagePrompt: image_prompt,
+      characterDescription: character_description,
+      emotion,
+      audience,
+      isReusedImage,
+      characterArtStyle,
+      panelType,
+      config
+    });
 
-    // ✅ ENHANCED: Character art style integration with CONSISTENCY focus
-    const artStylePrompts = {
-      'storybook': 'soft, whimsical storybook art style with gentle colors, clean lines, and consistent character design',
-      'semi-realistic': 'semi-realistic style with smooth shading, detailed facial features, and consistent character proportions',
-      'comic-book': 'bold comic book style with strong outlines, vivid colors, dynamic shading, and consistent character design across panels',
-      'flat-illustration': 'modern flat illustration style with minimal shading, vibrant flat colors, and consistent character silhouettes',
-      'anime': 'anime art style with expressive features, stylized proportions, crisp linework, and consistent character design'
-    };
+    const imageUrl = await this.generateCartoonImage(professionalPrompt);
 
-    // ✅ ENHANCED: Panel type specifications with COMIC BOOK elements
-    const panelSpecs = {
-      'standard': 'Create a standard rectangular comic book panel with balanced composition, clear panel borders, and comic book styling',
-      'wide': 'Create a wide panoramic comic book panel that spans horizontally with dynamic panel borders, perfect for establishing shots or action sequences',
-      'tall': 'Create a tall vertical comic book panel with dramatic panel borders that emphasizes height or dramatic moments',
-      'splash': 'Create a dramatic splash panel with dynamic composition, bold panel borders, and high impact that could span most of a page'
-    };
-
-    // ✅ CRITICAL FIX: Build the comprehensive CHARACTER-CONSISTENT comic book panel prompt
-    const characterConsistencyPrompt = isReusedImage && character_description 
-      ? `CRITICAL CHARACTER CONSISTENCY: Use this EXACT character appearance consistently: "${character_description}". Do not create a new character interpretation - maintain this specific character's appearance, facial features, clothing, and distinctive characteristics exactly as described.`
-      : `Character Design: ${character_description} (maintain consistent appearance if this character appears in other panels)`;
-
-    // ✅ ENHANCED: Comic book prompt with CHARACTER CONSISTENCY and proper formatting
-    const finalPrompt = [
-      `${panelSpecs[panelType as keyof typeof panelSpecs] || panelSpecs.standard}`,
-      `Comic Book Scene: ${image_prompt}`,
-      `Character Emotional State: ${emotion}`,
-      characterConsistencyPrompt,
-      `Art Style: ${artStylePrompts[characterArtStyle as keyof typeof artStylePrompts] || artStylePrompts.storybook}`,
-      `Comic Book Elements: Include clear panel borders, appropriate comic book styling, speech bubbles if dialogue is present, and professional comic book visual storytelling`,
-      `Target Audience: ${audienceStyles[audience] || audienceStyles.children}`,
-      `Character Consistency Note: If this character has appeared in previous panels, maintain exact same appearance, proportions, facial features, and clothing style for story continuity.`,
-      `Quality Standards: Professional comic book illustration quality with consistent character design, clear action, and engaging visual storytelling.`
-    ].filter(Boolean).join('\n\n');
-
-    console.log('🎨 Generating CHARACTER-CONSISTENT comic panel with enhanced prompt...');
-
-    const imageUrl = await this.generateCartoonImage(finalPrompt);
-
-    console.log('✅ Successfully generated CHARACTER-CONSISTENT comic book panel');
-    console.log(`🎨 Panel Style: ${characterArtStyle}, Type: ${panelType}, Character: Consistent`);
+    console.log('✅ Professional character-consistent comic panel generated');
 
     return {
       url: imageUrl,
-      prompt_used: finalPrompt,
+      prompt_used: professionalPrompt,
       reused: false,
     };
   }
 
-  // ✅ FIXED: Method overloading implementation
+  private buildProfessionalImagePrompt(options: {
+    imagePrompt: string;
+    characterDescription: string;
+    emotion: string;
+    audience: AudienceType;
+    isReusedImage: boolean;
+    characterArtStyle: string;
+    panelType: string;
+    config: any;
+  }): string {
+    const { imagePrompt, characterDescription, emotion, audience, isReusedImage, characterArtStyle, panelType, config } = options;
+
+    const characterConsistencyPrompt = isReusedImage && characterDescription 
+      ? `CRITICAL CHARACTER CONSISTENCY: This character has appeared in previous panels. Use this EXACT character appearance: "${characterDescription}". Maintain identical facial features, clothing, and all distinctive characteristics. NO variations allowed.`
+      : `CHARACTER DESIGN: ${characterDescription} (establish consistent appearance for future panels)`;
+
+    const panelSpecs = {
+      'standard': 'Standard rectangular comic panel with balanced composition and clear panel borders',
+      'wide': 'Wide panoramic comic panel perfect for establishing shots or action sequences',
+      'tall': 'Tall vertical comic panel emphasizing dramatic moments or character emotions',
+      'splash': 'Large dramatic splash panel with high visual impact and bold composition'
+    };
+
+    return `PROFESSIONAL COMIC BOOK PANEL GENERATION:
+
+PANEL SPECIFICATIONS:
+${panelSpecs[panelType] || panelSpecs.standard}
+
+SCENE DESCRIPTION:
+${imagePrompt}
+
+CHARACTER REQUIREMENTS:
+${characterConsistencyPrompt}
+Emotional State: ${emotion}
+
+COMIC BOOK PRODUCTION STANDARDS:
+- Art Style: ${characterArtStyle} with professional comic book quality
+- Panel Layout: ${config.panelLayout} style for ${audience} audience
+- Visual Quality: ${config.visualStyle}
+- Color Scheme: ${config.colorScheme}
+- Complexity Level: ${config.complexityLevel}
+
+PROFESSIONAL COMIC ELEMENTS:
+- Clear panel borders with proper gutters
+- Speech bubbles if dialogue is present
+- Professional comic book illustration quality
+- Visual storytelling that guides reader attention
+- Character positioning that supports narrative flow
+
+TARGET AUDIENCE: ${audience} - ${config.analysisInstructions}
+
+QUALITY STANDARDS:
+- Publication-ready comic book artwork
+- Character consistency for story continuity
+- Professional comic book visual storytelling
+- Clear, engaging panel composition`;
+  }
+
+  // ===== CHARACTER DESCRIPTION METHODS =====
+
   async describeCharacter(imageUrl: string, prompt: string): Promise<string>;
   async describeCharacter(options: CharacterDescriptionOptions): Promise<CharacterDescriptionResult>;
   async describeCharacter(imageUrlOrOptions: string | CharacterDescriptionOptions, prompt?: string): Promise<string | CharacterDescriptionResult> {
     if (typeof imageUrlOrOptions === 'string') {
-      // Original method signature
       const imageUrl = imageUrlOrOptions;
-      const characterPrompt = prompt || 'Describe this character for cartoon generation.';
+      const characterPrompt = prompt || 'Describe this character for professional comic book creation.';
       
       const result = await this.analyzeImage({
         model: 'gpt-4o',
@@ -615,7 +867,7 @@ Your response must be properly formatted JSON that can be parsed directly.
           {
             role: 'user',
             content: [
-              { type: 'text', text: 'Describe this image for cartoon generation. Only include clearly visible and objective features.' },
+              { type: 'text', text: 'Describe this character with professional detail for comic book consistency.' },
               { type: 'image_url', image_url: { url: imageUrl } }
             ]
           }
@@ -629,10 +881,9 @@ Your response must be properly formatted JSON that can be parsed directly.
 
       return result.choices[0].message.content;
     } else {
-      // New options-based signature
       const { imageUrl, style = 'storybook' } = imageUrlOrOptions;
       
-      const characterPrompt = `You are a professional character artist. Your task is to observe a real image of a person and return a precise, vivid, factual description of only the clearly visible physical traits for ${style} style artwork.`;
+      const characterPrompt = `You are a professional comic book character designer creating detailed character descriptions for ${style} style artwork with maximum consistency.`;
       
       const result = await this.analyzeImage({
         model: 'gpt-4o',
@@ -641,7 +892,7 @@ Your response must be properly formatted JSON that can be parsed directly.
           {
             role: 'user',
             content: [
-              { type: 'text', text: 'Describe this image for cartoon generation. Only include clearly visible and objective features.' },
+              { type: 'text', text: 'Create a detailed character description for comic book consistency. Include all visible features and characteristics.' },
               { type: 'image_url', image_url: { url: imageUrl } }
             ]
           }
@@ -660,22 +911,36 @@ Your response must be properly formatted JSON that can be parsed directly.
     }
   }
 
-  // ✅ ENHANCED: Cartoonize processing with full options
+  // ===== CARTOONIZE PROCESSING =====
+
   async processCartoonize(options: CartoonizeOptions): Promise<CartoonizeResult> {
     const { prompt, style = 'cartoon', imageUrl, userId } = options;
 
-    console.log('🎨 Starting cartoonize processing...');
+    console.log('🎨 Professional character cartoonization processing...');
 
-    // Clean and prepare prompt
     const cleanPrompt = this.cleanStoryPrompt(prompt);
     const stylePrompt = this.getStylePrompt(style);
-    const finalPrompt = `Create a cartoon-style portrait of the person described below. Focus on accurate facial features and clothing details. ${cleanPrompt}. ${stylePrompt}`;
+    const finalPrompt = `Create a professional ${style} style character portrait with maximum detail for comic book consistency.
 
-    console.log('🎨 Making request to OpenAI DALL-E API...');
+CHARACTER DESCRIPTION: ${cleanPrompt}
+
+STYLE REQUIREMENTS: ${stylePrompt}
+
+PROFESSIONAL STANDARDS:
+- High-quality character design suitable for comic book illustration
+- Detailed facial features and expressions for character consistency
+- Clear, distinctive clothing and accessories
+- Professional character art that can be used across multiple comic panels
+- Maintain character identity for story continuity
+
+TECHNICAL SPECIFICATIONS:
+- Publication-ready character illustration
+- Suitable for character reference and comic book generation
+- Detailed enough for consistent character reproduction`;
 
     const generatedUrl = await this.generateCartoonImage(finalPrompt);
 
-    console.log('✅ Successfully generated cartoon image');
+    console.log('✅ Professional character cartoonization completed');
 
     return {
       url: generatedUrl,
@@ -683,8 +948,60 @@ Your response must be properly formatted JSON that can be parsed directly.
     };
   }
 
+  // ===== LEGACY SCENE GENERATION (FALLBACK) =====
+
+  async generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult> {
+    const jsonSystemPrompt = `${systemPrompt}\n\nIMPORTANT: Respond with valid JSON containing professional comic book content.`;
+    
+    const result = await this.createChatCompletion({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: jsonSystemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.85,
+      responseFormat: { type: 'json_object' },
+    });
+
+    if (!result?.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response from OpenAI API - no content received');
+    }
+
+    try {
+      const parsed = JSON.parse(result.choices[0].message.content);
+      const discoveryResult = this.discoverContent(parsed);
+      
+      if (!discoveryResult.content || discoveryResult.content.length === 0) {
+        console.error('❌ No valid content discovered in OpenAI response');
+        throw new Error('Could not extract valid comic book content from OpenAI response');
+      }
+      
+      console.log(`✅ Content discovered via ${discoveryResult.patternType} pattern`);
+      
+      return { 
+        pages: discoveryResult.content,
+        audience: 'children',
+        characterImage: undefined,
+        layoutType: 'comic-book-panels',
+        characterArtStyle: 'storybook',
+        metadata: { 
+          discoveryPath: discoveryResult.discoveryPath,
+          patternType: discoveryResult.patternType,
+          qualityScore: discoveryResult.qualityScore,
+          originalStructure: Object.keys(parsed),
+          ...parsed.metadata 
+        } 
+      };
+      
+    } catch (parseError: any) {
+      console.error('❌ Failed to parse OpenAI JSON response:', parseError);
+      throw new Error(`Invalid JSON response from OpenAI: ${parseError?.message || 'Unknown error'}`);
+    }
+  }
+
+  // ===== CHAT COMPLETION =====
+
   async createChatCompletion(options: ChatCompletionOptions): Promise<ChatCompletionResult> {
-    // ✅ DEFENSIVE PROMPT VALIDATION: Ensure JSON keyword is present when using json_object format
     if (options.responseFormat?.type === 'json_object') {
       const hasJsonKeyword = options.messages.some(message => {
         if (typeof message.content === 'string') {
@@ -695,7 +1012,6 @@ Your response must be properly formatted JSON that can be parsed directly.
 
       if (!hasJsonKeyword) {
         console.warn('⚠️ Adding JSON keyword to prompt for OpenAI API compliance');
-        // Add JSON instruction to the last user message
         const lastUserMessageIndex = options.messages.map(m => m.role).lastIndexOf('user');
         if (lastUserMessageIndex >= 0) {
           const lastMessage = options.messages[lastUserMessageIndex];
@@ -729,17 +1045,31 @@ Your response must be properly formatted JSON that can be parsed directly.
     );
   }
 
+  async generateCartoonImage(prompt: string): Promise<string> {
+    const result = await this.generateImage({
+      model: 'dall-e-3',
+      prompt,
+      n: 1,
+      size: '1024x1024',
+      quality: 'standard',
+      style: 'vivid',
+    });
+
+    if (!result?.data?.[0]?.url) {
+      throw new Error('Invalid response from OpenAI API - no image URL received');
+    }
+
+    return result.data[0].url;
+  }
+
   // ===== PRIVATE HELPER METHODS =====
 
-  // ✅ ENTERPRISE HEALTH: Test actual API connectivity
   private async testAPIConnectivity(): Promise<void> {
     try {
       const testResponse = await this.makeRequest<any>(
         '/models',
-        {
-          method: 'GET',
-        },
-        5000, // Short timeout for connectivity test
+        { method: 'GET' },
+        5000,
         'testConnectivity'
       );
 
@@ -756,15 +1086,8 @@ Your response must be properly formatted JSON that can be parsed directly.
 
   private isPlaceholderValue(value: string): boolean {
     const placeholderPatterns = [
-      'your_',
-      'placeholder',
-      'example',
-      'test_key',
-      'demo_',
-      'localhost',
-      'http://localhost'
+      'your_', 'placeholder', 'example', 'test_key', 'demo_', 'localhost', 'http://localhost'
     ];
-
     return placeholderPatterns.some(pattern => 
       value.toLowerCase().includes(pattern.toLowerCase())
     );
@@ -772,67 +1095,49 @@ Your response must be properly formatted JSON that can be parsed directly.
 
   private buildStoryPrompt(genre: GenreType, characterDescription: string, audience: AudienceType): string {
     const genrePrompts = {
-      adventure: 'Create an exciting adventure story filled with discovery, challenges to overcome, and personal growth.',
-      siblings: 'Write a heartwarming story about the joys and challenges of sibling relationships, focusing on sharing, understanding, and family bonds.',
-      bedtime: 'Create a gentle, soothing bedtime story with calming imagery and a peaceful resolution that helps children transition to sleep.',
-      fantasy: 'Craft a magical tale filled with wonder, enchantment, and imaginative elements that spark creativity.',
-      history: 'Tell an engaging historical story that brings the past to life while weaving in educational elements naturally.',
+      adventure: 'Create an exciting adventure story filled with discovery, challenges, and personal growth.',
+      siblings: 'Write a heartwarming story about sibling relationships, sharing, and family bonds.',
+      bedtime: 'Create a gentle, soothing bedtime story with calming imagery and peaceful resolution.',
+      fantasy: 'Craft a magical tale filled with wonder, enchantment, and imaginative elements.',
+      history: 'Tell an engaging historical story that brings the past to life with educational elements.',
     };
 
-    const audienceConfig = {
-      children: {
-        prompt: 'Use simple, clear language suitable for young readers. Keep sentences short and direct. Include repetitive elements and patterns.',
-        wordCount: '300-400',
-        scenes: '5-8'
-      },
-      young_adults: {
-        prompt: 'Develop more complex character arcs and relationships. Include meaningful personal growth and self-discovery.',
-        wordCount: '600-800',
-        scenes: '8-12'
-      },
-      adults: {
-        prompt: 'Craft sophisticated narrative structures. Develop layered character relationships. Explore complex themes and moral ambiguity.',
-        wordCount: '800-1200',
-        scenes: '10-15'
-      }
-    };
-
-    const config = audienceConfig[audience];
+    const config = this.audienceConfig[audience];
     const genrePrompt = genrePrompts[genre];
 
-    return `You are a professional story writer crafting a high-quality, imaginative, and emotionally engaging story in the ${genre} genre.
-This story is for a ${audience} audience and will be turned into a cartoon storybook with illustrations.
+    return `You are a professional story writer crafting high-quality, imaginative stories for comic book adaptation.
 
-The main character is described as follows:
-"${characterDescription}"
+STORY REQUIREMENTS:
+- Genre: ${genre} - ${genrePrompt}
+- Character: ${characterDescription}
+- Audience: ${audience} (${config.complexityLevel} complexity)
+- Target Length: Suitable for ${config.totalPanels} comic book panels
 
-✨ Story Guidelines:
-- Use descriptive language that matches the visual traits of the character
-- Keep the character's appearance, personality, and role consistent throughout
-- Include rich sensory details that can be illustrated
-- Create ${config.scenes} distinct visual scenes that flow naturally
-- Build emotional connection through character reactions and feelings
-- Maintain a clear story arc: setup, challenge/conflict, resolution
-- Target word count: ${config.wordCount} words
+COMIC BOOK ADAPTATION FOCUS:
+- Create ${config.totalPanels} distinct visual moments
+- Include rich sensory details for illustration
+- Build clear emotional progression for character
+- Ensure strong visual storytelling potential
+- Create memorable scenes that translate well to comics
 
-Genre-specific guidance:
-${genrePrompt}
+PROFESSIONAL STANDARDS:
+- Engaging narrative with clear story arc
+- Character consistency and development
+- Visual scenes that advance the plot
+- Appropriate complexity for ${audience} audience
+- Strong beginning, middle, and satisfying conclusion
 
-Audience-specific requirements:
-${config.prompt}
-
-✍️ Write a cohesive story that brings this character to life in an engaging way. Focus on creating vivid scenes that will translate well to illustrations.`;
+Write a cohesive story optimized for professional comic book adaptation.`;
   }
 
   private getStylePrompt(style: string): string {
     const stylePrompts = {
-      'storybook': 'Use a soft, whimsical storybook style with gentle colors and clean lines.',
-      'semi-realistic': 'Use a semi-realistic cartoon style with smooth shading and facial detail accuracy.',
-      'comic-book': 'Use a bold comic book style with strong outlines, vivid colors, and dynamic shading.',
-      'flat-illustration': 'Use a modern flat illustration style with minimal shading, clean vector lines, and vibrant flat colors.',
-      'anime': 'Use anime style with expressive eyes, stylized proportions, and crisp linework inspired by Japanese animation.'
+      'storybook': 'Soft, whimsical storybook art with gentle colors, clean lines, and friendly character design.',
+      'semi-realistic': 'Semi-realistic cartoon style with smooth shading, detailed facial features, and natural proportions.',
+      'comic-book': 'Bold comic book style with strong outlines, vivid colors, dynamic shading, and heroic character design.',
+      'flat-illustration': 'Modern flat illustration style with minimal shading, clean vector lines, and vibrant flat colors.',
+      'anime': 'Anime art style with expressive eyes, stylized proportions, and crisp linework inspired by Japanese animation.'
     };
-
     return stylePrompts[style as keyof typeof stylePrompts] || stylePrompts['semi-realistic'];
   }
 
@@ -851,25 +1156,23 @@ ${config.prompt}
       .replace(/[.!]+$/, '');
   }
 
-  // ✅ ENTERPRISE CONTENT DISCOVERY SYSTEM
+  // ===== CONTENT DISCOVERY SYSTEM =====
+
   private discoverContent(parsed: any): ContentDiscoveryResult {
-    console.log('🔍 Starting deep content discovery...');
+    console.log('🔍 Starting professional content discovery...');
     
-    // Phase 1: Try known patterns (fastest, most reliable)
     const patternResult = this.tryKnownPatterns(parsed);
     if (patternResult) {
       console.log(`✅ Pattern match: ${patternResult.discoveryPath}`);
       return patternResult;
     }
     
-    // Phase 2: Deep recursive search (comprehensive fallback)
     const searchResult = this.performDeepSearch(parsed);
     if (searchResult) {
       console.log(`✅ Deep search success: ${searchResult.discoveryPath}`);
       return searchResult;
     }
     
-    // Phase 3: Emergency fallback (last resort)
     console.warn('⚠️ Using emergency fallback - no comic content found');
     return {
       content: [],
@@ -879,9 +1182,7 @@ ${config.prompt}
     };
   }
 
-  // ✅ PHASE 1: Known Pattern Recognition
   private tryKnownPatterns(parsed: any): ContentDiscoveryResult | null {
-    // Sort patterns by priority (highest first)
     const sortedPatterns = [...this.discoveryPatterns].sort((a, b) => b.priority - a.priority);
     
     for (const pattern of sortedPatterns) {
@@ -902,7 +1203,6 @@ ${config.prompt}
           }
         }
       } catch (error) {
-        // Continue to next pattern if this one fails
         console.debug(`Pattern ${pattern.name} validation failed:`, error);
       }
     }
@@ -910,16 +1210,12 @@ ${config.prompt}
     return null;
   }
 
-  // ✅ PHASE 2: Deep Recursive Search
   private performDeepSearch(obj: any, currentPath: string[] = []): ContentDiscoveryResult | null {
-    if (!obj || typeof obj !== 'object') {
-      return null;
-    }
+    if (!obj || typeof obj !== 'object') return null;
     
-    // Check if current object is an array of comic content
     if (Array.isArray(obj)) {
       const qualityScore = this.calculateContentQuality(obj);
-      if (qualityScore > 50) { // Threshold for acceptable content
+      if (qualityScore > 50) {
         return {
           content: obj,
           discoveryPath: currentPath.join('.') || 'root_array',
@@ -929,7 +1225,6 @@ ${config.prompt}
       }
     }
     
-    // Recursively search object properties
     const candidates: ContentDiscoveryResult[] = [];
     
     for (const [key, value] of Object.entries(obj)) {
@@ -941,7 +1236,6 @@ ${config.prompt}
       }
     }
     
-    // Return the best candidate (highest quality score)
     if (candidates.length > 0) {
       return candidates.sort((a, b) => b.qualityScore - a.qualityScore)[0];
     }
@@ -949,38 +1243,30 @@ ${config.prompt}
     return null;
   }
 
-  // ✅ CONTENT QUALITY ASSESSMENT
   private calculateContentQuality(content: any[]): number {
-    if (!Array.isArray(content) || content.length === 0) {
-      return 0;
-    }
+    if (!Array.isArray(content) || content.length === 0) return 0;
     
     let score = 0;
-    const items = content.slice(0, 5); // Check first 5 items for performance
+    const items = content.slice(0, 5);
     
-    // Size scoring (1-20 items is ideal for comic pages)
     if (content.length >= 1 && content.length <= 20) {
       score += 20;
     } else if (content.length <= 50) {
       score += 10;
     }
     
-    // Content structure scoring
     for (const item of items) {
       if (item && typeof item === 'object') {
-        score += 10; // Basic object structure
+        score += 10;
         
-        // Comic-specific properties (higher weight)
         const comicProperties = ['description', 'imagePrompt', 'scene', 'emotion', 'dialogue', 'panelNumber', 'pageNumber'];
         const foundProperties = comicProperties.filter(prop => prop in item);
         score += foundProperties.length * 8;
         
-        // Generic useful properties
         const genericProperties = ['text', 'content', 'prompt', 'action', 'character'];
         const foundGeneric = genericProperties.filter(prop => prop in item);
         score += foundGeneric.length * 3;
         
-        // Nested structure bonus (pages with scenes)
         if (item.scenes && Array.isArray(item.scenes)) {
           score += 15;
         }
@@ -990,7 +1276,6 @@ ${config.prompt}
     return Math.min(100, score);
   }
 
-  // ✅ UTILITY: Extract content by path
   private extractContentByPath(obj: any, path: string[]): any {
     let current = obj;
     for (const key of path) {
@@ -1005,10 +1290,9 @@ ${config.prompt}
 
   private checkRateLimit(endpoint: string): boolean {
     const now = Date.now();
-    const windowMs = 60000; // 1 minute
+    const windowMs = 60000;
     const requests = this.rateLimiter.get(endpoint) || [];
     
-    // Remove old requests outside the window
     const recentRequests = requests.filter(time => now - time < windowMs);
     
     if (recentRequests.length >= (this.config as AIConfig).rateLimitRpm) {
@@ -1064,7 +1348,6 @@ ${config.prompt}
         const errorMessage = errorData?.error?.message || `OpenAI API request failed with status ${response.status}`;
         const error = new Error(errorMessage);
         
-        // Classify error for retry logic
         if (response.status === 429) {
           (error as any).type = 'rate_limit';
         } else if (response.status >= 500) {
