@@ -34,6 +34,14 @@ import {
 // ===== PROPER TYPE DEFINITIONS =====
 type PanelType = 'standard' | 'wide' | 'tall' | 'splash';
 
+// ===== PANEL TYPE CONSTANTS =====
+private static readonly PANEL_CONSTANTS = {
+  STANDARD: 'standard',
+  WIDE: 'wide',
+  TALL: 'tall',
+  SPLASH: 'splash'
+} as const satisfies Record<string, PanelType>;
+
 export interface AIConfig extends ServiceConfig {
   apiKey: string;
   baseUrl: string;
@@ -1164,16 +1172,18 @@ VERIFICATION: Character must be identical to previous panels in this comic book 
   }
 
   private determinePanelType(panelIndex: number, totalPanels: number): PanelType {
-    if (totalPanels <= 2) {
-      return panelIndex === 0 ? 'wide' : 'standard';
-    } else if (totalPanels <= 4) {
-      return panelIndex === totalPanels - 1 ? 'wide' : 'standard';
-    } else {
-      // More sophisticated panel variety for complex layouts
-      const panelTypes: PanelType[] = ['standard', 'wide', 'tall', 'standard'];
-      return panelTypes[panelIndex % panelTypes.length];
-    }
+  const { STANDARD, WIDE, TALL } = AIService.PANEL_CONSTANTS;
+  
+  if (totalPanels <= 2) {
+    return panelIndex === 0 ? WIDE : STANDARD;
+  } else if (totalPanels <= 4) {
+    return panelIndex === totalPanels - 1 ? WIDE : STANDARD;
+  } else {
+    // More sophisticated panel variety for complex layouts
+    const panelTypes = [STANDARD, WIDE, TALL, STANDARD] as const;
+    return panelTypes[panelIndex % panelTypes.length];
   }
+}
 
   // ===== ENHANCED SCENE IMAGE GENERATION =====
 
