@@ -20,6 +20,7 @@ import {
   AudienceType,
   GenreType,
   SceneMetadata
+  PanelType
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
@@ -30,9 +31,6 @@ import {
   AIAuthenticationError,
   ErrorFactory
 } from '../errors/index.js';
-
-// ===== PROPER TYPE DEFINITIONS =====
-type PanelType = 'standard' | 'wide' | 'tall' | 'splash';
 
 export interface AIConfig extends ServiceConfig {
   apiKey: string;
