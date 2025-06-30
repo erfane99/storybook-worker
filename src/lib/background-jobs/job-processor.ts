@@ -628,12 +628,16 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       // Ensure page has scenes array
       const pageScenes = page.scenes || [];
       
-      for (const [sceneIndex, scene] of pageScenes.entries()) {
-        await jobService.updateJobProgress(
-          job.id, 
-          50 + ((processedScenes / totalScenes) * 30),
-          `Generating image for page ${pageIndex + 1}, panel ${sceneIndex + 1}`
-        );
+     for (const [sceneIndex, scene] of pageScenes.entries()) {
+  // ✅ FIXED: Ensure progress calculation returns a proper number
+  const sceneProgress = processedScenes / totalScenes;
+  const progressPercentage = Math.round(50 + (sceneProgress * 30)); // Force to integer
+  
+  await jobService.updateJobProgress(
+    job.id, 
+    progressPercentage, // ✅ Now guaranteed to be a number
+    `Generating image for page ${pageIndex + 1}, panel ${sceneIndex + 1}`
+  );
 
         try {
           this.trackServiceUsage(job.id, 'ai');
