@@ -276,12 +276,15 @@ export class AIService extends EnhancedBaseService implements IAIService {
 
   // ✅ ENTERPRISE-GRADE: Deep Content Discovery System
   async generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult> {
+    // ✅ FIXED: Add JSON keyword to system prompt for OpenAI API compliance
+    const jsonSystemPrompt = `${systemPrompt}\n\nIMPORTANT: Respond with valid JSON containing comic book content. Use clear structure with an array of pages/panels/scenes. Your response must be properly formatted JSON.`;
+    
     const result = await this.createChatCompletion({
       model: 'gpt-4o',
       messages: [
         { 
           role: 'system', 
-          content: `${systemPrompt}\n\nRespond with valid JSON containing comic book content. Use clear structure with an array of pages/panels/scenes.` 
+          content: jsonSystemPrompt
         },
         { role: 'user', content: userPrompt }
       ],
@@ -372,7 +375,7 @@ export class AIService extends EnhancedBaseService implements IAIService {
 
     const { scenes, pages, panelsPerPage, notes } = audienceConfig[audience];
 
-    // ENHANCED: Comic book focused system prompt
+    // ✅ FIXED: Enhanced comic book focused system prompt with required JSON keyword
     const systemPrompt = `
 You are a professional comic book layout designer for a storybook app that creates COMIC BOOK STYLE layouts.
 
@@ -398,7 +401,7 @@ Panel Structure:
 
 Visual pacing notes: ${notes}
 
-Return your output in this strict format:
+IMPORTANT: Return your output as valid JSON in this strict format:
 {
   "pages": [
     {
@@ -414,6 +417,8 @@ Return your output in this strict format:
     }
   ]
 }
+
+Your response must be properly formatted JSON that can be parsed directly.
 `;
 
     const result = await this.createChatCompletion({
@@ -423,7 +428,7 @@ Return your output in this strict format:
         { role: 'system', content: systemPrompt },
         { 
           role: 'user', 
-          content: `Create a comic book layout for this story. Remember: Multiple panels per page, ${characterArtStyle} art style, ${panelsPerPage} panels per page.\n\nStory: ${story}` 
+          content: `Create a comic book layout for this story. Remember: Multiple panels per page, ${characterArtStyle} art style, ${panelsPerPage} panels per page. Respond with valid JSON.\n\nStory: ${story}` 
         }
       ],
       responseFormat: { type: 'json_object' }
@@ -474,7 +479,17 @@ Return your output in this strict format:
 
     } catch (parseError: any) {
       console.error('❌ Failed to parse comic book scene generation response:', parseError);
-      throw new Error(`Invalid JSON response from OpenAI: ${parseError?.message || 'Unknown error'}`);
+      
+      // ✅ ENHANCED ERROR HANDLING: Provide detailed error information
+      const errorDetails = {
+        parseError: parseError?.message || 'Unknown parsing error',
+        rawResponse: result.choices[0].message.content.substring(0, 500) + '...',
+        responseLength: result.choices[0].message.content.length,
+        containsJSON: result.choices[0].message.content.includes('{') && result.choices[0].message.content.includes('}')
+      };
+      
+      console.error('❌ JSON parsing error details:', errorDetails);
+      throw new Error(`Invalid JSON response from OpenAI: ${parseError?.message || 'Unknown error'}. Response may not be valid JSON format.`);
     }
   }
 
@@ -651,6 +666,28 @@ Return your output in this strict format:
   }
 
   async createChatCompletion(options: ChatCompletionOptions): Promise<ChatCompletionResult> {
+    // ✅ DEFENSIVE PROMPT VALIDATION: Ensure JSON keyword is present when using json_object format
+    if (options.responseFormat?.type === 'json_object') {
+      const hasJsonKeyword = options.messages.some(message => {
+        if (typeof message.content === 'string') {
+          return message.content.toLowerCase().includes('json');
+        }
+        return false;
+      });
+
+      if (!hasJsonKeyword) {
+        console.warn('⚠️ Adding JSON keyword to prompt for OpenAI API compliance');
+        // Add JSON instruction to the last user message
+        const lastUserMessageIndex = options.messages.map(m => m.role).lastIndexOf('user');
+        if (lastUserMessageIndex >= 0) {
+          const lastMessage = options.messages[lastUserMessageIndex];
+          if (typeof lastMessage.content === 'string') {
+            lastMessage.content += '\n\nIMPORTANT: Respond with valid JSON format.';
+          }
+        }
+      }
+    }
+
     return this.withRetry(
       async () => {
         return this.makeRequest<ChatCompletionResult>(
