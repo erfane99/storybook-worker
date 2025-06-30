@@ -31,6 +31,9 @@ import {
   ErrorFactory
 } from '../errors/index.js';
 
+// ===== PROPER TYPE DEFINITIONS =====
+type PanelType = 'standard' | 'wide' | 'tall' | 'splash';
+
 export interface AIConfig extends ServiceConfig {
   apiKey: string;
   baseUrl: string;
@@ -1160,14 +1163,14 @@ ${characterDNA.negativePrompts.join('\n- ')}
 VERIFICATION: Character must be identical to previous panels in this comic book story.`;
   }
 
-  private determinePanelType(panelIndex: number, totalPanels: number): string {
+  private determinePanelType(panelIndex: number, totalPanels: number): PanelType {
     if (totalPanels <= 2) {
       return panelIndex === 0 ? 'wide' : 'standard';
     } else if (totalPanels <= 4) {
       return panelIndex === totalPanels - 1 ? 'wide' : 'standard';
     } else {
       // More sophisticated panel variety for complex layouts
-      const panelTypes = ['standard', 'wide', 'tall', 'standard'];
+      const panelTypes: PanelType[] = ['standard', 'wide', 'tall', 'standard'];
       return panelTypes[panelIndex % panelTypes.length];
     }
   }
@@ -1221,7 +1224,7 @@ VERIFICATION: Character must be identical to previous panels in this comic book 
     audience: AudienceType;
     isReusedImage: boolean;
     characterArtStyle: string;
-    panelType: string;
+    panelType: PanelType;
     config: any;
   }): string {
     const { imagePrompt, characterDescription, emotion, audience, isReusedImage, characterArtStyle, panelType, config } = options;
@@ -1230,7 +1233,7 @@ VERIFICATION: Character must be identical to previous panels in this comic book 
       ? `CRITICAL CHARACTER CONSISTENCY: This character has appeared in previous panels. Use this EXACT character appearance: "${characterDescription}". Maintain identical facial features, clothing, and all distinctive characteristics. NO variations allowed.`
       : `CHARACTER DESIGN: ${characterDescription} (establish consistent appearance for future panels)`;
 
-    const panelSpecs = {
+    const panelSpecs: Record<PanelType, string> = {
       'standard': 'Standard rectangular comic panel with balanced composition and clear panel borders',
       'wide': 'Wide panoramic comic panel perfect for establishing shots or action sequences',
       'tall': 'Tall vertical comic panel emphasizing dramatic moments or character emotions',
@@ -1240,7 +1243,7 @@ VERIFICATION: Character must be identical to previous panels in this comic book 
     return `PROFESSIONAL COMIC BOOK PANEL GENERATION:
 
 PANEL SPECIFICATIONS:
-${panelSpecs[panelType] || panelSpecs.standard}
+${panelSpecs[panelType]}
 
 SCENE DESCRIPTION:
 ${imagePrompt}
