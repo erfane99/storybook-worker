@@ -9,6 +9,7 @@ import type { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types.js
 export type { JobData, JobType, JobStatus, JobMetrics };
 
 // ===== CONSOLIDATED AI SERVICE TYPES - SINGLE SOURCE OF TRUTH =====
+export type PanelType = 'standard' | 'wide' | 'tall' | 'splash';
 export type AudienceType = 'children' | 'young_adults' | 'adults';
 export type GenreType = 'adventure' | 'siblings' | 'bedtime' | 'fantasy' | 'history';
 
@@ -62,7 +63,7 @@ export interface ImageGenerationOptions {
   style?: string;
   characterArtStyle?: string;
   layoutType?: string;
-  panelType?: string;
+  panelType?: PanelType;
 }
 
 export interface ImageGenerationResult {
