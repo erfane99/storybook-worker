@@ -34,14 +34,6 @@ import {
 // ===== PROPER TYPE DEFINITIONS =====
 type PanelType = 'standard' | 'wide' | 'tall' | 'splash';
 
-// ===== PANEL TYPE CONSTANTS =====
-private static readonly PANEL_CONSTANTS = {
-  STANDARD: 'standard',
-  WIDE: 'wide',
-  TALL: 'tall',
-  SPLASH: 'splash'
-} as const satisfies Record<string, PanelType>;
-
 export interface AIConfig extends ServiceConfig {
   apiKey: string;
   baseUrl: string;
