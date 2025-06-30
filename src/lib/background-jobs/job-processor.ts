@@ -1,6 +1,7 @@
 // Production-ready job processor using consolidated service architecture
 // CONSOLIDATED: Uses single service container and interfaces
 // DATABASE-FIRST: Reads from individual job columns matching database schema
+// ✅ FIXED: Character consistency and comic book generation
 
 import { serviceContainer } from '../../services/container/service-container.js';
 import { 
@@ -615,12 +616,13 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       throw new Error('No pages available for processing after story analysis');
     }
 
-    // Generate scenes for each page
+    // ✅ CRITICAL FIX: Generate scenes for each page using CHARACTER-CONSISTENT generation
     const updatedPages = [];
     const totalScenes = pages.reduce((total, page) => total + (page.scenes?.length || 0), 0);
     let processedScenes = 0;
 
     console.log(`🎨 Processing ${pages.length} pages with ${totalScenes} total scenes/panels`);
+    console.log(`🎭 Using character: "${characterDescriptionToUse}" with ${character_art_style} art style`);
 
     for (const [pageIndex, page] of pages.entries()) {
       const updatedScenes = [];
@@ -628,38 +630,54 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       // Ensure page has scenes array
       const pageScenes = page.scenes || [];
       
-     for (const [sceneIndex, scene] of pageScenes.entries()) {
-  // ✅ FIXED: Ensure progress calculation returns a proper number
-  const sceneProgress = processedScenes / totalScenes;
-  const progressPercentage = Math.round(50 + (sceneProgress * 30)); // Force to integer
-  
-  await jobService.updateJobProgress(
-    job.id, 
-    progressPercentage, // ✅ Now guaranteed to be a number
-    `Generating image for page ${pageIndex + 1}, panel ${sceneIndex + 1}`
-  );
+      for (const [sceneIndex, scene] of pageScenes.entries()) {
+        // ✅ FIXED: Ensure progress calculation returns a proper number
+        const sceneProgress = processedScenes / totalScenes;
+        const progressPercentage = Math.round(50 + (sceneProgress * 30)); // Force to integer
+        
+        await jobService.updateJobProgress(
+          job.id, 
+          progressPercentage, // ✅ Now guaranteed to be a number
+          `Generating character-consistent image for page ${pageIndex + 1}, panel ${sceneIndex + 1}`
+        );
 
         try {
           this.trackServiceUsage(job.id, 'ai');
           if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
           
-          const imageUrl = await aiService.generateCartoonImage(scene.imagePrompt);
+          // ✅ CRITICAL FIX: Use generateSceneImage for character consistency instead of generateCartoonImage
+          console.log(`🎨 Generating panel ${sceneIndex + 1} for page ${pageIndex + 1} with character consistency`);
+          
+          const imageResult = await aiService.generateSceneImage({
+            image_prompt: scene.imagePrompt,
+            character_description: characterDescriptionToUse,
+            emotion: scene.emotion || 'neutral',
+            audience: audience,
+            isReusedImage: is_reused_image,
+            cartoon_image: character_image,
+            characterArtStyle: character_art_style,
+            layoutType: layout_type,
+            panelType: scene.panelType || 'standard'
+          });
           
           updatedScenes.push({
             ...scene,
-            generatedImage: imageUrl,
+            generatedImage: imageResult.url,
             characterArtStyle: character_art_style,
             layoutType: layout_type,
+            promptUsed: imageResult.prompt_used, // Track the actual prompt used for debugging
+            characterDescription: characterDescriptionToUse, // Store character description used
           });
           
-          console.log(`✅ Generated panel ${sceneIndex + 1} for page ${pageIndex + 1}`);
+          console.log(`✅ Generated character-consistent panel ${sceneIndex + 1} for page ${pageIndex + 1}`);
         } catch (error) {
-          console.warn(`⚠️ Failed to generate image for scene, using fallback:`, error);
+          console.warn(`⚠️ Failed to generate character-consistent image for scene, using fallback:`, error);
           updatedScenes.push({
             ...scene,
             generatedImage: character_image || '',
             characterArtStyle: character_art_style,
             layoutType: layout_type,
+            error: 'Failed to generate character-consistent image, used fallback',
           });
         }
         
@@ -671,10 +689,11 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         scenes: updatedScenes,
         layoutType: layout_type,
         characterArtStyle: character_art_style,
+        characterDescription: characterDescriptionToUse, // Store at page level too
       });
     }
 
-    await jobService.updateJobProgress(job.id, 85, 'Images generated, saving storybook');
+    await jobService.updateJobProgress(job.id, 85, 'Character-consistent images generated, saving storybook');
 
     // Save to database using service abstraction
     this.trackServiceUsage(job.id, 'database');
@@ -690,7 +709,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       has_errors: false,
     });
 
-    await jobService.updateJobProgress(job.id, 100, 'Storybook saved successfully');
+    await jobService.updateJobProgress(job.id, 100, 'Character-consistent storybook saved successfully');
 
     // Mark job as completed
     await jobService.markJobCompleted(job.id, {
@@ -699,9 +718,10 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       has_errors: false,
       characterArtStyle: character_art_style,
       layoutType: layout_type,
+      characterDescription: characterDescriptionToUse,
     });
 
-    console.log(`✅ Storybook job completed: ${job.id} with ${character_art_style} art style`);
+    console.log(`✅ Storybook job completed: ${job.id} with ${character_art_style} art style and character-consistent panels`);
   }
 
   private async processAutoStoryJobWithServices(job: AutoStoryJobData, servicesUsed: string[]): Promise<void> {
@@ -848,24 +868,34 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
     const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
 
-    await jobService.updateJobProgress(job.id, 20, 'Starting image generation');
+    await jobService.updateJobProgress(job.id, 20, 'Starting character-consistent image generation');
 
-    // Generate image
+    // ✅ CRITICAL FIX: Use generateSceneImage for character consistency instead of generateCartoonImage
     this.trackServiceUsage(job.id, 'ai');
     servicesUsed.push('ai');
     
-    const finalPrompt = `${image_prompt} featuring ${character_description} with ${emotion} emotion for ${audience} audience`;
-    const imageUrl = await aiService.generateCartoonImage(finalPrompt);
+    const imageResult = await aiService.generateSceneImage({
+      image_prompt,
+      character_description,
+      emotion,
+      audience,
+      isReusedImage: is_reused_image,
+      cartoon_image,
+      style,
+      characterArtStyle: style,
+      layoutType: 'individual-scenes',
+      panelType: 'standard'
+    });
 
-    await jobService.updateJobProgress(job.id, 100, 'Image generation complete');
+    await jobService.updateJobProgress(job.id, 100, 'Character-consistent image generation complete');
 
     await jobService.markJobCompleted(job.id, {
-      generated_image_url: imageUrl,
-      final_prompt_used: finalPrompt,
+      generated_image_url: imageResult.url,
+      final_prompt_used: imageResult.prompt_used,
       style: style,
     });
 
-    console.log(`✅ Image job completed: ${job.id}`);
+    console.log(`✅ Image job completed: ${job.id} with character consistency`);
   }
 }
 
