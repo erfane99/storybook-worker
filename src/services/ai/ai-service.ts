@@ -1,5 +1,3 @@
-// Enhanced AI Service - Production Implementation with Professional Comic Book Generation
-// ✅ ENHANCED: Character DNA system, story beat analysis, and professional comic formatting
 import { EnhancedBaseService } from '../base/enhanced-base-service.js';
 import { 
   IAIService,
@@ -79,6 +77,10 @@ interface StoryBeat {
   characterAction: string;
   environment: string;
   dialogue?: string;
+  // ✅ ENHANCED: Speech bubble system fields
+  hasSpeechBubble?: boolean;
+  speechBubbleStyle?: 'standard' | 'thought' | 'shout' | 'whisper' | 'narrative';
+  cleanedDialogue?: string;
 }
 
 interface StoryAnalysis {
@@ -87,6 +89,30 @@ interface StoryAnalysis {
   visualFlow: string[];
   totalPanels: number;
   pagesRequired: number;
+  // ✅ ENHANCED: Speech bubble tracking
+  dialoguePanels: number;
+  speechBubbleDistribution: {
+    standard: number;
+    thought: number;
+    shout: number;
+    whisper: number;
+    narrative: number;
+  };
+}
+
+// ===== SPEECH BUBBLE SYSTEM INTERFACES =====
+
+interface DialoguePattern {
+  pattern: RegExp;
+  type: 'direct' | 'thought' | 'narrative' | 'exclamation';
+  priority: number;
+}
+
+interface SpeechBubbleConfig {
+  targetDialoguePercentage: number; // 30-40% of panels
+  emotionalDialogueTriggers: string[];
+  bubbleStyleMapping: Record<string, 'standard' | 'thought' | 'shout' | 'whisper' | 'narrative'>;
+  dialogueCleaningRules: Array<{ pattern: RegExp; replacement: string }>;
 }
 
 // ===== DEEP CONTENT DISCOVERY INTERFACES =====
@@ -160,6 +186,79 @@ export class AIService extends EnhancedBaseService implements IAIService {
       analysisInstructions: 'Develop complex narrative structure with nuanced character development. Use sophisticated visual storytelling techniques and varied panel compositions.'
     }
   };
+
+  // ===== ENHANCED SPEECH BUBBLE SYSTEM CONFIGURATION =====
+  private readonly speechBubbleConfig: SpeechBubbleConfig = {
+    targetDialoguePercentage: 35, // 35% of panels should have dialogue
+    emotionalDialogueTriggers: [
+      'excited', 'angry', 'sad', 'surprised', 'confused', 'happy', 'worried', 'determined',
+      'scared', 'curious', 'frustrated', 'delighted', 'nervous', 'confident', 'thoughtful'
+    ],
+    bubbleStyleMapping: {
+      'excited': 'shout',
+      'angry': 'shout', 
+      'surprised': 'shout',
+      'happy': 'standard',
+      'sad': 'whisper',
+      'worried': 'thought',
+      'scared': 'whisper',
+      'thoughtful': 'thought',
+      'confused': 'thought',
+      'determined': 'standard',
+      'curious': 'standard',
+      'frustrated': 'standard',
+      'delighted': 'standard',
+      'nervous': 'whisper',
+      'confident': 'standard'
+    },
+    dialogueCleaningRules: [
+      { pattern: /["'"]/g, replacement: '' }, // Remove quotes
+      { pattern: /\s+/g, replacement: ' ' }, // Normalize whitespace
+      { pattern: /^\s+|\s+$/g, replacement: '' }, // Trim
+      { pattern: /[.]{2,}/g, replacement: '...' }, // Normalize ellipses
+      { pattern: /[!]{2,}/g, replacement: '!' }, // Normalize exclamations
+      { pattern: /[?]{2,}/g, replacement: '?' }, // Normalize questions
+    ]
+  };
+
+  // ===== DIALOGUE DETECTION PATTERNS =====
+  private readonly dialoguePatterns: DialoguePattern[] = [
+    {
+      pattern: /"([^"]+)"/g,
+      type: 'direct',
+      priority: 100
+    },
+    {
+      pattern: /'([^']+)'/g,
+      type: 'direct',
+      priority: 95
+    },
+    {
+      pattern: /said\s+([^.!?]+)[.!?]/gi,
+      type: 'direct',
+      priority: 90
+    },
+    {
+      pattern: /thought\s+([^.!?]+)[.!?]/gi,
+      type: 'thought',
+      priority: 85
+    },
+    {
+      pattern: /shouted\s+([^.!?]+)[.!?]/gi,
+      type: 'exclamation',
+      priority: 80
+    },
+    {
+      pattern: /whispered\s+([^.!?]+)[.!?]/gi,
+      type: 'direct',
+      priority: 80
+    },
+    {
+      pattern: /exclaimed\s+([^.!?]+)[.!?]/gi,
+      type: 'exclamation',
+      priority: 75
+    }
+  ];
 
   // ===== ENTERPRISE CONTENT DISCOVERY PATTERNS =====
   private readonly discoveryPatterns: DiscoveryPattern[] = [
@@ -240,7 +339,7 @@ export class AIService extends EnhancedBaseService implements IAIService {
     this.apiKey = apiKey;
     await this.testAPIConnectivity();
     
-    this.log('info', 'AI service initialized with professional comic book generation capabilities');
+    this.log('info', 'AI service initialized with professional comic book generation and enhanced speech bubble system');
   }
 
   protected async disposeService(): Promise<void> {
@@ -394,10 +493,10 @@ This character model sheet will be used to ensure identical appearance across al
     return fallback;
   }
 
-  // ===== PROFESSIONAL STORY BEAT ANALYSIS =====
+  // ===== PROFESSIONAL STORY BEAT ANALYSIS WITH ENHANCED DIALOGUE SYSTEM =====
 
   async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
-    console.log(`📖 Analyzing story structure for ${audience} audience using professional comic book methodology...`);
+    console.log(`📖 Analyzing story structure for ${audience} audience using professional comic book methodology with enhanced speech bubble system...`);
 
     const config = this.audienceConfig[audience];
     
@@ -407,7 +506,7 @@ PROFESSIONAL STORY ANALYSIS MISSION:
 Analyze this story using proven comic book creation methodology where story beats drive visual choices.
 
 AUDIENCE: ${audience.toUpperCase()}
-TARGET: ${config.totalPanels} total panels across ${config.pagesPerStory} pages (${config.panelsPerPage} panels per page)
+TARGET: ${config.totalPanels} total panels across ${config.pagesRequired} pages (${config.panelsPerPage} panels per page)
 COMPLEXITY: ${config.complexityLevel}
 
 ANALYSIS REQUIREMENTS:
@@ -420,12 +519,20 @@ STORY BEAT ANALYSIS:
 4. Identify visual storytelling moments that advance narrative
 5. Ensure each panel has clear purpose in story progression
 
+✅ ENHANCED DIALOGUE ANALYSIS:
+6. Extract existing dialogue from story text using quotation marks and speech patterns
+7. Identify emotional moments that would benefit from character speech
+8. Assign dialogue to approximately 30-40% of panels strategically
+9. Generate contextual dialogue for key emotional beats without existing speech
+10. Ensure dialogue enhances story progression and character development
+
 COMIC BOOK PROFESSIONAL STANDARDS:
 - Every panel advances the story
 - Character actions serve narrative purpose
 - Visual flow guides reader through story
 - Emotional beats create character arc
 - Panel purposes build toward story resolution
+- Speech bubbles enhance emotional connection and story clarity
 
 STORY TO ANALYZE:
 ${story}
@@ -441,23 +548,24 @@ REQUIRED JSON OUTPUT:
       "narrativeFunction": "setup|rising_action|climax|resolution",
       "characterAction": "what_character_is_doing",
       "environment": "where_action_takes_place",
-      "dialogue": "optional_character_speech"
+      "dialogue": "character_speech_if_present_in_story_or_generated_for_emotional_moment"
     }
   ],
   "characterArc": ["emotional_progression_through_story"],
   "visualFlow": ["visual_storytelling_progression"],
   "totalPanels": ${config.totalPanels},
-  "pagesRequired": ${config.pagesPerStory}
+  "pagesRequired": ${config.pagesRequired}
 }
 
-CRITICAL: Must generate exactly ${config.totalPanels} story beats for ${config.pagesPerStory} comic book pages.
-Follow professional comic creation: Story purpose drives every visual choice.`;
+CRITICAL: Must generate exactly ${config.totalPanels} story beats for ${config.pagesRequired} comic book pages.
+Follow professional comic creation: Story purpose drives every visual choice.
+Include dialogue analysis and generation for enhanced speech bubble system.`;
 
     const result = await this.createChatCompletion({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: storyAnalysisPrompt },
-        { role: 'user', content: 'Analyze this story using professional comic book methodology. Return structured JSON.' }
+        { role: 'user', content: 'Analyze this story using professional comic book methodology with enhanced dialogue system. Return structured JSON.' }
       ],
       temperature: 0.7,
       responseFormat: { type: 'json_object' }
@@ -477,13 +585,387 @@ Follow professional comic creation: Story purpose drives every visual choice.`;
         storyAnalysis.storyBeats = this.adjustStoryBeats(storyAnalysis.storyBeats || [], config.totalPanels);
       }
 
-      console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} beats for professional comic book progression`);
-      return storyAnalysis;
+      // ✅ ENHANCED: Extract and enhance dialogue using speech bubble system
+      const enhancedAnalysis = await this.extractDialogueFromStory(story, storyAnalysis, audience);
+
+      console.log(`✅ Story structure analyzed: ${enhancedAnalysis.storyBeats.length} beats with ${enhancedAnalysis.dialoguePanels} dialogue panels for professional comic book progression`);
+      return enhancedAnalysis;
 
     } catch (parseError) {
       console.error('❌ Failed to parse story analysis:', parseError);
       throw new Error('Invalid story analysis response format');
     }
+  }
+
+  // ===== ENHANCED SPEECH BUBBLE SYSTEM METHODS =====
+
+  /**
+   * Extract dialogue from story and enhance story beats with speech bubble information
+   */
+  async extractDialogueFromStory(story: string, storyAnalysis: any, audience: AudienceType): Promise<StoryAnalysis> {
+    console.log('💬 Extracting and enhancing dialogue using professional speech bubble system...');
+
+    const config = this.audienceConfig[audience];
+    const targetDialoguePanels = Math.round(storyAnalysis.storyBeats.length * (this.speechBubbleConfig.targetDialoguePercentage / 100));
+    
+    console.log(`🎯 Target dialogue panels: ${targetDialoguePanels} out of ${storyAnalysis.storyBeats.length} total panels (${this.speechBubbleConfig.targetDialoguePercentage}%)`);
+
+    // Step 1: Detect existing dialogue patterns in the original story
+    const existingDialogue = this.detectDialogueInStory(story);
+    console.log(`📝 Detected ${existingDialogue.length} existing dialogue segments in story`);
+
+    // Step 2: Enhance story beats with dialogue information
+    const enhancedBeats: StoryBeat[] = [];
+    let dialoguePanelCount = 0;
+    const speechBubbleDistribution = {
+      standard: 0,
+      thought: 0,
+      shout: 0,
+      whisper: 0,
+      narrative: 0
+    };
+
+    for (let i = 0; i < storyAnalysis.storyBeats.length; i++) {
+      const beat = storyAnalysis.storyBeats[i];
+      
+      // Determine if this panel should have dialogue
+      const shouldHaveDialogue = this.shouldPanelHaveDialogue(
+        beat, 
+        i, 
+        storyAnalysis.storyBeats.length, 
+        dialoguePanelCount, 
+        targetDialoguePanels,
+        existingDialogue
+      );
+
+      if (shouldHaveDialogue) {
+        // Generate or use existing dialogue
+        const dialogue = beat.dialogue || this.generateContextualDialogue(beat, audience);
+        const cleanedDialogue = this.cleanDialogue(dialogue);
+        const bubbleStyle = this.determineSpeechBubbleStyle(beat.emotion, dialogue);
+
+        enhancedBeats.push({
+          ...beat,
+          dialogue,
+          hasSpeechBubble: true,
+          cleanedDialogue,
+          speechBubbleStyle: bubbleStyle
+        });
+
+        dialoguePanelCount++;
+        speechBubbleDistribution[bubbleStyle]++;
+        
+        console.log(`💬 Panel ${i + 1}: Added ${bubbleStyle} speech bubble - "${cleanedDialogue}"`);
+      } else {
+        enhancedBeats.push({
+          ...beat,
+          hasSpeechBubble: false,
+          speechBubbleStyle: undefined
+        });
+      }
+    }
+
+    console.log(`✅ Speech bubble system complete: ${dialoguePanelCount} panels with dialogue (${Math.round((dialoguePanelCount / storyAnalysis.storyBeats.length) * 100)}%)`);
+    console.log(`📊 Speech bubble distribution:`, speechBubbleDistribution);
+
+    return {
+      ...storyAnalysis,
+      storyBeats: enhancedBeats,
+      dialoguePanels: dialoguePanelCount,
+      speechBubbleDistribution
+    };
+  }
+
+  /**
+   * Determine which panels should have speech bubbles based on strategic placement
+   */
+  private shouldPanelHaveDialogue(
+    beat: StoryBeat, 
+    panelIndex: number, 
+    totalPanels: number, 
+    currentDialoguePanels: number, 
+    targetDialoguePanels: number,
+    existingDialogue: string[]
+  ): boolean {
+    // Always include if beat already has dialogue
+    if (beat.dialogue && beat.dialogue.trim().length > 0) {
+      return true;
+    }
+
+    // Don't exceed target dialogue panel count
+    if (currentDialoguePanels >= targetDialoguePanels) {
+      return false;
+    }
+
+    // Strategic placement rules
+    const isEmotionalMoment = this.speechBubbleConfig.emotionalDialogueTriggers.includes(beat.emotion.toLowerCase());
+    const isKeyNarrativeMoment = ['climax', 'rising_action'].includes(beat.narrativeFunction);
+    const isCharacterInteraction = beat.characterAction.toLowerCase().includes('talk') || 
+                                   beat.characterAction.toLowerCase().includes('speak') ||
+                                   beat.characterAction.toLowerCase().includes('say');
+
+    // Priority scoring system
+    let priority = 0;
+    
+    if (isEmotionalMoment) priority += 30;
+    if (isKeyNarrativeMoment) priority += 25;
+    if (isCharacterInteraction) priority += 35;
+    if (beat.narrativeFunction === 'climax') priority += 40;
+    
+    // Position-based bonuses
+    if (panelIndex === 0) priority += 20; // Opening panel
+    if (panelIndex === totalPanels - 1) priority += 25; // Closing panel
+    if (panelIndex === Math.floor(totalPanels / 2)) priority += 15; // Middle panel
+
+    // Ensure even distribution
+    const remainingPanels = totalPanels - panelIndex;
+    const remainingDialogueNeeded = targetDialoguePanels - currentDialoguePanels;
+    const distributionPressure = remainingDialogueNeeded / remainingPanels;
+    
+    if (distributionPressure > 0.7) priority += 20; // High pressure to add dialogue
+    if (distributionPressure > 0.9) priority += 30; // Very high pressure
+
+    // Decision threshold
+    const threshold = 50;
+    const shouldHave = priority >= threshold;
+
+    if (shouldHave) {
+      console.log(`🎯 Panel ${panelIndex + 1} selected for dialogue (priority: ${priority}, emotion: ${beat.emotion}, function: ${beat.narrativeFunction})`);
+    }
+
+    return shouldHave;
+  }
+
+  /**
+   * Generate contextual dialogue appropriate for the emotional moment and audience
+   */
+  private generateContextualDialogue(beat: StoryBeat, audience: AudienceType): string {
+    const config = this.audienceConfig[audience];
+    const emotion = beat.emotion.toLowerCase();
+    const action = beat.characterAction.toLowerCase();
+    const narrativeFunction = beat.narrativeFunction;
+
+    // Emotion-based dialogue templates
+    const dialogueTemplates: Record<string, string[]> = {
+      happy: [
+        "This is wonderful!",
+        "I'm so excited!",
+        "What a great day!",
+        "I love this!",
+        "This makes me smile!"
+      ],
+      excited: [
+        "Wow! This is amazing!",
+        "I can't believe it!",
+        "This is the best day ever!",
+        "Look at that!",
+        "Incredible!"
+      ],
+      sad: [
+        "I feel so sad...",
+        "This is hard...",
+        "I miss...",
+        "Why did this happen?",
+        "I don't understand..."
+      ],
+      angry: [
+        "This isn't fair!",
+        "I'm so frustrated!",
+        "Why won't this work?",
+        "This makes me mad!",
+        "I don't like this!"
+      ],
+      surprised: [
+        "What?!",
+        "I didn't expect that!",
+        "How did that happen?",
+        "That's impossible!",
+        "I can't believe my eyes!"
+      ],
+      scared: [
+        "I'm scared...",
+        "What was that?",
+        "I don't like this...",
+        "Help me!",
+        "I want to go home..."
+      ],
+      curious: [
+        "What's that?",
+        "How does this work?",
+        "I wonder...",
+        "Can I try?",
+        "Tell me more!"
+      ],
+      determined: [
+        "I can do this!",
+        "I won't give up!",
+        "Let's try again!",
+        "I'm ready!",
+        "Here I go!"
+      ],
+      thoughtful: [
+        "Hmm, let me think...",
+        "I wonder if...",
+        "Maybe I should...",
+        "What if...",
+        "I need to consider..."
+      ]
+    };
+
+    // Narrative function specific dialogue
+    const narrativeDialogue: Record<string, string[]> = {
+      setup: [
+        "Let me tell you about...",
+        "Once upon a time...",
+        "It all started when...",
+        "I remember when...",
+        "This is how it began..."
+      ],
+      rising_action: [
+        "And then...",
+        "Suddenly...",
+        "But wait...",
+        "Something's happening!",
+        "This changes everything!"
+      ],
+      climax: [
+        "This is it!",
+        "Now or never!",
+        "The moment of truth!",
+        "Everything depends on this!",
+        "Here we go!"
+      ],
+      resolution: [
+        "Finally!",
+        "It's over!",
+        "We did it!",
+        "Everything worked out!",
+        "What a journey!"
+      ]
+    };
+
+    // Select appropriate dialogue
+    let selectedDialogue = "...";
+
+    // Try emotion-based first
+    if (dialogueTemplates[emotion]) {
+      const templates = dialogueTemplates[emotion];
+      selectedDialogue = templates[Math.floor(Math.random() * templates.length)];
+    }
+    // Fallback to narrative function
+    else if (narrativeDialogue[narrativeFunction]) {
+      const templates = narrativeDialogue[narrativeFunction];
+      selectedDialogue = templates[Math.floor(Math.random() * templates.length)];
+    }
+    // Final fallback based on action
+    else if (action.includes('look')) {
+      selectedDialogue = "Look at that!";
+    } else if (action.includes('run')) {
+      selectedDialogue = "Here I go!";
+    } else if (action.includes('find')) {
+      selectedDialogue = "I found it!";
+    } else {
+      selectedDialogue = "Wow!";
+    }
+
+    // Adjust for audience
+    if (audience === 'children') {
+      selectedDialogue = selectedDialogue.replace(/[!]{2,}/g, '!'); // Single exclamation for children
+    } else if (audience === 'adults') {
+      // Add more sophisticated language for adults
+      if (selectedDialogue === "Wow!") {
+        selectedDialogue = "This is remarkable!";
+      }
+    }
+
+    console.log(`💭 Generated contextual dialogue for ${emotion} emotion: "${selectedDialogue}"`);
+    return selectedDialogue;
+  }
+
+  /**
+   * Clean and format dialogue for speech bubbles
+   */
+  private cleanDialogue(dialogue: string): string {
+    if (!dialogue || typeof dialogue !== 'string') {
+      return '';
+    }
+
+    let cleaned = dialogue;
+
+    // Apply cleaning rules
+    for (const rule of this.speechBubbleConfig.dialogueCleaningRules) {
+      cleaned = cleaned.replace(rule.pattern, rule.replacement);
+    }
+
+    // Ensure reasonable length for speech bubbles
+    if (cleaned.length > 50) {
+      // Find a good breaking point
+      const words = cleaned.split(' ');
+      if (words.length > 8) {
+        cleaned = words.slice(0, 8).join(' ') + '...';
+      }
+    }
+
+    // Ensure it ends with appropriate punctuation
+    if (cleaned && !cleaned.match(/[.!?]$/)) {
+      if (cleaned.includes('!') || cleaned.includes('?')) {
+        // Keep existing punctuation
+      } else {
+        cleaned += '.';
+      }
+    }
+
+    return cleaned;
+  }
+
+  /**
+   * Determine speech bubble style based on emotion and dialogue content
+   */
+  private determineSpeechBubbleStyle(emotion: string, dialogue: string): 'standard' | 'thought' | 'shout' | 'whisper' | 'narrative' {
+    const emotionLower = emotion.toLowerCase();
+    const dialogueLower = dialogue.toLowerCase();
+
+    // Check for explicit style indicators in dialogue
+    if (dialogueLower.includes('think') || dialogueLower.includes('wonder') || dialogueLower.includes('maybe')) {
+      return 'thought';
+    }
+
+    if (dialogueLower.includes('!') && (dialogueLower.includes('wow') || dialogueLower.includes('amazing') || dialogueLower.includes('incredible'))) {
+      return 'shout';
+    }
+
+    if (dialogueLower.includes('...') || dialogueLower.includes('whisper') || dialogueLower.includes('quietly')) {
+      return 'whisper';
+    }
+
+    // Use emotion-based mapping
+    const mappedStyle = this.speechBubbleConfig.bubbleStyleMapping[emotionLower];
+    if (mappedStyle) {
+      return mappedStyle;
+    }
+
+    // Default to standard
+    return 'standard';
+  }
+
+  /**
+   * Detect existing dialogue patterns in the story text
+   */
+  private detectDialogueInStory(story: string): string[] {
+    const detectedDialogue: string[] = [];
+
+    for (const pattern of this.dialoguePatterns) {
+      let match;
+      const regex = new RegExp(pattern.pattern);
+      
+      while ((match = regex.exec(story)) !== null) {
+        if (match[1] && match[1].trim().length > 0) {
+          detectedDialogue.push(match[1].trim());
+        }
+      }
+    }
+
+    return detectedDialogue;
   }
 
   private adjustStoryBeats(beats: StoryBeat[], targetCount: number): StoryBeat[] {
@@ -582,9 +1064,9 @@ Follow professional comic creation: Story purpose drives every visual choice.`;
       throw new Error('Story must be at least 50 characters long.');
     }
 
-    console.log(`🎨 Generating professional comic book layout for ${audience} audience...`);
+    console.log(`🎨 Generating professional comic book layout for ${audience} audience with enhanced speech bubble system...`);
 
-    // Step 1: Analyze story structure using professional methodology
+    // Step 1: Analyze story structure using professional methodology with dialogue system
     const storyAnalysis = await this.analyzeStoryStructure(story, audience);
     
     // Step 2: Create character DNA if character image provided
@@ -593,11 +1075,11 @@ Follow professional comic creation: Story purpose drives every visual choice.`;
       characterDNA = await this.createMasterCharacterDNA(characterImage, characterArtStyle);
     }
 
-    // Step 3: Generate professional comic book pages
+    // Step 3: Generate professional comic book pages with speech bubbles
     const config = this.audienceConfig[audience];
     const pages = await this.generateComicBookPages(storyAnalysis, characterDNA, config, characterArtStyle);
 
-    console.log(`✅ Professional comic book layout generated: ${pages.length} pages with ${config.totalPanels} total panels`);
+    console.log(`✅ Professional comic book layout generated: ${pages.length} pages with ${config.totalPanels} total panels and ${storyAnalysis.dialoguePanels} speech bubbles`);
 
     return {
       pages,
@@ -606,12 +1088,15 @@ Follow professional comic creation: Story purpose drives every visual choice.`;
       layoutType,
       characterArtStyle,
       metadata: {
-        discoveryPath: 'professional_comic_generation',
+        discoveryPath: 'professional_comic_generation_with_speech_bubbles',
         patternType: 'direct',
         qualityScore: 100,
-        originalStructure: ['professional_story_analysis', 'character_dna_system', 'comic_book_pages'],
+        originalStructure: ['professional_story_analysis', 'character_dna_system', 'speech_bubble_system', 'comic_book_pages'],
         storyBeats: storyAnalysis.storyBeats.length,
         characterConsistencyEnabled: !!characterDNA,
+        speechBubblesEnabled: true,
+        dialoguePanels: storyAnalysis.dialoguePanels,
+        speechBubbleDistribution: storyAnalysis.speechBubbleDistribution,
         professionalStandards: true
       }
     };
@@ -649,6 +1134,10 @@ Follow professional comic creation: Story purpose drives every visual choice.`;
         narrativePurpose: beat.panelPurpose,
         visualPriority: beat.visualPriority,
         dialogue: beat.dialogue,
+        // ✅ ENHANCED: Speech bubble information
+        hasSpeechBubble: beat.hasSpeechBubble || false,
+        speechBubbleStyle: beat.speechBubbleStyle,
+        cleanedDialogue: beat.cleanedDialogue,
         panelNumber: panelIndex + 1,
         pageNumber: pageNum
       }));
@@ -658,12 +1147,19 @@ Follow professional comic creation: Story purpose drives every visual choice.`;
         scenes: pageScenes,
         layoutType: config.panelLayout,
         characterArtStyle: artStyle,
-        panelCount: pageScenes.length
+        panelCount: pageScenes.length,
+        // ✅ ENHANCED: Page-level speech bubble tracking
+        dialoguePanelsOnPage: pageScenes.filter(scene => scene.hasSpeechBubble).length,
+        speechBubbleStyles: pageScenes
+          .filter(scene => scene.hasSpeechBubble)
+          .map(scene => scene.speechBubbleStyle)
       });
     }
 
     return pages;
   }
+
+  // ===== ENHANCED PANEL PROMPT WITH SPEECH BUBBLE SYSTEM =====
 
   private buildProfessionalPanelPrompt(
     beat: StoryBeat, 
@@ -672,6 +1168,9 @@ Follow professional comic creation: Story purpose drives every visual choice.`;
     config: any
   ): string {
     const characterPrompt = characterDNA ? this.buildCharacterDNAPrompt(characterDNA, artStyle) : '';
+    
+    // ✅ ENHANCED: Speech bubble enforcement section
+    const speechBubbleSection = beat.hasSpeechBubble ? this.buildSpeechBubbleRequirements(beat) : this.buildNoSpeechBubbleSection();
     
     return `PROFESSIONAL COMIC BOOK PANEL:
 
@@ -684,24 +1183,72 @@ ENVIRONMENT: ${beat.environment}
 
 ${characterPrompt}
 
+${speechBubbleSection}
+
 COMIC BOOK PRODUCTION STANDARDS:
 - Panel Style: ${config.panelLayout} for ${config.complexityLevel} storytelling
 - Visual Flow: ${config.readingFlow}
 - Art Style: ${artStyle} with professional comic book formatting
 - Color Scheme: ${config.colorScheme}
 - Panel Borders: Professional comic book gutters and panel separation
-- Speech Bubbles: Include if dialogue present: "${beat.dialogue || 'None'}"
+- Target Audience: Appropriate for ${config.complexityLevel} readers
 
 TECHNICAL SPECIFICATIONS:
 - Format: Professional comic book panel illustration
 - Quality: Publication-ready comic book artwork
 - Composition: ${config.visualStyle}
-- Target Audience: Appropriate for ${config.complexityLevel} readers
+- Character Positioning: Ensure clear sight lines for speech bubbles if present
 
 CRITICAL REQUIREMENTS:
 - Character consistency across all panels
 - Clear visual storytelling that advances narrative
-- Professional comic book production quality`;
+- Professional comic book production quality
+- Proper speech bubble integration when required`;
+  }
+
+  /**
+   * Build speech bubble requirements section for panels with dialogue
+   */
+  private buildSpeechBubbleRequirements(beat: StoryBeat): string {
+    const bubbleStyle = beat.speechBubbleStyle || 'standard';
+    const dialogue = beat.cleanedDialogue || beat.dialogue || '';
+
+    const bubbleStyleInstructions = {
+      standard: 'Standard oval speech bubble with clean outline and tail pointing to character',
+      thought: 'Cloud-style thought bubble with scalloped edges and small circles leading to character',
+      shout: 'Jagged, explosive speech bubble with bold outline indicating loud speech or excitement',
+      whisper: 'Dashed or dotted outline speech bubble indicating quiet or secretive speech',
+      narrative: 'Rectangular caption box for narrative text, positioned at top or bottom of panel'
+    };
+
+    return `CRITICAL SPEECH BUBBLE REQUIREMENTS:
+- MANDATORY: Include ${bubbleStyle} speech bubble in this panel
+- DIALOGUE TEXT: "${dialogue}"
+- BUBBLE STYLE: ${bubbleStyleInstructions[bubbleStyle]}
+- POSITIONING: Position speech bubble to not obscure important visual elements
+- CHARACTER SIGHT LINE: Ensure character's mouth/head position supports speech bubble placement
+- READABILITY: Speech bubble must be clearly readable with appropriate text size
+- PROFESSIONAL QUALITY: Comic book industry standard speech bubble design
+- INTEGRATION: Speech bubble should feel naturally integrated into the panel composition
+
+SPEECH BUBBLE TECHNICAL SPECS:
+- Style: ${bubbleStyle}
+- Text: "${dialogue}"
+- Placement: Strategic positioning for optimal readability
+- Character Connection: Clear visual connection between character and speech bubble
+- Panel Balance: Speech bubble enhances rather than disrupts panel composition`;
+  }
+
+  /**
+   * Build no speech bubble section for panels without dialogue
+   */
+  private buildNoSpeechBubbleSection(): string {
+    return `NO SPEECH BUBBLE REQUIRED:
+- This panel focuses on visual storytelling without dialogue
+- Emphasize character expressions and body language
+- Use visual elements to convey emotion and narrative
+- Ensure clear character positioning and environmental details
+- Focus on advancing story through visual composition alone`;
   }
 
   private buildCharacterDNAPrompt(characterDNA: CharacterDNA, artStyle: string): string {
@@ -767,7 +1314,7 @@ VERIFICATION: Character must be identical to previous panels in this comic book 
       panelType = 'standard'
     } = options;
 
-    console.log('🎨 Generating professional character-consistent comic panel...');
+    console.log('🎨 Generating professional character-consistent comic panel with enhanced speech bubble support...');
 
     const config = this.audienceConfig[audience] || this.audienceConfig.children;
     
@@ -784,7 +1331,7 @@ VERIFICATION: Character must be identical to previous panels in this comic book 
 
     const imageUrl = await this.generateCartoonImage(professionalPrompt);
 
-    console.log('✅ Professional character-consistent comic panel generated');
+    console.log('✅ Professional character-consistent comic panel generated with speech bubble support');
 
     return {
       url: imageUrl,
@@ -837,10 +1384,10 @@ COMIC BOOK PRODUCTION STANDARDS:
 
 PROFESSIONAL COMIC ELEMENTS:
 - Clear panel borders with proper gutters
-- Speech bubbles if dialogue is present
 - Professional comic book illustration quality
 - Visual storytelling that guides reader attention
 - Character positioning that supports narrative flow
+- Space for speech bubbles when dialogue is present
 
 TARGET AUDIENCE: ${audience} - ${config.analysisInstructions}
 
@@ -848,7 +1395,8 @@ QUALITY STANDARDS:
 - Publication-ready comic book artwork
 - Character consistency for story continuity
 - Professional comic book visual storytelling
-- Clear, engaging panel composition`;
+- Clear, engaging panel composition
+- Proper spacing for speech bubble integration when needed`;
   }
 
   // ===== CHARACTER DESCRIPTION METHODS =====
@@ -951,7 +1499,8 @@ TECHNICAL SPECIFICATIONS:
   // ===== LEGACY SCENE GENERATION (FALLBACK) =====
 
   async generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult> {
-    const jsonSystemPrompt = `${systemPrompt}\n\nIMPORTANT: Respond with valid JSON containing professional comic book content.`;
+    // ✅ FIXED: Add JSON keyword to system prompt for OpenAI API compliance
+    const jsonSystemPrompt = `${systemPrompt}\n\nIMPORTANT: Respond with valid JSON containing comic book content. Use clear structure with an array of pages/panels/scenes. Your response must be properly formatted JSON.`;
     
     const result = await this.createChatCompletion({
       model: 'gpt-4o',
@@ -1002,6 +1551,7 @@ TECHNICAL SPECIFICATIONS:
   // ===== CHAT COMPLETION =====
 
   async createChatCompletion(options: ChatCompletionOptions): Promise<ChatCompletionResult> {
+    // ✅ DEFENSIVE PROMPT VALIDATION: Ensure JSON keyword is present when using json_object format
     if (options.responseFormat?.type === 'json_object') {
       const hasJsonKeyword = options.messages.some(message => {
         if (typeof message.content === 'string') {
@@ -1012,6 +1562,7 @@ TECHNICAL SPECIFICATIONS:
 
       if (!hasJsonKeyword) {
         console.warn('⚠️ Adding JSON keyword to prompt for OpenAI API compliance');
+        // Add JSON instruction to the last user message
         const lastUserMessageIndex = options.messages.map(m => m.role).lastIndexOf('user');
         if (lastUserMessageIndex >= 0) {
           const lastMessage = options.messages[lastUserMessageIndex];
