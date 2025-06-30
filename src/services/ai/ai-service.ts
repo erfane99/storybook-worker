@@ -1171,7 +1171,7 @@ ${characterDNA.negativePrompts.join('\n- ')}
 VERIFICATION: Character must be identical to previous panels in this comic book story.`;
   }
 
-  private determinePanelType(panelIndex: number, totalPanels: number): PanelType {
+ private determinePanelType(panelIndex: number, totalPanels: number): PanelType {
   const { STANDARD, WIDE, TALL } = AIService.PANEL_CONSTANTS;
   
   if (totalPanels <= 2) {
@@ -1179,8 +1179,15 @@ VERIFICATION: Character must be identical to previous panels in this comic book 
   } else if (totalPanels <= 4) {
     return panelIndex === totalPanels - 1 ? WIDE : STANDARD;
   } else {
-    const panelTypes = [STANDARD, WIDE, TALL, STANDARD] as const;
-    return panelTypes[panelIndex % panelTypes.length];
+    // Professional panel variety for complex layouts - type-safe switch pattern
+    const typeIndex = panelIndex % 4;
+    switch (typeIndex) {
+      case 0: return STANDARD;
+      case 1: return WIDE;
+      case 2: return TALL;
+      case 3: return STANDARD;
+      default: return STANDARD; // Type safety guarantee
+    }
   }
 }
 
