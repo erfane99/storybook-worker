@@ -517,6 +517,312 @@ export class AIService extends EnhancedBaseService implements IAIService {
     };
   }
 
+  // ===== ENHANCED COMIC BOOK GENERATION METHODS =====
+
+  /**
+   * Create Environmental DNA for consistent world-building across panels
+   * Extracts locations, lighting, weather, time-of-day from story analysis
+   */
+  async createEnvironmentalDNA(
+    storyAnalysis: any,
+    audience: AudienceType
+  ): Promise<any> {
+    const startTime = Date.now();
+    
+    try {
+      console.log('🌍 Creating Environmental DNA for consistent world-building...');
+      
+      const environmentalPrompt = `You are a professional comic book environmental designer. Analyze this story and create consistent environmental DNA for all panels.
+
+STORY ANALYSIS:
+${JSON.stringify(storyAnalysis, null, 2)}
+
+AUDIENCE: ${audience}
+
+Create comprehensive environmental DNA that ensures 85-90% consistency across all panels. Return your response as valid JSON in this exact format:
+
+{
+  "primaryLocation": {
+    "name": "Main setting name",
+    "type": "indoor/outdoor/mixed",
+    "description": "Detailed visual description",
+    "keyFeatures": ["feature1", "feature2", "feature3"],
+    "colorPalette": ["#color1", "#color2", "#color3"],
+    "architecturalStyle": "Style description"
+  },
+  "secondaryLocations": [
+    {
+      "name": "Secondary location name",
+      "type": "indoor/outdoor/mixed",
+      "description": "Visual description",
+      "transitionFrom": "primary/other location",
+      "keyFeatures": ["feature1", "feature2"]
+    }
+  ],
+  "lightingContext": {
+    "timeOfDay": "morning/afternoon/evening/night",
+    "weatherCondition": "sunny/cloudy/rainy/stormy/snowy",
+    "lightingMood": "bright/warm/dramatic/mysterious/soft",
+    "shadowDirection": "left/right/overhead/backlit",
+    "consistencyRules": ["rule1", "rule2", "rule3"]
+  },
+  "visualContinuity": {
+    "backgroundElements": ["element1", "element2", "element3"],
+    "recurringObjects": ["object1", "object2"],
+    "colorConsistency": {
+      "dominantColors": ["#color1", "#color2"],
+      "accentColors": ["#color3", "#color4"],
+      "avoidColors": ["#color5", "#color6"]
+    },
+    "perspectiveGuidelines": "Camera angle and perspective rules"
+  },
+  "atmosphericElements": {
+    "ambientEffects": ["effect1", "effect2"],
+    "particleEffects": ["particles if any"],
+    "environmentalMood": "overall emotional tone",
+    "seasonalContext": "spring/summer/fall/winter/none"
+  },
+  "panelTransitions": {
+    "movementFlow": "How characters move through space",
+    "cameraMovement": "How perspective changes between panels",
+    "spatialRelationships": "How locations connect to each other"
+  }
+}
+
+CRITICAL REQUIREMENTS:
+- Extract actual locations and settings from the story
+- Ensure lighting and weather consistency throughout
+- Create visual rules that maintain 85-90% environmental consistency
+- Consider ${audience} audience for appropriate environmental complexity
+- Plan for smooth visual transitions between panels
+- Include specific color palettes for consistency`;
+
+      const options = {
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: environmentalPrompt
+          }
+        ],
+        maxTokens: 2000,
+        temperature: 0.3, // Lower temperature for consistency
+        responseFormat: { type: 'json_object' }
+      };
+
+      const result = await this.makeOpenAIAPICall<any>(
+        '/chat/completions',
+        options,
+        120000, // 2 minutes timeout
+        'createEnvironmentalDNA'
+      );
+
+      if (!result.choices?.[0]?.message?.content) {
+        throw new Error('No environmental DNA content received from OpenAI');
+      }
+
+      const environmentalDNA = JSON.parse(result.choices[0].message.content);
+      
+      // Validate environmental DNA structure
+      if (!environmentalDNA.primaryLocation || !environmentalDNA.lightingContext) {
+        throw new Error('Invalid environmental DNA structure received');
+      }
+
+      const duration = Date.now() - startTime;
+      console.log(`✅ Environmental DNA created successfully in ${duration}ms`);
+      console.log(`🌍 Primary Location: ${environmentalDNA.primaryLocation.name}`);
+      console.log(`☀️ Lighting: ${environmentalDNA.lightingContext.timeOfDay} - ${environmentalDNA.lightingContext.lightingMood}`);
+      
+      return {
+        ...environmentalDNA,
+        metadata: {
+          createdAt: new Date().toISOString(),
+          processingTime: duration,
+          audience: audience,
+          consistencyTarget: '85-90%'
+        }
+      };
+
+    } catch (error: any) {
+      console.error('❌ Environmental DNA creation failed:', error);
+      
+      // Return fallback environmental DNA to prevent workflow failure
+      return {
+        primaryLocation: {
+          name: 'Generic Setting',
+          type: 'mixed',
+          description: 'A versatile environment suitable for the story',
+          keyFeatures: ['open space', 'natural lighting', 'neutral background'],
+          colorPalette: ['#87CEEB', '#F5F5DC', '#8FBC8F'],
+          architecturalStyle: 'Simple and clean'
+        },
+        lightingContext: {
+          timeOfDay: 'afternoon',
+          weatherCondition: 'sunny',
+          lightingMood: 'bright',
+          shadowDirection: 'left',
+          consistencyRules: ['Maintain consistent lighting direction', 'Keep shadows soft']
+        },
+        visualContinuity: {
+          backgroundElements: ['sky', 'ground', 'horizon'],
+          recurringObjects: [],
+          colorConsistency: {
+            dominantColors: ['#87CEEB', '#F5F5DC'],
+            accentColors: ['#8FBC8F'],
+            avoidColors: ['#FF0000', '#000000']
+          }
+        },
+        fallback: true,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Analyze panel continuity for cross-panel relationship mapping
+   * Plans character movement and environmental transitions
+   */
+  async analyzePanelContinuity(storyBeats: any[]): Promise<any> {
+    const startTime = Date.now();
+    
+    try {
+      console.log('🔄 Analyzing panel continuity for visual flow...');
+      
+      const continuityPrompt = `You are a professional comic book layout artist. Analyze these story beats and create a continuity map for seamless visual flow between panels.
+
+STORY BEATS:
+${JSON.stringify(storyBeats, null, 2)}
+
+Create a comprehensive continuity analysis. Return your response as valid JSON in this exact format:
+
+{
+  "panelFlow": [
+    {
+      "panelIndex": 0,
+      "characterPositions": {
+        "mainCharacter": "left/center/right/background",
+        "secondaryCharacters": ["position1", "position2"],
+        "movementDirection": "entering/exiting/static/moving_left/moving_right"
+      },
+      "environmentalTransition": {
+        "locationChange": true/false,
+        "cameraAngle": "close-up/medium/wide/establishing",
+        "perspectiveShift": "none/slight/dramatic",
+        "continuityElements": ["element1", "element2"]
+      },
+      "visualBridge": {
+        "connectsToPrevious": "How this panel connects to previous",
+        "connectsToNext": "How this panel connects to next",
+        "transitionType": "cut/fade/zoom/pan/match_cut"
+      }
+    }
+  ],
+  "characterMovementMap": {
+    "primaryCharacterArc": "Overall movement pattern through story",
+    "spatialRelationships": "How characters relate to each other spatially",
+    "consistencyRules": ["rule1", "rule2", "rule3"]
+  },
+  "environmentalTransitions": {
+    "locationChanges": [
+      {
+        "fromPanel": 0,
+        "toPanel": 1,
+        "transitionType": "smooth/cut/establishing",
+        "bridgingElements": ["element1", "element2"]
+      }
+    ],
+    "cameraMovement": "Overall camera movement strategy",
+    "visualCohesion": "How to maintain visual unity"
+  },
+  "panelComposition": {
+    "readingFlow": "How panels guide reader's eye",
+    "balanceStrategy": "Visual weight distribution",
+    "rhythmPattern": "Pacing through panel sizes and layouts"
+  }
+}
+
+CRITICAL REQUIREMENTS:
+- Plan smooth character movement between panels
+- Ensure environmental consistency across location changes
+- Create visual bridges that connect panels seamlessly
+- Consider comic book reading flow and pacing
+- Maintain spatial relationships and character positioning
+- Plan camera angles for optimal storytelling`;
+
+      const options = {
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: continuityPrompt
+          }
+        ],
+        maxTokens: 1500,
+        temperature: 0.2, // Very low temperature for consistency
+        responseFormat: { type: 'json_object' }
+      };
+
+      const result = await this.makeOpenAIAPICall<any>(
+        '/chat/completions',
+        options,
+        90000, // 1.5 minutes timeout
+        'analyzePanelContinuity'
+      );
+
+      if (!result.choices?.[0]?.message?.content) {
+        throw new Error('No panel continuity analysis received from OpenAI');
+      }
+
+      const continuityAnalysis = JSON.parse(result.choices[0].message.content);
+      
+      // Validate continuity analysis structure
+      if (!continuityAnalysis.panelFlow || !continuityAnalysis.characterMovementMap) {
+        throw new Error('Invalid continuity analysis structure received');
+      }
+
+      const duration = Date.now() - startTime;
+      console.log(`✅ Panel continuity analysis completed in ${duration}ms`);
+      console.log(`🔄 Analyzed ${continuityAnalysis.panelFlow.length} panel transitions`);
+      
+      return {
+        ...continuityAnalysis,
+        metadata: {
+          createdAt: new Date().toISOString(),
+          processingTime: duration,
+          panelCount: storyBeats.length
+        }
+      };
+
+    } catch (error: any) {
+      console.error('❌ Panel continuity analysis failed:', error);
+      
+      // Return basic continuity fallback
+      return {
+        panelFlow: storyBeats.map((_, index) => ({
+          panelIndex: index,
+          characterPositions: {
+            mainCharacter: 'center',
+            movementDirection: 'static'
+          },
+          environmentalTransition: {
+            locationChange: false,
+            cameraAngle: 'medium',
+            perspectiveShift: 'none'
+          },
+          visualBridge: {
+            transitionType: 'cut'
+          }
+        })),
+        characterMovementMap: {
+          primaryCharacterArc: 'Standard progression through story',
+          consistencyRules: ['Maintain character positioning', 'Keep camera angles consistent']
+        },
+        fallback: true,
+        error: error.message
+      };
+    }
+  }
+
   // ===== ENHANCED CHARACTER DNA SYSTEM =====
 
   async createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA> {
@@ -1944,6 +2250,170 @@ Write a cohesive story optimized for professional comic book adaptation.`;
       this.gptRetryConfig,
       'analyzeImage'
     );
+  }
+
+  // ===== ENHANCED COMIC BOOK GENERATION METHODS =====
+
+  /**
+   * Enhanced comic book generation with environmental context
+   */
+  async generateComicBookWithEnvironmentalContext(
+    story: string,
+    audience: AudienceType,
+    character_image?: string,
+    character_art_style: string = 'storybook',
+    layout_type: string = 'comic-book-panels'
+  ): Promise<any> {
+    try {
+      console.log('🎨 Starting enhanced comic book generation with environmental context...');
+      
+      // Step 1: Analyze story structure
+      const storyBeats = await this.analyzeStoryStructure(story, audience);
+      console.log(`✅ Story structure analyzed: ${storyBeats.storyBeats.length} narrative beats for ${audience} audience`);
+      
+      // ENHANCED: Add environmental extraction to story analysis
+      console.log('🌍 Extracting environmental context from story analysis...');
+      const environmentalContext = {
+        primarySetting: this.extractPrimarySetting(story),
+        timeContext: this.extractTimeContext(story),
+        weatherMood: this.extractWeatherMood(story),
+        locationTransitions: this.identifyLocationTransitions(storyBeats.storyBeats)
+      };
+      
+      // Enhanced scene image generation with character DNA
+      const sceneResult = await (aiService as any).generateScenesWithAudience({
+        story: story,
+        audience: audience as any,
+        characterImage: character_image,
+        characterArtStyle: character_art_style,
+        layoutType: layout_type,
+        environmentalContext: environmentalContext // ENHANCED: Pass environmental context
+      });
+      
+      if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
+        console.log(`✅ Enhanced comic book generation completed: ${sceneResult.pages.length} pages with environmental consistency`);
+        return sceneResult;
+      } else {
+        throw new Error('Invalid scene generation result structure');
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Enhanced comic book generation failed:', error);
+      throw new Error(`Enhanced comic book generation failed: ${error.message}`);
+    }
+  }
+
+  // ===== ENVIRONMENTAL EXTRACTION HELPER METHODS =====
+
+  private extractPrimarySetting(story: string): string {
+    // Extract primary setting from story text
+    const settingKeywords = {
+      indoor: ['house', 'room', 'kitchen', 'bedroom', 'school', 'classroom', 'library'],
+      outdoor: ['park', 'garden', 'forest', 'beach', 'playground', 'yard', 'outside'],
+      fantasy: ['castle', 'kingdom', 'magical', 'enchanted', 'fairy', 'dragon'],
+      modern: ['city', 'street', 'car', 'computer', 'phone', 'mall']
+    };
+    
+    const storyLower = story.toLowerCase();
+    
+    for (const [category, keywords] of Object.entries(settingKeywords)) {
+      if (keywords.some(keyword => storyLower.includes(keyword))) {
+        return category;
+      }
+    }
+    
+    return 'mixed';
+  }
+
+  private extractTimeContext(story: string): string {
+    const timeKeywords = {
+      morning: ['morning', 'sunrise', 'dawn', 'breakfast'],
+      afternoon: ['afternoon', 'lunch', 'midday', 'noon'],
+      evening: ['evening', 'sunset', 'dinner', 'dusk'],
+      night: ['night', 'dark', 'moon', 'stars', 'bedtime']
+    };
+    
+    const storyLower = story.toLowerCase();
+    
+    for (const [time, keywords] of Object.entries(timeKeywords)) {
+      if (keywords.some(keyword => storyLower.includes(keyword))) {
+        return time;
+      }
+    }
+    
+    return 'afternoon'; // Default to afternoon
+  }
+
+  private extractWeatherMood(story: string): string {
+    const weatherKeywords = {
+      sunny: ['sunny', 'bright', 'clear', 'warm'],
+      cloudy: ['cloudy', 'overcast', 'gray', 'grey'],
+      rainy: ['rain', 'wet', 'storm', 'thunder'],
+      snowy: ['snow', 'cold', 'winter', 'ice']
+    };
+    
+    const storyLower = story.toLowerCase();
+    
+    for (const [weather, keywords] of Object.entries(weatherKeywords)) {
+      if (keywords.some(keyword => storyLower.includes(keyword))) {
+        return weather;
+      }
+    }
+    
+    return 'sunny'; // Default to sunny
+  }
+
+  private identifyLocationTransitions(storyBeats: any[]): any[] {
+    const transitions = [];
+    
+    for (let i = 1; i < storyBeats.length; i++) {
+      const prevBeat = storyBeats[i - 1];
+      const currentBeat = storyBeats[i];
+      
+      // Simple heuristic to detect location changes
+      if (this.detectLocationChange(prevBeat.description, currentBeat.description)) {
+        transitions.push({
+          fromPanel: i - 1,
+          toPanel: i,
+          transitionType: 'location_change',
+          description: `Transition from ${prevBeat.setting || 'previous location'} to ${currentBeat.setting || 'new location'}`
+        });
+      }
+    }
+    
+    return transitions;
+  }
+
+  private detectLocationChange(prevDescription: string, currentDescription: string): boolean {
+    const locationWords = ['room', 'outside', 'kitchen', 'park', 'school', 'home', 'garden', 'forest'];
+    
+    const prevLocations = locationWords.filter(word => prevDescription.toLowerCase().includes(word));
+    const currentLocations = locationWords.filter(word => currentDescription.toLowerCase().includes(word));
+    
+    // If different location words are found, assume location change
+    return prevLocations.length > 0 && currentLocations.length > 0 && 
+           !prevLocations.some(loc => currentLocations.includes(loc));
+  }
+
+  /**
+   * Extract character description from Character DNA
+   */
+  private extractCharacterDescription(characterDNA: CharacterDNA): string {
+    const physicalFeatures = [
+      characterDNA.physicalStructure.faceShape,
+      characterDNA.physicalStructure.eyeDetails,
+      characterDNA.physicalStructure.hairSpecifics,
+      characterDNA.physicalStructure.skinTone
+    ].filter(Boolean).join(', ');
+
+    const clothingDetails = [
+      characterDNA.clothingSignature.primaryOutfit,
+      characterDNA.clothingSignature.colorPalette
+    ].filter(Boolean).join(', ');
+
+    const uniqueFeatures = characterDNA.uniqueIdentifiers.distinctiveFeatures;
+
+    return `${physicalFeatures}. Wearing ${clothingDetails}. ${uniqueFeatures}`.trim();
   }
 }
 
