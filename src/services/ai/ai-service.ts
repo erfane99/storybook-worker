@@ -1461,7 +1461,8 @@ ${story}`;
     beat: StoryBeat, 
     characterDNA: CharacterDNA | null, 
     artStyle: string, 
-    config: any
+    config: any,
+    environmentalDNA: any = null
   ): string {
     const characterPrompt = characterDNA ? this.buildCharacterDNAPrompt(characterDNA, artStyle) : '';
     
@@ -1500,6 +1501,16 @@ NO SPEECH BUBBLE REQUIRED:
 - Focus on advancing story through visual composition alone`;
     }
     
+    // Enhanced environmental context integration
+    const environmentalPrompt = environmentalDNA ? `
+
+ENVIRONMENTAL CONTEXT (MAINTAIN CONSISTENCY):
+- Location: ${environmentalDNA.primaryLocation || 'consistent setting'}
+- Lighting: ${environmentalDNA.lightingContext || 'natural lighting'}
+- Color Palette: ${environmentalDNA.colorPalette || 'harmonious colors'}
+- Atmosphere: ${environmentalDNA.atmosphericElements || 'appropriate mood'}
+- Visual Continuity: Maintain environmental consistency with previous panels` : '';
+
     return `PROFESSIONAL COMIC BOOK PANEL:
 
 NARRATIVE PURPOSE: ${beat.panelPurpose}
@@ -1509,7 +1520,7 @@ EMOTIONAL STATE: ${beat.emotion}
 VISUAL FOCUS: ${beat.visualPriority}
 ENVIRONMENT: ${beat.environment}
 
-${characterPrompt}
+${characterPrompt}${environmentalPrompt}
 
 ${speechBubbleSection}
 
@@ -1528,6 +1539,7 @@ TECHNICAL SPECIFICATIONS:
 
 CRITICAL REQUIREMENTS:
 - Character consistency across all panels
+- Environmental consistency for professional world-building
 - Clear visual storytelling that advances narrative
 - Professional comic book production quality`;
   }
