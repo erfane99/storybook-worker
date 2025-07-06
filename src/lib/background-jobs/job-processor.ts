@@ -789,7 +789,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
             characterArtStyle: character_art_style,
             layoutType: layout_type,
             panelType: scene.panelType || 'standard',
-            environmentalContext: enhancedContext // Pass environmental context for prompt enhancement
+            environmentalContext: enhancedContext // Pass environmental context to image generation
           });
           
           // Calculate consistency scores
@@ -879,6 +879,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       storyCoherence: Math.round(storyCoherence),
       panelCount: totalScenes,
       professionalStandards: true,
+      environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
+      enhancedContextUsed: true
     };
 
     await jobService.markJobCompleted(job.id, {
@@ -889,7 +891,11 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       layoutType: layout_type,
       characterDescription: characterDescriptionToUse,
       qualityMetrics,
-      professionalStandards: true
+      characterDNAUsed: !!characterDNA,
+      environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
+      storyAnalysisUsed: !!storyAnalysis,
+      professionalStandards: true,
+      enhancedContextUsed: true
     });
 
     console.log(`✅ ENHANCED storybook job with environmental consistency completed: ${job.id}`);
@@ -898,6 +904,9 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     return {
       success: true,
       pages: updatedPages,
+      characterDNA,
+      environmentalDNA,
+      storyAnalysis,
       qualityMetrics,
     };
   }

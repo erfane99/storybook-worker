@@ -355,342 +355,6 @@ export class AIService extends EnhancedBaseService implements IAIService {
     }
   }
 
-  // ===== ENVIRONMENTAL CONSISTENCY METHODS =====
-
-  /**
-   * Create Environmental DNA for consistent world-building across panels
-   * Extracts locations, lighting, weather, and visual continuity rules from story
-   */
-  async createEnvironmentalDNA(storyAnalysis: any, audience: AudienceType): Promise<any> {
-    const result = await this.withErrorHandling(
-      async () => {
-        console.log('🌍 Creating Environmental DNA for world consistency...');
-        
-        const storyBeats = storyAnalysis?.storyBeats || [];
-        const storyText = storyAnalysis?.story || 'A story unfolds';
-        
-        const environmentalPrompt = `You are a professional comic book environmental designer. Analyze this story and create consistent environmental DNA for all panels.
-
-STORY ANALYSIS:
-${JSON.stringify(storyBeats, null, 2)}
-
-STORY TEXT:
-${storyText}
-
-AUDIENCE: ${audience}
-
-Create environmental DNA with these components:
-
-1. PRIMARY LOCATION:
-   - Name and type of main setting
-   - Key visual features and landmarks
-   - Architectural style and period
-   - Color palette (3-5 dominant colors)
-
-2. LIGHTING CONTEXT:
-   - Time of day (morning/afternoon/evening/night)
-   - Weather condition (sunny/cloudy/rainy/stormy)
-   - Lighting mood (bright/dramatic/soft/mysterious)
-   - Shadow direction and intensity
-
-3. VISUAL CONTINUITY RULES:
-   - Background elements that should appear consistently
-   - Color consistency guidelines
-   - Perspective and camera angle preferences
-   - Atmospheric effects (fog, dust, particles)
-
-4. ENVIRONMENTAL MOOD:
-   - Overall atmosphere (cheerful/mysterious/adventurous/cozy)
-   - Seasonal context if relevant
-   - Cultural or historical setting details
-
-Return as JSON with this structure:
-{
-  "primaryLocation": {
-    "name": "Location name",
-    "type": "indoor/outdoor/mixed",
-    "description": "Detailed description",
-    "keyFeatures": ["feature1", "feature2"],
-    "colorPalette": ["#color1", "#color2", "#color3"]
-  },
-  "lightingContext": {
-    "timeOfDay": "afternoon",
-    "weatherCondition": "sunny",
-    "lightingMood": "bright",
-    "shadowDirection": "left"
-  },
-  "visualContinuity": {
-    "backgroundElements": ["element1", "element2"],
-    "colorConsistency": "warm/cool/neutral",
-    "perspectiveGuidelines": "eye-level/low-angle/high-angle"
-  },
-  "atmosphericElements": {
-    "ambientEffects": ["effect1", "effect2"],
-    "environmentalMood": "cheerful",
-    "seasonalContext": "spring/summer/fall/winter"
-  }
-}`;
-
-        const options = {
-          model: 'gpt-4',
-          messages: [
-            { role: 'system', content: 'You are a professional comic book environmental designer specializing in world consistency.' },
-            { role: 'user', content: environmentalPrompt }
-          ],
-          maxTokens: 1000,
-          temperature: 0.3,
-          responseFormat: { type: 'json_object' }
-        };
-
-        const response = await this.makeOpenAIAPICall<any>(
-          '/chat/completions',
-          options,
-          120000,
-          'createEnvironmentalDNA'
-        );
-
-        if (!response?.choices?.[0]?.message?.content) {
-          throw new Error('No environmental DNA content received from AI service');
-        }
-
-        const environmentalDNA = JSON.parse(response.choices[0].message.content);
-        
-        console.log(`✅ Environmental DNA created: ${environmentalDNA.primaryLocation?.name || 'Unknown Location'}`);
-        console.log(`☀️ Lighting: ${environmentalDNA.lightingContext?.timeOfDay || 'afternoon'} - ${environmentalDNA.lightingContext?.lightingMood || 'bright'}`);
-        
-        return environmentalDNA;
-      },
-      'createEnvironmentalDNA'
-    );
-
-    return result.success ? result.data : this.getFallbackEnvironmentalDNA();
-  }
-
-  /**
-   * Analyze panel continuity for smooth visual flow between panels
-   */
-  async analyzePanelContinuity(storyBeats: any[]): Promise<any> {
-    const result = await this.withErrorHandling(
-      async () => {
-        console.log('🔄 Analyzing panel continuity for visual flow...');
-        
-        const continuityPrompt = `You are a professional comic book layout designer. Analyze these story beats and create panel continuity guidelines for smooth visual flow.
-
-STORY BEATS:
-${JSON.stringify(storyBeats, null, 2)}
-
-Create panel continuity analysis with:
-
-1. PANEL FLOW MAPPING:
-   - Character positioning across panels
-   - Environmental transitions between scenes
-   - Visual bridges between panels
-
-2. CHARACTER MOVEMENT:
-   - Primary character arc through panels
-   - Spatial relationships between characters
-   - Movement direction consistency
-
-3. CAMERA MOVEMENT:
-   - Zoom levels (close-up/medium/wide)
-   - Angle changes (eye-level/high/low)
-   - Perspective shifts
-
-4. READING FLOW:
-   - Panel composition for left-to-right reading
-   - Visual rhythm and pacing
-   - Balance between action and dialogue panels
-
-Return as JSON:
-{
-  "panelFlow": [
-    {
-      "panelIndex": 0,
-      "characterPositions": "description",
-      "environmentalTransition": "description",
-      "visualBridge": "description"
-    }
-  ],
-  "characterMovementMap": {
-    "primaryCharacterArc": "description",
-    "spatialRelationships": "description"
-  },
-  "cameraMovement": {
-    "zoomProgression": "description",
-    "angleStrategy": "description"
-  },
-  "readingFlow": {
-    "panelComposition": "description",
-    "visualRhythm": "description"
-  }
-}`;
-
-        const options = {
-          model: 'gpt-4',
-          messages: [
-            { role: 'system', content: 'You are a professional comic book layout designer specializing in visual flow.' },
-            { role: 'user', content: continuityPrompt }
-          ],
-          maxTokens: 800,
-          temperature: 0.3,
-          responseFormat: { type: 'json_object' }
-        };
-
-        const response = await this.makeOpenAIAPICall<any>(
-          '/chat/completions',
-          options,
-          90000,
-          'analyzePanelContinuity'
-        );
-
-        if (!response?.choices?.[0]?.message?.content) {
-          throw new Error('No panel continuity content received from AI service');
-        }
-
-        const panelContinuity = JSON.parse(response.choices[0].message.content);
-        
-        console.log(`✅ Panel continuity analyzed: ${panelContinuity.panelFlow?.length || 0} panel transitions mapped`);
-        
-        return panelContinuity;
-      },
-      'analyzePanelContinuity'
-    );
-
-    return result.success ? result.data : this.getFallbackPanelContinuity();
-  }
-
-  /**
-   * Build environmentally aware prompt by enriching the base prompt with environmental context
-   * This maintains interface segregation by enhancing prompts rather than changing interfaces
-   */
-  private buildEnvironmentallyAwarePrompt(
-    basePrompt: string,
-    environmentalContext: any,
-    panelIndex?: number
-  ): string {
-    if (!environmentalContext || environmentalContext.fallback) {
-      return basePrompt;
-    }
-
-    const envDNA = environmentalContext.environmentalDNA;
-    const continuity = environmentalContext.panelContinuity;
-    
-    if (!envDNA) {
-      return basePrompt;
-    }
-
-    // Build environmental enhancement
-    let environmentalEnhancement = '';
-    
-    // Add location context
-    if (envDNA.primaryLocation) {
-      environmentalEnhancement += `\n\nENVIRONMENTAL CONTEXT:
-Setting: ${envDNA.primaryLocation.name} (${envDNA.primaryLocation.type})
-Key Features: ${envDNA.primaryLocation.keyFeatures?.join(', ') || 'Standard features'}
-Color Palette: ${envDNA.primaryLocation.colorPalette?.join(', ') || 'Natural colors'}`;
-    }
-    
-    // Add lighting context
-    if (envDNA.lightingContext) {
-      environmentalEnhancement += `
-Lighting: ${envDNA.lightingContext.timeOfDay || 'afternoon'} lighting with ${envDNA.lightingContext.lightingMood || 'bright'} mood
-Weather: ${envDNA.lightingContext.weatherCondition || 'clear'} conditions
-Shadows: ${envDNA.lightingContext.shadowDirection || 'natural'} shadow direction`;
-    }
-    
-    // Add visual continuity
-    if (envDNA.visualContinuity) {
-      environmentalEnhancement += `
-Background Elements: ${envDNA.visualContinuity.backgroundElements?.join(', ') || 'Consistent backgrounds'}
-Color Consistency: ${envDNA.visualContinuity.colorConsistency || 'natural'} color scheme
-Perspective: ${envDNA.visualContinuity.perspectiveGuidelines || 'eye-level'} perspective`;
-    }
-    
-    // Add atmospheric elements
-    if (envDNA.atmosphericElements) {
-      environmentalEnhancement += `
-Atmosphere: ${envDNA.atmosphericElements.environmentalMood || 'neutral'} mood
-Ambient Effects: ${envDNA.atmosphericElements.ambientEffects?.join(', ') || 'None'}`;
-    }
-    
-    // Add panel continuity if available
-    if (continuity && typeof panelIndex === 'number' && continuity.panelFlow?.[panelIndex]) {
-      const panelFlow = continuity.panelFlow[panelIndex];
-      environmentalEnhancement += `
-
-PANEL CONTINUITY:
-Character Positioning: ${panelFlow.characterPositions || 'Natural positioning'}
-Environmental Transition: ${panelFlow.environmentalTransition || 'Smooth transition'}
-Visual Bridge: ${panelFlow.visualBridge || 'Consistent flow'}`;
-    }
-    
-    // Add environmental consistency requirements
-    environmentalEnhancement += `
-
-ENVIRONMENTAL CONSISTENCY REQUIREMENTS:
-- Maintain consistent lighting and weather throughout
-- Use established color palette for backgrounds
-- Keep environmental elements consistent with previous panels
-- Ensure smooth visual flow and continuity
-- Target 85-90% environmental consistency`;
-
-    return basePrompt + environmentalEnhancement;
-  }
-
-  /**
-   * Fallback environmental DNA for reliability
-   */
-  private getFallbackEnvironmentalDNA(): any {
-    return {
-      primaryLocation: {
-        name: 'Generic Setting',
-        type: 'mixed',
-        description: 'A versatile setting suitable for the story',
-        keyFeatures: ['natural lighting', 'appropriate backgrounds'],
-        colorPalette: ['#87CEEB', '#90EE90', '#F5DEB3'] // Sky blue, light green, wheat
-      },
-      lightingContext: {
-        timeOfDay: 'afternoon',
-        weatherCondition: 'clear',
-        lightingMood: 'bright',
-        shadowDirection: 'natural'
-      },
-      visualContinuity: {
-        backgroundElements: ['consistent backgrounds'],
-        colorConsistency: 'natural',
-        perspectiveGuidelines: 'eye-level'
-      },
-      atmosphericElements: {
-        ambientEffects: [],
-        environmentalMood: 'neutral',
-        seasonalContext: 'temperate'
-      },
-      fallback: true
-    };
-  }
-
-  /**
-   * Fallback panel continuity for reliability
-   */
-  private getFallbackPanelContinuity(): any {
-    return {
-      panelFlow: [],
-      characterMovementMap: {
-        primaryCharacterArc: 'Natural character progression',
-        spatialRelationships: 'Consistent positioning'
-      },
-      cameraMovement: {
-        zoomProgression: 'Varied zoom levels',
-        angleStrategy: 'Eye-level perspective'
-      },
-      readingFlow: {
-        panelComposition: 'Left-to-right reading flow',
-        visualRhythm: 'Balanced pacing'
-      },
-      fallback: true
-    };
-  }
-
   // ===== ENHANCED STORY ANALYSIS WITH DIALOGUE EXTRACTION =====
 
   // ===== OPENAI PARAMETER TRANSFORMATION LAYER =====
@@ -1288,109 +952,318 @@ Analyze the provided image and create a detailed character DNA profile.`;
   // ===== PROFESSIONAL STORY BEAT ANALYSIS =====
 
   async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
-    const result = await this.withErrorHandling(
-      async () => {
-        console.log(`🔍 Analyzing story structure for ${audience} audience with professional comic methodology...`);
-        console.log('📍 Including environmental context extraction for world consistency...');
-        
-        const storyAnalysisPrompt = `You are a professional comic book story analyst and environmental designer. Analyze this story for ${audience} audience and create structured story beats with environmental context.
+    console.log(`📖 Analyzing story structure for ${audience} audience using professional comic book methodology...`);
+
+    const config = this.audienceConfig[audience];
+    
+    const systemPrompt = `You are an award-winning comic book writer following industry-standard narrative structure from Stan Lee, Alan Moore, and Grant Morrison.
+
+PROFESSIONAL STORY ANALYSIS MISSION:
+Analyze this story using proven comic book creation methodology where story beats drive visual choices.
 
 AUDIENCE: ${audience.toUpperCase()}
-TARGET PANELS: ${this.audienceConfig[audience].totalPanels}
-COMPLEXITY: ${this.audienceConfig[audience].complexityLevel}
+TARGET: ${config.totalPanels} total panels across ${config.pagesPerStory} pages (${config.panelsPerPage} panels per page)
+COMPLEXITY: ${config.complexityLevel}
 
 ANALYSIS REQUIREMENTS:
-${this.audienceConfig[audience].analysisInstructions}
+${config.analysisInstructions}
+
+STORY BEAT ANALYSIS:
+1. Break story into ${config.totalPanels} distinct narrative beats
+2. Each beat serves specific story function (setup, rising action, climax, resolution)
+3. Map character's emotional journey through beats
+4. Identify visual storytelling moments that advance narrative
+5. Ensure each panel has clear purpose in story progression
+
+✅ ENHANCED DIALOGUE ANALYSIS:
+6. Extract existing dialogue from story text using quotation marks and speech patterns
+7. Identify emotional moments that would benefit from character speech
+8. Assign dialogue to approximately 30-40% of panels strategically
+9. Generate contextual dialogue for key emotional beats without existing speech
+10. Ensure dialogue enhances story progression and character development
+
+COMIC BOOK PROFESSIONAL STANDARDS:
+- Every panel advances the story
+- Character actions serve narrative purpose
+- Visual flow guides reader through story
+- Emotional beats create character arc
+- Panel purposes build toward story resolution
+- Speech bubbles enhance emotional connection and story clarity
+
+REQUIRED JSON OUTPUT:
+{
+  "storyBeats": [
+    {
+      "beat": "specific_story_moment",
+      "emotion": "character_emotional_state", 
+      "visualPriority": "what_reader_should_focus_on",
+      "panelPurpose": "why_this_panel_exists",
+      "narrativeFunction": "setup|rising_action|climax|resolution",
+      "characterAction": "what_character_is_doing",
+      "environment": "where_action_takes_place",
+      "dialogue": "optional_character_speech"
+    }
+  ],
+  "characterArc": ["emotional_progression_through_story"],
+  "visualFlow": ["visual_storytelling_progression"],
+  "totalPanels": ${config.totalPanels},
+  "pagesRequired": ${config.pagesPerStory}
+}
+
+CRITICAL: Must generate exactly ${config.totalPanels} story beats for ${config.pagesPerStory} comic book pages.
+Follow professional comic creation: Story purpose drives every visual choice.`;
+
+    const userPrompt = `Analyze this story using professional comic book methodology. Return structured JSON.
 
 STORY TO ANALYZE:
-${story}
+${story}`;
 
-Create story beats optimized for comic book panels with environmental context and dialogue integration:
+    const options = {
+      model: 'gpt-4o',
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+      max_tokens: 2000,
+      temperature: 0.8,
+      response_format: { type: 'json_object' }
+    };
 
-1. ENVIRONMENTAL ANALYSIS:
-   Extract and identify:
-   - Primary locations and settings
-   - Time of day and weather conditions
-   - Environmental mood and atmosphere
-   - Visual themes and consistency elements
-
-2. STORY BEATS ANALYSIS:
-   For each story beat, provide:
-   - description: Clear scene description
-   - emotion: Primary emotion (happy, sad, excited, scared, surprised, angry, peaceful, curious)
-   - imagePrompt: Detailed visual description for image generation
-   - setting: Specific location/environment for this beat
-   - environmentalMood: Atmosphere and mood of the environment
-   - panelType: standard/wide/tall/splash based on story importance
-   - hasSpeechBubble: true/false based on dialogue needs
-   - dialogue: Character dialogue if hasSpeechBubble is true
-
-3. DIALOGUE INTEGRATION:
-   - Identify natural dialogue moments
-   - Assign speech bubbles to 30-40% of panels strategically
-   - Focus on emotional peaks and character interactions
-   - Ensure dialogue enhances story progression
-
-Return as JSON:
-{
-  "storyAnalysis": {
-    "storyBeats": [
-      {
-        "description": "Scene description",
-        "emotion": "happy",
-        "imagePrompt": "Detailed visual prompt",
-        "setting": "Specific location",
-        "environmentalMood": "Atmosphere description",
-        "panelType": "standard",
-        "hasSpeechBubble": true,
-        "dialogue": "Character speech"
-      }
-    ],
-    "dialoguePanels": 3,
-    "totalPanels": 8,
-    "primaryLocations": ["location1", "location2"],
-    "environmentalThemes": ["theme1", "theme2"],
-    "audienceOptimized": true
-  }
-}`;
-
-        const options = {
-          model: 'gpt-4',
-          messages: [
-            { role: 'system', content: 'You are a professional comic book story analyst specializing in environmental consistency and dialogue integration.' },
-            { role: 'user', content: storyAnalysisPrompt }
-          ],
-          maxTokens: 2000,
-          temperature: 0.7,
-          responseFormat: { type: 'json_object' }
-        };
-
-        const response = await this.makeOpenAIAPICall<any>(
-          '/chat/completions',
-          options,
-          120000,
-          'analyzeStoryStructure'
-        );
-
-        if (!response?.choices?.[0]?.message?.content) {
-          throw new Error('No story analysis content received from AI service');
-        }
-
-        const analysisResult = JSON.parse(response.choices[0].message.content);
-        
-        // Extract dialogue from story beats
-        const enhancedResult = await this.extractDialogueFromStory(analysisResult, audience);
-        
-        console.log(`✅ Story analysis with environmental context complete: ${enhancedResult.storyBeats?.length || 0} beats, ${enhancedResult.dialoguePanels || 0} dialogue panels`);
-        console.log(`🌍 Environmental themes: ${enhancedResult.environmentalThemes?.join(', ') || 'General'}`);
-        console.log(`📍 Primary locations: ${enhancedResult.primaryLocations?.join(', ') || 'Mixed settings'}`);
-        
-        return enhancedResult;
-      },
+    const result = await this.makeOpenAIAPICall<any>(
+      '/chat/completions',
+      options,
+      120000,
       'analyzeStoryStructure'
     );
 
-    return result.success ? result.data : this.getFallbackStoryAnalysis(audience);
+    if (!result?.choices?.[0]?.message?.content) {
+      throw new Error('Failed to analyze story structure');
+    }
+
+    try {
+      const storyAnalysis = JSON.parse(result.choices[0].message.content);
+      
+      // Validate story beats count
+      if (!storyAnalysis.storyBeats || storyAnalysis.storyBeats.length !== config.totalPanels) {
+        console.warn(`⚠️ Story beat count mismatch: expected ${config.totalPanels}, got ${storyAnalysis.storyBeats?.length || 0}`);
+        // Adjust beats to match required count
+        storyAnalysis.storyBeats = this.adjustStoryBeats(storyAnalysis.storyBeats || [], config.totalPanels);
+      }
+
+      console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} beats for professional comic book progression`);
+      
+      // ✅ ENHANCED: Extract dialogue from story and enhance beats with speech bubble information
+      const enhancedAnalysis = await this.extractDialogueFromStory(story, storyAnalysis, audience);
+      
+      return enhancedAnalysis;
+
+    } catch (parseError) {
+      console.error('❌ Failed to parse story analysis:', parseError);
+      throw new Error('Invalid story analysis response format');
+    }
+  }
+
+  // ===== ENHANCED SPEECH BUBBLE SYSTEM =====
+
+  /**
+   * Detect existing dialogue patterns in story text
+   */
+  private detectDialogueInStory(story: string): DialogueCandidate[] {
+    const dialogueCandidates: DialogueCandidate[] = [];
+    
+    for (const pattern of this.dialoguePatterns) {
+      let match;
+      while ((match = pattern.pattern.exec(story)) !== null) {
+        dialogueCandidates.push({
+          text: match[1] || match[0],
+          type: pattern.type,
+          priority: pattern.priority,
+          beatIndex: -1 // Will be assigned later based on story position
+        });
+      }
+    }
+
+    // Sort by priority and assign to story beats
+    dialogueCandidates.sort((a, b) => b.priority - a.priority);
+    
+    return dialogueCandidates;
+  }
+
+  /**
+   * Calculate dialogue score for a story beat
+   */
+  private calculateDialogueScore(beat: StoryBeat, index: number, totalBeats: number): number {
+    let score = 0;
+
+    // Emotional dialogue triggers
+    if (this.speechBubbleConfig.emotionalDialogueTriggers.includes(beat.emotion.toLowerCase())) {
+      score += 30;
+    }
+
+    // Narrative function bonuses
+    switch (beat.narrativeFunction) {
+      case 'climax':
+        score += 25;
+        break;
+      case 'rising_action':
+        score += 20;
+        break;
+      case 'setup':
+        score += 15;
+        break;
+      case 'resolution':
+        score += 10;
+        break;
+    }
+
+    // Character action bonuses
+    if (beat.characterAction.toLowerCase().includes('speak') || 
+        beat.characterAction.toLowerCase().includes('say') ||
+        beat.characterAction.toLowerCase().includes('talk')) {
+      score += 35;
+    }
+
+    // Position-based bonuses
+    if (index === 0) score += 20; // Opening panel
+    if (index === totalBeats - 1) score += 25; // Closing panel
+    if (index === Math.floor(totalBeats / 2)) score += 15; // Middle panel
+
+    // Distribution pressure (encourage even spread)
+    const position = index / totalBeats;
+    if (position > 0.2 && position < 0.8) score += 10; // Middle 60% of story
+
+    return score;
+  }
+
+  /**
+   * Determine if a panel should have dialogue based on strategic placement
+   */
+  private shouldPanelHaveDialogue(
+    beatScore: { index: number; beat: StoryBeat; score: number; hasExistingDialogue: boolean },
+    currentDialogueCount: number,
+    targetDialogueCount: number,
+    existingDialogue: DialogueCandidate[]
+  ): boolean {
+    // Always include existing dialogue
+    if (beatScore.hasExistingDialogue) {
+      return true;
+    }
+
+    // Don't exceed target
+    if (currentDialogueCount >= targetDialogueCount) {
+      return false;
+    }
+
+    // High-scoring beats get priority
+    if (beatScore.score >= 50) {
+      return true;
+    }
+
+    // Fill remaining slots with medium-scoring beats
+    const remainingSlots = targetDialogueCount - currentDialogueCount;
+    const remainingBeats = existingDialogue.length - beatScore.index;
+    
+    if (remainingSlots > 0 && beatScore.score >= 25 && remainingSlots >= remainingBeats * 0.3) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Generate contextual dialogue for emotional moments
+   */
+  private async generateContextualDialogue(beat: StoryBeat, audience: AudienceType): Promise<string> {
+    const emotionDialogueMap: Record<string, string[]> = {
+      excited: ["Wow!", "This is amazing!", "I can't believe it!", "Yes!", "Incredible!"],
+      happy: ["I'm so happy!", "This is wonderful!", "Perfect!", "Great!", "Yay!"],
+      sad: ["I'm sorry...", "This is hard...", "I don't understand...", "Why?", "Oh no..."],
+      angry: ["That's not fair!", "I don't like this!", "Stop!", "No way!", "This is wrong!"],
+      surprised: ["What?!", "Really?", "I didn't expect that!", "Wow!", "No way!"],
+      confused: ["I don't understand...", "What does that mean?", "Huh?", "I'm confused...", "How?"],
+      worried: ["I'm scared...", "What if...?", "I hope everything's okay...", "I'm worried...", "Be careful..."],
+      determined: ["I can do this!", "Let's go!", "I won't give up!", "I'm ready!", "Here we go!"],
+      scared: ["Help!", "I'm scared!", "What was that?", "I don't like this...", "Stay close..."],
+      curious: ["What's that?", "I wonder...", "Can we look?", "Tell me more!", "How does it work?"],
+      frustrated: ["This is hard!", "I can't do it!", "Why won't it work?", "Ugh!", "This is annoying!"],
+      delighted: ["This is perfect!", "I love it!", "How wonderful!", "Amazing!", "Beautiful!"],
+      nervous: ["I'm nervous...", "What if I mess up?", "I hope this works...", "Here goes nothing...", "Wish me luck!"],
+      confident: ["I've got this!", "No problem!", "Easy!", "I know what to do!", "Trust me!"],
+      thoughtful: ["Hmm...", "Let me think...", "I wonder if...", "Maybe...", "That's interesting..."]
+    };
+
+    const emotion = beat.emotion.toLowerCase();
+    const dialogueOptions = emotionDialogueMap[emotion] || ["...", "Yes.", "Okay.", "I see.", "Alright."];
+    
+    // Select appropriate dialogue based on audience
+    let selectedDialogue = dialogueOptions[Math.floor(Math.random() * dialogueOptions.length)];
+    
+    // Adjust complexity for audience
+    if (audience === 'children') {
+      selectedDialogue = selectedDialogue.replace(/[.]{3}/g, '...');
+      if (selectedDialogue.length > 20) {
+        selectedDialogue = dialogueOptions.find(d => d.length <= 20) || "Wow!";
+      }
+    }
+
+    return selectedDialogue;
+  }
+
+  /**
+   * Clean dialogue for speech bubble formatting
+   */
+  private cleanDialogue(dialogue: string): string {
+    let cleaned = dialogue;
+    
+    // Apply cleaning rules
+    for (const rule of this.speechBubbleConfig.dialogueCleaningRules) {
+      cleaned = cleaned.replace(rule.pattern, rule.replacement);
+    }
+    
+    // Ensure proper length for speech bubbles
+    if (cleaned.length > 50) {
+      cleaned = cleaned.substring(0, 47) + '...';
+    }
+    
+    // Ensure proper punctuation
+    if (!/[.!?]$/.test(cleaned) && cleaned.length > 0) {
+      cleaned += '.';
+    }
+    
+    return cleaned;
+  }
+
+  /**
+   * Determine speech bubble style based on emotion and dialogue content
+   */
+  private determineSpeechBubbleStyle(emotion: string, dialogue: string): string {
+    const emotionLower = emotion.toLowerCase();
+    
+    // Check for thought indicators
+    if (dialogue.toLowerCase().includes('think') || 
+        dialogue.toLowerCase().includes('wonder') ||
+        dialogue.toLowerCase().includes('maybe') ||
+        emotionLower === 'thoughtful') {
+      return 'thought';
+    }
+    
+    // Check for shouting indicators
+    if (dialogue.includes('!') || 
+        dialogue.toUpperCase() === dialogue ||
+        emotionLower === 'excited' ||
+        emotionLower === 'angry' ||
+        emotionLower === 'surprised') {
+      return 'shout';
+    }
+    
+    // Check for whisper indicators
+    if (dialogue.includes('...') || 
+        dialogue.toLowerCase().includes('whisper') ||
+        emotionLower === 'sad' ||
+        emotionLower === 'scared' ||
+        emotionLower === 'worried') {
+      return 'whisper';
+    }
+    
+    // Use emotion-based mapping
+    return this.speechBubbleConfig.bubbleStyleMapping[emotionLower] || 'standard';
   }
 
   private adjustStoryBeats(beats: StoryBeat[], targetCount: number): StoryBeat[] {
@@ -1717,181 +1590,101 @@ VERIFICATION: Character must be identical to previous panels in this comic book 
   // ===== ENHANCED SCENE IMAGE GENERATION =====
 
   async generateSceneImage(options: ImageGenerationOptions): Promise<ImageGenerationResult> {
-    const result = await this.withErrorHandling(
-      async () => {
-        console.log('🎨 Generating professional character-consistent comic panel...');
-        
-        // Enhanced prompt building with environmental awareness
-        const enhancedPrompt = this.buildProfessionalPanelPrompt(
-          options.image_prompt,
-          options.character_description,
-          options.emotion,
-          options.audience,
-          options.characterArtStyle || 'storybook',
-          options.layoutType || 'comic-book-panels',
-          options.panelType || 'standard',
-          options.environmentalContext // Pass environmental context for prompt enhancement
-        );
-        
-        const imageOptions = {
-          model: 'dall-e-3',
-          prompt: enhancedPrompt,
-          size: '1024x1024',
-          quality: 'standard',
-          response_format: 'url'
-        };
+    const {
+      image_prompt,
+      character_description,
+      emotion,
+      audience,
+      isReusedImage = false,
+      cartoon_image,
+      style = 'storybook',
+      characterArtStyle = 'storybook',
+      layoutType = 'comic-book-panels',
+      panelType = 'standard'
+    } = options;
 
-        const response = await this.makeOpenAIAPICall<any>(
-          '/images/generations',
-          imageOptions,
-          180000,
-          'generateSceneImage'
-        );
+    console.log('🎨 Generating professional character-consistent comic panel...');
 
-        if (!response?.data?.[0]?.url) {
-          throw new Error('No image URL received from AI service');
-        }
+    const config = this.audienceConfig[audience] || this.audienceConfig.children;
+    
+    const professionalPrompt = this.buildProfessionalImagePrompt({
+      imagePrompt: image_prompt,
+      characterDescription: character_description,
+      emotion,
+      audience,
+      isReusedImage,
+      characterArtStyle,
+      panelType,
+      config
+    });
 
-        console.log('✅ Professional character-consistent comic panel generated');
+    const imageUrl = await this.generateCartoonImage(professionalPrompt);
 
-        return {
-          url: response.data[0].url,
-          prompt_used: enhancedPrompt,
-          reused: false,
-        };
-      },
-      'generateSceneImage'
-    );
+    console.log('✅ Professional character-consistent comic panel generated');
 
-    return result.success ? result.data : { url: '', prompt_used: options.image_prompt, reused: false };
+    return {
+      url: imageUrl,
+      prompt_used: professionalPrompt,
+      reused: false,
+    };
   }
 
-  private buildProfessionalPanelPrompt(
-    image_prompt: string,
-    character_description: string,
-    emotion: string,
-    audience: AudienceType,
-    characterArtStyle: string = 'storybook',
-    layoutType: string = 'comic-book-panels',
-    panelType: PanelType = 'standard',
-    environmentalContext?: any
-  ): string {
-    // First, enhance the base prompt with environmental context if available
-    const environmentallyAwarePrompt = environmentalContext 
-      ? this.buildEnvironmentallyAwarePrompt(image_prompt, environmentalContext)
-      : image_prompt;
-    
-    const audienceConfig = this.getAudienceConfiguration(audience);
-    const artStyleConfig = this.getArtStyleConfiguration(characterArtStyle);
-    const layoutConfig = this.getLayoutConfiguration(layoutType);
-    const panelConfig = this.getPanelConfiguration(panelType);
+  private buildProfessionalImagePrompt(options: {
+    imagePrompt: string;
+    characterDescription: string;
+    emotion: string;
+    audience: AudienceType;
+    isReusedImage: boolean;
+    characterArtStyle: string;
+    panelType: PanelType;
+    config: any;
+  }): string {
+    const { imagePrompt, characterDescription, emotion, audience, isReusedImage, characterArtStyle, panelType, config } = options;
+
+    const characterConsistencyPrompt = isReusedImage && characterDescription 
+      ? `CRITICAL CHARACTER CONSISTENCY: This character has appeared in previous panels. Use this EXACT character appearance: "${characterDescription}". Maintain identical facial features, clothing, and all distinctive characteristics. NO variations allowed.`
+      : `CHARACTER DESIGN: ${characterDescription} (establish consistent appearance for future panels)`;
+
+    const panelSpecs: Record<PanelType, string> = {
+      'standard': 'Standard rectangular comic panel with balanced composition and clear panel borders',
+      'wide': 'Wide panoramic comic panel perfect for establishing shots or action sequences',
+      'tall': 'Tall vertical comic panel emphasizing dramatic moments or character emotions',
+      'splash': 'Large dramatic splash panel with high visual impact and bold composition'
+    };
 
     return `PROFESSIONAL COMIC BOOK PANEL GENERATION:
 
+PANEL SPECIFICATIONS:
+${panelSpecs[panelType]}
+
 SCENE DESCRIPTION:
-${environmentallyAwarePrompt}
+${imagePrompt}
 
 CHARACTER REQUIREMENTS:
-${character_description}
+${characterConsistencyPrompt}
 Emotional State: ${emotion}
 
 COMIC BOOK PRODUCTION STANDARDS:
-- Professional ${characterArtStyle} art style with ${audienceConfig.artComplexity} detail level
-- ${layoutConfig.panelStyle} panel composition optimized for ${audience} audience
-- ${audienceConfig.colorPalette} color palette with ${audienceConfig.lightingStyle} lighting
-${environmentalContext && !environmentalContext.fallback ? '- Environmental consistency maintained with established world-building' : ''}
-- Character consistency: ${character_description}
-- Emotional tone: ${emotion} expression and body language
-- Panel type: ${panelType} (${this.getPanelTypeDescription(panelType)})
+- Art Style: ${characterArtStyle} with professional comic book quality
+- Panel Layout: ${config.panelLayout} style for ${audience} audience
+- Visual Quality: ${config.visualStyle}
+- Color Scheme: ${config.colorScheme}
+- Complexity Level: ${config.complexityLevel}
 
-TECHNICAL SPECIFICATIONS:
-- Format: Professional comic book panel illustration
-- Quality: Publication-ready comic book artwork
-- Composition: ${panelConfig.composition}
-- Visual storytelling: Clear narrative progression
+PROFESSIONAL COMIC ELEMENTS:
+- Clear panel borders with proper gutters
+- Speech bubbles if dialogue is present
+- Professional comic book illustration quality
+- Visual storytelling that guides reader attention
+- Character positioning that supports narrative flow
 
-CRITICAL REQUIREMENTS:
-- Avoid any inappropriate content for ${audience} audience
-- Ensure professional comic book quality and composition
-- Maintain character consistency throughout the scene
-${environmentalContext && !environmentalContext.fallback ? '- Follow environmental DNA guidelines for world consistency' : ''}
-- Use ${audienceConfig.safetyGuidelines} content guidelines`;
-  }
+TARGET AUDIENCE: ${audience} - ${config.analysisInstructions}
 
-  // ===== ENHANCED SCENE GENERATION WITH ENVIRONMENTAL CONTEXT =====
-
-  private async generateScenesWithAudience(options: SceneGenerationOptions): Promise<SceneGenerationResult> {
-    const result = await this.withErrorHandling(
-      async () => {
-        console.log(`🎬 Generating scenes for ${options.audience} audience with environmental consistency and professional methodology...`);
-        
-        const audienceConfig = this.getAudienceConfiguration(options.audience);
-        const artStyleConfig = this.getArtStyleConfiguration(options.characterArtStyle || 'storybook');
-        
-        const scenePrompt = `You are a professional comic book creator generating scenes for ${options.audience} audience with environmental consistency.
-
-STORY: ${options.story}
-AUDIENCE: ${options.audience}
-CHARACTER IMAGE: ${options.characterImage || 'No character image provided'}
-CHARACTER ART STYLE: ${options.characterArtStyle || 'storybook'}
-LAYOUT TYPE: ${options.layoutType || 'comic-book-panels'}
-${options.enhancedContext ? 'ENHANCED CONTEXT: Environmental and character consistency enabled' : ''}
-
-Create professional comic book scenes with:
-1. Environmental consistency across all panels
-2. Character consistency if character image provided
-3. Age-appropriate content for ${options.audience} audience
-4. Professional comic book layout and composition
-5. Clear visual storytelling progression
-
-Return as JSON with pages array containing scenes for each page.`;
-
-        const sceneOptions = {
-          model: 'gpt-4',
-          messages: [
-            { role: 'system', content: 'You are a professional comic book creator specializing in environmental consistency and character development.' },
-            { role: 'user', content: scenePrompt }
-          ],
-          maxTokens: 2000,
-          temperature: 0.7,
-          responseFormat: { type: 'json_object' }
-        };
-
-        const response = await this.makeOpenAIAPICall<any>(
-          '/chat/completions',
-          sceneOptions,
-          120000,
-          'generateScenesWithAudience'
-        );
-
-        if (!response?.choices?.[0]?.message?.content) {
-          throw new Error('No scene content received from AI service');
-        }
-
-        const generatedScenes = JSON.parse(response.choices[0].message.content);
-        
-        console.log(`✅ Scene generation complete: ${generatedScenes.pages?.length || 0} pages created`);
-        console.log(`🌍 Environmental consistency: ${options.enhancedContext && !options.enhancedContext.fallback ? 'Enhanced' : 'Standard'}`);
-        
-        return {
-          pages: generatedScenes.pages || [],
-          audience: options.audience,
-          characterImage: options.characterImage,
-          layoutType: options.layoutType || 'comic-book-panels',
-          characterArtStyle: options.characterArtStyle || 'storybook',
-          environmentalConsistency: options.enhancedContext && !options.enhancedContext.fallback ? 'enhanced' : 'standard',
-          metadata: {
-            discoveryPath: 'generateScenesWithAudience',
-            patternType: 'direct',
-            qualityScore: 95,
-            originalStructure: ['story', 'audience', 'characterImage', 'artStyle', 'layout', 'environmentalContext']
-          }
-        };
-      },
-      'generateScenesWithAudience'
-    );
-
-    return result.success ? result.data : this.getFallbackSceneResult(options);
+QUALITY STANDARDS:
+- Publication-ready comic book artwork
+- Character consistency for story continuity
+- Professional comic book visual storytelling
+- Clear, engaging panel composition`;
   }
 
   // ===== CHARACTER DESCRIPTION METHODS =====
@@ -2621,293 +2414,6 @@ Write a cohesive story optimized for professional comic book adaptation.`;
     const uniqueFeatures = characterDNA.uniqueIdentifiers.distinctiveFeatures;
 
     return `${physicalFeatures}. Wearing ${clothingDetails}. ${uniqueFeatures}`.trim();
-  }
-
-  // ===== ENHANCED SPEECH BUBBLE SYSTEM =====
-
-  /**
-   * Detect existing dialogue patterns in story text
-   */
-  private detectDialogueInStory(story: string): DialogueCandidate[] {
-    const dialogueCandidates: DialogueCandidate[] = [];
-    
-    for (const pattern of this.dialoguePatterns) {
-      let match;
-      while ((match = pattern.pattern.exec(story)) !== null) {
-        dialogueCandidates.push({
-          text: match[1] || match[0],
-          type: pattern.type,
-          priority: pattern.priority,
-          beatIndex: -1 // Will be assigned later based on story position
-        });
-      }
-    }
-
-    // Sort by priority and assign to story beats
-    dialogueCandidates.sort((a, b) => b.priority - a.priority);
-    
-    return dialogueCandidates;
-  }
-
-  /**
-   * Calculate dialogue score for a story beat
-   */
-  private calculateDialogueScore(beat: StoryBeat, index: number, totalBeats: number): number {
-    let score = 0;
-
-    // Emotional dialogue triggers
-    if (this.speechBubbleConfig.emotionalDialogueTriggers.includes(beat.emotion.toLowerCase())) {
-      score += 30;
-    }
-
-    // Narrative function bonuses
-    switch (beat.narrativeFunction) {
-      case 'climax':
-        score += 25;
-        break;
-      case 'rising_action':
-        score += 20;
-        break;
-      case 'setup':
-        score += 15;
-        break;
-      case 'resolution':
-        score += 10;
-        break;
-    }
-
-    // Character action bonuses
-    if (beat.characterAction.toLowerCase().includes('speak') || 
-        beat.characterAction.toLowerCase().includes('say') ||
-        beat.characterAction.toLowerCase().includes('talk')) {
-      score += 35;
-    }
-
-    // Position-based bonuses
-    if (index === 0) score += 20; // Opening panel
-    if (index === totalBeats - 1) score += 25; // Closing panel
-    if (index === Math.floor(totalBeats / 2)) score += 15; // Middle panel
-
-    // Distribution pressure (encourage even spread)
-    const position = index / totalBeats;
-    if (position > 0.2 && position < 0.8) score += 10; // Middle 60% of story
-
-    return score;
-  }
-
-  /**
-   * Determine if a panel should have dialogue based on strategic placement
-   */
-  private shouldPanelHaveDialogue(
-    beatScore: { index: number; beat: StoryBeat; score: number; hasExistingDialogue: boolean },
-    currentDialogueCount: number,
-    targetDialogueCount: number,
-    existingDialogue: DialogueCandidate[]
-  ): boolean {
-    // Always include existing dialogue
-    if (beatScore.hasExistingDialogue) {
-      return true;
-    }
-
-    // Don't exceed target
-    if (currentDialogueCount >= targetDialogueCount) {
-      return false;
-    }
-
-    // High-scoring beats get priority
-    if (beatScore.score >= 50) {
-      return true;
-    }
-
-    // Fill remaining slots with medium-scoring beats
-    const remainingSlots = targetDialogueCount - currentDialogueCount;
-    const remainingBeats = existingDialogue.length - beatScore.index;
-    
-    if (remainingSlots > 0 && beatScore.score >= 25 && remainingSlots >= remainingBeats * 0.3) {
-      return true;
-    }
-
-    return false;
-  }
-
-  /**
-   * Generate contextual dialogue for emotional moments
-   */
-  private async generateContextualDialogue(beat: StoryBeat, audience: AudienceType): Promise<string> {
-    const emotionDialogueMap: Record<string, string[]> = {
-      excited: ["Wow!", "This is amazing!", "I can't believe it!", "Yes!", "Incredible!"],
-      happy: ["I'm so happy!", "This is wonderful!", "Perfect!", "Great!", "Yay!"],
-      sad: ["I'm sorry...", "This is hard...", "I don't understand...", "Why?", "Oh no..."],
-      angry: ["That's not fair!", "I don't like this!", "Stop!", "No way!", "This is wrong!"],
-      surprised: ["What?!", "Really?", "I didn't expect that!", "Wow!", "No way!"],
-      confused: ["I don't understand...", "What does that mean?", "Huh?", "I'm confused...", "How?"],
-      worried: ["I'm scared...", "What if...?", "I hope everything's okay...", "I'm worried...", "Be careful..."],
-      determined: ["I can do this!", "Let's go!", "I won't give up!", "I'm ready!", "Here we go!"],
-      scared: ["Help!", "I'm scared!", "What was that?", "I don't like this...", "Stay close..."],
-      curious: ["What's that?", "I wonder...", "Can we look?", "Tell me more!", "How does it work?"],
-      frustrated: ["This is hard!", "I can't do it!", "Why won't it work?", "Ugh!", "This is annoying!"],
-      delighted: ["This is perfect!", "I love it!", "How wonderful!", "Amazing!", "Beautiful!"],
-      nervous: ["I'm nervous...", "What if I mess up?", "I hope this works...", "Here goes nothing...", "Wish me luck!"],
-      confident: ["I've got this!", "No problem!", "Easy!", "I know what to do!", "Trust me!"],
-      thoughtful: ["Hmm...", "Let me think...", "I wonder if...", "Maybe...", "That's interesting..."]
-    };
-
-    const emotion = beat.emotion.toLowerCase();
-    const dialogueOptions = emotionDialogueMap[emotion] || ["...", "Yes.", "Okay.", "I see.", "Alright."];
-    
-    // Select appropriate dialogue based on audience
-    let selectedDialogue = dialogueOptions[Math.floor(Math.random() * dialogueOptions.length)];
-    
-    // Adjust complexity for audience
-    if (audience === 'children') {
-      selectedDialogue = selectedDialogue.replace(/[.]{3}/g, '...');
-      if (selectedDialogue.length > 20) {
-        selectedDialogue = dialogueOptions.find(d => d.length <= 20) || "Wow!";
-      }
-    }
-
-    return selectedDialogue;
-  }
-
-  /**
-   * Clean dialogue for speech bubble formatting
-   */
-  private cleanDialogue(dialogue: string): string {
-    let cleaned = dialogue;
-    
-    // Apply cleaning rules
-    for (const rule of this.speechBubbleConfig.dialogueCleaningRules) {
-      cleaned = cleaned.replace(rule.pattern, rule.replacement);
-    }
-    
-    // Ensure proper length for speech bubbles
-    if (cleaned.length > 50) {
-      cleaned = cleaned.substring(0, 47) + '...';
-    }
-    
-    // Ensure proper punctuation
-    if (!/[.!?]$/.test(cleaned) && cleaned.length > 0) {
-      cleaned += '.';
-    }
-    
-    return cleaned;
-  }
-
-  /**
-   * Determine speech bubble style based on emotion and dialogue content
-   */
-  private determineSpeechBubbleStyle(emotion: string, dialogue: string): string {
-    const emotionLower = emotion.toLowerCase();
-    
-    // Check for thought indicators
-    if (dialogue.toLowerCase().includes('think') || 
-        dialogue.toLowerCase().includes('wonder') ||
-        dialogue.toLowerCase().includes('maybe') ||
-        emotionLower === 'thoughtful') {
-      return 'thought';
-    }
-    
-    // Check for shouting indicators
-    if (dialogue.includes('!') || 
-        dialogue.toUpperCase() === dialogue ||
-        emotionLower === 'excited' ||
-        emotionLower === 'angry' ||
-        emotionLower === 'surprised') {
-      return 'shout';
-    }
-    
-    // Check for whisper indicators
-    if (dialogue.includes('...') || 
-        dialogue.toLowerCase().includes('whisper') ||
-        emotionLower === 'sad' ||
-        emotionLower === 'scared' ||
-        emotionLower === 'worried') {
-      return 'whisper';
-    }
-    
-    // Use emotion-based mapping
-    return this.speechBubbleConfig.bubbleStyleMapping[emotionLower] || 'standard';
-  }
-
-  // ===== FALLBACK METHODS =====
-
-  private getFallbackStoryAnalysis(audience: AudienceType): StoryAnalysis {
-    const config = this.audienceConfig[audience];
-    return {
-      storyBeats: Array(config.totalPanels).fill(null).map((_, index) => ({
-        beat: `Story moment ${index + 1}`,
-        emotion: 'neutral',
-        visualPriority: 'character',
-        panelPurpose: 'story progression',
-        narrativeFunction: 'rising_action',
-        characterAction: 'character action',
-        environment: 'appropriate setting'
-      })),
-      characterArc: ['Beginning', 'Development', 'Resolution'],
-      visualFlow: ['Establishing', 'Building', 'Climax', 'Resolution'],
-      totalPanels: config.totalPanels,
-      pagesRequired: config.pagesPerStory
-    };
-  }
-
-  private getFallbackSceneResult(options: SceneGenerationOptions): SceneGenerationResult {
-    return {
-      pages: [],
-      audience: options.audience,
-      characterImage: options.characterImage,
-      layoutType: options.layoutType || 'comic-book-panels',
-      characterArtStyle: options.characterArtStyle || 'storybook',
-      metadata: {
-        discoveryPath: 'fallback',
-        patternType: 'fallback',
-        qualityScore: 0,
-        originalStructure: ['fallback']
-      }
-    };
-  }
-
-  // ===== CONFIGURATION HELPER METHODS =====
-
-  private getAudienceConfiguration(audience: AudienceType): any {
-    return {
-      artComplexity: audience === 'children' ? 'simple' : audience === 'young_adults' ? 'moderate' : 'detailed',
-      colorPalette: audience === 'children' ? 'bright and vibrant' : audience === 'young_adults' ? 'balanced' : 'sophisticated',
-      lightingStyle: audience === 'children' ? 'soft and friendly' : audience === 'young_adults' ? 'dynamic' : 'dramatic',
-      safetyGuidelines: audience === 'children' ? 'child-safe' : audience === 'young_adults' ? 'teen-appropriate' : 'adult-suitable'
-    };
-  }
-
-  private getArtStyleConfiguration(style: string): any {
-    return {
-      technique: style === 'storybook' ? 'soft illustration' : style === 'comic-book' ? 'bold comic art' : 'cartoon style',
-      lineWeight: style === 'storybook' ? 'gentle lines' : style === 'comic-book' ? 'strong outlines' : 'clean lines',
-      shading: style === 'storybook' ? 'soft shading' : style === 'comic-book' ? 'dramatic shadows' : 'minimal shading'
-    };
-  }
-
-  private getLayoutConfiguration(layoutType: string): any {
-    return {
-      panelStyle: layoutType === 'comic-book-panels' ? 'traditional comic panels' : 'storybook layout',
-      composition: layoutType === 'comic-book-panels' ? 'dynamic panel composition' : 'centered illustration',
-      flow: layoutType === 'comic-book-panels' ? 'sequential storytelling' : 'page-by-page narrative'
-    };
-  }
-
-  private getPanelConfiguration(panelType: PanelType): any {
-    return {
-      composition: panelType === 'wide' ? 'panoramic composition' : panelType === 'tall' ? 'vertical emphasis' : panelType === 'splash' ? 'full-page impact' : 'balanced composition',
-      focus: panelType === 'wide' ? 'environmental scope' : panelType === 'tall' ? 'character emphasis' : panelType === 'splash' ? 'dramatic moment' : 'story progression'
-    };
-  }
-
-  private getPanelTypeDescription(panelType: PanelType): string {
-    const descriptions = {
-      standard: 'balanced rectangular panel for story progression',
-      wide: 'panoramic panel for establishing shots and action',
-      tall: 'vertical panel for character focus and emotion',
-      splash: 'large dramatic panel for climactic moments'
-    };
-    return descriptions[panelType] || descriptions.standard;
   }
 }
 
