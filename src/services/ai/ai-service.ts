@@ -355,226 +355,72 @@ export class AIService extends EnhancedBaseService implements IAIService {
     }
   }
 
-  // ===== ENHANCED CHARACTER DNA SYSTEM =====
+  // ===== ENHANCED STORY ANALYSIS WITH DIALOGUE EXTRACTION =====
 
-  async createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA> {
-    console.log('🧬 Creating professional character DNA for maximum consistency...');
+  // ===== OPENAI PARAMETER TRANSFORMATION LAYER =====
 
-    const characterAnalysis = await this.analyzeImage({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a professional comic book character designer creating a detailed character model sheet for consistent comic book illustration.
-
-CRITICAL MISSION: Analyze this person's appearance with extreme detail to ensure 100% character consistency across all comic book panels.
-
-REQUIRED ANALYSIS DEPTH:
-1. FACIAL STRUCTURE: Exact face shape, jawline definition, cheekbone structure, forehead characteristics
-2. EYE DETAILS: Precise color, shape, size, eyebrow style, eyelash length, eye spacing
-3. HAIR SPECIFICATIONS: Exact color with highlights/lowlights, texture (straight/wavy/curly), length, style, hairline shape
-4. SKIN CHARACTERISTICS: Tone, texture, any distinctive marks, freckles, scars, birthmarks
-5. BODY TYPE: Height estimation, build, proportions, posture tendencies
-6. CLOTHING ANALYSIS: Specific garments, exact colors, patterns, fit, accessories
-7. UNIQUE IDENTIFIERS: Any distinctive features that make this person immediately recognizable
-8. EXPRESSION PATTERNS: Default facial expression, smile characteristics, eyebrow position
-
-COMIC BOOK ADAPTATION REQUIREMENTS:
-- How to maintain these exact features in ${artStyle} art style
-- Key features that must NEVER change across panels
-- Specific details that ensure immediate character recognition
-- Consistency enforcers to prevent AI variations
-
-OUTPUT REQUIREMENTS:
-Create a comprehensive character DNA that prevents any character variations in comic generation.
-Focus on features that are most likely to vary and provide specific prevention measures.
-
-This character model sheet will be used to ensure identical appearance across all comic book panels.`
-        },
-        {
-          role: 'user',
-          content: [
-            { 
-              type: 'text', 
-              text: 'Create a detailed professional character model sheet from this image. Focus on preventing character variations in comic book generation.' 
-            },
-            { type: 'image_url', image_url: { url: imageUrl } }
-          ]
-        }
-      ],
-      maxTokens: 800,
-    });
-
-    if (!characterAnalysis?.choices?.[0]?.message?.content) {
-      throw new Error('Failed to generate character DNA - no analysis received');
-    }
-
-    const analysisText = characterAnalysis.choices[0].message.content;
+  /**
+   * Transform TypeScript camelCase parameters to OpenAI snake_case format
+   * Industry standard approach used by Google/AWS SDKs
+   */
+  private transformOpenAIParameters(params: any): any {
+    const transformed = { ...params };
     
-    // Parse the analysis into structured DNA
-    const characterDNA: CharacterDNA = {
-      physicalStructure: {
-        faceShape: this.extractDetail(analysisText, 'face shape', 'oval face with defined features'),
-        eyeDetails: this.extractDetail(analysisText, 'eye', 'medium brown eyes with natural arch eyebrows'),
-        hairSpecifics: this.extractDetail(analysisText, 'hair', 'shoulder-length brown hair with natural texture'),
-        skinTone: this.extractDetail(analysisText, 'skin', 'medium skin tone with healthy complexion'),
-        bodyType: this.extractDetail(analysisText, 'body', 'average height with proportional build'),
-        facialMarks: this.extractDetail(analysisText, 'marks|freckle|scar', 'natural facial features')
-      },
-      clothingSignature: {
-        primaryOutfit: this.extractDetail(analysisText, 'clothing|shirt|jacket', 'casual comfortable clothing'),
-        accessories: this.extractDetail(analysisText, 'accessory|jewelry|watch', 'minimal accessories'),
-        colorPalette: this.extractDetail(analysisText, 'color', 'earth tone color palette'),
-        footwear: this.extractDetail(analysisText, 'shoe|foot', 'casual footwear')
-      },
-      uniqueIdentifiers: {
-        distinctiveFeatures: this.extractDetail(analysisText, 'distinctive|unique', 'friendly approachable appearance'),
-        expressions: this.extractDetail(analysisText, 'expression|smile', 'warm genuine smile'),
-        posture: this.extractDetail(analysisText, 'posture|stance', 'confident relaxed posture'),
-        mannerisms: this.extractDetail(analysisText, 'manner|gesture', 'natural friendly demeanor')
-      },
-      artStyleAdaptation: {
-        [artStyle]: `Maintain all physical features in ${artStyle} style while preserving character identity`,
-        consistencyRule: `Adapt to ${artStyle} art style without changing core character features`,
-        styleGuideline: `${artStyle} interpretation must keep character immediately recognizable`
-      },
-      consistencyEnforcers: [
-        'IDENTICAL character across all panels',
-        'EXACT same facial features and expressions',
-        'CONSISTENT clothing and accessories', 
-        'UNCHANGING character proportions',
-        'MAINTAINED character identity',
-        'SAME character throughout story'
-      ],
-      negativePrompts: [
-        'no aging or age changes',
-        'no facial hair additions or changes',
-        'no clothing variations or outfit changes',
-        'no facial feature alterations',
-        'no body type modifications',
-        'no personality changes',
-        'no style inconsistencies'
-      ]
-    };
-
-    console.log('✅ Professional character DNA created with maximum consistency protocols');
-    return characterDNA;
-  }
-
-  private extractDetail(text: string, pattern: string, fallback: string): string {
-    const regex = new RegExp(`(${pattern}).*?[.!]`, 'gi');
-    const matches = text.match(regex);
-    if (matches && matches.length > 0) {
-      return matches[0].replace(/^[^a-zA-Z]*/, '').trim();
+    // Transform maxTokens to max_tokens
+    if (transformed.maxTokens !== undefined) {
+      transformed.max_tokens = transformed.maxTokens;
+      delete transformed.maxTokens;
     }
-    return fallback;
-  }
-
-  // ===== PROFESSIONAL STORY BEAT ANALYSIS =====
-
-  async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
-    console.log(`📖 Analyzing story structure for ${audience} audience using professional comic book methodology...`);
-
-    const config = this.audienceConfig[audience];
     
-    const storyAnalysisPrompt = `You are an award-winning comic book writer following industry-standard narrative structure from Stan Lee, Alan Moore, and Grant Morrison.
-
-PROFESSIONAL STORY ANALYSIS MISSION:
-Analyze this story using proven comic book creation methodology where story beats drive visual choices.
-
-AUDIENCE: ${audience.toUpperCase()}
-TARGET: ${config.totalPanels} total panels across ${config.pagesPerStory} pages (${config.panelsPerPage} panels per page)
-COMPLEXITY: ${config.complexityLevel}
-
-ANALYSIS REQUIREMENTS:
-${config.analysisInstructions}
-
-STORY BEAT ANALYSIS:
-1. Break story into ${config.totalPanels} distinct narrative beats
-2. Each beat serves specific story function (setup, rising action, climax, resolution)
-3. Map character's emotional journey through beats
-4. Identify visual storytelling moments that advance narrative
-5. Ensure each panel has clear purpose in story progression
-
-✅ ENHANCED DIALOGUE ANALYSIS:
-6. Extract existing dialogue from story text using quotation marks and speech patterns
-7. Identify emotional moments that would benefit from character speech
-8. Assign dialogue to approximately 30-40% of panels strategically
-9. Generate contextual dialogue for key emotional beats without existing speech
-10. Ensure dialogue enhances story progression and character development
-
-COMIC BOOK PROFESSIONAL STANDARDS:
-- Every panel advances the story
-- Character actions serve narrative purpose
-- Visual flow guides reader through story
-- Emotional beats create character arc
-- Panel purposes build toward story resolution
-- Speech bubbles enhance emotional connection and story clarity
-
-STORY TO ANALYZE:
-${story}
-
-REQUIRED JSON OUTPUT:
-{
-  "storyBeats": [
-    {
-      "beat": "specific_story_moment",
-      "emotion": "character_emotional_state", 
-      "visualPriority": "what_reader_should_focus_on",
-      "panelPurpose": "why_this_panel_exists",
-      "narrativeFunction": "setup|rising_action|climax|resolution",
-      "characterAction": "what_character_is_doing",
-      "environment": "where_action_takes_place",
-      "dialogue": "optional_character_speech"
+    // Transform responseFormat to response_format
+    if (transformed.responseFormat !== undefined) {
+      transformed.response_format = transformed.responseFormat;
+      delete transformed.responseFormat;
     }
-  ],
-  "characterArc": ["emotional_progression_through_story"],
-  "visualFlow": ["visual_storytelling_progression"],
-  "totalPanels": ${config.totalPanels},
-  "pagesRequired": ${config.pagesPerStory}
-}
-
-CRITICAL: Must generate exactly ${config.totalPanels} story beats for ${config.pagesPerStory} comic book pages.
-Follow professional comic creation: Story purpose drives every visual choice.`;
-
-    const result = await this.createChatCompletion({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: storyAnalysisPrompt },
-        { role: 'user', content: 'Analyze this story using professional comic book methodology. Return structured JSON.' }
-      ],
-      temperature: 0.7,
-      responseFormat: { type: 'json_object' }
-    });
-
-    if (!result?.choices?.[0]?.message?.content) {
-      throw new Error('Failed to analyze story structure');
+    
+    // Transform topP to top_p
+    if (transformed.topP !== undefined) {
+      transformed.top_p = transformed.topP;
+      delete transformed.topP;
     }
-
-    try {
-      const storyAnalysis = JSON.parse(result.choices[0].message.content);
-      
-      // Validate story beats count
-      if (!storyAnalysis.storyBeats || storyAnalysis.storyBeats.length !== config.totalPanels) {
-        console.warn(`⚠️ Story beat count mismatch: expected ${config.totalPanels}, got ${storyAnalysis.storyBeats?.length || 0}`);
-        // Adjust beats to match required count
-        storyAnalysis.storyBeats = this.adjustStoryBeats(storyAnalysis.storyBeats || [], config.totalPanels);
-      }
-
-      console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} beats for professional comic book progression`);
-      
-      // ✅ ENHANCED: Extract dialogue from story and enhance beats with speech bubble information
-      const enhancedAnalysis = await this.extractDialogueFromStory(story, storyAnalysis, audience);
-      
-      return enhancedAnalysis;
-
-    } catch (parseError) {
-      console.error('❌ Failed to parse story analysis:', parseError);
-      throw new Error('Invalid story analysis response format');
+    
+    // Transform frequencyPenalty to frequency_penalty
+    if (transformed.frequencyPenalty !== undefined) {
+      transformed.frequency_penalty = transformed.frequencyPenalty;
+      delete transformed.frequencyPenalty;
     }
+    
+    // Transform presencePenalty to presence_penalty
+    if (transformed.presencePenalty !== undefined) {
+      transformed.presence_penalty = transformed.presencePenalty;
+      delete transformed.presencePenalty;
+    }
+    
+    return transformed;
   }
 
-  // ===== ENHANCED SPEECH BUBBLE SYSTEM =====
+  /**
+   * Centralized OpenAI API call handler with parameter transformation
+   * Prevents parameter format bugs and provides consistent error handling
+   */
+  private async makeOpenAIAPICall<T>(
+    endpoint: string,
+    params: any,
+    timeout: number,
+    operationName: string
+  ): Promise<T> {
+    const transformedParams = this.transformOpenAIParameters(params);
+    
+    return this.makeRequest<T>(
+      endpoint,
+      {
+        method: 'POST',
+        body: JSON.stringify(transformedParams),
+      },
+      timeout,
+      operationName
+    );
+  }
 
   /**
    * Extract dialogue from story and assign speech bubbles to 30-40% of panels strategically
@@ -670,6 +516,245 @@ Follow professional comic creation: Story purpose drives every visual choice.`;
       speechBubbleDistribution
     };
   }
+
+  // ===== ENHANCED CHARACTER DNA SYSTEM =====
+
+  async createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA> {
+    console.log('🧬 Creating professional character DNA for maximum consistency...');
+
+    const prompt = `You are a professional comic book character designer creating a detailed character model sheet for consistent comic book illustration.
+
+CRITICAL MISSION: Analyze this person's appearance with extreme detail to ensure 100% character consistency across all comic book panels.
+
+REQUIRED ANALYSIS DEPTH:
+1. FACIAL STRUCTURE: Exact face shape, jawline definition, cheekbone structure, forehead characteristics
+2. EYE DETAILS: Precise color, shape, size, eyebrow style, eyelash length, eye spacing
+3. HAIR SPECIFICATIONS: Exact color with highlights/lowlights, texture (straight/wavy/curly), length, style, hairline shape
+4. SKIN CHARACTERISTICS: Tone, texture, any distinctive marks, freckles, scars, birthmarks
+5. BODY TYPE: Height estimation, build, proportions, posture tendencies
+6. CLOTHING ANALYSIS: Specific garments, exact colors, patterns, fit, accessories
+7. UNIQUE IDENTIFIERS: Any distinctive features that make this person immediately recognizable
+8. EXPRESSION PATTERNS: Default facial expression, smile characteristics, eyebrow position
+
+COMIC BOOK ADAPTATION REQUIREMENTS:
+- How to maintain these exact features in ${artStyle} art style
+- Key features that must NEVER change across panels
+- Specific details that ensure immediate character recognition
+- Consistency enforcers to prevent AI variations
+
+OUTPUT REQUIREMENTS:
+Create a comprehensive character DNA that prevents any character variations in comic generation.
+Focus on features that are most likely to vary and provide specific prevention measures.
+
+This character model sheet will be used to ensure identical appearance across all comic book panels.
+
+Analyze the provided image and create a detailed character DNA profile.`;
+
+    const options = {
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: prompt
+        },
+        {
+          role: 'user',
+          content: [
+            { 
+              type: 'text', 
+              text: 'Create a detailed professional character model sheet from this image. Focus on preventing character variations in comic book generation.' 
+            },
+            { type: 'image_url', image_url: { url: imageUrl } }
+          ]
+        }
+      ],
+      max_tokens: 800,
+    };
+
+    const result = await this.makeOpenAIAPICall<any>(
+      '/chat/completions',
+      options,
+      120000,
+      'createMasterCharacterDNA'
+    );
+
+    if (!result?.choices?.[0]?.message?.content) {
+      throw new Error('Failed to generate character DNA - no analysis received');
+    }
+
+    const analysisText = result.choices[0].message.content;
+    
+    // Parse the analysis into structured DNA
+    const characterDNA: CharacterDNA = {
+      physicalStructure: {
+        faceShape: this.extractDetail(analysisText, 'face shape', 'oval face with defined features'),
+        eyeDetails: this.extractDetail(analysisText, 'eye', 'medium brown eyes with natural arch eyebrows'),
+        hairSpecifics: this.extractDetail(analysisText, 'hair', 'shoulder-length brown hair with natural texture'),
+        skinTone: this.extractDetail(analysisText, 'skin', 'medium skin tone with healthy complexion'),
+        bodyType: this.extractDetail(analysisText, 'body', 'average height with proportional build'),
+        facialMarks: this.extractDetail(analysisText, 'marks|freckle|scar', 'natural facial features')
+      },
+      clothingSignature: {
+        primaryOutfit: this.extractDetail(analysisText, 'clothing|shirt|jacket', 'casual comfortable clothing'),
+        accessories: this.extractDetail(analysisText, 'accessory|jewelry|watch', 'minimal accessories'),
+        colorPalette: this.extractDetail(analysisText, 'color', 'earth tone color palette'),
+        footwear: this.extractDetail(analysisText, 'shoe|foot', 'casual footwear')
+      },
+      uniqueIdentifiers: {
+        distinctiveFeatures: this.extractDetail(analysisText, 'distinctive|unique', 'friendly approachable appearance'),
+        expressions: this.extractDetail(analysisText, 'expression|smile', 'warm genuine smile'),
+        posture: this.extractDetail(analysisText, 'posture|stance', 'confident relaxed posture'),
+        mannerisms: this.extractDetail(analysisText, 'manner|gesture', 'natural friendly demeanor')
+      },
+      artStyleAdaptation: {
+        [artStyle]: `Maintain all physical features in ${artStyle} style while preserving character identity`,
+        consistencyRule: `Adapt to ${artStyle} art style without changing core character features`,
+        styleGuideline: `${artStyle} interpretation must keep character immediately recognizable`
+      },
+      consistencyEnforcers: [
+        'IDENTICAL character across all panels',
+        'EXACT same facial features and expressions',
+        'CONSISTENT clothing and accessories', 
+        'UNCHANGING character proportions',
+        'MAINTAINED character identity',
+        'SAME character throughout story'
+      ],
+      negativePrompts: [
+        'no aging or age changes',
+        'no facial hair additions or changes',
+        'no clothing variations or outfit changes',
+        'no facial feature alterations',
+        'no body type modifications',
+        'no personality changes',
+        'no style inconsistencies'
+      ]
+    };
+
+    console.log('✅ Professional character DNA created with maximum consistency protocols');
+    return characterDNA;
+  }
+
+  private extractDetail(text: string, pattern: string, fallback: string): string {
+    const regex = new RegExp(`(${pattern}).*?[.!]`, 'gi');
+    const matches = text.match(regex);
+    if (matches && matches.length > 0) {
+      return matches[0].replace(/^[^a-zA-Z]*/, '').trim();
+    }
+    return fallback;
+  }
+
+  // ===== PROFESSIONAL STORY BEAT ANALYSIS =====
+
+  async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
+    console.log(`📖 Analyzing story structure for ${audience} audience using professional comic book methodology...`);
+
+    const config = this.audienceConfig[audience];
+    
+    const systemPrompt = `You are an award-winning comic book writer following industry-standard narrative structure from Stan Lee, Alan Moore, and Grant Morrison.
+
+PROFESSIONAL STORY ANALYSIS MISSION:
+Analyze this story using proven comic book creation methodology where story beats drive visual choices.
+
+AUDIENCE: ${audience.toUpperCase()}
+TARGET: ${config.totalPanels} total panels across ${config.pagesPerStory} pages (${config.panelsPerPage} panels per page)
+COMPLEXITY: ${config.complexityLevel}
+
+ANALYSIS REQUIREMENTS:
+${config.analysisInstructions}
+
+STORY BEAT ANALYSIS:
+1. Break story into ${config.totalPanels} distinct narrative beats
+2. Each beat serves specific story function (setup, rising action, climax, resolution)
+3. Map character's emotional journey through beats
+4. Identify visual storytelling moments that advance narrative
+5. Ensure each panel has clear purpose in story progression
+
+✅ ENHANCED DIALOGUE ANALYSIS:
+6. Extract existing dialogue from story text using quotation marks and speech patterns
+7. Identify emotional moments that would benefit from character speech
+8. Assign dialogue to approximately 30-40% of panels strategically
+9. Generate contextual dialogue for key emotional beats without existing speech
+10. Ensure dialogue enhances story progression and character development
+
+COMIC BOOK PROFESSIONAL STANDARDS:
+- Every panel advances the story
+- Character actions serve narrative purpose
+- Visual flow guides reader through story
+- Emotional beats create character arc
+- Panel purposes build toward story resolution
+- Speech bubbles enhance emotional connection and story clarity
+
+REQUIRED JSON OUTPUT:
+{
+  "storyBeats": [
+    {
+      "beat": "specific_story_moment",
+      "emotion": "character_emotional_state", 
+      "visualPriority": "what_reader_should_focus_on",
+      "panelPurpose": "why_this_panel_exists",
+      "narrativeFunction": "setup|rising_action|climax|resolution",
+      "characterAction": "what_character_is_doing",
+      "environment": "where_action_takes_place",
+      "dialogue": "optional_character_speech"
+    }
+  ],
+  "characterArc": ["emotional_progression_through_story"],
+  "visualFlow": ["visual_storytelling_progression"],
+  "totalPanels": ${config.totalPanels},
+  "pagesRequired": ${config.pagesPerStory}
+}
+
+CRITICAL: Must generate exactly ${config.totalPanels} story beats for ${config.pagesPerStory} comic book pages.
+Follow professional comic creation: Story purpose drives every visual choice.`;
+
+    const userPrompt = `Analyze this story using professional comic book methodology. Return structured JSON.
+
+STORY TO ANALYZE:
+${story}`;
+
+    const options = {
+      model: 'gpt-4o',
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+      max_tokens: 2000,
+      temperature: 0.8,
+      response_format: { type: 'json_object' }
+    };
+
+    const result = await this.makeOpenAIAPICall<any>(
+      '/chat/completions',
+      options,
+      120000,
+      'analyzeStoryStructure'
+    );
+
+    if (!result?.choices?.[0]?.message?.content) {
+      throw new Error('Failed to analyze story structure');
+    }
+
+    try {
+      const storyAnalysis = JSON.parse(result.choices[0].message.content);
+      
+      // Validate story beats count
+      if (!storyAnalysis.storyBeats || storyAnalysis.storyBeats.length !== config.totalPanels) {
+        console.warn(`⚠️ Story beat count mismatch: expected ${config.totalPanels}, got ${storyAnalysis.storyBeats?.length || 0}`);
+        // Adjust beats to match required count
+        storyAnalysis.storyBeats = this.adjustStoryBeats(storyAnalysis.storyBeats || [], config.totalPanels);
+      }
+
+      console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} beats for professional comic book progression`);
+      
+      // ✅ ENHANCED: Extract dialogue from story and enhance beats with speech bubble information
+      const enhancedAnalysis = await this.extractDialogueFromStory(story, storyAnalysis, audience);
+      
+      return enhancedAnalysis;
+
+    } catch (parseError) {
+      console.error('❌ Failed to parse story analysis:', parseError);
+      throw new Error('Invalid story analysis response format');
+    }
+  }
+
+  // ===== ENHANCED SPEECH BUBBLE SYSTEM =====
 
   /**
    * Detect existing dialogue patterns in story text
@@ -902,16 +987,19 @@ Follow professional comic creation: Story purpose drives every visual choice.`;
   // ===== AI OPERATIONS IMPLEMENTATION =====
 
   async generateStory(prompt: string, options: StoryGenerationOptions = {}): Promise<string> {
-    const result = await this.createChatCompletion({
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: prompt },
-        { role: 'user', content: 'Generate a story following the provided guidelines.' }
-      ],
+    const options_obj = {
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1500,
       temperature: 0.8,
-      maxTokens: 2000,
-      ...options,
-    });
+    };
+
+    const result = await this.makeOpenAIAPICall<any>(
+      '/chat/completions',
+      options_obj,
+      90000,
+      'generateStory'
+    );
 
     if (!result?.choices?.[0]?.message?.content) {
       throw new Error('Invalid response from OpenAI API - no content received');
@@ -920,7 +1008,7 @@ Follow professional comic creation: Story purpose drives every visual choice.`;
     return result.choices[0].message.content;
   }
 
-  async generateStoryWithOptions(options: StoryGenerationOptions): Promise<StoryGenerationResult> {
+  async generateStoryWithOptions(storyOptions: StoryGenerationOptions): Promise<StoryGenerationResult> {
     const {
       genre = 'adventure',
       characterDescription = 'a young protagonist',
@@ -928,19 +1016,23 @@ Follow professional comic creation: Story purpose drives every visual choice.`;
       temperature = 0.8,
       maxTokens = 2000,
       model = 'gpt-4'
-    } = options;
+    } = storyOptions;
 
-    const storyPrompt = this.buildStoryPrompt(genre, characterDescription, audience);
+    const prompt = this.buildStoryPrompt(genre, characterDescription, audience);
     
-    const result = await this.createChatCompletion({
-      model,
-      messages: [
-        { role: 'system', content: storyPrompt },
-        { role: 'user', content: 'Generate a story following the provided guidelines.' }
-      ],
-      temperature,
-      maxTokens,
-    });
+    const options = {
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: storyOptions.maxTokens || 1500,
+      temperature: storyOptions.temperature || 0.8,
+    };
+
+    const result = await this.makeOpenAIAPICall<any>(
+      '/chat/completions',
+      options,
+      90000,
+      'generateStoryWithOptions'
+    );
 
     if (!result?.choices?.[0]?.message?.content) {
       throw new Error('Invalid response from OpenAI API - no content received');
@@ -1298,20 +1390,19 @@ QUALITY STANDARDS:
       const imageUrl = imageUrlOrOptions;
       const characterPrompt = prompt || 'Describe this character for professional comic book creation.';
       
-      const result = await this.analyzeImage({
+      const options = {
         model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: characterPrompt },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'Describe this character with professional detail for comic book consistency.' },
-              { type: 'image_url', image_url: { url: imageUrl } }
-            ]
-          }
-        ],
-        maxTokens: 500,
-      });
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 500,
+        temperature: 0.7,
+      };
+
+      const result = await this.makeOpenAIAPICall<any>(
+        '/chat/completions',
+        options,
+        60000,
+        'describeCharacter'
+      );
 
       if (!result?.choices?.[0]?.message?.content) {
         throw new Error('Invalid response from OpenAI API - no content received');
@@ -1323,20 +1414,19 @@ QUALITY STANDARDS:
       
       const characterPrompt = `You are a professional comic book character designer creating detailed character descriptions for ${style} style artwork with maximum consistency.`;
       
-      const result = await this.analyzeImage({
+      const options = {
         model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: characterPrompt },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'Create a detailed character description for comic book consistency. Include all visible features and characteristics.' },
-              { type: 'image_url', image_url: { url: imageUrl } }
-            ]
-          }
-        ],
-        maxTokens: 500,
-      });
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 500,
+        temperature: 0.7,
+      };
+
+      const result = await this.makeOpenAIAPICall<any>(
+        '/chat/completions',
+        options,
+        60000,
+        'describeCharacterWithOptions'
+      );
 
       if (!result?.choices?.[0]?.message?.content) {
         throw new Error('Invalid response from OpenAI API - no content received');
@@ -1391,15 +1481,20 @@ TECHNICAL SPECIFICATIONS:
   async generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult> {
     const jsonSystemPrompt = `${systemPrompt}\n\nIMPORTANT: Respond with valid JSON containing professional comic book content.`;
     
-    const result = await this.createChatCompletion({
+    const options = {
       model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: jsonSystemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.85,
-      responseFormat: { type: 'json_object' },
-    });
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+      max_tokens: 3000,
+      temperature: 0.8,
+      response_format: { type: 'json_object' }
+    };
+
+    const result = await this.makeOpenAIAPICall<any>(
+      '/chat/completions',
+      options,
+      120000,
+      'generateScenes'
+    );
 
     if (!result?.choices?.[0]?.message?.content) {
       throw new Error('Invalid response from OpenAI API - no content received');
@@ -1439,9 +1534,9 @@ TECHNICAL SPECIFICATIONS:
 
   // ===== CHAT COMPLETION =====
 
-  async createChatCompletion(options: ChatCompletionOptions): Promise<ChatCompletionResult> {
-    if (options.responseFormat?.type === 'json_object') {
-      const hasJsonKeyword = options.messages.some(message => {
+  async createChatCompletion(chatOptions: ChatCompletionOptions): Promise<ChatCompletionResult> {
+    if (chatOptions.responseFormat?.type === 'json_object') {
+      const hasJsonKeyword = chatOptions.messages.some(message => {
         if (typeof message.content === 'string') {
           return message.content.toLowerCase().includes('json');
         }
@@ -1450,9 +1545,9 @@ TECHNICAL SPECIFICATIONS:
 
       if (!hasJsonKeyword) {
         console.warn('⚠️ Adding JSON keyword to prompt for OpenAI API compliance');
-        const lastUserMessageIndex = options.messages.map(m => m.role).lastIndexOf('user');
+        const lastUserMessageIndex = chatOptions.messages.map(m => m.role).lastIndexOf('user');
         if (lastUserMessageIndex >= 0) {
-          const lastMessage = options.messages[lastUserMessageIndex];
+          const lastMessage = chatOptions.messages[lastUserMessageIndex];
           if (typeof lastMessage.content === 'string') {
             lastMessage.content += '\n\nIMPORTANT: Respond with valid JSON format.';
           }
@@ -1462,21 +1557,22 @@ TECHNICAL SPECIFICATIONS:
 
     return this.withRetry(
       async () => {
-        return this.makeRequest<ChatCompletionResult>(
+        const options = {
+          model: chatOptions.model || 'gpt-4o',
+          messages: chatOptions.messages,
+          max_tokens: chatOptions.maxTokens || 1000,
+          temperature: chatOptions.temperature || 0.7,
+          response_format: chatOptions.responseFormat
+        };
+
+        const result = await this.makeOpenAIAPICall<any>(
           '/chat/completions',
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              model: options.model,
-              messages: options.messages,
-              temperature: options.temperature || 0.8,
-              max_tokens: options.maxTokens || (this.config as AIConfig).maxTokens,
-              response_format: options.responseFormat,
-            }),
-          },
-          (this.config as AIConfig).gptTimeout,
+          options,
+          120000,
           'createChatCompletion'
         );
+
+        return result;
       },
       this.gptRetryConfig,
       'createChatCompletion'
@@ -1484,14 +1580,20 @@ TECHNICAL SPECIFICATIONS:
   }
 
   async generateCartoonImage(prompt: string): Promise<string> {
-    const result = await this.generateImage({
+    const options = {
       model: 'dall-e-3',
-      prompt,
-      n: 1,
+      prompt: prompt,
       size: '1024x1024',
       quality: 'standard',
-      style: 'vivid',
-    });
+      response_format: 'url'
+    };
+
+    const result = await this.makeOpenAIAPICall<any>(
+      '/images/generations',
+      options,
+      180000,
+      'generateCartoonImage'
+    );
 
     if (!result?.data?.[0]?.url) {
       throw new Error('Invalid response from OpenAI API - no image URL received');
