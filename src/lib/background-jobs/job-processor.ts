@@ -617,6 +617,24 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         
         console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} narrative beats for ${audience} audience`);
         await jobService.updateJobProgress(job.id, 15, `Story beats analyzed - ${storyAnalysis.storyBeats.length} panels planned with environmental context`);
+        // PHASE 2: ENVIRONMENTAL DNA CREATION
+        console.log('🌍 PHASE 2: Creating Environmental DNA for world-building consistency...');
+        let environmentalDNA: any = null;
+        
+        try {
+          environmentalDNA = await (aiService as any).createEnvironmentalDNA(storyAnalysis, audience);
+          console.log('✅ Environmental DNA created for consistent world-building');
+          await jobService.updateJobProgress(job.id, 25, 'Environmental consistency system activated - professional world-building established');
+        } catch (envError) {
+          console.warn('⚠️ Environmental DNA creation failed, using fallback:', envError);
+          environmentalDNA = {
+            primaryLocation: 'consistent setting',
+            lightingContext: 'natural lighting',
+            colorPalette: 'harmonious colors',
+            atmosphericElements: 'appropriate mood'
+          };
+          await jobService.updateJobProgress(job.id, 25, 'Environmental consistency system activated (fallback mode)');
+        }
         
       } catch (storyError) {
         console.error('❌ Story analysis failed:', storyError);
