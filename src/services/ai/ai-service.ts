@@ -22,10 +22,7 @@ import {
   CharacterDNA,
   StoryAnalysis,
   StoryBeat,
-  QualityMetrics,
-  ComicPanel,
-  QualityAnalysisContext,
-  QualityAnalysisResult
+  QualityMetrics
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
@@ -662,28 +659,36 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
 
   // ===== PRODUCTION-GRADE QUALITY ANALYSIS SYSTEM =====
 
-  async calculateQualityMetrics(panels: ComicPanel[], context: QualityAnalysisContext): Promise<QualityAnalysisResult> {
+  async calculateQualityMetrics(
+    generatedPanels: any[],
+    originalContext: {
+      characterDNA?: CharacterDNA;
+      environmentalDNA?: EnvironmentalDNA;
+      storyAnalysis?: StoryAnalysis;
+      enhancedContext?: any;
+    }
+  ): Promise<QualityAnalysisResult> {
     const startTime = Date.now();
     
     try {
       // Input validation
-      if (!panels || !Array.isArray(panels)) {
+      if (!generatedPanels || !Array.isArray(generatedPanels)) {
         this.log('warn', 'Invalid panels provided for quality analysis, using fallback metrics');
         return this.getFallbackQualityMetrics();
       }
 
-      if (panels.length === 0) {
+      if (generatedPanels.length === 0) {
         this.log('warn', 'No panels provided for quality analysis, using fallback metrics');
         return this.getFallbackQualityMetrics();
       }
 
-      this.log('info', `Starting quality analysis for ${panels.length} panels`);
+      this.log('info', `Starting quality analysis for ${generatedPanels.length} panels`);
 
       // Run parallel analysis with timeout protection
       const analysisPromises = [
-        this.analyzeCharacterConsistencyPro(panels, context.characterDNA),
-        this.analyzeEnvironmentalCoherencePro(panels, context.environmentalDNA),
-        this.analyzeNarrativeFlowPro(panels, context.storyAnalysis)
+        this.analyzeCharacterConsistencyPro(generatedPanels, originalContext.characterDNA),
+        this.analyzeEnvironmentalCoherencePro(generatedPanels, originalContext.environmentalDNA),
+        this.analyzeNarrativeFlowPro(generatedPanels, originalContext.storyAnalysis)
       ];
 
       const analysisResults = await Promise.allSettled(
@@ -730,7 +735,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
           backgroundConsistencyRate: Math.round(environmentalAnalysis.backgroundConsistency),
           storyProgressionQuality: Math.round(narrativeAnalysis.storyProgression),
           panelTransitionSmoothing: Math.round(narrativeAnalysis.panelTransitions),
-          panelsAnalyzed: panels.length,
+          panelsAnalyzed: generatedPanels.length,
           processingTime
         },
         recommendations: this.generateQualityRecommendations({
@@ -744,7 +749,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
             backgroundConsistencyRate: environmentalAnalysis.backgroundConsistency,
             storyProgressionQuality: narrativeAnalysis.storyProgression,
             panelTransitionSmoothing: narrativeAnalysis.panelTransitions,
-            panelsAnalyzed: panels.length,
+            panelsAnalyzed: generatedPanels.length,
             processingTime
           },
           recommendations: []
@@ -754,7 +759,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
       this.log('info', `Quality analysis completed in ${processingTime}ms`, {
         grade: result.qualityGrade,
         overallScore: result.overallTechnicalQuality,
-        panelsAnalyzed: panels.length
+        panelsAnalyzed: generatedPanels.length
       });
 
       return result;
