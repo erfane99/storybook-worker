@@ -518,6 +518,20 @@ export interface IAIService extends
   IServiceMetrics, 
   IServiceLifecycle {
   getName(): string;
+  
+  // Quality Analysis Methods
+  calculateQualityMetrics(
+    generatedPanels: any[],
+    originalContext: {
+      characterDNA?: any;
+      environmentalDNA?: any;
+      storyAnalysis?: any;
+      targetAudience: string;
+      artStyle: string;
+    }
+  ): Promise<any>;
+  
+  generateQualityRecommendations(qualityMetrics: any): string[];
 }
 
 export interface IStorageService extends 
