@@ -194,7 +194,7 @@ export class AIService extends EnhancedBaseService implements IAIService {
       this.log('info', 'Storing successful pattern for learning system');
 
       // Check if this meets success criteria
-      const technicalSuccess = qualityScores.automatedScores?.overallTechnicalQuality >= 85;
+      const technicalSuccess = (qualityScores.automatedScores?.overallTechnicalQuality || 0) >= 85;
       const userSuccess = userRatings && userRatings.length > 0 
         ? userRatings.reduce((sum, r) => sum + r.averageRating, 0) / userRatings.length >= 4.0
         : false;
