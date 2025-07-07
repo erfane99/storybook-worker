@@ -44,60 +44,6 @@ export interface AIConfig extends ServiceConfig {
   rateLimitRpm: number;
 }
 
-// ===== PROFESSIONAL CHARACTER DNA INTERFACES =====
-
-interface CharacterDNA {
-  physicalStructure: {
-    faceShape: string;
-    eyeDetails: string;
-    hairSpecifics: string;
-    skinTone: string;
-    bodyType: string;
-    facialMarks: string;
-  };
-  clothingSignature: {
-    primaryOutfit: string;
-    accessories: string;
-    colorPalette: string;
-    footwear: string;
-  };
-  uniqueIdentifiers: {
-    distinctiveFeatures: string;
-    expressions: string;
-    posture: string;
-    mannerisms: string;
-  };
-  artStyleAdaptation: {
-    [key: string]: string;
-  };
-  consistencyEnforcers: string[];
-  negativePrompts: string[];
-}
-
-interface StoryBeat {
-  beat: string;
-  emotion: string;
-  visualPriority: string;
-  panelPurpose: string;
-  narrativeFunction: string;
-  characterAction: string;
-  environment: string;
-  dialogue?: string;
-  hasSpeechBubble?: boolean;
-  speechBubbleStyle?: string;
-  cleanedDialogue?: string;
-}
-
-interface StoryAnalysis {
-  storyBeats: StoryBeat[];
-  characterArc: string[];
-  visualFlow: string[];
-  totalPanels: number;
-  pagesRequired: number;
-  dialoguePanels?: number;
-  speechBubbleDistribution?: Record<string, number>;
-}
-
 // ===== SPEECH BUBBLE SYSTEM INTERFACES =====
 
 interface SpeechBubbleConfig {
