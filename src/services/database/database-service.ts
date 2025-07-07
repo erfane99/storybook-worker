@@ -11,7 +11,9 @@ import {
   RetryConfig,
   QualityMetrics,
   UserRating,
-  QualityTrendData
+  QualityTrendData,
+  SuccessPattern,
+  LearningMetrics
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
@@ -529,6 +531,261 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
         failing: 0,
       },
     }));
+  }
+
+  // ===== SUCCESS PATTERN LEARNING SYSTEM IMPLEMENTATION =====
+
+  async saveSuccessPattern(pattern: SuccessPattern): Promise<boolean> {
+    const result = await this.executeQuery<{ id: string }>(
+      'Save success pattern',
+      async (supabase) => {
+        const patternRecord = {
+          pattern_type: pattern.patternType,
+          context_signature: pattern.contextSignature,
+          success_criteria: pattern.successCriteria || {},
+          pattern_data: pattern.patternData || {},
+          usage_context: pattern.usageContext || {},
+          quality_scores: pattern.qualityScores || {},
+          effectiveness_score: pattern.effectivenessScore || 0,
+          usage_count: pattern.usageCount || 1,
+          success_rate: pattern.successRate || 100,
+          audience_type: pattern.usageContext.audience,
+          story_genre: pattern.usageContext.genre,
+          art_style: pattern.usageContext.artStyle,
+          environmental_setting: pattern.usageContext.environmentalSetting,
+          character_type: pattern.usageContext.characterType,
+          created_at: new Date().toISOString(),
+          last_used_at: new Date().toISOString(),
+        };
+
+        const response = await supabase
+          .from('success_patterns')
+          .upsert(patternRecord, { onConflict: 'context_signature,pattern_type' })
+          .select('id')
+          .single();
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    return !!result?.id;
+  }
+
+  async getSuccessPatterns(
+    context: {
+      audience?: string;
+      genre?: string;
+      artStyle?: string;
+      environmentalSetting?: string;
+      characterType?: string;
+    },
+    limit: number = 10
+  ): Promise<SuccessPattern[]> {
+    const result = await this.executeQuery<any[]>(
+      'Get success patterns',
+      async (supabase) => {
+        let query = supabase
+          .from('success_patterns')
+          .select('*')
+          .order('effectiveness_score', { ascending: false })
+          .limit(limit);
+
+        // Apply context filters
+        if (context.audience) {
+          query = query.eq('audience_type', context.audience);
+        }
+        if (context.genre) {
+          query = query.eq('story_genre', context.genre);
+        }
+        if (context.artStyle) {
+          query = query.eq('art_style', context.artStyle);
+        }
+        if (context.environmentalSetting) {
+          query = query.eq('environmental_setting', context.environmentalSetting);
+        }
+        if (context.characterType) {
+          query = query.eq('character_type', context.characterType);
+        }
+
+        const response = await query;
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    if (!result || !Array.isArray(result)) return [];
+
+    return result.map(record => ({
+      id: record.id,
+      patternType: record.pattern_type,
+      contextSignature: record.context_signature,
+      successCriteria: record.success_criteria || {},
+      patternData: record.pattern_data || {},
+      usageContext: record.usage_context || {},
+      qualityScores: record.quality_scores || {},
+      effectivenessScore: record.effectiveness_score || 0,
+      usageCount: record.usage_count || 0,
+      successRate: record.success_rate || 0,
+      createdAt: record.created_at,
+      lastUsedAt: record.last_used_at,
+    }));
+  }
+
+  async updatePatternEffectiveness(
+    patternId: string,
+    comicId: string,
+    effectivenessData: {
+      qualityImprovement: any;
+      beforeScores: any;
+      afterScores: any;
+      userSatisfactionImpact: number;
+      technicalQualityImpact: number;
+      effectivenessRating: number;
+    }
+  ): Promise<boolean> {
+    const result = await this.executeQuery<{ id: string }>(
+      'Update pattern effectiveness',
+      async (supabase) => {
+        const effectivenessRecord = {
+          pattern_id: patternId,
+          comic_id: comicId,
+          application_context: {},
+          quality_improvement: effectivenessData.qualityImprovement || {},
+          before_scores: effectivenessData.beforeScores || {},
+          after_scores: effectivenessData.afterScores || {},
+          user_satisfaction_impact: effectivenessData.userSatisfactionImpact || 0,
+          technical_quality_impact: effectivenessData.technicalQualityImpact || 0,
+          effectiveness_rating: effectivenessData.effectivenessRating || 0,
+          created_at: new Date().toISOString(),
+        };
+
+        const response = await supabase
+          .from('pattern_effectiveness')
+          .insert(effectivenessRecord)
+          .select('id')
+          .single();
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    return !!result?.id;
+  }
+
+  async logPromptEvolution(
+    evolutionData: {
+      evolutionType: string;
+      originalPrompt: string;
+      evolvedPrompt: string;
+      improvementRationale: string;
+      patternsApplied: string[];
+      contextMatch: any;
+      expectedImprovements: any;
+      comicId?: string;
+    }
+  ): Promise<boolean> {
+    const result = await this.executeQuery<{ id: string }>(
+      'Log prompt evolution',
+      async (supabase) => {
+        const evolutionRecord = {
+          evolution_type: evolutionData.evolutionType,
+          original_prompt: evolutionData.originalPrompt,
+          evolved_prompt: evolutionData.evolvedPrompt,
+          improvement_rationale: evolutionData.improvementRationale,
+          patterns_applied: evolutionData.patternsApplied || [],
+          context_match: evolutionData.contextMatch || {},
+          expected_improvements: evolutionData.expectedImprovements || {},
+          comic_id: evolutionData.comicId,
+          created_at: new Date().toISOString(),
+        };
+
+        const response = await supabase
+          .from('prompt_evolution_log')
+          .insert(evolutionRecord)
+          .select('id')
+          .single();
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    return !!result?.id;
+  }
+
+  async getLearningMetrics(): Promise<LearningMetrics> {
+    const result = await this.executeQuery<any>(
+      'Get learning metrics',
+      async (supabase) => {
+        // Get pattern statistics
+        const { data: patternStats, error: patternError } = await supabase
+          .from('success_patterns')
+          .select('pattern_type, effectiveness_score, success_rate, created_at')
+          .order('created_at', { ascending: false });
+
+        if (patternError) {
+          throw new Error(`Failed to get pattern stats: ${patternError.message}`);
+        }
+
+        // Get recent effectiveness data
+        const { data: recentEffectiveness, error: effectivenessError } = await supabase
+          .from('pattern_effectiveness')
+          .select('effectiveness_rating, created_at')
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Last 30 days
+          .order('created_at', { ascending: false });
+
+        if (effectivenessError) {
+          throw new Error(`Failed to get effectiveness data: ${effectivenessError.message}`);
+        }
+
+        return { data: { patternStats, recentEffectiveness }, error: null };
+      }
+    );
+
+    if (!result) {
+      return {
+        totalPatternsStored: 0,
+        activePatterns: 0,
+        averageEffectiveness: 0,
+        improvementRate: 0,
+        patternsByType: {},
+        recentSuccesses: 0,
+        learningTrend: 'stable',
+      };
+    }
+
+    const { patternStats, recentEffectiveness } = result;
+
+    // Calculate metrics
+    const totalPatterns = patternStats?.length || 0;
+    const activePatterns = patternStats?.filter((p: any) => p.effectiveness_score >= 75).length || 0;
+    const averageEffectiveness = totalPatterns > 0 
+      ? patternStats.reduce((sum: number, p: any) => sum + (p.effectiveness_score || 0), 0) / totalPatterns 
+      : 0;
+
+    const patternsByType = patternStats?.reduce((acc: any, p: any) => {
+      acc[p.pattern_type] = (acc[p.pattern_type] || 0) + 1;
+      return acc;
+    }, {}) || {};
+
+    const recentSuccesses = recentEffectiveness?.filter((e: any) => e.effectiveness_rating >= 75).length || 0;
+
+    // Calculate improvement trend
+    const recentAvg = recentEffectiveness?.length > 0 
+      ? recentEffectiveness.reduce((sum: number, e: any) => sum + (e.effectiveness_rating || 0), 0) / recentEffectiveness.length 
+      : 0;
+    
+    let learningTrend: 'improving' | 'stable' | 'declining' = 'stable';
+    if (recentAvg > averageEffectiveness + 5) {
+      learningTrend = 'improving';
+    } else if (recentAvg < averageEffectiveness - 5) {
+      learningTrend = 'declining';
+    }
+
+    return {
+      totalPatternsStored: totalPatterns,
+      activePatterns,
+      averageEffectiveness: Math.round(averageEffectiveness * 100) / 100,
+      improvementRate: Math.round((recentAvg - averageEffectiveness) * 100) / 100,
+      patternsByType,
+      recentSuccesses,
+      learningTrend,
+    };
   }
 
   // ===== PRIVATE HELPER METHODS =====

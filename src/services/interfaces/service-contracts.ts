@@ -391,6 +391,44 @@ export interface IDatabaseOperations {
   getUserRatings(comicId: string): Promise<UserRating[]>;
   getQualityTrends(timeframe: string, limit?: number): Promise<QualityTrendData[]>;
   
+  // Success Pattern Learning System
+  saveSuccessPattern(pattern: SuccessPattern): Promise<boolean>;
+  getSuccessPatterns(
+    context: {
+      audience?: string;
+      genre?: string;
+      artStyle?: string;
+      environmentalSetting?: string;
+      characterType?: string;
+    },
+    limit?: number
+  ): Promise<SuccessPattern[]>;
+  updatePatternEffectiveness(
+    patternId: string,
+    comicId: string,
+    effectivenessData: {
+      qualityImprovement: any;
+      beforeScores: any;
+      afterScores: any;
+      userSatisfactionImpact: number;
+      technicalQualityImpact: number;
+      effectivenessRating: number;
+    }
+  ): Promise<boolean>;
+  logPromptEvolution(
+    evolutionData: {
+      evolutionType: string;
+      originalPrompt: string;
+      evolvedPrompt: string;
+      improvementRationale: string;
+      patternsApplied: string[];
+      contextMatch: any;
+      expectedImprovements: any;
+      comicId?: string;
+    }
+  ): Promise<boolean>;
+  getLearningMetrics(): Promise<LearningMetrics>;
+  
   // Transaction Support
   executeTransaction<T>(operations: DatabaseOperation<T>[]): Promise<T[]>;
 }
@@ -532,6 +570,102 @@ export interface IAIService extends
   ): Promise<any>;
   
   generateQualityRecommendations(qualityMetrics: any): string[];
+  
+  // Success Pattern Learning Methods
+  storeSuccessfulPattern(
+    context: any,
+    results: any,
+    qualityScores: QualityMetrics,
+    userRatings?: UserRating[]
+  ): Promise<boolean>;
+  
+  evolvePromptsFromPatterns(
+    currentContext: any,
+    pastSuccesses: any[]
+  ): Promise<{
+    evolvedPrompts: any;
+    patternsApplied: string[];
+    expectedImprovements: string[];
+  }>;
+  
+  findSimilarSuccessPatterns(
+    context: {
+      audience: string;
+      genre?: string;
+      artStyle: string;
+      environmentalSetting?: string;
+      characterType?: string;
+    },
+    limit?: number
+  ): Promise<SuccessPattern[]>;
+}
+
+// ===== SUCCESS PATTERN LEARNING INTERFACES =====
+
+export interface SuccessPattern {
+  id: string;
+  patternType: 'prompt_template' | 'environmental_context' | 'character_strategy' | 'dialogue_pattern';
+  contextSignature: string;
+  successCriteria: {
+    minTechnicalScore: number;
+    minUserRating: number;
+    combinedThreshold: number;
+  };
+  patternData: {
+    promptTemplate?: string;
+    environmentalElements?: string[];
+    characterTechniques?: string[];
+    dialogueStrategies?: string[];
+    visualElements?: string[];
+    contextualModifiers?: string[];
+  };
+  usageContext: {
+    audience: string;
+    genre?: string;
+    artStyle: string;
+    environmentalSetting?: string;
+    characterType?: string;
+    layoutType?: string;
+  };
+  qualityScores: {
+    averageTechnicalScore: number;
+    averageUserRating: number;
+    consistencyRate: number;
+    improvementRate: number;
+  };
+  effectivenessScore: number; // 0-100
+  usageCount: number;
+  successRate: number; // percentage
+  createdAt: string;
+  lastUsedAt: string;
+}
+
+export interface PatternEvolutionResult {
+  originalPrompt: string;
+  evolvedPrompt: string;
+  improvementRationale: string;
+  patternsApplied: SuccessPattern[];
+  contextMatch: {
+    similarity: number;
+    matchingFactors: string[];
+    adaptationRequired: string[];
+  };
+  expectedImprovements: {
+    characterConsistency: number;
+    environmentalCoherence: number;
+    narrativeFlow: number;
+    userSatisfaction: number;
+  };
+}
+
+export interface LearningMetrics {
+  totalPatternsStored: number;
+  activePatterns: number;
+  averageEffectiveness: number;
+  improvementRate: number;
+  patternsByType: Record<string, number>;
+  recentSuccesses: number;
+  learningTrend: 'improving' | 'stable' | 'declining';
 }
 
 export interface IStorageService extends 
