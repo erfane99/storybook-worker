@@ -1094,7 +1094,6 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       professionalStandards: true,
       enhancedContextUsed: true,
       // ✅ NEW: Include Quality Data in Job Completion
-      qualityMetrics: qualityMetrics,
       automatedQualityGrade: automatedQualityScores?.qualityGrade,
       qualityRecommendations: aiService.generateQualityRecommendations(automatedQualityScores),
     });
