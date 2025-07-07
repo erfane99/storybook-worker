@@ -1065,12 +1065,12 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       // ✅ NEW: Add Automated Quality Scores
       automatedScores: automatedQualityScores,
       // ✅ NEW: Add Generation Metrics
-      generationMetrics: {
+     generationMetrics: {
         totalGenerationTime: Date.now() - startTime,
         averageTimePerPanel: totalScenes > 0 ? (Date.now() - startTime) / totalScenes : 0,
         apiCallsUsed: totalScenes + 3, // Rough estimate: panels + story analysis + DNA creation
         costEfficiency: totalScenes > 0 ? 100 / totalScenes : 100, // Simple efficiency metric
-      }
+      },
       parallelDuration: parallelDuration,
       successfulPanels: successfulPanels,
       performanceGain: Math.round(((totalScenes * 8000) - parallelDuration) / 1000),
