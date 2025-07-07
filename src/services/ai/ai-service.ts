@@ -24,7 +24,8 @@ import {
   EnvironmentalDNA,
   CharacterDNA,
   StoryAnalysis,
-  StoryBeat
+  StoryBeat,
+  QualityMetrics
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
