@@ -20,7 +20,10 @@ import {
   AudienceType,
   GenreType,
   SceneMetadata,
-  PanelType
+  PanelType,
+  EnvironmentalDNA,
+  CharacterDNA,
+  StoryAnalysis
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
