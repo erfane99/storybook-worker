@@ -7,7 +7,11 @@ import {
   IAIService, 
   IJobService,
   IServiceHealth,
-  IServiceMetrics
+  IServiceMetrics,
+  ComicGenerationResult,
+  EnvironmentalDNA,
+  CharacterDNA,
+  QualityMetrics
 } from '../../services/interfaces/service-contracts.js';
 import { 
   Result,
@@ -17,21 +21,6 @@ import {
   withCorrelationResult
 } from '../../services/errors/index.js';
 import { JobData, JobType, StorybookJobData, AutoStoryJobData, SceneJobData, CartoonizeJobData, ImageJobData } from '../types.js';
-
-// ===== PROFESSIONAL COMIC GENERATION INTERFACES =====
-
-interface ComicGenerationResult {
-  success: boolean;
-  pages: any[];
-  characterDNA?: any;
-  storyAnalysis?: any;
-  qualityMetrics: {
-    characterConsistency: number;
-    storyCoherence: number;
-    panelCount: number;
-    professionalStandards: boolean;
-  };
-}
 
 interface JobProcessingResult {
   success: boolean;
