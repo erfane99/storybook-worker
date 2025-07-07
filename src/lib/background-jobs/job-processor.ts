@@ -612,25 +612,6 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} narrative beats for ${audience} audience`);
         await jobService.updateJobProgress(job.id, 15, `Story beats analyzed - ${storyAnalysis.storyBeats.length} panels planned with environmental context`);
         
-        // PHASE 2: ENVIRONMENTAL DNA CREATION
-        console.log('🌍 PHASE 2: Creating Environmental DNA for world-building consistency...');
-        let environmentalDNA: any = null;
-        
-        try {
-          environmentalDNA = await (aiService as any).createEnvironmentalDNA(storyAnalysis, audience);
-          console.log('✅ Environmental DNA created for consistent world-building');
-          await jobService.updateJobProgress(job.id, 25, 'Environmental consistency system activated - professional world-building established');
-        } catch (envError) {
-          console.warn('⚠️ Environmental DNA creation failed, using fallback:', envError);
-          environmentalDNA = {
-            primaryLocation: 'consistent setting',
-            lightingContext: 'natural lighting',
-            colorPalette: 'harmonious colors',
-            atmosphericElements: 'appropriate mood'
-          };
-          await jobService.updateJobProgress(job.id, 25, 'Environmental consistency system activated (fallback mode)');
-        }
-        
       } catch (storyError) {
         console.error('❌ Story analysis failed:', storyError);
         throw new Error(`Failed to analyze story structure: ${storyError instanceof Error ? storyError.message : String(storyError)}`);
@@ -1092,7 +1073,11 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       storyAnalysisUsed: !!storyAnalysis,
       professionalStandards: true,
       automatedQualityGrade: automatedQualityScores?.qualityGrade,
-      qualityRecommendations: automatedQualityScores?.recommendations
+      qualityRecommendations: automatedQualityScores?.recommendations,
+      // ✅ NEW: Include Quality Data in Job Completion
+      qualityMetrics: qualityMetrics,
+      automatedQualityGrade: automatedQualityScores?.qualityGrade,
+      qualityRecommendations: aiService.generateQualityRecommendations(automatedQualityScores),
     });
 
     console.log(`✅ ENHANCED storybook job with quality measurement completed: ${job.id}`);
@@ -1361,7 +1346,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       generated_pages: sceneResult.pages,
       character_description: character_description || 'Generated character',
       professionalStandards: true,
-      enhancedGeneration: true
+      enhancedGeneration: true,
     });
 
     console.log(`✅ ENHANCED scene job completed: ${job.id}`);
@@ -1447,7 +1432,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       final_prompt_used: imageResult.prompt_used,
       style: style,
       professionalStandards: true,
-      enhancedGeneration: true,
+      enhancedGeneration: true
     });
 
     console.log(`✅ ENHANCED image job completed: ${job.id} with professional character consistency`);
