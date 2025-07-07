@@ -567,7 +567,6 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   // ===== ENHANCED JOB-SPECIFIC PROCESSORS =====
 
   private async processStorybookJobWithServices(job: StorybookJobData, servicesUsed: string[]): Promise<ComicGenerationResult> {
-    const startTime = Date.now();
     const { 
       title, 
       story, 
@@ -1070,7 +1069,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         averageTimePerPanel: totalScenes > 0 ? (Date.now() - startTime) / totalScenes : 0,
         apiCallsUsed: totalScenes + 3, // Rough estimate: panels + story analysis + DNA creation
         costEfficiency: totalScenes > 0 ? 100 / totalScenes : 100, // Simple efficiency metric
-      },
+      }
       parallelDuration: parallelDuration,
       successfulPanels: successfulPanels,
       performanceGain: Math.round(((totalScenes * 8000) - parallelDuration) / 1000),
@@ -1092,7 +1091,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
       storyAnalysisUsed: !!storyAnalysis,
       professionalStandards: true,
-      enhancedContextUsed: true,
+      enhancedContextUsed: true
       // ✅ NEW: Include Quality Data in Job Completion
       qualityMetrics: qualityMetrics,
       automatedQualityGrade: automatedQualityScores?.qualityGrade,
