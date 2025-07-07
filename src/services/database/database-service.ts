@@ -371,6 +371,163 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     );
   }
 
+  // ===== QUALITY MEASUREMENT SYSTEM IMPLEMENTATION =====
+
+  async saveQualityMetrics(comicId: string, qualityData: QualityMetrics): Promise<boolean> {
+    const result = await this.executeQuery<{ id: string }>(
+      'Save quality metrics',
+      async (supabase) => {
+        const qualityRecord = {
+          comic_id: comicId,
+          automated_scores: qualityData.automatedScores || {},
+          generation_metrics: qualityData.generationMetrics || {},
+          quality_grade: qualityData.automatedScores?.qualityGrade || 'C',
+          overall_technical_quality: qualityData.automatedScores?.overallTechnicalQuality || 75,
+          character_consistency_score: qualityData.automatedScores?.characterConsistencyScore || 75,
+          environmental_coherence_score: qualityData.automatedScores?.environmentalCoherenceScore || 75,
+          narrative_flow_score: qualityData.automatedScores?.narrativeFlowScore || 75,
+          created_at: new Date().toISOString(),
+        };
+
+        const response = await supabase
+          .from('comic_quality_metrics')
+          .upsert(qualityRecord, { onConflict: 'comic_id' })
+          .select('id')
+          .single();
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    return !!result?.id;
+  }
+
+  async getQualityMetrics(comicId: string): Promise<QualityMetrics | null> {
+    const result = await this.executeQuery<any>(
+      'Get quality metrics',
+      async (supabase) => {
+        const response = await supabase
+          .from('comic_quality_metrics')
+          .select('*')
+          .eq('comic_id', comicId)
+          .single();
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    if (!result) return null;
+
+    // Convert database format back to QualityMetrics
+    return {
+      characterConsistency: result.character_consistency_score || 75,
+      environmentalConsistency: result.environmental_coherence_score || 75,
+      storyCoherence: result.narrative_flow_score || 75,
+      panelCount: result.automated_scores?.analysisDetails?.panelsAnalyzed || 0,
+      professionalStandards: result.quality_grade !== 'F',
+      automatedScores: result.automated_scores,
+      generationMetrics: result.generation_metrics,
+    };
+  }
+
+  async saveUserRating(rating: UserRating): Promise<boolean> {
+    const result = await this.executeQuery<{ id: string }>(
+      'Save user rating',
+      async (supabase) => {
+        const ratingRecord = {
+          comic_id: rating.comicId,
+          user_id: rating.userId,
+          ratings: rating.ratings,
+          character_consistency_rating: rating.ratings.characterConsistency,
+          story_flow_narrative_rating: rating.ratings.storyFlowNarrative,
+          art_quality_visual_appeal_rating: rating.ratings.artQualityVisualAppeal,
+          scene_background_consistency_rating: rating.ratings.sceneBackgroundConsistency,
+          overall_comic_experience_rating: rating.ratings.overallComicExperience,
+          comment: rating.comment,
+          time_spent_reading: rating.timeSpentReading || 0,
+          would_recommend: rating.wouldRecommend,
+          rating_date: rating.ratingDate,
+        };
+
+        const response = await supabase
+          .from('user_ratings')
+          .upsert(ratingRecord, { onConflict: 'comic_id,user_id' })
+          .select('id')
+          .single();
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    return !!result?.id;
+  }
+
+  async getUserRatings(comicId: string): Promise<UserRating[]> {
+    const result = await this.executeQuery<any[]>(
+      'Get user ratings',
+      async (supabase) => {
+        const response = await supabase
+          .from('user_ratings')
+          .select('*')
+          .eq('comic_id', comicId)
+          .order('rating_date', { ascending: false });
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    if (!result || !Array.isArray(result)) return [];
+
+    return result.map(record => ({
+      id: record.id,
+      comicId: record.comic_id,
+      userId: record.user_id,
+      ratings: {
+        characterConsistency: record.character_consistency_rating,
+        storyFlowNarrative: record.story_flow_narrative_rating,
+        artQualityVisualAppeal: record.art_quality_visual_appeal_rating,
+        sceneBackgroundConsistency: record.scene_background_consistency_rating,
+        overallComicExperience: record.overall_comic_experience_rating,
+      },
+      averageRating: record.average_rating,
+      comment: record.comment,
+      ratingDate: record.rating_date,
+      timeSpentReading: record.time_spent_reading,
+      wouldRecommend: record.would_recommend,
+    }));
+  }
+
+  async getQualityTrends(timeframe: string, limit: number = 30): Promise<QualityTrendData[]> {
+    const result = await this.executeQuery<any[]>(
+      'Get quality trends',
+      async (supabase) => {
+        const response = await supabase
+          .from('quality_trends')
+          .select('*')
+          .eq('timeframe', timeframe)
+          .order('period_start', { ascending: false })
+          .limit(limit);
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    if (!result || !Array.isArray(result)) return [];
+
+    return result.map(record => ({
+      timeframe: record.timeframe,
+      averageScores: {
+        technical: record.technical_score_avg || 0,
+        userSatisfaction: record.user_satisfaction_avg || 0,
+        combined: record.combined_quality_score || 0,
+      },
+      improvementRate: record.improvement_rate || 0,
+      totalComicsAnalyzed: record.total_comics_analyzed || 0,
+      qualityDistribution: record.quality_distribution || {
+        excellent: 0,
+        good: 0,
+        average: 0,
+        poor: 0,
+        failing: 0,
+      },
+    }));
+  }
+
   // ===== PRIVATE HELPER METHODS =====
 
   private async testConnection(): Promise<void> {
