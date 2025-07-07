@@ -52,6 +52,113 @@ export interface StoryGenerationResult {
 
 // ===== IMAGE GENERATION INTERFACES =====
 
+export interface EnvironmentalDNA {
+  primaryLocation: {
+    name: string;
+    type: 'indoor' | 'outdoor' | 'mixed';
+    description: string;
+    keyFeatures: string[];
+    colorPalette?: string[];
+    architecturalStyle?: string;
+  };
+  lightingContext: {
+    timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
+    weatherCondition: 'sunny' | 'cloudy' | 'rainy' | 'stormy' | 'snowy';
+    lightingMood: string;
+    shadowDirection?: string;
+    consistencyRules?: string[];
+  };
+  visualContinuity: {
+    backgroundElements: string[];
+    recurringObjects?: string[];
+    colorConsistency: {
+      dominantColors: string[];
+      accentColors: string[];
+      avoidColors?: string[];
+    };
+    perspectiveGuidelines?: string;
+  };
+  atmosphericElements?: {
+    ambientEffects?: string[];
+    particleEffects?: string[];
+    environmentalMood?: string;
+    seasonalContext?: string;
+  };
+  panelTransitions?: {
+    movementFlow?: string;
+    cameraMovement?: string;
+    spatialRelationships?: string;
+  };
+  metadata?: {
+    createdAt: string;
+    processingTime: number;
+    audience: AudienceType;
+    consistencyTarget: string;
+  };
+  fallback?: boolean;
+  error?: string;
+}
+
+export interface CharacterDNA {
+  physicalStructure: {
+    faceShape: string;
+    eyeDetails: string;
+    hairSpecifics: string;
+    skinTone: string;
+    bodyType: string;
+    facialMarks: string;
+  };
+  clothingSignature: {
+    primaryOutfit: string;
+    accessories: string;
+    colorPalette: string;
+    footwear: string;
+  };
+  uniqueIdentifiers: {
+    distinctiveFeatures: string;
+    expressions: string;
+    posture: string;
+    mannerisms: string;
+  };
+  artStyleAdaptation: {
+    [key: string]: string;
+  };
+  consistencyEnforcers: string[];
+  negativePrompts: string[];
+}
+
+export interface StoryAnalysis {
+  storyBeats: {
+    beat: string;
+    emotion: string;
+    visualPriority: string;
+    panelPurpose: string;
+    narrativeFunction: string;
+    characterAction: string;
+    environment: string;
+    dialogue?: string;
+    hasSpeechBubble?: boolean;
+    speechBubbleStyle?: string;
+    cleanedDialogue?: string;
+  }[];
+  characterArc: string[];
+  visualFlow: string[];
+  totalPanels: number;
+  pagesRequired: number;
+  dialoguePanels?: number;
+  speechBubbleDistribution?: Record<string, number>;
+}
+
+export interface QualityMetrics {
+  characterConsistency: number;
+  environmentalConsistency?: number;
+  storyCoherence: number;
+  panelCount: number;
+  professionalStandards: boolean;
+  environmentalDNAUsed?: boolean;
+  enhancedContextUsed?: boolean;
+}
+
 export interface ImageGenerationOptions {
   image_prompt: string;
   character_description: string;
@@ -64,6 +171,16 @@ export interface ImageGenerationOptions {
   characterArtStyle?: string;
   layoutType?: string;
   panelType?: PanelType;
+  environmentalContext?: EnvironmentalDNA;
+}
+
+export interface ComicGenerationResult {
+  success: boolean;
+  pages: any[];
+  characterDNA?: CharacterDNA;
+  environmentalDNA?: EnvironmentalDNA;
+  storyAnalysis?: StoryAnalysis;
+  qualityMetrics: QualityMetrics;
 }
 
 export interface ImageGenerationResult {
