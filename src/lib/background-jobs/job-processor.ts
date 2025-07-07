@@ -567,6 +567,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   // ===== ENHANCED JOB-SPECIFIC PROCESSORS =====
 
   private async processStorybookJobWithServices(job: StorybookJobData, servicesUsed: string[]): Promise<ComicGenerationResult> {
+    const startTime = Date.now();
     const { 
       title, 
       story, 
