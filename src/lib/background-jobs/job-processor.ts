@@ -8,10 +8,10 @@ import {
   IJobService,
   IServiceHealth,
   IServiceMetrics,
-  AudienceType
+  AudienceType,
   ComicPanel,
   QualityAnalysisContext,
-  QualityAnalysisResult
+  QualityAnalysisResult,
   ComicGenerationResult,
   EnvironmentalDNA,
   CharacterDNA,
@@ -520,7 +520,6 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   @withCorrelationResult('enhanced-job-processor', 'processJob')
   private async processJobWithServices(job: JobData): Promise<JobProcessingResult> {
     const startTime = Date.now();
-    const startTime = Date.now();
     const servicesUsed: string[] = [];
     
     try {
@@ -573,8 +572,6 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
 
   private async processStorybookJobWithServices(job: StorybookJobData, servicesUsed: string[]): Promise<ComicGenerationResult> {
     const startTime = Date.now();
-    const startTime = Date.now();
-    const startTime = Date.now();
     const { 
       title, 
       story, 
@@ -614,6 +611,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         
         console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} narrative beats for ${audience} audience`);
         await jobService.updateJobProgress(job.id, 15, `Story beats analyzed - ${storyAnalysis.storyBeats.length} panels planned with environmental context`);
+        
         // PHASE 2: ENVIRONMENTAL DNA CREATION
         console.log('🌍 PHASE 2: Creating Environmental DNA for world-building consistency...');
         let environmentalDNA: any = null;
@@ -983,7 +981,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         layoutType: layout_type,
         characterArtStyle: character_art_style,
         characterDescription: characterDescriptionToUse,
-        professionalStandards: true
+        professionalStandards: true,
         characterDNAEnabled: !!characterDNA,
         environmentalDNAEnabled: !!environmentalDNA && !environmentalDNA.fallback,
         enhancedContextEnabled: true,
@@ -1000,7 +998,6 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     // ===== PERFORMANCE SUMMARY =====
     console.log('📊 PHASE 7: Calculating Quality Metrics and Saving Storybook...');
     console.log(`⚡ PARALLEL PROCESSING SUMMARY:`);
-        qualityMetrics
     console.log(`📊 Success Rate: ${successfulPanels}/${totalScenes} panels (${Math.round((successfulPanels/totalScenes)*100)}%)`);
     
     // PHASE 7: SAVE WITH ENHANCED QUALITY METRICS INCLUDING PARALLEL PROCESSING DATA
@@ -1044,44 +1041,6 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       console.warn('⚠️ Quality analysis failed, continuing without automated scores:', qualityError);
     }
     
-    // ✅ NEW: Calculate Automated Quality Metrics
-    let automatedQualityScores: any = null;
-    try {
-      this.trackServiceUsage(job.id, 'ai');
-      if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
-      
-      console.log('🔍 Calculating automated quality metrics for comic...');
-      
-      automatedQualityScores = await aiService.calculateQualityMetrics(
-        updatedPages,
-        {
-          characterDNA,
-          environmentalDNA,
-          storyAnalysis,
-          targetAudience: audience,
-          artStyle: character_art_style
-        }
-      );
-      
-      console.log(`✅ Quality analysis complete - Grade: ${automatedQualityScores.qualityGrade} (${automatedQualityScores.overallTechnicalQuality}%)`);
-      
-    } catch (qualityError) {
-      console.warn('⚠️ Quality analysis failed, using fallback metrics:', qualityError);
-      automatedQualityScores = {
-        characterConsistencyScore: Math.round(averageConsistency),
-        environmentalCoherenceScore: Math.round(averageEnvironmentalConsistency),
-        narrativeFlowScore: Math.round(storyCoherence),
-        overallTechnicalQuality: Math.round((averageConsistency + averageEnvironmentalConsistency + storyCoherence) / 3),
-        qualityGrade: 'C',
-        analysisDetails: {
-          characterFeatureVariance: 0.25,
-          backgroundConsistencyRate: 0.75,
-          storyProgressionQuality: 0.75,
-          panelTransitionSmoothing: 0.75,
-        },
-      };
-    }
-    
     const storybookEntry = await databaseService.saveStorybookEntry({
       title,
       story,
@@ -1100,11 +1059,10 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       storyCoherence: Math.round(storyCoherence),
       panelCount: totalScenes,
       professionalStandards: true,
+      characterDNAUsed: !!characterDNA,
       environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
       enhancedContextUsed: true,
-      automatedScores: automatedQualityScores || undefined
-      // ✅ NEW: Add Automated Quality Scores
-      automatedScores: automatedQualityScores,
+      automatedScores: automatedQualityScores || undefined,
       // ✅ NEW: Add Generation Metrics
       generationMetrics: {
         totalGenerationTime: Date.now() - startTime,
@@ -1115,7 +1073,6 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       parallelDuration: parallelDuration,
       successfulPanels: successfulPanels,
       performanceGain: Math.round(((totalScenes * 8000) - parallelDuration) / 1000),
-      enhancedContextUsed: true,
     };
 
     await jobService.markJobCompleted(job.id, {
@@ -1127,19 +1084,15 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       characterDescription: characterDescriptionToUse,
       qualityMetrics,
       characterDNAUsed: !!characterDNA,
+      environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
       parallelProcessed: true,
       parallelDuration: parallelDuration,
       performanceGain: qualityMetrics.performanceGain,
       enhancedContextUsed: true,
       storyAnalysisUsed: !!storyAnalysis,
       professionalStandards: true,
-      enhancedContextUsed: true,
       automatedQualityGrade: automatedQualityScores?.qualityGrade,
       qualityRecommendations: automatedQualityScores?.recommendations
-      // ✅ NEW: Include Quality Data in Job Completion
-      qualityMetrics: qualityMetrics,
-      automatedQualityGrade: automatedQualityScores?.qualityGrade,
-      qualityRecommendations: aiService.generateQualityRecommendations(automatedQualityScores),
     });
 
     console.log(`✅ ENHANCED storybook job with quality measurement completed: ${job.id}`);
@@ -1408,7 +1361,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       generated_pages: sceneResult.pages,
       character_description: character_description || 'Generated character',
       professionalStandards: true,
-      enhancedGeneration: true,
+      enhancedGeneration: true
     });
 
     console.log(`✅ ENHANCED scene job completed: ${job.id}`);
