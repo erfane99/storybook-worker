@@ -163,6 +163,84 @@ export interface QualityMetrics {
   parallelDuration?: number;
   successfulPanels?: number;
   performanceGain?: number;
+  // Automated Quality Scoring (0-100)
+  automatedScores?: {
+    characterConsistencyScore: number;
+    environmentalCoherenceScore: number;
+    narrativeFlowScore: number;
+    overallTechnicalQuality: number;
+    qualityGrade: 'A' | 'B' | 'C' | 'D' | 'F';
+    analysisDetails: {
+      characterFeatureVariance: number;
+      backgroundConsistencyRate: number;
+      storyProgressionQuality: number;
+      panelTransitionSmoothing: number;
+    };
+  };
+  // Performance Metrics
+  generationMetrics?: {
+    totalGenerationTime: number;
+    averageTimePerPanel: number;
+    apiCallsUsed: number;
+    costEfficiency: number;
+  };
+}
+
+// ===== USER RATING SYSTEM INTERFACES =====
+
+export interface UserRating {
+  id: string;
+  comicId: string;
+  userId: string;
+  ratings: {
+    characterConsistency: number; // 1-5 stars
+    storyFlowNarrative: number;   // 1-5 stars
+    artQualityVisualAppeal: number; // 1-5 stars
+    sceneBackgroundConsistency: number; // 1-5 stars
+    overallComicExperience: number; // 1-5 stars
+  };
+  averageRating: number; // Calculated average of all ratings
+  comment?: string;
+  ratingDate: string;
+  timeSpentReading?: number; // seconds
+  wouldRecommend?: boolean;
+}
+
+export interface QualityAnalysisResult {
+  comicId: string;
+  automatedQuality: QualityMetrics['automatedScores'];
+  userRatings?: UserRating[];
+  qualitySummary: {
+    technicalScore: number; // 0-100 from automated analysis
+    userSatisfactionScore: number; // 0-100 from user ratings
+    combinedQualityScore: number; // Weighted combination
+    qualityTrend: 'improving' | 'stable' | 'declining';
+    recommendationsForImprovement: string[];
+  };
+  benchmarkComparison: {
+    aboveAverage: boolean;
+    percentileRank: number;
+    topPerformingAspects: string[];
+    areasForImprovement: string[];
+  };
+}
+
+export interface QualityTrendData {
+  timeframe: string;
+  averageScores: {
+    technical: number;
+    userSatisfaction: number;
+    combined: number;
+  };
+  improvementRate: number;
+  totalComicsAnalyzed: number;
+  qualityDistribution: {
+    excellent: number; // A grade
+    good: number;      // B grade
+    average: number;   // C grade
+    poor: number;      // D grade
+    failing: number;   // F grade
+  };
 }
 
 export interface ImageGenerationOptions {
@@ -305,6 +383,13 @@ export interface IDatabaseOperations {
   // Storybook Management
   saveStorybookEntry(data: StorybookEntryData): Promise<StorybookEntry>;
   getStorybookEntry(id: string): Promise<StorybookEntry | null>;
+  
+  // Quality Measurement System
+  saveQualityMetrics(comicId: string, qualityData: QualityMetrics): Promise<boolean>;
+  getQualityMetrics(comicId: string): Promise<QualityMetrics | null>;
+  saveUserRating(rating: UserRating): Promise<boolean>;
+  getUserRatings(comicId: string): Promise<UserRating[]>;
+  getQualityTrends(timeframe: string, limit?: number): Promise<QualityTrendData[]>;
   
   // Transaction Support
   executeTransaction<T>(operations: DatabaseOperation<T>[]): Promise<T[]>;

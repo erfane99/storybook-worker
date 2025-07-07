@@ -990,6 +990,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     await jobService.updateJobProgress(job.id, 95, 'Professional comic panels with environmental consistency generated, saving storybook with enhanced quality metrics');
 
     // ===== PERFORMANCE SUMMARY =====
+    console.log('📊 PHASE 7: Calculating Quality Metrics and Saving Storybook...');
     console.log(`⚡ PARALLEL PROCESSING SUMMARY:`);
     console.log(`🚀 Total Duration: ${parallelDuration}ms (vs ~${totalScenes * 8}s sequential)`);
     console.log(`📊 Success Rate: ${successfulPanels}/${totalScenes} panels (${Math.round((successfulPanels/totalScenes)*100)}%)`);
@@ -1002,6 +1003,44 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     const averageEnvironmentalConsistency = environmentalConsistencyScore / totalScenes;
     const storyCoherence = storyAnalysis ? 90 : 70; // Higher with story analysis
     
+    // ✅ NEW: Calculate Automated Quality Metrics
+    let automatedQualityScores: any = null;
+    try {
+      this.trackServiceUsage(job.id, 'ai');
+      if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
+      
+      console.log('🔍 Calculating automated quality metrics for comic...');
+      
+      automatedQualityScores = await aiService.calculateQualityMetrics(
+        updatedPages,
+        {
+          characterDNA,
+          environmentalDNA,
+          storyAnalysis,
+          targetAudience: audience,
+          artStyle: character_art_style
+        }
+      );
+      
+      console.log(`✅ Quality analysis complete - Grade: ${automatedQualityScores.qualityGrade} (${automatedQualityScores.overallTechnicalQuality}%)`);
+      
+    } catch (qualityError) {
+      console.warn('⚠️ Quality analysis failed, using fallback metrics:', qualityError);
+      automatedQualityScores = {
+        characterConsistencyScore: Math.round(averageConsistency),
+        environmentalCoherenceScore: Math.round(averageEnvironmentalConsistency),
+        narrativeFlowScore: Math.round(storyCoherence),
+        overallTechnicalQuality: Math.round((averageConsistency + averageEnvironmentalConsistency + storyCoherence) / 3),
+        qualityGrade: 'C',
+        analysisDetails: {
+          characterFeatureVariance: 0.25,
+          backgroundConsistencyRate: 0.75,
+          storyProgressionQuality: 0.75,
+          panelTransitionSmoothing: 0.75,
+        },
+      };
+    }
+    
     const storybookEntry = await databaseService.saveStorybookEntry({
       title,
       story,
@@ -1012,7 +1051,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       has_errors: false,
     });
 
-    await jobService.updateJobProgress(job.id, 100, 'Professional comic book created with environmental consistency and enhanced quality standards');
+    await jobService.updateJobProgress(job.id, 100, `Professional comic book created - Quality Grade: ${automatedQualityScores?.qualityGrade || 'C'} with enhanced standards`);
 
     const qualityMetrics = {
       characterConsistency: Math.round(averageConsistency),
@@ -1022,6 +1061,15 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       professionalStandards: true,
       environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
       parallelProcessed: true,
+      // ✅ NEW: Add Automated Quality Scores
+      automatedScores: automatedQualityScores,
+      // ✅ NEW: Add Generation Metrics
+      generationMetrics: {
+        totalGenerationTime: Date.now() - startTime,
+        averageTimePerPanel: totalScenes > 0 ? (Date.now() - startTime) / totalScenes : 0,
+        apiCallsUsed: totalScenes + 3, // Rough estimate: panels + story analysis + DNA creation
+        costEfficiency: totalScenes > 0 ? 100 / totalScenes : 100, // Simple efficiency metric
+      }
       parallelDuration: parallelDuration,
       successfulPanels: successfulPanels,
       performanceGain: Math.round(((totalScenes * 8000) - parallelDuration) / 1000),
@@ -1044,10 +1092,16 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       storyAnalysisUsed: !!storyAnalysis,
       professionalStandards: true,
       enhancedContextUsed: true
+      // ✅ NEW: Include Quality Data in Job Completion
+      qualityMetrics: qualityMetrics,
+      automatedQualityGrade: automatedQualityScores?.qualityGrade,
+      qualityRecommendations: aiService.generateQualityRecommendations(automatedQualityScores),
     });
 
-    console.log(`✅ ENHANCED storybook job with environmental consistency completed: ${job.id}`);
-    console.log(`📊 Quality: ${qualityMetrics.characterConsistency}% character consistency, ${qualityMetrics.environmentalConsistency}% environmental consistency, ${qualityMetrics.storyCoherence}% coherence, ${qualityMetrics.panelCount} panels`);
+    console.log(`✅ ENHANCED storybook job with quality measurement completed: ${job.id}`);
+    console.log(`📊 Quality Grade: ${automatedQualityScores?.qualityGrade || 'C'} (${automatedQualityScores?.overallTechnicalQuality || 75}% overall)`);
+    console.log(`🎭 Character: ${qualityMetrics.characterConsistency}%, 🌍 Environmental: ${qualityMetrics.environmentalConsistency}%, 📖 Story: ${qualityMetrics.storyCoherence}%`);
+    console.log(`⚡ Performance: ${qualityMetrics.generationMetrics?.totalGenerationTime}ms total, ${Math.round(qualityMetrics.generationMetrics?.averageTimePerPanel || 0)}ms/panel`);
     console.log(`⚡ Performance: ${parallelDuration}ms total, ${qualityMetrics.performanceGain}s saved vs sequential`);
 
     return {
