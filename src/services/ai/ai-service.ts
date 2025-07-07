@@ -1381,7 +1381,7 @@ ${story}`;
       const pageScenes = pageBeats.map((beat, panelIndex) => ({
         description: beat.beat,
         emotion: beat.emotion,
-        imagePrompt: this.buildProfessionalPanelPrompt(beat, characterDNA, artStyle, config),
+     imagePrompt: this.buildProfessionalPanelPrompt(beat, characterDNA, artStyle, config, null),
         panelType: this.determinePanelType(panelIndex, config.panelsPerPage),
         characterAction: beat.characterAction,
         narrativePurpose: beat.panelPurpose,
