@@ -827,7 +827,7 @@ async calculateQualityMetrics(
     }
 
     // Extract environmental context patterns
-    if (context.environmentalDNA && qualityScores.environmentalConsistency >= 85) {
+    if (context.environmentalDNA && (qualityScores.environmentalConsistency || 0) >= 85) {
       patterns.push({
         type: 'environmental_context' as const,
         data: {
