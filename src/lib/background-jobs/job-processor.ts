@@ -1104,6 +1104,45 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     console.log(`⚡ Performance: ${qualityMetrics.generationMetrics?.totalGenerationTime}ms total, ${Math.round(qualityMetrics.generationMetrics?.averageTimePerPanel || 0)}ms/panel`);
     console.log(`⚡ Performance: ${parallelDuration}ms total, ${qualityMetrics.performanceGain}s saved vs sequential`);
 
+    // PHASE 8: SUCCESS PATTERN LEARNING
+    console.log('🧠 PHASE 8: Success Pattern Learning...');
+    await this.processSuccessPatternLearning(job.id, {
+      context: enhancedContext,
+      results: {
+        pages: updatedPages,
+        characterDNA,
+        environmentalDNA,
+        storyAnalysis,
+      },
+      qualityMetrics: {
+        characterConsistency: Math.round(averageConsistency),
+        environmentalConsistency: Math.round(averageEnvironmentalConsistency),
+        storyCoherence: Math.round(storyCoherence),
+        panelCount: totalScenes,
+        professionalStandards: true,
+        automatedScores: {
+          characterConsistencyScore: Math.round(averageConsistency),
+          environmentalCoherenceScore: Math.round(averageEnvironmentalConsistency),
+          narrativeFlowScore: Math.round(storyCoherence),
+          overallTechnicalQuality: Math.round((averageConsistency + averageEnvironmentalConsistency + storyCoherence) / 3),
+          qualityGrade: Math.round((averageConsistency + averageEnvironmentalConsistency + storyCoherence) / 3) >= 90 ? 'A' as const :
+                       Math.round((averageConsistency + averageEnvironmentalConsistency + storyCoherence) / 3) >= 80 ? 'B' as const :
+                       Math.round((averageConsistency + averageEnvironmentalConsistency + storyCoherence) / 3) >= 70 ? 'C' as const :
+                       Math.round((averageConsistency + averageEnvironmentalConsistency + storyCoherence) / 3) >= 60 ? 'D' as const : 'F' as const,
+          analysisDetails: {
+            characterFeatureVariance: 100 - averageConsistency,
+            backgroundConsistencyRate: averageEnvironmentalConsistency,
+            storyProgressionQuality: storyCoherence,
+            panelTransitionSmoothing: 85,
+            panelsAnalyzed: totalScenes,
+            characterDNAUsed: !!characterDNA,
+            environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
+            storyAnalysisUsed: !!storyAnalysis,
+          },
+        },
+      },
+    });
+
     return {
       success: true,
       pages: updatedPages,
@@ -1454,6 +1493,129 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     });
 
     console.log(`✅ ENHANCED image job completed: ${job.id} with professional character consistency`);
+  }
+
+  // ===== SUCCESS PATTERN LEARNING IMPLEMENTATION =====
+
+  /**
+   * Process success pattern learning after comic generation
+   */
+  private async processSuccessPatternLearning(
+    jobId: string,
+    data: {
+      context: any;
+      results: any;
+      qualityMetrics: any;
+      userRatings?: any[];
+    }
+  ): Promise<void> {
+    try {
+      console.log('🧠 Processing success pattern learning...');
+
+      // Check if this comic meets success criteria
+      const technicalSuccess = data.qualityMetrics.automatedScores?.overallTechnicalQuality >= 85;
+      const userSuccess = data.userRatings && data.userRatings.length > 0
+        ? data.userRatings.reduce((sum: number, r: any) => sum + r.averageRating, 0) / data.userRatings.length >= 4.0
+        : false;
+
+      // For now, consider technical success sufficient for learning
+      const isSuccessful = technicalSuccess;
+
+      if (!isSuccessful) {
+        console.log('📊 Comic does not meet success criteria for pattern learning');
+        console.log(`   Technical Score: ${data.qualityMetrics.automatedScores?.overallTechnicalQuality || 0}% (need ≥85%)`);
+        return;
+      }
+
+      console.log('✅ Comic meets success criteria - storing patterns for learning');
+      console.log(`   Technical Score: ${data.qualityMetrics.automatedScores?.overallTechnicalQuality}%`);
+      console.log(`   Character Consistency: ${data.qualityMetrics.characterConsistency}%`);
+      console.log(`   Environmental Coherence: ${data.qualityMetrics.environmentalConsistency}%`);
+
+      // Get AI service for pattern storage
+      this.trackServiceUsage(jobId, 'ai');
+      const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
+
+      if (!aiService) {
+        console.warn('⚠️ AI service not available for pattern learning');
+        return;
+      }
+
+      // Store successful patterns
+      const patternStored = await aiService.storeSuccessfulPattern(
+        data.context,
+        data.results,
+        data.qualityMetrics,
+        data.userRatings
+      );
+
+      if (patternStored) {
+        console.log('✅ Success patterns stored for future learning');
+        console.log('🎯 System will use these patterns to improve future comics');
+      } else {
+        console.log('📝 Pattern storage skipped (may not meet all criteria)');
+      }
+
+    } catch (error: any) {
+      console.warn('⚠️ Success pattern learning failed:', error.message);
+      console.log('ℹ️ Comic generation completed successfully despite learning failure');
+    }
+  }
+
+  /**
+   * Apply learned patterns to enhance context before generation
+   */
+  private async applyLearnedPatterns(
+    enhancedContext: any,
+    jobId: string
+  ): Promise<any> {
+    try {
+      console.log('🧠 Applying learned patterns to enhance context...');
+
+      // Get AI service for pattern evolution
+      this.trackServiceUsage(jobId, 'ai');
+      const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
+
+      if (!aiService) {
+        console.warn('⚠️ AI service not available for pattern application');
+        return enhancedContext;
+      }
+
+      // Find similar successful patterns
+      const similarPatterns = await aiService.findSimilarSuccessPatterns({
+        audience: enhancedContext.audience || 'children',
+        artStyle: enhancedContext.characterArtStyle || 'storybook',
+        environmentalSetting: enhancedContext.environmentalDNA?.primaryLocation?.type,
+      }, 5);
+
+      if (similarPatterns.length === 0) {
+        console.log('📝 No similar success patterns found - using original context');
+        return enhancedContext;
+      }
+
+      console.log(`🎯 Found ${similarPatterns.length} similar success patterns`);
+      console.log(`   Average effectiveness: ${similarPatterns.reduce((sum, p) => sum + p.effectivenessScore, 0) / similarPatterns.length}%`);
+
+      // Evolve prompts using successful patterns
+      const evolutionResult = await aiService.evolvePromptsFromPatterns(
+        enhancedContext,
+        similarPatterns
+      );
+
+      if (evolutionResult.patternsApplied.length > 0) {
+        console.log(`✅ Applied ${evolutionResult.patternsApplied.length} learned patterns`);
+        console.log(`🎯 Expected improvements: ${evolutionResult.expectedImprovements.join(', ')}`);
+        return evolutionResult.evolvedPrompts;
+      } else {
+        console.log('📝 No patterns applied - using original context');
+        return enhancedContext;
+      }
+
+    } catch (error: any) {
+      console.warn('⚠️ Pattern application failed:', error.message);
+      console.log('ℹ️ Continuing with original context');
+      return enhancedContext;
+    }
   }
 }
 
