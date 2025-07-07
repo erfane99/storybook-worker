@@ -8,7 +8,10 @@ import {
   DatabaseOperation,
   JobFilter,
   ServiceConfig,
-  RetryConfig 
+  RetryConfig,
+  QualityMetrics,
+  UserRating,
+  QualityTrendData
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
