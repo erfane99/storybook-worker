@@ -12,6 +12,8 @@ import {
   QualityMetrics,
   UserRating,
   QualityTrendData,
+  ComicPanel,
+  QualityAnalysisResult
 } from '../interfaces/service-contracts.js';
 import { 
   Result,

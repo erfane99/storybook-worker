@@ -22,7 +22,10 @@ import {
   CharacterDNA,
   StoryAnalysis,
   StoryBeat,
-  QualityMetrics
+  QualityMetrics,
+  ComicPanel,
+  QualityAnalysisContext,
+  QualityAnalysisResult
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
@@ -67,28 +70,6 @@ const QUALITY_ANALYSIS_TIMEOUTS = {
 } as const;
 
 // ===== QUALITY ANALYSIS INTERFACES =====
-
-export interface ComicPanel {
-  id: string;
-  imageUrl: string;
-  prompt: string;
-  generatedAt: string;
-  qualityScore?: number;
-  characterConsistency?: number;
-  environmentalConsistency?: number;
-}
-
-export interface QualityAnalysisContext {
-  characterDNA?: CharacterDNA;
-  environmentalDNA?: EnvironmentalDNA;
-  storyAnalysis?: StoryAnalysis;
-  generationSettings: {
-    artStyle: string;
-    audience: AudienceType;
-    targetQuality: 'standard' | 'professional' | 'premium';
-    panelCount: number;
-  };
-}
 
 interface ConsistencyAnalysis {
   featureVariance: number;
