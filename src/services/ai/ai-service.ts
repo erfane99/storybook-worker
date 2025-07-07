@@ -23,7 +23,8 @@ import {
   PanelType,
   EnvironmentalDNA,
   CharacterDNA,
-  StoryAnalysis
+  StoryAnalysis,
+  StoryBeat
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
