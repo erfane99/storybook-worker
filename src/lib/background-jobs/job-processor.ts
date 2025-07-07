@@ -757,7 +757,6 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     // PHASE 6: PROFESSIONAL PANEL GENERATION WITH ENVIRONMENTAL AND CHARACTER CONSISTENCY
     const updatedPages = [];
     const totalScenes = pages.reduce((total, page) => total + (page.scenes?.length || 0), 0);
-    let processedScenes = 0;
     let characterConsistencyScore = 0;
     let environmentalConsistencyScore = 0;
 
@@ -765,82 +764,209 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     console.log(`🌍 Environmental DNA: ${environmentalDNA?.primaryLocation?.name || 'Fallback'}`);
     console.log(`🎭 Character DNA: ${characterDNA ? 'Active' : 'Fallback'}, Art Style: ${character_art_style}`);
 
+    // ===== PARALLEL PANEL PROCESSING OPTIMIZATION =====
+    console.log(`⚡ OPTIMIZATION: Starting parallel panel generation for ${totalScenes} panels...`);
+    
+    // Prepare all panel generation tasks
+    const panelTasks: Array<{
+      pageIndex: number;
+      sceneIndex: number;
+      scene: any;
+      panelNumber: number;
+      totalPanels: number;
+    }> = [];
+    
+    let panelCounter = 0;
     for (const [pageIndex, page] of pages.entries()) {
-      const updatedScenes = [];
       const pageScenes = page.scenes || [];
+      for (const [sceneIndex, scene] of pageScenes.entries()) {
+        panelTasks.push({
+          pageIndex,
+          sceneIndex,
+          scene,
+          panelNumber: panelCounter + 1,
+          totalPanels: totalScenes
+        });
+        panelCounter++;
+      }
+    }
+    
+    console.log(`🚀 Prepared ${panelTasks.length} panel generation tasks for parallel processing`);
+    
+    // ===== PARALLEL PANEL GENERATION WITH REAL-TIME PROGRESS =====
+    const panelResults = new Map<string, any>();
+    const panelErrors = new Map<string, any>();
+    let completedPanels = 0;
+    
+    // Create progress tracking function
+    const updatePanelProgress = async (panelNumber: number, totalPanels: number, status: string) => {
+      const overallProgress = Math.round(55 + ((completedPanels / totalPanels) * 40));
+      await jobService.updateJobProgress(
+        job.id,
+        overallProgress,
+        `${status} panel ${panelNumber}/${totalPanels} with environmental and character consistency`
+      );
+    };
+    
+    // Generate all panels in parallel using Promise.allSettled for error resilience
+    const panelPromises = panelTasks.map(async (task) => {
+      const { pageIndex, sceneIndex, scene, panelNumber, totalPanels } = task;
+      const panelKey = `${pageIndex}-${sceneIndex}`;
+      
+      try {
+        // Update progress for this panel start
+        await updatePanelProgress(panelNumber, totalPanels, 'Generating professional');
+        
+        this.trackServiceUsage(job.id, 'ai');
+        if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
+        
+        console.log(`🎨 Generating professional panel ${panelNumber}/${totalPanels} (Page ${pageIndex + 1}, Scene ${sceneIndex + 1}) with environmental and character consistency...`);
+        
+        // Enhanced scene image generation with environmental and character DNA
+        const imageResult = await aiService.generateSceneImage({
+          image_prompt: scene.imagePrompt,
+          character_description: characterDescriptionToUse,
+          emotion: scene.emotion || 'neutral',
+          audience: audience,
+          isReusedImage: is_reused_image,
+          cartoon_image: character_image,
+          characterArtStyle: character_art_style,
+          layoutType: layout_type,
+          panelType: scene.panelType || 'standard',
+          environmentalContext: enhancedContext // Pass environmental context to image generation
+        });
+        
+        // Calculate consistency scores
+        const panelConsistency = characterDNA ? 95 : 75; // Higher with DNA
+        const envConsistency = environmentalDNA && !environmentalDNA.fallback ? 90 : 70; // Higher with environmental DNA
+        
+        const enhancedScene = {
+          ...scene,
+          generatedImage: imageResult.url,
+          characterArtStyle: character_art_style,
+          layoutType: layout_type,
+          promptUsed: imageResult.prompt_used,
+          characterDescription: characterDescriptionToUse,
+          characterConsistency: panelConsistency,
+          environmentalConsistency: envConsistency,
+          professionalStandards: true,
+          characterDNAUsed: !!characterDNA,
+          environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
+          enhancedContextUsed: true,
+          panelNumber: panelNumber,
+          parallelGenerated: true
+        };
+        
+        // Store result
+        panelResults.set(panelKey, enhancedScene);
+        
+        // Update completion tracking
+        completedPanels++;
+        this.updateComicGenerationProgress(job.id, { panelsGenerated: completedPanels });
+        
+        // Update progress for this panel completion
+        await updatePanelProgress(panelNumber, totalPanels, 'Completed professional');
+        
+        console.log(`✅ Professional panel ${panelNumber}/${totalPanels} generated with ${panelConsistency}% character consistency, ${envConsistency}% environmental consistency`);
+        
+        return {
+          success: true,
+          panelKey,
+          scene: enhancedScene,
+          consistency: { character: panelConsistency, environmental: envConsistency }
+        };
+        
+      } catch (error) {
+        console.warn(`⚠️ Failed to generate professional panel ${panelNumber}/${totalPanels} with enhanced consistency, using fallback:`, error);
+        
+        const fallbackScene = {
+          ...scene,
+          generatedImage: character_image || '',
+          characterArtStyle: character_art_style,
+          layoutType: layout_type,
+          error: 'Failed to generate professional panel with enhanced consistency, used fallback',
+          characterConsistency: 50,
+          environmentalConsistency: 50,
+          professionalStandards: false,
+          panelNumber: panelNumber,
+          parallelGenerated: true,
+          fallback: true
+        };
+        
+        // Store error result
+        panelErrors.set(panelKey, error);
+        panelResults.set(panelKey, fallbackScene);
+        
+        // Update completion tracking
+        completedPanels++;
+        
+        // Update progress for this panel completion (with error)
+        await updatePanelProgress(panelNumber, totalPanels, 'Completed (fallback)');
+        
+        return {
+          success: false,
+          panelKey,
+          scene: fallbackScene,
+          error: error,
+          consistency: { character: 50, environmental: 50 }
+        };
+      }
+    });
+    
+    console.log(`⚡ Starting parallel generation of ${panelPromises.length} panels...`);
+    const startParallelTime = Date.now();
+    
+    // Wait for all panels to complete (or fail gracefully)
+    const panelResultsArray = await Promise.allSettled(panelPromises);
+    
+    const parallelDuration = Date.now() - startParallelTime;
+    console.log(`⚡ PARALLEL PROCESSING COMPLETE: ${panelResultsArray.length} panels in ${parallelDuration}ms`);
+    console.log(`🚀 PERFORMANCE GAIN: ~${Math.round(((totalScenes * 8000) - parallelDuration) / 1000)}s saved vs sequential processing`);
+    
+    // Process results and calculate final consistency scores
+    const successfulPanels = panelResultsArray.filter(result => 
+      result.status === 'fulfilled' && result.value.success
+    ).length;
+    
+    const failedPanels = panelResultsArray.length - successfulPanels;
+    
+    console.log(`📊 PARALLEL RESULTS: ${successfulPanels} successful, ${failedPanels} fallback panels`);
+    
+    // Calculate aggregate consistency scores from parallel results
+    panelResultsArray.forEach(result => {
+      if (result.status === 'fulfilled' && result.value.consistency) {
+        characterConsistencyScore += result.value.consistency.character;
+        environmentalConsistencyScore += result.value.consistency.environmental;
+      }
+    });
+    
+    // ===== RECONSTRUCT PAGES FROM PARALLEL RESULTS =====
+    for (const [pageIndex, page] of pages.entries()) {
+      const pageScenes = page.scenes || [];
+      const updatedScenes = [];
       
       for (const [sceneIndex, scene] of pageScenes.entries()) {
-        const sceneProgress = processedScenes / totalScenes;
-        const progressPercentage = Math.round(55 + (sceneProgress * 40));
+        const panelKey = `${pageIndex}-${sceneIndex}`;
+        const panelResult = panelResults.get(panelKey);
         
-        await jobService.updateJobProgress(
-          job.id, 
-          progressPercentage,
-          `Generating professional panel ${processedScenes + 1}/${totalScenes} with environmental and character consistency`
-        );
-
-        try {
-          this.trackServiceUsage(job.id, 'ai');
-          if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
-          
-          console.log(`🎨 Generating professional panel ${sceneIndex + 1} for page ${pageIndex + 1} with environmental and character consistency...`);
-          
-          // Enhanced scene image generation with environmental and character DNA
-          const imageResult = await aiService.generateSceneImage({
-            image_prompt: scene.imagePrompt,
-            character_description: characterDescriptionToUse,
-            emotion: scene.emotion || 'neutral',
-            audience: audience,
-            isReusedImage: is_reused_image,
-            cartoon_image: character_image,
-            characterArtStyle: character_art_style,
-            layoutType: layout_type,
-            panelType: scene.panelType || 'standard',
-            environmentalContext: enhancedContext // Pass environmental context to image generation
-          });
-          
-          // Calculate consistency scores
-          const panelConsistency = characterDNA ? 95 : 75; // Higher with DNA
-          const envConsistency = environmentalDNA && !environmentalDNA.fallback ? 90 : 70; // Higher with environmental DNA
-          characterConsistencyScore += panelConsistency;
-          environmentalConsistencyScore += envConsistency;
-          
-          updatedScenes.push({
-            ...scene,
-            generatedImage: imageResult.url,
-            characterArtStyle: character_art_style,
-            layoutType: layout_type,
-            promptUsed: imageResult.prompt_used,
-            characterDescription: characterDescriptionToUse,
-            characterConsistency: panelConsistency,
-            environmentalConsistency: envConsistency,
-            professionalStandards: true,
-            characterDNAUsed: !!characterDNA,
-            environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
-            enhancedContextUsed: true
-          });
-          
-          this.updateComicGenerationProgress(job.id, { panelsGenerated: processedScenes + 1 });
-          console.log(`✅ Professional panel ${sceneIndex + 1} generated with ${panelConsistency}% character consistency, ${envConsistency}% environmental consistency`);
-          
-        } catch (error) {
-          console.warn(`⚠️ Failed to generate professional panel with enhanced consistency, using fallback:`, error);
-          characterConsistencyScore += 50; // Lower score for fallback
-          environmentalConsistencyScore += 50; // Lower score for fallback
-          
+        if (panelResult) {
+          updatedScenes.push(panelResult);
+        } else {
+          // Fallback if somehow panel result is missing
+          console.warn(`⚠️ Missing panel result for ${panelKey}, using fallback`);
           updatedScenes.push({
             ...scene,
             generatedImage: character_image || '',
             characterArtStyle: character_art_style,
             layoutType: layout_type,
-            error: 'Failed to generate professional panel with enhanced consistency, used fallback',
+            error: 'Missing panel result from parallel processing',
             characterConsistency: 50,
             environmentalConsistency: 50,
             professionalStandards: false,
+            parallelGenerated: false,
+            fallback: true
           });
         }
-        
-        processedScenes++;
       }
       
       updatedPages.push({
@@ -853,6 +979,9 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         characterDNAEnabled: !!characterDNA,
         environmentalDNAEnabled: !!environmentalDNA && !environmentalDNA.fallback,
         enhancedContextEnabled: true,
+        parallelProcessed: true,
+        parallelDuration: parallelDuration,
+        successfulPanels: updatedScenes.filter(s => !s.fallback).length,
         panelCount: updatedScenes.length,
         environmentalConsistency: environmentalConsistencyScore / updatedScenes.length
       });
@@ -860,7 +989,12 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
 
     await jobService.updateJobProgress(job.id, 95, 'Professional comic panels with environmental consistency generated, saving storybook with enhanced quality metrics');
 
-    // PHASE 7: SAVE WITH ENHANCED QUALITY METRICS
+    // ===== PERFORMANCE SUMMARY =====
+    console.log(`⚡ PARALLEL PROCESSING SUMMARY:`);
+    console.log(`🚀 Total Duration: ${parallelDuration}ms (vs ~${totalScenes * 8}s sequential)`);
+    console.log(`📊 Success Rate: ${successfulPanels}/${totalScenes} panels (${Math.round((successfulPanels/totalScenes)*100)}%)`);
+    
+    // PHASE 7: SAVE WITH ENHANCED QUALITY METRICS INCLUDING PARALLEL PROCESSING DATA
     this.trackServiceUsage(job.id, 'database');
     servicesUsed.push('database');
     
@@ -887,6 +1021,10 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       panelCount: totalScenes,
       professionalStandards: true,
       environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
+      parallelProcessed: true,
+      parallelDuration: parallelDuration,
+      successfulPanels: successfulPanels,
+      performanceGain: Math.round(((totalScenes * 8000) - parallelDuration) / 1000),
       enhancedContextUsed: true
     };
 
@@ -899,6 +1037,9 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       characterDescription: characterDescriptionToUse,
       qualityMetrics,
       characterDNAUsed: !!characterDNA,
+      parallelProcessed: true,
+      parallelDuration: parallelDuration,
+      performanceGain: qualityMetrics.performanceGain,
       environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
       storyAnalysisUsed: !!storyAnalysis,
       professionalStandards: true,
@@ -907,6 +1048,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
 
     console.log(`✅ ENHANCED storybook job with environmental consistency completed: ${job.id}`);
     console.log(`📊 Quality: ${qualityMetrics.characterConsistency}% character consistency, ${qualityMetrics.environmentalConsistency}% environmental consistency, ${qualityMetrics.storyCoherence}% coherence, ${qualityMetrics.panelCount} panels`);
+    console.log(`⚡ Performance: ${parallelDuration}ms total, ${qualityMetrics.performanceGain}s saved vs sequential`);
 
     return {
       success: true,

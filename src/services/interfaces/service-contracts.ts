@@ -159,6 +159,10 @@ export interface QualityMetrics {
   professionalStandards: boolean;
   environmentalDNAUsed?: boolean;
   enhancedContextUsed?: boolean;
+  parallelProcessed?: boolean;
+  parallelDuration?: number;
+  successfulPanels?: number;
+  performanceGain?: number;
 }
 
 export interface ImageGenerationOptions {
