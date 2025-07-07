@@ -1074,7 +1074,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       parallelDuration: parallelDuration,
       successfulPanels: successfulPanels,
       performanceGain: Math.round(((totalScenes * 8000) - parallelDuration) / 1000),
-      enhancedContextUsed: true
+      enhancedContextUsed: true,
     };
 
     await jobService.markJobCompleted(job.id, {
@@ -1092,7 +1092,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
       storyAnalysisUsed: !!storyAnalysis,
       professionalStandards: true,
-      enhancedContextUsed: true
+      enhancedContextUsed: true,
       // ✅ NEW: Include Quality Data in Job Completion
       qualityMetrics: qualityMetrics,
       automatedQualityGrade: automatedQualityScores?.qualityGrade,
