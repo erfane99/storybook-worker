@@ -372,6 +372,47 @@ export interface IServiceLifecycle {
 
 // ===== BUSINESS OPERATION INTERFACES =====
 
+// ===== QUALITY ANALYSIS INTERFACES =====
+
+export interface ComicPanel {
+  id: string;
+  imageUrl: string;
+  prompt: string;
+  generatedAt: string;
+  qualityScore?: number;
+  characterConsistency?: number;
+  environmentalConsistency?: number;
+}
+
+export interface QualityAnalysisContext {
+  characterDNA?: CharacterDNA;
+  environmentalDNA?: EnvironmentalDNA;
+  storyAnalysis?: StoryAnalysis;
+  generationSettings: {
+    artStyle: string;
+    audience: AudienceType;
+    targetQuality: 'standard' | 'professional' | 'premium';
+    panelCount: number;
+  };
+}
+
+export interface QualityAnalysisResult {
+  characterConsistencyScore: number;
+  environmentalCoherenceScore: number;
+  narrativeFlowScore: number;
+  overallTechnicalQuality: number;
+  qualityGrade: 'A' | 'B' | 'C' | 'D' | 'F';
+  analysisDetails: {
+    characterFeatureVariance: number;
+    backgroundConsistencyRate: number;
+    storyProgressionQuality: number;
+    panelTransitionSmoothing: number;
+    panelsAnalyzed: number;
+    processingTime: number;
+  };
+  recommendations: string[];
+}
+
 export interface IDatabaseOperations {
   // Job Management
   getPendingJobs(filter?: JobFilter, limit?: number): Promise<JobData[]>;
@@ -416,6 +457,10 @@ export interface IAIOperations {
   
   // Cartoonize Operations
   processCartoonize(options: CartoonizeOptions): Promise<CartoonizeResult>;
+  
+  // Quality Analysis Operations
+  calculateQualityMetrics(panels: ComicPanel[], context: QualityAnalysisContext): Promise<QualityAnalysisResult>;
+  generateQualityRecommendations(analysis: QualityAnalysisResult): string[];
   
   // Chat Completion
   createChatCompletion(options: ChatCompletionOptions): Promise<ChatCompletionResult>;
