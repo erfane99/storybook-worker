@@ -127,20 +127,22 @@ export interface CharacterDNA {
   negativePrompts: string[];
 }
 
+export interface StoryBeat {
+  beat: string;
+  emotion: string;
+  visualPriority: string;
+  panelPurpose: string;
+  narrativeFunction: string;
+  characterAction: string;
+  environment: string;
+  dialogue?: string;
+  hasSpeechBubble?: boolean;
+  speechBubbleStyle?: string;
+  cleanedDialogue?: string;
+}
+
 export interface StoryAnalysis {
-  storyBeats: {
-    beat: string;
-    emotion: string;
-    visualPriority: string;
-    panelPurpose: string;
-    narrativeFunction: string;
-    characterAction: string;
-    environment: string;
-    dialogue?: string;
-    hasSpeechBubble?: boolean;
-    speechBubbleStyle?: string;
-    cleanedDialogue?: string;
-  }[];
+  storyBeats: StoryBeat[];
   characterArc: string[];
   visualFlow: string[];
   totalPanels: number;
