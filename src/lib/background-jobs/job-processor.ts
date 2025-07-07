@@ -8,6 +8,7 @@ import {
   IJobService,
   IServiceHealth,
   IServiceMetrics,
+  AudienceType
   ComicPanel,
   QualityAnalysisContext,
   QualityAnalysisResult
@@ -519,6 +520,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   @withCorrelationResult('enhanced-job-processor', 'processJob')
   private async processJobWithServices(job: JobData): Promise<JobProcessingResult> {
     const startTime = Date.now();
+    const startTime = Date.now();
     const servicesUsed: string[] = [];
     
     try {
@@ -570,6 +572,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
   // ===== ENHANCED JOB-SPECIFIC PROCESSORS =====
 
   private async processStorybookJobWithServices(job: StorybookJobData, servicesUsed: string[]): Promise<ComicGenerationResult> {
+    const startTime = Date.now();
     const startTime = Date.now();
     const startTime = Date.now();
     const { 
@@ -980,7 +983,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         layoutType: layout_type,
         characterArtStyle: character_art_style,
         characterDescription: characterDescriptionToUse,
-        professionalStandards: true,
+        professionalStandards: true
         characterDNAEnabled: !!characterDNA,
         environmentalDNAEnabled: !!environmentalDNA && !environmentalDNA.fallback,
         enhancedContextEnabled: true,
@@ -997,7 +1000,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     // ===== PERFORMANCE SUMMARY =====
     console.log('📊 PHASE 7: Calculating Quality Metrics and Saving Storybook...');
     console.log(`⚡ PARALLEL PROCESSING SUMMARY:`);
-    console.log(`🚀 Total Duration: ${parallelDuration}ms (vs ~${totalScenes * 8}s sequential)`);
+        qualityMetrics
     console.log(`📊 Success Rate: ${successfulPanels}/${totalScenes} panels (${Math.round((successfulPanels/totalScenes)*100)}%)`);
     
     // PHASE 7: SAVE WITH ENHANCED QUALITY METRICS INCLUDING PARALLEL PROCESSING DATA
@@ -1127,7 +1130,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       parallelProcessed: true,
       parallelDuration: parallelDuration,
       performanceGain: qualityMetrics.performanceGain,
-      environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
+      enhancedContextUsed: true,
       storyAnalysisUsed: !!storyAnalysis,
       professionalStandards: true,
       enhancedContextUsed: true,
@@ -1151,7 +1154,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       characterDNA,
       environmentalDNA,
       storyAnalysis,
-      qualityMetrics,
+      qualityMetrics
     };
   }
 
