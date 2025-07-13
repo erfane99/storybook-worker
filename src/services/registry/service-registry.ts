@@ -84,7 +84,7 @@ export class ServiceRegistry {
         singleton: true,
         lazy: true,
         dependencies: [SERVICE_TOKENS.CONFIG],
-        healthCheck: true,
+        healthCheck: false, // Not critical for basic job processing
       }
     );
 
@@ -129,6 +129,38 @@ export class ServiceRegistry {
 
     this.registered = true;
     console.log('✅ All services registered successfully');
+  }
+
+  /**
+   * Initialize core services needed for job processing
+   */
+  static async initializeCoreServices(): Promise<void> {
+    console.log('🚀 Initializing core services for job processing...');
+    
+    try {
+      // Initialize configuration services first
+      await serviceContainer.resolve(SERVICE_TOKENS.CONFIG);
+      await serviceContainer.resolve('ISubscriptionConfigService');
+      
+      // Initialize database service (critical for job processing)
+      console.log('🗄️ Initializing database service...');
+      const databaseService = await serviceContainer.resolve(SERVICE_TOKENS.DATABASE);
+      if (!databaseService) {
+        throw new Error('Failed to initialize database service');
+      }
+      
+      // Initialize job service (depends on database)
+      console.log('📋 Initializing job service...');
+      const jobService = await serviceContainer.resolve(SERVICE_TOKENS.JOB);
+      if (!jobService) {
+        throw new Error('Failed to initialize job service');
+      }
+      
+      console.log('✅ Core services initialized successfully');
+    } catch (error: any) {
+      console.error('❌ Failed to initialize core services:', error.message);
+      throw error;
+    }
   }
 
   /**

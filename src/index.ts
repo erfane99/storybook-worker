@@ -7,8 +7,6 @@ import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/type
 import { environmentManager } from './lib/config/environment.js';
 import { ServiceRegistry } from './services/registry/service-registry.js';
 import { SERVICE_TOKENS } from './services/interfaces/service-contracts.js';
-import { StartupValidator } from './validation/index.js';
-import { workerBootstrap } from './worker/worker-bootstrap.js';
 
 // Environment configuration with graceful degradation
 const envConfig = environmentManager.getConfig();
@@ -213,80 +211,21 @@ async function processJobs(): Promise<void> {
 // Initialize worker with consolidated service registry and validation
 async function initializeWorker(): Promise<void> {
   try {
-    console.log('🔧 Initializing job worker with enhanced service container architecture...');
+    console.log('🔧 Initializing job worker...');
     
-    // Enhanced worker bootstrap with service preloading
-    console.log('🚀 Starting worker bootstrap process...');
-    const bootstrapResult = await workerBootstrap.bootstrap();
+    // Simple service registration and initialization
+    console.log('📝 Registering services...');
+    ServiceRegistry.registerServices();
     
-    if (!bootstrapResult.success) {
-      console.error('❌ Worker bootstrap failed:');
-      bootstrapResult.errors.forEach(error => console.error(`   - ${error}`));
-      
-      if (bootstrapResult.warnings.length > 0) {
-        console.warn('⚠️ Bootstrap warnings:');
-        bootstrapResult.warnings.forEach(warning => console.warn(`   - ${warning}`));
-      }
-      
-      throw new Error('Worker bootstrap failed - cannot start job processing');
-    }
+    // Initialize core services needed for job processing
+    console.log('🔧 Initializing core services...');
+    await ServiceRegistry.initializeCoreServices();
     
-    console.log('✅ Worker bootstrap completed successfully');
-    console.log(`📊 Ready services: ${bootstrapResult.readyServices.length}/${bootstrapResult.readyServices.length + bootstrapResult.failedServices.length}`);
-    
-    if (bootstrapResult.warnings.length > 0) {
-      console.warn('⚠️ Bootstrap warnings:');
-      bootstrapResult.warnings.forEach(warning => console.warn(`   - ${warning}`));
-    }
-    
-    // Run startup validation
-    console.log('🔍 Running startup validation...');
-    const startupValidator = StartupValidator.getInstance();
-    const validationResult = await startupValidator.validateStartup();
-    
-    if (!validationResult.ready) {
-      console.error('❌ Startup validation failed - system not ready for production');
-      console.error('Errors:', validationResult.errors || []);
-      
-      // Check if rollback is needed using optional chaining
-      if (validationResult.report?.rollbackRequired) {
-        console.log('🔄 Rollback recommended - disposing services...');
-        await ServiceRegistry.disposeServices();
-        throw new Error('Startup validation failed - rollback executed');
-      }
-      
-      console.warn('⚠️ Continuing with degraded functionality...');
-    } else {
-      console.log('✅ Startup validation passed - system ready for production');
-    }
-    
-    // Restore continuous monitoring since the method now exists
-    try {
-      const stopMonitoring = await startupValidator.startContinuousMonitoring(300000); // Every 5 minutes
-      console.log('✅ Continuous monitoring started');
-      
-      // Store the stop function for graceful shutdown
-      process.on('beforeExit', () => {
-        if (stopMonitoring) {
-          stopMonitoring();
-        }
-      });
-    } catch (monitoringError) {
-      console.warn('⚠️ Could not start continuous monitoring:', monitoringError);
-      console.log('ℹ️ Continuing without continuous monitoring - relying on periodic health checks');
-    }
-    
-    // Validate job processing system
+    // Simple job system validation
+    console.log('🔍 Validating job processing system...');
     const isValid = await validateJobSystem();
     if (!isValid) {
-      console.warn('⚠️ Job processing system validation failed - worker may have limited functionality');
-      
-      // Get detailed service debug info
-      const debugInfo = workerBootstrap.getServiceDebugInfo();
-      console.log('🔍 Service debug information:');
-      Object.entries(debugInfo).forEach(([service, info]) => {
-        console.log(`   ${service}:`, info);
-      });
+      console.warn('⚠️ Job processing system validation failed - continuing with limited functionality');
     }
     
     console.log('⏰ Setting up job processing schedule...');
@@ -308,21 +247,10 @@ async function initializeWorker(): Promise<void> {
     }, config.initialScanDelay);
     
     const mode = envConfig.isDevelopment ? 'development' : 'production';
-    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode with Enhanced Service Container Architecture`);
+    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode`);
     
   } catch (error: any) {
     console.error('❌ Failed to initialize worker:', error.message);
-    
-    // Get detailed service debug info for troubleshooting
-    try {
-      const debugInfo = workerBootstrap.getServiceDebugInfo();
-      console.log('🔍 Service debug information for troubleshooting:');
-      Object.entries(debugInfo).forEach(([service, info]) => {
-        console.log(`   ${service}:`, info);
-      });
-    } catch (debugError) {
-      console.warn('⚠️ Could not get service debug info:', debugError);
-    }
     
     // Attempt graceful shutdown using ServiceRegistry
     try {
