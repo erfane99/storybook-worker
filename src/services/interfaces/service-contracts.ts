@@ -580,13 +580,9 @@ export interface IAIService extends
   ): Promise<boolean>;
   
   evolvePromptsFromPatterns(
-    currentContext: any,
-    pastSuccesses: any[]
-  ): Promise<{
-    evolvedPrompts: any;
-    patternsApplied: string[];
-    expectedImprovements: string[];
-  }>;
+  currentContext: any,
+  pastSuccesses: SuccessPattern[]
+): Promise<PatternEvolutionResult>;
   
   findSimilarSuccessPatterns(
     context: {
