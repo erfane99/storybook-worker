@@ -140,14 +140,38 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
 
         // CONSOLIDATED: Delegate to DatabaseService for actual data access
         try {
-          const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+          // Enhanced database service resolution with better error handling
+          let databaseService: IDatabaseService;
+          
+          try {
+            // First try synchronous resolution (should work if preloaded)
+            databaseService = serviceContainer.resolveSync<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+            this.log('info', 'DatabaseService resolved synchronously');
+          } catch (syncError) {
+            this.log('warn', 'Synchronous DatabaseService resolution failed, trying async resolution');
+            
+            // Fallback to async resolution
+            databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+            this.log('info', 'DatabaseService resolved asynchronously');
+          }
           
           if (!databaseService) {
-            this.log('warn', 'DatabaseService not available, returning empty array');
-            return [];
+            throw new DatabaseConnectionError('DatabaseService resolved to null/undefined', {
+              service: this.getName(),
+              operation: 'getPendingJobs'
+            });
+          }
+
+          // Validate database service health
+          if (typeof databaseService.isHealthy === 'function' && !databaseService.isHealthy()) {
+            throw new DatabaseConnectionError('DatabaseService is not healthy', {
+              service: this.getName(),
+              operation: 'getPendingJobs'
+            });
           }
 
           // Delegate the actual database query to DatabaseService
+          this.log('info', 'Calling DatabaseService.getPendingJobs...');
           const pendingJobs = await databaseService.getPendingJobs(filter, limit);
           
           this.log('info', `Found ${pendingJobs.length} pending jobs from database`);
@@ -160,10 +184,23 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         } catch (databaseError: any) {
           this.log('error', 'Failed to get pending jobs from database', databaseError);
           
-          // If database is unavailable, return empty array but log the issue
-          if (databaseError.message?.includes('not available') || databaseError.message?.includes('not configured')) {
-            this.log('warn', 'Database service unavailable for job discovery - returning empty array');
-            return [];
+          // Enhanced error classification and handling
+          if (databaseError.message?.includes('not registered') || 
+              databaseError.message?.includes('not yet initialized') ||
+              databaseError.message?.includes('disposed container')) {
+            throw new DatabaseConnectionError(
+              `Database service container issue: ${databaseError.message}`,
+              { service: this.getName(), operation: 'getPendingJobs' }
+            );
+          }
+          
+          if (databaseError.message?.includes('not available') || 
+              databaseError.message?.includes('not configured') ||
+              databaseError.message?.includes('not healthy')) {
+            throw new DatabaseConnectionError(
+              `Database service unavailable: ${databaseError.message}`,
+              { service: this.getName(), operation: 'getPendingJobs' }
+            );
           }
           
           // Re-throw other database errors

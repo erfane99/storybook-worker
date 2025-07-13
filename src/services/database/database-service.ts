@@ -67,13 +67,21 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase not configured: Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
+      const missingVars = [];
+      if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL');
+      if (!supabaseKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
+      
+      throw new Error(`Supabase not configured for worker environment: Missing ${missingVars.join(', ')} environment variables`);
     }
 
     // ✅ DIRECT VALIDATION: Simple environment variable validation
     if (supabaseUrl.length < 10 || supabaseKey.length < 20) {
-      throw new Error('Supabase environment variables appear to be invalid or too short');
+      throw new Error(`Supabase environment variables appear to be invalid: URL length=${supabaseUrl.length}, Key length=${supabaseKey.length}`);
     }
+
+    this.log('info', `Initializing Supabase client for worker environment...`);
+    this.log('info', `Supabase URL: ${supabaseUrl.substring(0, 30)}...`);
+    this.log('info', `Service Key: ${supabaseKey.substring(0, 10)}...`);
 
     this.supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false },
@@ -84,6 +92,7 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     });
 
     // Test connection
+    this.log('info', 'Testing Supabase connection...');
     await this.testConnection();
     this.log('info', 'Database service initialized with verified Supabase connectivity');
   }
@@ -795,14 +804,19 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       throw new Error('Supabase client not initialized');
     }
 
+    this.log('info', 'Testing database connection with storybook_entries table...');
+    
     const { error } = await this.supabase
       .from('storybook_entries')
       .select('id')
       .limit(1);
 
     if (error) {
-      throw new Error(`Database connection test failed: ${error.message}`);
+      this.log('error', 'Database connection test failed:', error);
+      throw new Error(`Database connection test failed: ${error.message} (Code: ${error.code})`);
     }
+    
+    this.log('info', 'Database connection test successful');
   }
 
   private async executeQuery<T>(

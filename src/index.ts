@@ -8,6 +8,7 @@ import { environmentManager } from './lib/config/environment.js';
 import { ServiceRegistry } from './services/registry/service-registry.js';
 import { SERVICE_TOKENS } from './services/interfaces/service-contracts.js';
 import { StartupValidator } from './validation/index.js';
+import { workerBootstrap } from './worker/worker-bootstrap.js';
 
 // Environment configuration with graceful degradation
 const envConfig = environmentManager.getConfig();
@@ -212,10 +213,31 @@ async function processJobs(): Promise<void> {
 // Initialize worker with consolidated service registry and validation
 async function initializeWorker(): Promise<void> {
   try {
-    console.log('🔧 Initializing job worker with Consolidated Service Registry and Production Architecture...');
+    console.log('🔧 Initializing job worker with enhanced service container architecture...');
     
-    // REFACTORED: Use ServiceRegistry static methods for lifecycle management
-    await ServiceRegistry.initializeServices();
+    // Enhanced worker bootstrap with service preloading
+    console.log('🚀 Starting worker bootstrap process...');
+    const bootstrapResult = await workerBootstrap.bootstrap();
+    
+    if (!bootstrapResult.success) {
+      console.error('❌ Worker bootstrap failed:');
+      bootstrapResult.errors.forEach(error => console.error(`   - ${error}`));
+      
+      if (bootstrapResult.warnings.length > 0) {
+        console.warn('⚠️ Bootstrap warnings:');
+        bootstrapResult.warnings.forEach(warning => console.warn(`   - ${warning}`));
+      }
+      
+      throw new Error('Worker bootstrap failed - cannot start job processing');
+    }
+    
+    console.log('✅ Worker bootstrap completed successfully');
+    console.log(`📊 Ready services: ${bootstrapResult.readyServices.length}/${bootstrapResult.readyServices.length + bootstrapResult.failedServices.length}`);
+    
+    if (bootstrapResult.warnings.length > 0) {
+      console.warn('⚠️ Bootstrap warnings:');
+      bootstrapResult.warnings.forEach(warning => console.warn(`   - ${warning}`));
+    }
     
     // Run startup validation
     console.log('🔍 Running startup validation...');
@@ -257,7 +279,14 @@ async function initializeWorker(): Promise<void> {
     // Validate job processing system
     const isValid = await validateJobSystem();
     if (!isValid) {
-      console.warn('⚠️ Worker initialization completed with limited functionality');
+      console.warn('⚠️ Job processing system validation failed - worker may have limited functionality');
+      
+      // Get detailed service debug info
+      const debugInfo = workerBootstrap.getServiceDebugInfo();
+      console.log('🔍 Service debug information:');
+      Object.entries(debugInfo).forEach(([service, info]) => {
+        console.log(`   ${service}:`, info);
+      });
     }
     
     console.log('⏰ Setting up job processing schedule...');
@@ -279,10 +308,21 @@ async function initializeWorker(): Promise<void> {
     }, config.initialScanDelay);
     
     const mode = envConfig.isDevelopment ? 'development' : 'production';
-    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode with Consolidated Architecture`);
+    console.log(`✅ StoryCanvas Job Worker initialized successfully in ${mode} mode with Enhanced Service Container Architecture`);
     
   } catch (error: any) {
     console.error('❌ Failed to initialize worker:', error.message);
+    
+    // Get detailed service debug info for troubleshooting
+    try {
+      const debugInfo = workerBootstrap.getServiceDebugInfo();
+      console.log('🔍 Service debug information for troubleshooting:');
+      Object.entries(debugInfo).forEach(([service, info]) => {
+        console.log(`   ${service}:`, info);
+      });
+    } catch (debugError) {
+      console.warn('⚠️ Could not get service debug info:', debugError);
+    }
     
     // Attempt graceful shutdown using ServiceRegistry
     try {
