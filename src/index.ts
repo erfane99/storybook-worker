@@ -25,7 +25,7 @@ app.get('/health', async (_req, res) => {
   const systemHealth = await ServiceRegistry.getSystemHealth();
   
   // Get startup validation status
-  const startupValidator = StartupValidator.getInstance();
+  const startupValidator = startupValidator.getInstance();
   const validationResult = startupValidator.getLastValidationResult() || null;
   
   const response: HealthResponse = {
@@ -88,7 +88,7 @@ app.get('/metrics', async (_req, res) => {
 // Validation endpoint
 app.get('/validate', async (_req, res) => {
   try {
-    const startupValidator = StartupValidator.getInstance();
+    const startupValidator = startupValidator.getInstance();
     const result = await startupValidator.validateStartup();
     
     res.json({
