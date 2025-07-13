@@ -15,6 +15,7 @@ import {
   JobProcessingError,
   JobTimeoutError,
   JobConcurrencyLimitError,
+  DatabaseConnectionError,
   ErrorFactory,
   ErrorCategory
 } from '../errors/index.js';
