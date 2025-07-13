@@ -7,6 +7,7 @@ import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/type
 import { environmentManager } from './lib/config/environment.js';
 import { ServiceRegistry } from './services/registry/service-registry.js';
 import { SERVICE_TOKENS } from './services/interfaces/service-contracts.js';
+import { StartupValidator } from './validation/startup-validator.js';
 
 // Environment configuration with graceful degradation
 const envConfig = environmentManager.getConfig();
@@ -24,9 +25,13 @@ app.get('/health', async (_req, res) => {
   const serviceHealth = await ServiceRegistry.getServiceHealth();
   const systemHealth = await ServiceRegistry.getSystemHealth();
   
-  // Get startup validation status
-  const startupValidator = startupValidator.getInstance();
-  const validationResult = startupValidator.getLastValidationResult() || null;
+  // Get system validation status using ServiceRegistry
+  const validationResult = {
+    ready: systemHealth.container.overall === 'healthy',
+    warnings: systemHealth.container.overall === 'degraded' ? ['Some services degraded'] : [],
+    errors: systemHealth.container.overall === 'unhealthy' ? ['System not fully healthy'] : [],
+    lastValidation: systemHealth.timestamp,
+  };
   
   const response: HealthResponse = {
     status: serviceHealth.overall === 'healthy' ? 'healthy' : 'unhealthy',
@@ -88,12 +93,28 @@ app.get('/metrics', async (_req, res) => {
 // Validation endpoint
 app.get('/validate', async (_req, res) => {
   try {
-    const startupValidator = startupValidator.getInstance();
-    const result = await startupValidator.validateStartup();
+    // Use ServiceRegistry for validation instead of StartupValidator
+    const systemHealth = await ServiceRegistry.getSystemHealth();
+    const serviceHealth = await ServiceRegistry.checkAllServicesHealth();
+    
+    const result = {
+      ready: serviceHealth.overall && systemHealth.container.overall === 'healthy',
+      validation: {
+        overall: serviceHealth.overall ? 'passed' : 'failed',
+        services: serviceHealth.services,
+        systemHealth: systemHealth,
+        timestamp: new Date().toISOString(),
+      },
+      warnings: serviceHealth.overall ? [] : ['Some services not fully healthy'],
+      errors: systemHealth.container.overall === 'unhealthy' ? ['System unhealthy'] : [],
+    };
     
     res.json({
       success: result.ready,
       validation: result,
+      ready: result.ready,
+      warnings: result.warnings,
+      errors: result.errors,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
