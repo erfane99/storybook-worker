@@ -142,12 +142,16 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
         // CONSOLIDATED: Delegate to DatabaseService for actual data access
         try {
           // Enhanced database service resolution with better error handling
-          let databaseService: IDatabaseService;
-          
-          try {
-            // First try synchronous resolution (should work if preloaded)
-            databaseService = serviceContainer.resolveSync<IDatabaseService>(SERVICE_TOKENS.DATABASE);
-            this.log('info', 'DatabaseService resolved synchronously');
+let databaseService: IDatabaseService;
+
+try {
+  // First try synchronous resolution (should work if preloaded)
+  const syncResult = serviceContainer.resolveSync<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+  if (!syncResult) {
+    throw new Error('Sync resolution returned null');
+  }
+  databaseService = syncResult;
+  this.log('info', 'DatabaseService resolved synchronously');
           } catch (syncError) {
             this.log('warn', 'Synchronous DatabaseService resolution failed, trying async resolution');
             
