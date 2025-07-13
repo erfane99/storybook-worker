@@ -7,7 +7,6 @@ import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/type
 import { environmentManager } from './lib/config/environment.js';
 import { ServiceRegistry } from './services/registry/service-registry.js';
 import { SERVICE_TOKENS } from './services/interfaces/service-contracts.js';
-import { StartupValidator } from './validation/startup-validator.js';
 
 // Environment configuration with graceful degradation
 const envConfig = environmentManager.getConfig();
@@ -61,10 +60,10 @@ app.get('/health', async (_req, res) => {
     containerStats: ServiceRegistry.getContainerStats(),
     systemHealth: systemHealth,
     validation: {
-      ready: validationResult?.ready || false,
-      warnings: validationResult?.warnings || [],
-      errors: validationResult?.errors || [],
-      lastValidation: validationResult?.report?.timestamp,
+      ready: validationResult.ready,
+      warnings: validationResult.warnings,
+      errors: validationResult.errors,
+      lastValidation: validationResult.lastValidation,
     },
   });
 });
@@ -111,7 +110,7 @@ app.get('/validate', async (_req, res) => {
     
     res.json({
       success: result.ready,
-      validation: result,
+      validation: result.validation,
       ready: result.ready,
       warnings: result.warnings,
       errors: result.errors,
