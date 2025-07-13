@@ -164,21 +164,6 @@ export class ServiceRegistry {
   }
 
   /**
-   * Initialize core services that should be loaded immediately
-   */
-  static async initializeCoreServices(): Promise<void> {
-    console.log('🚀 Initializing core services...');
-    
-    try {
-      // Initialize configuration services first
-      await serviceContainer.resolve(SERVICE_TOKENS.CONFIG);
-      await serviceContainer.resolve('ISubscriptionConfigService');
-      console.log('✅ Core services initialized');
-    } catch (error: any) {
-      console.error('❌ Failed to initialize core services:', error.message);
-      throw error;
-    }
-  }
 
   // ===== LIFECYCLE MANAGEMENT FUNCTIONS =====
 
