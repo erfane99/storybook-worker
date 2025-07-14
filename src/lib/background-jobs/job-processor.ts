@@ -602,7 +602,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
         
         // Enhanced story analysis with environmental awareness
-        storyAnalysis = await (aiService as any).analyzeStoryStructure(story, audience);
+        storyAnalysis = await aiService.analyzeStoryStructure(story, audience);
         this.updateComicGenerationProgress(job.id, { storyAnalyzed: true });
         
         console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} narrative beats for ${audience} audience`);
@@ -612,7 +612,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         let environmentalDNA: any = null;
         
         try {
-          environmentalDNA = await (aiService as any).createEnvironmentalDNA(storyAnalysis, audience);
+          environmentalDNA = await aiService.createEnvironmentalDNA(storyAnalysis.storyBeats, audience);
           console.log('✅ Environmental DNA created for consistent world-building');
           await jobService.updateJobProgress(job.id, 25, 'Environmental consistency system activated - professional world-building established');
         } catch (envError) {
@@ -676,7 +676,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
         
         // Use enhanced AI service for character DNA creation
-        characterDNA = await (aiService as any).createMasterCharacterDNA(character_image, character_art_style);
+        characterDNA = await aiService.createMasterCharacterDNA(character_image, character_art_style);
         characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
         
         this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
@@ -728,7 +728,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
         
         // Generate professional comic book layout
-        const sceneResult = await (aiService as any).generateScenesWithAudience({
+        const sceneResult = await aiService.generateScenesWithAudience({
           story: story,
           audience: audience as any,
           characterImage: character_image,
@@ -1149,7 +1149,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       let panelContinuity: any = null;
       if (storyAnalysis?.storyBeats) {
         const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
-        panelContinuity = await (aiService as any).analyzePanelContinuity(storyAnalysis.storyBeats);
+        panelContinuity = await aiService.analyzePanelContinuity(storyAnalysis.storyBeats);
         console.log('✅ Panel continuity analysis completed for visual flow');
       }
       
@@ -1306,7 +1306,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         this.trackServiceUsage(job.id, 'ai');
         servicesUsed.push('ai');
         
-        characterDNA = await (aiService as any).createMasterCharacterDNA(cartoon_image_url, character_art_style);
+        characterDNA = await aiService.createMasterCharacterDNA(cartoon_image_url, character_art_style);
         console.log('✅ Character DNA created for auto-story generation');
         await jobService.updateJobProgress(job.id, 25, 'Character DNA created for story generation');
       } catch (error) {
@@ -1324,7 +1324,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     await jobService.updateJobProgress(job.id, 50, 'Enhanced story generated, creating professional comic layout');
 
     // Enhanced scene generation with professional methodology
-    const sceneResult = await (aiService as any).generateScenesWithAudience({
+    const sceneResult = await aiService.generateScenesWithAudience({
       story: generatedStory,
       audience: audience as any,
       characterImage: cartoon_image_url,
@@ -1397,7 +1397,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     this.trackServiceUsage(job.id, 'ai');
     servicesUsed.push('ai');
     
-    const sceneResult = await (aiService as any).generateScenesWithAudience({
+    const sceneResult = await aiService.generateScenesWithAudience({
       story: story,
       audience: audience as any,
       characterImage: character_image,
