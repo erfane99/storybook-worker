@@ -859,7 +859,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
       } catch (error) {
         console.error(`❌ CRITICAL FAILURE: Panel ${panelNumber}/${totalPanels} generation failed`);
         console.error(`❌ Error details:`, error);
-        console.error(`❌ Error stack:`, error.stack);
+        console.error(`❌ Error stack:`, error instanceof Error ? error.stack : 'No stack trace available');
         console.error(`❌ Scene data that failed:`, JSON.stringify(scene, null, 2));
         console.error(`❌ Image prompt that failed:`, scene.imagePrompt);
         console.error(`❌ Image prompt length:`, scene.imagePrompt?.length || 0);
@@ -875,7 +875,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
           is_reused_image
         });
         
-        throw new Error(`COMIC GENERATION FAILED: Panel ${panelNumber}/${totalPanels} could not be generated. Error: ${error.message}. Scene: ${scene.description || 'No description'}. Prompt length: ${scene.imagePrompt?.length || 0}. No fallbacks allowed - comic generation aborted.`);
+        throw new Error(`COMIC GENERATION FAILED: Panel ${panelNumber}/${totalPanels} could not be generated. Error: ${error instanceof Error ? error.message : String(error)}. Scene: ${scene.description || 'No description'}. Prompt length: ${scene.imagePrompt?.length || 0}. No fallbacks allowed - comic generation aborted.`);
       }
     });
 console.log(`⚡ Starting parallel generation of ${panelPromises.length} panels...`);
