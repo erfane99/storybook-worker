@@ -884,41 +884,26 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         };
         
       } catch (error) {
-        console.warn(`⚠️ Failed to generate professional panel ${panelNumber}/${totalPanels} with enhanced consistency + learned patterns, using fallback:`, error);
-        
-        const fallbackScene = {
-          ...scene,
-          generatedImage: character_image || '',
-          characterArtStyle: character_art_style,
-          layoutType: layout_type,
-          error: 'Failed to generate professional panel with enhanced consistency + learned patterns, used fallback',
-          characterConsistency: 50,
-          environmentalConsistency: 50,
-          professionalStandards: false,
-          panelNumber: panelNumber,
-          parallelGenerated: true,
-          fallback: true
-        };
-        
-        // Store error result
-        panelErrors.set(panelKey, error);
-        panelResults.set(panelKey, fallbackScene);
-        
-        // Update completion tracking
-        completedPanels++;
-        
-        // Update progress for this panel completion (with error)
-        await updatePanelProgress(panelNumber, totalPanels, 'Completed (fallback)');
-        
-        return {
-          success: false,
-          panelKey,
-          scene: fallbackScene,
-          error: error,
-          consistency: { character: 50, environmental: 50 }
-        };
-      }
-    });
+  console.error(`❌ CRITICAL FAILURE: Panel ${panelNumber}/${totalPanels} generation failed`);
+  console.error(`❌ Error details:`, error);
+  console.error(`❌ Error stack:`, error.stack);
+  console.error(`❌ Scene data that failed:`, JSON.stringify(scene, null, 2));
+  console.error(`❌ Image prompt that failed:`, scene.imagePrompt);
+  console.error(`❌ Image prompt length:`, scene.imagePrompt?.length || 0);
+  console.error(`❌ Character description:`, characterDescriptionToUse);
+  console.error(`❌ Panel generation context:`, {
+    panelNumber,
+    totalPanels,
+    pageIndex,
+    sceneIndex,
+    audience,
+    character_art_style,
+    layout_type,
+    is_reused_image
+  });
+  
+  throw new Error(`COMIC GENERATION FAILED: Panel ${panelNumber}/${totalPanels} could not be generated. Error: ${error.message}. Scene: ${scene.description || 'No description'}. Prompt length: ${scene.imagePrompt?.length || 0}. No fallbacks allowed - comic generation aborted.`);
+}
     
     console.log(`⚡ Starting parallel generation of ${panelPromises.length} panels...`);
     const startParallelTime = Date.now();
