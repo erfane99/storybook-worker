@@ -884,26 +884,27 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         };
         
       } catch (error) {
-  console.error(`❌ CRITICAL FAILURE: Panel ${panelNumber}/${totalPanels} generation failed`);
-  console.error(`❌ Error details:`, error);
-  console.error(`❌ Error stack:`, error.stack);
-  console.error(`❌ Scene data that failed:`, JSON.stringify(scene, null, 2));
-  console.error(`❌ Image prompt that failed:`, scene.imagePrompt);
-  console.error(`❌ Image prompt length:`, scene.imagePrompt?.length || 0);
-  console.error(`❌ Character description:`, characterDescriptionToUse);
-  console.error(`❌ Panel generation context:`, {
-    panelNumber,
-    totalPanels,
-    pageIndex,
-    sceneIndex,
-    audience,
-    character_art_style,
-    layout_type,
-    is_reused_image
-  });
-  
-  throw new Error(`COMIC GENERATION FAILED: Panel ${panelNumber}/${totalPanels} could not be generated. Error: ${error.message}. Scene: ${scene.description || 'No description'}. Prompt length: ${scene.imagePrompt?.length || 0}. No fallbacks allowed - comic generation aborted.`);
-}
+        console.error(`❌ CRITICAL FAILURE: Panel ${panelNumber}/${totalPanels} generation failed`);
+        console.error(`❌ Error details:`, error);
+        console.error(`❌ Error stack:`, error.stack);
+        console.error(`❌ Scene data that failed:`, JSON.stringify(scene, null, 2));
+        console.error(`❌ Image prompt that failed:`, scene.imagePrompt);
+        console.error(`❌ Image prompt length:`, scene.imagePrompt?.length || 0);
+        console.error(`❌ Character description:`, characterDescriptionToUse);
+        console.error(`❌ Panel generation context:`, {
+          panelNumber,
+          totalPanels,
+          pageIndex,
+          sceneIndex,
+          audience,
+          character_art_style,
+          layout_type,
+          is_reused_image
+        });
+        
+        throw new Error(`COMIC GENERATION FAILED: Panel ${panelNumber}/${totalPanels} could not be generated. Error: ${error.message}. Scene: ${scene.description || 'No description'}. Prompt length: ${scene.imagePrompt?.length || 0}. No fallbacks allowed - comic generation aborted.`);
+      }
+    });
     
     console.log(`⚡ Starting parallel generation of ${panelPromises.length} panels...`);
     const startParallelTime = Date.now();
