@@ -1,6 +1,7 @@
 // Service contracts implementing Interface Segregation Principle
 // CONSOLIDATED: Single source of truth for all service interfaces
 // Combines enhanced functionality with standard interfaces
+// ✅ FIXED: Updated to match enterprise AI service implementation
 
 // ===== IMPORT AND RE-EXPORT JOB TYPES =====
 import type { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types.js';
@@ -150,7 +151,6 @@ export interface StoryAnalysis {
   dialoguePanels?: number;
   speechBubbleDistribution?: Record<string, number>;
 }
-
 export interface QualityMetrics {
   characterConsistency: number;
   environmentalConsistency?: number;
@@ -295,6 +295,7 @@ export interface SceneGenerationOptions {
   characterImage?: string;
   characterArtStyle?: string;
   layoutType?: string;
+  enhancedContext?: any; // ✅ FIXED: Added missing property
 }
 
 export interface SceneGenerationResult {
@@ -305,7 +306,6 @@ export interface SceneGenerationResult {
   characterArtStyle?: string;
   metadata?: SceneMetadata;
 }
-
 // ===== HEALTH MONITORING INTERFACES =====
 
 export interface IServiceHealth {
@@ -436,7 +436,12 @@ export interface IDatabaseOperations {
 export interface IAIOperations {
   // Text Generation
   generateStory(prompt: string, options?: StoryGenerationOptions): Promise<string>;
-  generateScenes(systemPrompt: string, userPrompt: string): Promise<SceneGenerationResult>;
+  
+  // ✅ FIXED: Added missing enterprise methods
+  analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis>;
+  createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA>;
+  createEnvironmentalDNA(storyBeats: StoryBeat[], audience: AudienceType, artStyle?: string): Promise<EnvironmentalDNA>;
+  analyzePanelContinuity(storyBeats: any[]): Promise<any>;
   
   // Enhanced Scene Generation with Audience Support
   generateScenesWithAudience(options: SceneGenerationOptions): Promise<SceneGenerationResult>;
@@ -539,7 +544,6 @@ export interface IServiceConfiguration {
    */
   isFeatureEnabled(feature: string): boolean;
 }
-
 // ===== COMPOSITE SERVICE INTERFACES =====
 
 export interface IDatabaseService extends 
