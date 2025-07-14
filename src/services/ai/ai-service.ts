@@ -1616,20 +1616,36 @@ CRITICAL REQUIREMENTS:
         pageBeats.splice(config.panelsPerPage);
       }
 
-      const pageScenes = pageBeats.map((beat, panelIndex) => ({
-        description: beat.beat,
-        emotion: beat.emotion,
-        imagePrompt: this.buildProfessionalPanelPrompt(beat, characterDNA, artStyle, config, null),
-        panelType: this.determinePanelType(panelIndex, config.panelsPerPage),
-        characterAction: beat.characterAction,
-        narrativePurpose: beat.panelPurpose,
-        visualPriority: beat.visualPriority,
-        dialogue: beat.dialogue,
-        hasSpeechBubble: beat.hasSpeechBubble || false,
-        speechBubbleStyle: beat.speechBubbleStyle,
-        panelNumber: panelIndex + 1,
-        pageNumber: pageNum
-      }));
+      const pageScenes = pageBeats.map((beat, panelIndex) => {
+  console.log(`🔍 DEBUG PANEL ${panelIndex + 1}: Building prompt for beat:`, JSON.stringify(beat, null, 2));
+  
+  const promptResult = this.buildProfessionalPanelPrompt(beat, characterDNA, artStyle, config, null);
+  
+  console.log(`🔍 DEBUG PANEL ${panelIndex + 1}: Generated prompt length: ${promptResult?.length || 0}`);
+  if (!promptResult || promptResult.trim().length === 0) {
+    console.error(`❌ CRITICAL ERROR: Empty prompt generated for panel ${panelIndex + 1}`);
+    console.error(`❌ Beat data:`, beat);
+    console.error(`❌ CharacterDNA present:`, !!characterDNA);
+    console.error(`❌ ArtStyle:`, artStyle);
+    throw new Error(`PROMPT GENERATION FAILED: Panel ${panelIndex + 1} has empty prompt. Cannot proceed with comic generation.`);
+  }
+  console.log(`🔍 DEBUG PANEL ${panelIndex + 1}: Prompt preview: ${promptResult.substring(0, 200)}...`);
+  
+  return {
+    description: beat.beat,
+    emotion: beat.emotion,
+    imagePrompt: promptResult,
+    panelType: this.determinePanelType(panelIndex, config.panelsPerPage),
+    characterAction: beat.characterAction,
+    narrativePurpose: beat.panelPurpose,
+    visualPriority: beat.visualPriority,
+    dialogue: beat.dialogue,
+    hasSpeechBubble: beat.hasSpeechBubble || false,
+    speechBubbleStyle: beat.speechBubbleStyle,
+    panelNumber: panelIndex + 1,
+    pageNumber: pageNum
+  };
+});
 
       pages.push({
         pageNumber: pageNum,
