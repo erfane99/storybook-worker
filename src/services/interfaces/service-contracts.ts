@@ -11,7 +11,7 @@ export type { JobData, JobType, JobStatus, JobMetrics };
 
 // ===== CONSOLIDATED AI SERVICE TYPES - SINGLE SOURCE OF TRUTH =====
 export type PanelType = 'standard' | 'wide' | 'tall' | 'splash';
-export type AudienceType = 'children' | 'young_adults' | 'adults';
+export type AudienceType = 'children' | 'young adults' | 'adults';
 export type GenreType = 'adventure' | 'siblings' | 'bedtime' | 'fantasy' | 'history';
 
 export interface SceneMetadata {
@@ -101,31 +101,28 @@ export interface EnvironmentalDNA {
 }
 
 export interface CharacterDNA {
-  physicalStructure: {
-    faceShape: string;
-    eyeDetails: string;
-    hairSpecifics: string;
-    skinTone: string;
+  sourceImage: string;
+  description: string;
+  artStyle: string;
+  visualDNA: {
+    facialFeatures: string[];
     bodyType: string;
-    facialMarks: string;
+    clothing: string;
+    distinctiveFeatures: string[];
+    colorPalette: string[];
+    expressionBaseline: string;
   };
-  clothingSignature: {
-    primaryOutfit: string;
-    accessories: string;
-    colorPalette: string;
-    footwear: string;
+  consistencyPrompts: {
+    basePrompt: string;
+    artStyleIntegration: string;
+    variationGuidance: string;
   };
-  uniqueIdentifiers: {
-    distinctiveFeatures: string;
-    expressions: string;
-    posture: string;
-    mannerisms: string;
+  metadata: {
+    createdAt: string;
+    processingTime: number;
+    analysisMethod: string;
+    confidenceScore: number;
   };
-  artStyleAdaptation: {
-    [key: string]: string;
-  };
-  consistencyEnforcers: string[];
-  negativePrompts: string[];
 }
 
 export interface StoryBeat {
@@ -302,9 +299,19 @@ export interface SceneGenerationResult {
   pages: any[];
   audience: AudienceType;
   characterImage?: string;
-  layoutType?: string;
-  characterArtStyle?: string;
-  metadata?: SceneMetadata;
+  layoutType: string;
+  characterArtStyle: string;
+  metadata: {
+    discoveryPath: string;
+    patternType: 'direct' | 'nested' | 'discovered' | 'fallback';
+    qualityScore: number;
+    originalStructure: string[];
+    storyBeats: number;
+    characterConsistencyEnabled: boolean;
+    professionalStandards: boolean;
+    dialoguePanels: number;
+    speechBubbleDistribution: any;
+  };
 }
 // ===== HEALTH MONITORING INTERFACES =====
 
