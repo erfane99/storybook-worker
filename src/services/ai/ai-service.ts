@@ -10,7 +10,17 @@ import {
   StoryAnalysis,
   StoryBeat,
   AudienceType,
-  PanelType
+  PanelType,
+  SceneGenerationOptions,
+  SceneGenerationResult,
+  ImageGenerationOptions,
+  ImageGenerationResult,
+  CharacterDescriptionOptions,
+  CharacterDescriptionResult,
+  CartoonizeOptions,
+  CartoonizeResult,
+  ChatCompletionOptions,
+  ChatCompletionResult
 } from '../interfaces/service-contracts.js';
 import { 
   Result,
@@ -34,89 +44,6 @@ export interface AIServiceConfig extends ErrorAwareServiceConfig {
   maxRetries: number;
   retryDelay: number;
   rateLimitPerMinute: number;
-}
-
-// ===== TYPE DEFINITIONS =====
-
-export interface SceneGenerationOptions {
-  story: string;
-  audience?: AudienceType;
-  characterImage?: string;
-  characterArtStyle?: string;
-  layoutType?: string;
-}
-
-export interface SceneGenerationResult {
-  pages: any[];
-  audience: AudienceType;
-  characterImage?: string;
-  layoutType: string;
-  characterArtStyle: string;
-  metadata: {
-    discoveryPath: string;
-    patternType: string;
-    qualityScore: number;
-    originalStructure: string[];
-    storyBeats: number;
-    characterConsistencyEnabled: boolean;
-    professionalStandards: boolean;
-    dialoguePanels: number;
-    speechBubbleDistribution: any;
-  };
-}
-
-export interface ImageGenerationOptions {
-  image_prompt: string;
-  character_description: string;
-  emotion: string;
-  audience: AudienceType;
-  isReusedImage?: boolean;
-  cartoon_image?: string;
-  style?: string;
-  characterArtStyle?: string;
-  layoutType?: string;
-  panelType?: PanelType;
-}
-
-export interface ImageGenerationResult {
-  url: string;
-  prompt_used: string;
-  reused: boolean;
-}
-
-export interface CharacterDescriptionOptions {
-  imageUrl: string;
-}
-
-export interface CharacterDescriptionResult {
-  description: string;
-  cached: boolean;
-}
-
-export interface CartoonizeOptions {
-  style: string;
-  prompt: string;
-}
-
-export interface CartoonizeResult {
-  url: string;
-  cached: boolean;
-}
-
-export interface ChatCompletionOptions {
-  model?: string;
-  messages: any[];
-  temperature?: number;
-  maxTokens?: number;
-  responseFormat?: { type: string };
-}
-
-export interface ChatCompletionResult {
-  choices: Array<{
-    message: {
-      content: string;
-    };
-  }>;
 }
 
 // ===== AI SERVICE IMPLEMENTATION =====
@@ -2122,22 +2049,6 @@ export const aiService = new AIService();
 
 // Export default
 export default AIService;
-
-// ===== TYPE EXPORTS =====
-
-export type {
-  AIServiceConfig,
-  SceneGenerationOptions,
-  SceneGenerationResult,
-  ImageGenerationOptions,
-  ImageGenerationResult,
-  CharacterDescriptionOptions,
-  CharacterDescriptionResult,
-  CartoonizeOptions,
-  CartoonizeResult,
-  ChatCompletionOptions,
-  ChatCompletionResult
-};
 
 // ===== SERVICE REGISTRY INTEGRATION =====
 
