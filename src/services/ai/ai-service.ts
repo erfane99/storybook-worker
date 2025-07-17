@@ -2160,7 +2160,6 @@ QUALITY STANDARDS:
     };
   }
 }
-}
 
 // ===== EXPORTS =====
 
