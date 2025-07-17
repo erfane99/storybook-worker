@@ -643,7 +643,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
     let characterDNA: any = null;
 
     if (character_image) {
-      this.updateComicGenerationProgress(job.id, { targetPanels: audience === 'children' ? 8 : audience === 'young_adults' ? 15 : 24 });
+      this.updateComicGenerationProgress(job.id, { targetPanels: audience === 'children' ? 8 : audience === 'young adults' ? 15 : 24 });
       
       try {
         this.trackServiceUsage(job.id, 'ai');
