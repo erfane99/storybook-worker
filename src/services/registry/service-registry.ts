@@ -58,7 +58,7 @@ export class ServiceRegistry {
       () => new DatabaseService(),
       {
         singleton: true,
-        lazy: true,
+        lazy: false,
         dependencies: [SERVICE_TOKENS.CONFIG],
         healthCheck: true,
       }
