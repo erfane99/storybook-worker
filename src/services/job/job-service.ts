@@ -146,16 +146,22 @@ let databaseService: IDatabaseService;
 
 try {
   // Resolve DatabaseService (should now work since it's eager-loaded)
-  databaseService = serviceContainer.resolveSync<IDatabaseService>(SERVICE_TOKENS.DATABASE);
-  if (!databaseService) {
+  const syncResult = serviceContainer.resolveSync<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+  if (!syncResult) {
     this.log('warn', 'Sync resolution failed, trying async fallback');
-    databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+    const asyncResult = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+    if (!asyncResult) {
+      throw new Error('Both sync and async resolution returned null');
+    }
+    databaseService = asyncResult;
+  } else {
+    databaseService = syncResult;
   }
   this.log('info', 'DatabaseService resolved successfully');
-} catch (resolutionError) {
+} catch (resolutionError: any) {  // ← FIX #2: Type the error
   this.log('error', 'Failed to resolve DatabaseService', resolutionError);
   throw new DatabaseConnectionError(
-    `DatabaseService resolution failed: ${resolutionError.message}`,
+    `DatabaseService resolution failed: ${resolutionError?.message || 'Unknown error'}`,
     { service: this.getName(), operation: 'getPendingJobs' }
   );
 }
