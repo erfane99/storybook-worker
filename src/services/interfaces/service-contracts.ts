@@ -19,6 +19,11 @@ export interface SceneMetadata {
   patternType: 'direct' | 'nested' | 'discovered' | 'fallback';
   qualityScore: number;
   originalStructure: string[];
+  storyBeats: number;
+  characterConsistencyEnabled: boolean;
+  professionalStandards: boolean;
+  dialoguePanels: number;
+  speechBubbleDistribution: any;
   [key: string]: any; // Allow additional metadata properties
 }
 
@@ -64,7 +69,7 @@ export interface EnvironmentalDNA {
   };
   lightingContext: {
     timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
-    weatherCondition: 'sunny' | 'cloudy' | 'rainy' | 'stormy' | 'snowy';
+    weatherCondition: 'sunny' | 'cloudy' | 'rainy' | 'stormy' | 'snowy' | 'pleasant';
     lightingMood: string;
     shadowDirection?: string;
     consistencyRules?: string[];
@@ -79,13 +84,13 @@ export interface EnvironmentalDNA {
     };
     perspectiveGuidelines?: string;
   };
-  atmosphericElements?: {
+  atmosphericElements?: string[] | {
     ambientEffects?: string[];
     particleEffects?: string[];
     environmentalMood?: string;
     seasonalContext?: string;
   };
-  panelTransitions?: {
+  panelTransitions?: string[] | {
     movementFlow?: string;
     cameraMovement?: string;
     spatialRelationships?: string;
@@ -95,8 +100,8 @@ export interface EnvironmentalDNA {
     processingTime: number;
     audience: AudienceType;
     consistencyTarget: string;
+    fallback?: boolean;
   };
-  fallback?: boolean;
   error?: string;
 }
 
@@ -137,6 +142,7 @@ export interface StoryBeat {
   hasSpeechBubble?: boolean;
   speechBubbleStyle?: string;
   cleanedDialogue?: string;
+  [key: string]: any; // Allow dynamic property access
 }
 
 export interface StoryAnalysis {
@@ -148,6 +154,7 @@ export interface StoryAnalysis {
   dialoguePanels?: number;
   speechBubbleDistribution?: Record<string, number>;
 }
+
 export interface QualityMetrics {
   characterConsistency: number;
   environmentalConsistency?: number;
@@ -288,11 +295,11 @@ export interface CartoonizeResult {
 
 export interface SceneGenerationOptions {
   story: string;
-  audience: AudienceType;
+  audience?: AudienceType;
   characterImage?: string;
   characterArtStyle?: string;
   layoutType?: string;
-  enhancedContext?: any; // ✅ FIXED: Added missing property
+  enhancedContext?: any;
 }
 
 export interface SceneGenerationResult {
@@ -301,18 +308,9 @@ export interface SceneGenerationResult {
   characterImage?: string;
   layoutType: string;
   characterArtStyle: string;
-  metadata: {
-    discoveryPath: string;
-    patternType: 'direct' | 'nested' | 'discovered' | 'fallback';
-    qualityScore: number;
-    originalStructure: string[];
-    storyBeats: number;
-    characterConsistencyEnabled: boolean;
-    professionalStandards: boolean;
-    dialoguePanels: number;
-    speechBubbleDistribution: any;
-  };
+  metadata: SceneMetadata;
 }
+
 // ===== HEALTH MONITORING INTERFACES =====
 
 export interface IServiceHealth {
@@ -551,6 +549,7 @@ export interface IServiceConfiguration {
    */
   isFeatureEnabled(feature: string): boolean;
 }
+
 // ===== COMPOSITE SERVICE INTERFACES =====
 
 export interface IDatabaseService extends 
@@ -793,7 +792,7 @@ export interface DatabaseOperation<T> {
 }
 
 export interface ChatCompletionOptions {
-  model: string;
+  model?: string;
   messages: any[];
   temperature?: number;
   maxTokens?: number;
