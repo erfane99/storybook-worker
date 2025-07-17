@@ -3,7 +3,7 @@
 
 export type JobType = 'storybook' | 'auto-story' | 'scenes' | 'cartoonize' | 'image-generation';
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
-export type AudienceType = 'children' | 'young_adults' | 'adults';
+export type { AudienceType } from '../services/interfaces/service-contracts.js';
 export type CharacterArtStyle = 'storybook' | 'comic-book' | 'anime' | 'semi-realistic' | 'cartoon';
 export type LayoutType = 'comic-book-panels' | 'individual-scenes';
 
