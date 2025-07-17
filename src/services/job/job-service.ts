@@ -145,20 +145,20 @@ export class JobService extends ErrorAwareBaseService implements IJobService {
 let databaseService: IDatabaseService;
 
 try {
-  // First try synchronous resolution (should work if preloaded)
-  const syncResult = serviceContainer.resolveSync<IDatabaseService>(SERVICE_TOKENS.DATABASE);
-  if (!syncResult) {
-    throw new Error('Sync resolution returned null');
+  // Resolve DatabaseService (should now work since it's eager-loaded)
+  databaseService = serviceContainer.resolveSync<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+  if (!databaseService) {
+    this.log('warn', 'Sync resolution failed, trying async fallback');
+    databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
   }
-  databaseService = syncResult;
-  this.log('info', 'DatabaseService resolved synchronously');
-          } catch (syncError) {
-            this.log('warn', 'Synchronous DatabaseService resolution failed, trying async resolution');
-            
-            // Fallback to async resolution
-            databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
-            this.log('info', 'DatabaseService resolved asynchronously');
-          }
+  this.log('info', 'DatabaseService resolved successfully');
+} catch (resolutionError) {
+  this.log('error', 'Failed to resolve DatabaseService', resolutionError);
+  throw new DatabaseConnectionError(
+    `DatabaseService resolution failed: ${resolutionError.message}`,
+    { service: this.getName(), operation: 'getPendingJobs' }
+  );
+}
           
           if (!databaseService) {
             throw new DatabaseConnectionError('DatabaseService resolved to null/undefined', {
