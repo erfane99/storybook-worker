@@ -949,7 +949,7 @@ Return only the dialogue text, no quotes.`;
   }
 
   private async extractVisualDNA(description: string, artStyle: string): Promise<any> {
-    const prompt = `Extract visual DNA components for consistent character generation:
+  const prompt = `Extract visual DNA components for consistent character generation:
 
 Character Description: ${description}
 Art Style: ${artStyle}
@@ -962,35 +962,38 @@ Return JSON with these components:
 - colorPalette: [character's color scheme]
 - expressionBaseline: [neutral expression description]`;
 
-    try {
-      const options = {
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        maxTokens: 800,
-        temperature: 0.3,
-        responseFormat: { type: 'json_object' }
-      };
+  try {
+    const options = {
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: prompt }],
+      maxTokens: 800,
+      temperature: 0.3,
+      responseFormat: { type: 'json_object' }
+    };
 
-      const result = await this.makeOpenAIAPICall<any>(
-        '/chat/completions',
-        options,
-        60000,
-        'extractVisualDNA'
-      );
+    const result = await this.makeOpenAIAPICall<any>(
+      '/chat/completions',
+      options,
+      60000,
+      'extractVisualDNA'
+    );
 
-      return JSON.parse(result.choices[0]?.message?.content || '{}');
-    } catch (error) {
-      console.warn('Failed to extract visual DNA, using fallback');
-      return {
-        facialFeatures: ['distinctive character features'],
-        bodyType: 'proportional character build',
-        clothing: 'character outfit',
-        distinctiveFeatures: ['unique character traits'],
-        colorPalette: ['character colors'],
-        expressionBaseline: 'neutral character expression'
-      };
-    }
+    const rawResult = JSON.parse(result.choices[0]?.message?.content || '{}');
+    
+    // ✅ VALIDATION LAYER - Ensures data matches expected format
+    return {
+      facialFeatures: this.ensureArray(rawResult.facialFeatures),
+      bodyType: this.ensureString(rawResult.bodyType),
+      clothing: this.ensureString(rawResult.clothing),
+      distinctiveFeatures: this.ensureArray(rawResult.distinctiveFeatures),
+      colorPalette: this.ensureArray(rawResult.colorPalette),
+      expressionBaseline: this.ensureString(rawResult.expressionBaseline)
+    };
+  } catch (error) {
+    console.warn('Failed to extract visual DNA, using fallback');
+    return this.getFallbackVisualDNA();
   }
+}
 
   private buildCharacterConsistencyPrompts(description: string, artStyle: string): any {
     return {
@@ -2122,6 +2125,41 @@ QUALITY STANDARDS:
       ]
     };
   }
+
+  // ===== HELPER METHODS FOR DATA VALIDATION =====
+  
+  /**
+   * Ensures value is always an array of strings
+   */
+  private ensureArray(value: any): string[] {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') return value.split(',').map(s => s.trim()).filter(s => s);
+    return ['default feature'];
+  }
+
+  /**
+   * Ensures value is always a string
+   */
+  private ensureString(value: any): string {
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value)) return value.join(', ');
+    return 'default value';
+  }
+
+  /**
+   * Provides fallback visual DNA when OpenAI fails
+   */
+  private getFallbackVisualDNA(): any {
+    return {
+      facialFeatures: ['distinctive character features'],
+      bodyType: 'proportional character build',
+      clothing: 'character outfit',
+      distinctiveFeatures: ['unique character traits'],
+      colorPalette: ['character colors'],
+      expressionBaseline: 'neutral character expression'
+    };
+  }
+}
 }
 
 // ===== EXPORTS =====
