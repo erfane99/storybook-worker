@@ -429,7 +429,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
   }
 
   // ✅ ENHANCED HEALTH CHECK WITH ADVANCED FEATURES
-  protected async checkServiceHealth(): Promise<boolean> {
+  async checkServiceHealth(): Promise<boolean> {
     if (!this.apiKey) {
       return false;
     }
@@ -6693,7 +6693,8 @@ export const AI_SERVICE_VERSION_INFO = {
  * Create AI service configuration for different environments
  */
 export function createEnvironmentConfig(environment: 'production' | 'development' | 'testing'): AIServiceConfig {
-  const baseConfig = AI_SERVICE_ENTERPRISE_CONFIG[environment.toUpperCase()];
+  const envKey = environment.toUpperCase() as keyof typeof AI_SERVICE_ENTERPRISE_CONFIG;
+  const baseConfig = AI_SERVICE_ENTERPRISE_CONFIG[envKey];
   
   return {
     name: 'AIService',
