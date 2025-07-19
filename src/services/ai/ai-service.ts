@@ -533,6 +533,214 @@ NARRATIVE INTELLIGENCE APPLIED:
       const storyAnalysis = JSON.parse(result.choices[0].message.content);
       
       // 🔍 ENHANCED VALIDATION: Multi-layer validation system
+      private validateStoryAnalysisCompleteness(storyAnalysis: any, config: any): { isValid: boolean; missingFields: string[] } {
+    const issues: string[] = [];
+    
+    // Core structure validation
+    if (!storyAnalysis || typeof storyAnalysis !== 'object') {
+      issues.push('Invalid analysis structure');
+      return { isValid: false, missingFields: issues };
+    }
+    
+    // Story beats validation with professional standards
+    if (!storyAnalysis.storyBeats || !Array.isArray(storyAnalysis.storyBeats)) {
+      issues.push('Missing or invalid storyBeats array');
+    } else {
+      // Validate each story beat has required fields
+      storyAnalysis.storyBeats.forEach((beat: any, index: number) => {
+        const requiredFields = ['beat', 'emotion', 'visualPriority', 'panelPurpose', 'narrativeFunction', 'characterAction', 'environment'];
+        requiredFields.forEach(field => {
+          if (!beat[field] || typeof beat[field] !== 'string' || beat[field].trim().length === 0) {
+            issues.push(`Beat ${index + 1}: Missing or empty ${field}`);
+          }
+        });
+      });
+      
+      // Panel count validation
+      if (storyAnalysis.storyBeats.length !== config.totalPanels) {
+        issues.push(`Panel count mismatch: expected ${config.totalPanels}, got ${storyAnalysis.storyBeats.length}`);
+      }
+    }
+    
+    // Narrative intelligence validation
+    if (!storyAnalysis.storyArchetype) {
+      issues.push('Missing story archetype from narrative intelligence');
+    }
+    
+    // Character arc validation
+    if (!storyAnalysis.characterArc || !Array.isArray(storyAnalysis.characterArc) || storyAnalysis.characterArc.length === 0) {
+      issues.push('Missing or invalid character arc progression');
+    }
+    
+    // Visual flow validation
+    if (!storyAnalysis.visualFlow || !Array.isArray(storyAnalysis.visualFlow) || storyAnalysis.visualFlow.length === 0) {
+      issues.push('Missing or invalid visual flow progression');
+    }
+    
+    // Professional standards validation
+    if (typeof storyAnalysis.totalPanels !== 'number' || storyAnalysis.totalPanels <= 0) {
+      issues.push('Invalid totalPanels value');
+    }
+    
+    if (typeof storyAnalysis.pagesRequired !== 'number' || storyAnalysis.pagesRequired <= 0) {
+      issues.push('Invalid pagesRequired value');
+    }
+    
+    console.log(`📊 Validation complete: ${issues.length === 0 ? '✅ PASSED' : '❌ FAILED'} - ${issues.length} issues found`);
+    
+    return {
+      isValid: issues.length === 0,
+      missingFields: issues
+    };
+  }
+      private async intelligentEmergencyStoryAnalysis(story: string, audience: AudienceType): Promise<StoryAnalysis> {
+    console.log('🧠 Activating intelligent emergency story analysis with narrative intelligence...');
+    
+    try {
+      const config = PROFESSIONAL_AUDIENCE_CONFIG[audience];
+      
+      // Apply narrative intelligence even in emergency mode
+      const detectedArchetype = this.detectStoryArchetypeFromText(story);
+      const narrativeIntel = this.narrativeIntelligence.get(detectedArchetype) || 
+                            await this.createEmergencyNarrativeIntelligence(story, audience, detectedArchetype);
+      
+      // Intelligent story parsing using advanced text analysis
+      const storySegments = this.parseStoryIntelligently(story, config.totalPanels);
+      const emotionalProgression = this.mapEmotionalProgressionFromText(story, narrativeIntel.emotionalArc);
+      
+      const storyBeats: StoryBeat[] = [];
+      
+      for (let i = 0; i < config.totalPanels; i++) {
+        const segment = storySegments[i] || this.generateContextualSegment(story, i, config.totalPanels);
+        const emotion = emotionalProgression[i] || this.deriveEmotionFromContext(segment, i, config.totalPanels);
+        const panelPurpose = this.determinePanelPurpose(i, config.totalPanels, detectedArchetype);
+        
+        storyBeats.push({
+          beat: this.refineBeatDescription(segment, emotion, panelPurpose),
+          emotion,
+          visualPriority: this.determineVisualPriority(emotion, panelPurpose, i),
+          panelPurpose,
+          narrativeFunction: this.mapToNarrativeFunction(i, config.totalPanels, detectedArchetype),
+          characterAction: this.deriveCharacterAction(segment, emotion, panelPurpose),
+          environment: this.deriveEnvironment(segment, story, i),
+          dialogue: this.extractOrGenerateDialogue(segment, i, config.speechBubbleRatio)
+        });
+      }
+      
+      // Generate intelligent character arc
+      const characterArc = this.generateIntelligentCharacterArc(detectedArchetype, narrativeIntel);
+      
+      // Generate professional visual flow
+      const visualFlow = this.generateProfessionalVisualFlow(storyBeats, detectedArchetype);
+      
+      console.log(`✅ Emergency analysis complete: ${detectedArchetype} archetype with ${storyBeats.length} professional beats`);
+      
+      return {
+        storyBeats,
+        storyArchetype: detectedArchetype,
+        emotionalArc: narrativeIntel.emotionalArc,
+        characterArc,
+        visualFlow,
+        totalPanels: config.totalPanels,
+        pagesRequired: config.pagesPerStory,
+        dialoguePanels: storyBeats.filter(beat => beat.dialogue && beat.dialogue.trim().length > 0).length,
+        narrativeIntelligence: {
+          archetypeApplied: detectedArchetype,
+          pacingStrategy: narrativeIntel.pacingStrategy,
+          characterGrowthIntegrated: true
+        }
+      };
+      
+    } catch (error) {
+      console.error('Emergency analysis failed, using basic fallback:', error);
+      return this.createBasicFallbackAnalysis(story, audience);
+    }
+  }
+
+  // Supporting intelligent methods for emergency analysis
+  private detectStoryArchetypeFromText(story: string): string {
+    const text = story.toLowerCase();
+    
+    // Advanced pattern matching for story archetypes
+    if (text.includes('journey') || text.includes('adventure') || text.includes('quest')) {
+      return 'hero_journey';
+    }
+    if (text.includes('discover') || text.includes('find') || text.includes('explore')) {
+      return 'discovery';
+    }
+    if (text.includes('change') || text.includes('learn') || text.includes('grow')) {
+      return 'transformation';
+    }
+    
+    return 'discovery'; // Safe default for most stories
+  }
+
+  private async createEmergencyNarrativeIntelligence(story: string, audience: AudienceType, archetype: string): Promise<any> {
+    const archetypeData = STORYTELLING_ARCHETYPES[archetype] || STORYTELLING_ARCHETYPES.discovery;
+    
+    return {
+      storyArchetype: archetype,
+      emotionalArc: archetypeData.emotionalBeats,
+      thematicElements: this.extractThemesFromText(story),
+      pacingStrategy: audience === 'children' ? 'emotional_depth' : 'slow_build',
+      characterGrowth: ['beginning', 'development', 'resolution'],
+      conflictProgression: archetypeData.structure
+    };
+  }
+
+  private parseStoryIntelligently(story: string, panelCount: number): string[] {
+    // Advanced story parsing with context awareness
+    const sentences = story.split(/[.!?]+/).filter(s => s.trim().length > 10);
+    const segments: string[] = [];
+    
+    for (let i = 0; i < panelCount; i++) {
+      const position = i / (panelCount - 1); // 0 to 1
+      const sentenceIndex = Math.floor(position * (sentences.length - 1));
+      const sentence = sentences[sentenceIndex] || sentences[sentences.length - 1] || 'Story continues';
+      segments.push(sentence.trim());
+    }
+    
+    return segments;
+  }
+
+  private extractThemesFromText(story: string): string[] {
+    const text = story.toLowerCase();
+    const themes = [];
+    
+    if (text.includes('friend') || text.includes('together')) themes.push('friendship');
+    if (text.includes('brave') || text.includes('courage')) themes.push('courage');
+    if (text.includes('help') || text.includes('kind')) themes.push('kindness');
+    if (text.includes('learn') || text.includes('discover')) themes.push('growth');
+    
+    return themes.length > 0 ? themes : ['adventure', 'discovery'];
+  }
+
+  private createBasicFallbackAnalysis(story: string, audience: AudienceType): StoryAnalysis {
+    const config = PROFESSIONAL_AUDIENCE_CONFIG[audience];
+    const basicBeats: StoryBeat[] = [];
+    
+    for (let i = 0; i < config.totalPanels; i++) {
+      basicBeats.push({
+        beat: `Story panel ${i + 1}`,
+        emotion: 'curious',
+        visualPriority: 'character focus',
+        panelPurpose: 'story_progression',
+        narrativeFunction: 'narrative_development',
+        characterAction: 'story interaction',
+        environment: 'story setting',
+        dialogue: ''
+      });
+    }
+    
+    return {
+      storyBeats: basicBeats,
+      characterArc: ['beginning', 'middle', 'end'],
+      visualFlow: ['establish', 'develop', 'conclude'],
+      totalPanels: config.totalPanels,
+      pagesRequired: config.pagesPerStory,
+      dialoguePanels: 0
+    };
+  }
       const validationResult = this.validateStoryAnalysisCompleteness(storyAnalysis, config);
       
       if (!validationResult.isValid) {
@@ -6134,36 +6342,3 @@ export function getServiceCapabilities(config: AIServiceConfig): string[] {
 
   return capabilities;
 }
-
-// ===== FINAL EXPORTS =====
-
-// Main service export
-export { AIService };
-
-// Enterprise features
-export { 
-  createEnterpriseAIService,
-  initializeEnterpriseAIService,
-  checkEnterpriseAIServiceHealth,
-  monitorEnterpriseAIServicePerformance
-};
-
-// Configuration utilities
-export {
-  createEnvironmentConfig,
-  validateEnterpriseConfiguration,
-  getServiceCapabilities
-};
-
-// Constants and version info
-export {
-  AI_SERVICE_ENTERPRISE_CONSTANTS,
-  AI_SERVICE_ENTERPRISE_CONFIG,
-  AI_SERVICE_VERSION_INFO
-};
-
-// Legacy compatibility
-export const aiService = revolutionaryAIService;
-export const createAIService = createEnterpriseAIService;
-export const initializeAIService = initializeEnterpriseAIService;
-export const checkAIServiceHealth = checkEnterpriseAIServiceHealth;
