@@ -65,16 +65,16 @@ export class ServiceRegistry {
     );
 
     // Register AI Service (depends on config)
-    serviceContainer.register(
-      SERVICE_TOKENS.AI,
-      () => new AIService(),
-      {
-        singleton: true,
-        lazy: true,
-        dependencies: [SERVICE_TOKENS.CONFIG],
-        healthCheck: true,
-      }
-    );
+serviceContainer.register(
+  SERVICE_TOKENS.AI,
+  () => createEnterpriseAIService(),
+  {
+    singleton: true,
+    lazy: true,
+    dependencies: [SERVICE_TOKENS.CONFIG],
+    healthCheck: true,
+  }
+);
 
     // Register Storage Service (depends on config)
     serviceContainer.register(
