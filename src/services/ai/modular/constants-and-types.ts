@@ -11,12 +11,12 @@
 import { ErrorAwareServiceConfig } from '../../../base/error-aware-base-service.js';
 import { 
   ServiceConfig,
-  CharacterDNA,
-  EnvironmentalDNA,
-  StoryAnalysis,
-  StoryBeat,
-  AudienceType,
-  PanelType,
+  CharacterDNA as BaseCharacterDNA,
+  EnvironmentalDNA as BaseEnvironmentalDNA,
+  StoryAnalysis as BaseStoryAnalysis,
+  StoryBeat as BaseStoryBeat,
+  AudienceType as BaseAudienceType,
+  PanelType as BasePanelType,
   SceneGenerationOptions,
   SceneGenerationResult,
   ImageGenerationOptions,
@@ -30,6 +30,195 @@ import {
   RetryConfig
 } from '../../../interfaces/service-contracts.js';
 import { ErrorCategory } from '../../../errors/index.js';
+
+// ===== RE-EXPORT AND EXTEND BASE TYPES =====
+export type AudienceType = BaseAudienceType;
+export type PanelType = BasePanelType;
+
+// ===== MISSING INTERFACE DEFINITIONS (ADDED) =====
+
+export interface ComicPanel {
+  description: string;
+  emotion: string;
+  imagePrompt: string;
+  panelType: PanelType;
+  characterAction: string;
+  narrativePurpose: string;
+  visualPriority: string;
+  dialogue?: string;
+  hasSpeechBubble: boolean;
+  speechBubbleStyle?: string;
+  panelNumber: number;
+  pageNumber: number;
+  environmentalContext?: string;
+  professionalStandards: boolean;
+}
+
+export interface ThematicAnalysis {
+  primaryThemes: string[];
+  secondaryThemes: string[];
+  universalAppeal: number;
+  audienceAlignment: number;
+  emotionalResonance: number;
+}
+
+export interface ArchetypeDetectionResult {
+  primaryArchetype: StoryArchetype;
+  confidence: number;
+  alternativeArchetypes: string[];
+  reasoningFactors: string[];
+}
+
+export interface StoryAnalysisContext {
+  totalPanels: number;
+  pagesPerStory: number;
+  panelsPerPage: number;
+  complexity: string;
+  narrativeDepth: string;
+  speechBubbleRatio: number;
+}
+
+export interface EmotionalProgression {
+  startEmotion: string;
+  midEmotion: string;
+  endEmotion: string;
+  progression: string[];
+}
+
+export interface CharacterGrowthPattern {
+  initial: string;
+  development: string[];
+  final: string;
+}
+
+export interface PatternEvolutionResult {
+  originalContext: any;
+  evolvedPrompts: any;
+  improvementRationale: string;
+  patternsApplied: LearningPattern[];
+  contextMatch: {
+    similarity: number;
+    matchingFactors: string[];
+    adaptationRequired: string[];
+  };
+  expectedImprovements: {
+    characterConsistency: number;
+    environmentalCoherence: number;
+    narrativeFlow: number;
+    userSatisfaction: number;
+  };
+  confidenceScore: number;
+}
+
+export interface PatternLearningConfig {
+  enableSelfLearning: boolean;
+  patternStorageLimit: number;
+  evolutionThreshold: number;
+  effectivenessThreshold: number;
+}
+
+export interface QualityEngineConfig {
+  enableProfessionalGrading: boolean;
+  enableUserSatisfactionTracking: boolean;
+  qualityThresholds: {
+    excellent: number;
+    good: number;
+    acceptable: number;
+    needsImprovement: number;
+  };
+}
+
+export interface QualityAssessmentContext {
+  characterDNA?: CharacterDNA;
+  environmentalDNA?: EnvironmentalDNA;
+  storyAnalysis?: StoryAnalysis;
+  targetAudience: AudienceType;
+  artStyle: string;
+}
+
+export interface VisualDNAConfig {
+  enableFingerprinting: boolean;
+  cacheSize: number;
+  compressionLevel: string;
+  consistencyThreshold: number;
+}
+
+export interface DNAExtractionResult {
+  success: boolean;
+  dna: any;
+  confidence: number;
+}
+
+export interface HealthAssessment {
+  timestamp: string;
+  basicHealth: boolean;
+  systemComponents: any;
+  performance: any;
+  quality: any;
+  learning: any;
+}
+
+export interface ServiceValidation {
+  name: string;
+  check: () => boolean;
+  passed?: boolean;
+  timestamp?: string;
+}
+
+export interface EnterpriseMonitoringConfig {
+  enableRealTimeMetrics: boolean;
+  enableHealthChecking: boolean;
+  metricsRetentionDays: number;
+}
+
+// ===== AI PROMPTS DEFINITION (ADDED) =====
+export const AI_PROMPTS = {
+  characterAnalysis: {
+    base: `Analyze this character image for consistent comic book representation.
+Create a detailed visual DNA profile that will ensure perfect consistency across all comic panels.`,
+    visualDNA: `Extract visual DNA components:
+1. Facial structure and distinctive features
+2. Body proportions and characteristics  
+3. Clothing signature elements
+4. Color palette and style markers
+5. Unique identifying traits`,
+    fingerprinting: `Create compressed visual fingerprint for efficient character consistency.`
+  },
+  storyAnalysis: {
+    base: `Analyze this story for professional comic book adaptation:`,
+    children: `For children's audience, ensure safe, educational, and engaging content.`,
+    youngAdults: `For young adults, include character growth and relatable themes.`,
+    adults: `For adults, explore complex themes with sophisticated storytelling.`
+  },
+  archetypeDetection: {
+    base: `Detect the primary storytelling archetype in this narrative:`,
+    children: `Focus on discovery, friendship, and positive growth themes.`,
+    youngAdults: `Emphasize personal development and adventure themes.`,
+    adults: `Consider complex psychological and thematic elements.`
+  },
+  thematicAnalysis: {
+    base: `Extract thematic elements from this story:`,
+    instructions: `Identify primary themes, emotional resonance, and universal appeal factors.`
+  },
+  imageGeneration: {
+    base: `Generate professional comic book panel:`,
+    visualDNA: `Apply character visual DNA for consistency:`,
+    environmentalDNA: `Maintain environmental consistency:`
+  },
+  qualityAssessment: {
+    base: `Assess comic panel quality with professional standards:`
+  }
+} as const;
+
+// ===== QUALITY STANDARDS (ADDED) =====
+export const QUALITY_STANDARDS = {
+  characterConsistency: { min: 85, target: 95 },
+  narrativeCoherence: { min: 80, target: 90 },
+  visualQuality: { min: 85, target: 95 },
+  emotionalResonance: { min: 75, target: 85 },
+  technicalExecution: { min: 80, target: 90 },
+  audienceAlignment: { min: 85, target: 95 }
+} as const;
 
 // ===== ENHANCED AI SERVICE CONFIGURATION =====
 
@@ -57,16 +246,21 @@ export interface VisualFingerprint {
   clothing: string;                // Signature clothing
   signature: string;               // Unique visual marker
   colorDNA: string;               // Color palette code
-  artStyleSignature: string;      // Art style consistency marker
+  artStyleSignature: string;      // Art style consistency marker (ADDED - was missing)
 }
 
 export interface NarrativeIntelligence {
-  storyArchetype: 'hero_journey' | 'redemption' | 'discovery' | 'transformation' | 'mystery' | 'adventure';
+  storyArchetype: StoryArchetype;
   emotionalArc: string[];
   thematicElements: string[];
   pacingStrategy: 'slow_build' | 'action_packed' | 'emotional_depth' | 'mystery_reveal';
   characterGrowth: string[];
   conflictProgression: string[];
+  confidence?: number;
+  alternativeArchetypes?: string[];
+  audienceAlignment?: number;
+  universalAppeal?: number;
+  reasoningFactors?: string[];
 }
 
 // ===== SINGLE PROFESSIONAL COMIC STANDARDS DEFINITION =====
@@ -94,7 +288,7 @@ export interface ProfessionalComicStandards {
 // ===== ENHANCED LEARNING PATTERN INTERFACE =====
 
 export interface LearningPattern {
-  patternId: string;
+  id: string;
   timestamp: string;
   contextAnalysis: {
     audience: AudienceType;
@@ -187,22 +381,35 @@ export interface CircuitBreakerState {
 }
 
 export interface ServiceRegistration {
-  name: string;
-  version: string;
-  capabilities: string[];
-  healthEndpoint: string;
-  metricsEndpoint: string;
+  serviceId: string;
+  registrationTime: string;
   lastHeartbeat: string;
+  capabilities: string[];
+  version: string;
   status: 'active' | 'inactive' | 'degraded';
 }
 
+// ===== FIXED METRICS COLLECTOR INTERFACE =====
 export interface MetricsCollector {
+  // Original properties
   totalRequests: number;
   successfulRequests: number;
   failedRequests: number;
   averageResponseTime: number;
   circuitBreakerTrips: number;
   lastRequestTime: string;
+  
+  // ADDED: Missing properties that enterprise-monitoring expects
+  operationCounts: Map<string, number>;
+  operationTimes: Map<string, number[]>;
+  errorCounts: Map<string, number>;
+  systemHealth: Array<{
+    timestamp: string;
+    status: boolean;
+    details: any;
+  }>;
+  qualityScores: number[];
+  userSatisfactionScores: number[];
 }
 
 export interface ErrorClassification {
@@ -245,6 +452,7 @@ export interface ComprehensiveMetrics {
     scoreDistribution: any;
     totalAssessments: number;
     recentQualityScore: number;
+    averageUserSatisfaction: number; // ADDED: Missing property
   };
   system: {
     memoryUsage: string;
@@ -355,9 +563,10 @@ export const PROFESSIONAL_AUDIENCE_CONFIG = {
     resolutionType: 'meaningful_conclusion'
   }
 } as const;
-
 // ===== STORYTELLING ARCHETYPES WITH HIGH-QUALITY CONFIGURATIONS =====
 // COMBINED FROM BOTH ORIGINAL FILES FOR MAXIMUM NARRATIVE QUALITY
+
+export type StoryArchetype = 'hero_journey' | 'redemption' | 'discovery' | 'transformation' | 'mystery' | 'adventure';
 
 export const STORYTELLING_ARCHETYPES = {
   hero_journey: {
@@ -372,8 +581,8 @@ export const STORYTELLING_ARCHETYPES = {
       'road_back',
       'resurrection',
       'return_transformed'
-    ],
-    emotionalArc: [
+    ] as const,
+    emotionalBeats: [
       'comfortable',
       'reluctant', 
       'encouraged',
@@ -384,7 +593,7 @@ export const STORYTELLING_ARCHETYPES = {
       'confident',
       'transformed',
       'wise'
-    ],
+    ] as const,
     thematicElements: [
       'personal_growth',
       'courage_development',
@@ -399,7 +608,7 @@ export const STORYTELLING_ARCHETYPES = {
       'inexperienced_to_wise',
       'selfish_to_selfless'
     ],
-    pacingStrategy: 'emotional_depth',
+    pacingStrategy: 'emotional_depth' as const,
     visualPriority: 'character_transformation',
     recommendedPanels: 12
   },
@@ -414,8 +623,8 @@ export const STORYTELLING_ARCHETYPES = {
       'support_from_others',
       'final_test',
       'transformation_complete'
-    ],
-    emotionalArc: [
+    ] as const,
+    emotionalBeats: [
       'guilt_ridden',
       'defensive',
       'awakened',
@@ -425,7 +634,7 @@ export const STORYTELLING_ARCHETYPES = {
       'supported',
       'resolved',
       'redeemed'
-    ],
+    ] as const,
     thematicElements: [
       'second_chances',
       'forgiveness',
@@ -440,7 +649,7 @@ export const STORYTELLING_ARCHETYPES = {
       'bitter_to_hopeful',
       'isolated_to_connected'
     ],
-    pacingStrategy: 'emotional_depth',
+    pacingStrategy: 'emotional_depth' as const,
     visualPriority: 'character_emotion',
     recommendedPanels: 12
   },
@@ -454,8 +663,8 @@ export const STORYTELLING_ARCHETYPES = {
       'breakthrough_moment',
       'understanding_gained',
       'knowledge_applied'
-    ],
-    emotionalArc: [
+    ] as const,
+    emotionalBeats: [
       'curious',
       'excited',
       'intrigued',
@@ -464,7 +673,7 @@ export const STORYTELLING_ARCHETYPES = {
       'amazed',
       'enlightened',
       'accomplished'
-    ],
+    ] as const,
     thematicElements: [
       'knowledge_power',
       'curiosity_value',
@@ -479,7 +688,7 @@ export const STORYTELLING_ARCHETYPES = {
       'closed_minded_to_open',
       'individual_to_teacher'
     ],
-    pacingStrategy: 'mystery_reveal',
+    pacingStrategy: 'mystery_reveal' as const,
     visualPriority: 'discovery_moments',
     recommendedPanels: 10
   },
@@ -493,8 +702,8 @@ export const STORYTELLING_ARCHETYPES = {
       'breakthrough_acceptance',
       'new_identity_emerging',
       'transformation_complete'
-    ],
-    emotionalArc: [
+    ] as const,
+    emotionalBeats: [
       'content',
       'resistant',
       'confused',
@@ -503,7 +712,7 @@ export const STORYTELLING_ARCHETYPES = {
       'accepting',
       'growing',
       'transformed'
-    ],
+    ] as const,
     thematicElements: [
       'change_inevitable',
       'adaptation_survival',
@@ -518,7 +727,7 @@ export const STORYTELLING_ARCHETYPES = {
       'one_dimensional_to_complex',
       'limited_to_expanded'
     ],
-    pacingStrategy: 'emotional_depth',
+    pacingStrategy: 'emotional_depth' as const,
     visualPriority: 'transformation_moments',
     recommendedPanels: 12
   },
@@ -532,8 +741,8 @@ export const STORYTELLING_ARCHETYPES = {
       'connecting_pieces',
       'revelation_moment',
       'resolution_achieved'
-    ],
-    emotionalArc: [
+    ] as const,
+    emotionalBeats: [
       'puzzled',
       'determined',
       'hopeful',
@@ -542,7 +751,7 @@ export const STORYTELLING_ARCHETYPES = {
       'excited',
       'amazed',
       'satisfied'
-    ],
+    ] as const,
     thematicElements: [
       'truth_seeking',
       'persistence_rewarded',
@@ -557,7 +766,7 @@ export const STORYTELLING_ARCHETYPES = {
       'surface_to_deep_thinking',
       'follower_to_investigator'
     ],
-    pacingStrategy: 'mystery_reveal',
+    pacingStrategy: 'mystery_reveal' as const,
     visualPriority: 'clue_discovery',
     recommendedPanels: 14
   },
@@ -571,8 +780,8 @@ export const STORYTELLING_ARCHETYPES = {
       'climactic_challenge',
       'victory_achieved',
       'homecoming_changed'
-    ],
-    emotionalArc: [
+    ] as const,
+    emotionalBeats: [
       'eager',
       'adventurous',
       'challenged',
@@ -581,7 +790,7 @@ export const STORYTELLING_ARCHETYPES = {
       'heroic',
       'triumphant',
       'enriched'
-    ],
+    ] as const,
     thematicElements: [
       'exploration_spirit',
       'friendship_bonds',
@@ -596,7 +805,7 @@ export const STORYTELLING_ARCHETYPES = {
       'cautious_to_bold',
       'local_to_worldly'
     ],
-    pacingStrategy: 'action_packed',
+    pacingStrategy: 'action_packed' as const,
     visualPriority: 'action_sequences',
     recommendedPanels: 16
   }
@@ -754,11 +963,6 @@ export const PANEL_PSYCHOLOGY = {
     narrativePurpose: 'major_moment'
   }
 } as const;
-/**
- * ===== CONSTANTS AND TYPES PART 2 - ENTERPRISE CONSTANTS =====
- * Continuation of constants-and-types.ts
- * Contains enterprise configuration, version info, and utility exports
- */
 
 // ===== AI SERVICE ENTERPRISE CONSTANTS =====
 // COMPREHENSIVE CONFIGURATION FROM BOTH ORIGINAL FILES
@@ -1199,7 +1403,6 @@ export type SupportedArtStyle = typeof AI_SERVICE_ENTERPRISE_CONSTANTS.SUPPORTED
 export type QualityGrade = typeof AI_SERVICE_ENTERPRISE_CONSTANTS.QUALITY_GRADES[number];
 export type SpeechBubbleStyle = typeof AI_SERVICE_ENTERPRISE_CONSTANTS.SPEECH_BUBBLE_STYLES[number];
 export type PanelTypeConstant = typeof AI_SERVICE_ENTERPRISE_CONSTANTS.PANEL_TYPES[number];
-export type StoryArchetype = keyof typeof STORYTELLING_ARCHETYPES;
 export type RetryStrategyType = typeof RETRY_STRATEGIES[keyof typeof RETRY_STRATEGIES];
 
 // ===== CONFIGURATION VALIDATION HELPERS =====
@@ -1271,3 +1474,114 @@ export function generateQualityRecommendations(metrics: QualityMetrics): string[
   
   return recommendations;
 }
+
+// ===== EXTENDED TYPE DEFINITIONS =====
+
+export interface CharacterDNA extends BaseCharacterDNA {
+  visualFingerprint?: VisualFingerprint;
+  facialFeatures: string[];
+  bodyCharacteristics: string;
+  clothingSignature: string;
+  colorPalette: string[];
+  artStyleAdaptation: string;
+  consistencyMarkers: string[];
+  visualDNA?: any;
+  consistencyPrompts?: any;
+  metadata?: {
+    analysisMethod: string;
+    artStyleOptimized: string;
+    fingerprintGenerated: boolean;
+    qualityScore: number;
+    createdAt?: string;
+    compressionApplied?: boolean;
+    confidenceScore?: number;
+  };
+}
+
+export interface EnvironmentalDNA extends BaseEnvironmentalDNA {
+  primaryLocation: {
+    name: string;
+    characteristics: string[];
+    visualElements: string[];
+  };
+  atmosphericConditions: string[];
+  colorScheme: string;
+  lightingConditions: string;
+  spatialRelationships: string[];
+  consistencyMarkers: string[];
+  visualContinuity: {
+    backgroundElements: string[];
+    transitionElements: string[];
+    styleConsistency: string;
+  };
+  environmentalFlow: string;
+}
+
+export interface StoryBeat extends BaseStoryBeat {
+  beat: string;
+  emotion: string;
+  visualPriority: string;
+  characterAction: string;
+  panelPurpose: string;
+  environment: string;
+  dialogue?: string;
+  hasSpeechBubble?: boolean;
+  speechBubbleStyle?: string;
+}
+
+export interface StoryAnalysis extends BaseStoryAnalysis {
+  storyBeats: StoryBeat[];
+  storyArchetype?: string;
+  emotionalArc?: string[];
+  thematicElements?: string[];
+  characterArc?: string[];
+  visualFlow?: string[];
+  totalPanels: number;
+  pagesRequired?: number;
+  dialoguePanels?: number;
+  speechBubbleDistribution?: Record<string, number>;
+  narrativeIntelligence?: {
+    archetypeApplied: string;
+    pacingStrategy: string;
+    characterGrowthIntegrated: boolean;
+  };
+}
+
+// ===== FINAL EXPORT ALL TYPES =====
+export type {
+  // Base exports
+  ServiceConfig,
+  SceneGenerationOptions,
+  SceneGenerationResult,
+  ImageGenerationOptions,
+  ImageGenerationResult,
+  CharacterDescriptionOptions,
+  CharacterDescriptionResult,
+  CartoonizeOptions,
+  CartoonizeResult,
+  ChatCompletionOptions,
+  ChatCompletionResult,
+  RetryConfig,
+  
+  // Extended local types
+  CharacterDNA,
+  EnvironmentalDNA,
+  StoryBeat,
+  StoryAnalysis,
+  ComicPanel,
+  ThematicAnalysis,
+  ArchetypeDetectionResult,
+  StoryAnalysisContext,
+  EmotionalProgression,
+  CharacterGrowthPattern,
+  PatternEvolutionResult,
+  PatternLearningConfig,
+  QualityEngineConfig,
+  QualityAssessmentContext,
+  VisualDNAConfig,
+  DNAExtractionResult,
+  HealthAssessment,
+  ServiceValidation,
+  EnterpriseMonitoringConfig,
+  StoryArchetype
+};
