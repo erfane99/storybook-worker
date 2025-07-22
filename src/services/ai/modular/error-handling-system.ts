@@ -184,6 +184,64 @@ export class ErrorHandlingSystem {
     return ErrorHandlingSystem.instance;
   }
 
+  // ===== MISSING METHOD IMPLEMENTATIONS - FIXED =====
+
+  /**
+   * Handle error with comprehensive context and recovery suggestions
+   */
+  public handleError(error: any, operationName: string, context?: any): AIServiceError {
+    const enhancedError = this.enhanceError(error, operationName, context);
+    
+    // Record error metrics
+    this.recordErrorMetrics(operationName, enhancedError, []);
+    
+    // Record circuit breaker failure
+    this.recordCircuitBreakerFailure(operationName);
+    
+    return enhancedError;
+  }
+
+  /**
+   * Enhance error with additional context and retry information
+   */
+  public enhanceError(error: any, operationName: string, context?: any): AIServiceError {
+    // If already an AI service error, enhance it
+    if (error instanceof AIServiceError) {
+      error.context.operation = operationName;
+      if (context) {
+        error.context = { ...error.context, ...context };
+      }
+      return error;
+    }
+
+    // Convert generic error to AI service error
+    const errorMessage = error?.message || String(error);
+    const errorContext: ErrorContext = {
+      service: 'ErrorHandlingSystem',
+      operation: operationName,
+      originalError: errorMessage,
+      timestamp: Date.now(),
+      ...context
+    };
+
+    // Classify the error and create appropriate AI service error
+    const classification = this.classifyError(error);
+    
+    switch (classification.category) {
+      case 'transient':
+        return new AIServiceUnavailableError(errorMessage, errorContext);
+      case 'configuration':
+        return new AIValidationError(errorMessage, errorContext);
+      case 'content':
+        return new AIContentPolicyError(errorMessage, errorContext);
+      case 'persistent':
+        return new AIServiceUnavailableError(errorMessage, errorContext);
+      case 'system':
+      default:
+        return new AIServiceUnavailableError(errorMessage, errorContext);
+    }
+  }
+
   // 🎯 INTELLIGENT RETRY MECHANISM WITH LEARNING (FROM CURRENTAISERV.TXT)
 
   public async withIntelligentRetry<T>(
@@ -458,13 +516,7 @@ export class ErrorHandlingSystem {
       estimatedRecoveryTime: 60000 // 1 minute
     };
   }
-/**
- * ===== ERROR HANDLING SYSTEM PART 2 =====
- * Recovery strategies, circuit breaker management, and error analytics
- * Continuation of error-handling-system.ts
- */
-
-  // 🔧 RECOVERY STRATEGY EXECUTION (FROM AISERVNOW.TXT)
+  // ===== RECOVERY STRATEGY EXECUTION (FROM AISERVNOW.TXT) =====
 
   public async executeRecoveryStrategy(
     error: any,
@@ -582,14 +634,14 @@ export class ErrorHandlingSystem {
         
         this.logger.log('✅ Basic health check completed');
       }
-    } catch (healthError) {
+    } catch (healthError: any) {
       this.logger.error('❌ Health check and recovery failed:', healthError);
       throw new AIServiceUnavailableError(
         'Service health check and recovery failed',
         { 
           service: 'ErrorHandlingSystem', 
           operation: 'performHealthCheckAndRecover',
-          originalError: healthError instanceof Error ? healthError.message : String(healthError) 
+          originalError: healthError?.message || 'Unknown health error'
         }
       );
     }
@@ -812,7 +864,7 @@ export class ErrorHandlingSystem {
 
   private calculateAverageRetries(metrics: any[]): number {
     if (metrics.length === 0) return 0;
-    const totalRetries = metrics.reduce((sum, m) => sum + m.totalAttempts, 0);
+    const totalRetries = metrics.reduce((sum: number, m: any) => sum + m.totalAttempts, 0);
     return totalRetries / metrics.length;
   }
 
@@ -826,7 +878,7 @@ export class ErrorHandlingSystem {
     }
     
     return Object.entries(categories)
-      .sort(([, a], [, b]) => b - a)[0]?.[0] || 'unknown';
+      .sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0] || 'unknown';
   }
 
   private getTopFailingOperations(): Array<{ operation: string; errors: number; errorRate: string }> {
@@ -854,7 +906,7 @@ export class ErrorHandlingSystem {
     return this.classifyError(error).estimatedRecoveryTime || 60000;
   }
 
-  public createErrorFromResponse(response: Response, operationName: string, endpoint: string): Promise<never> {
+  public async createErrorFromResponse(response: Response, operationName: string, endpoint: string): Promise<never> {
     return this.handleAPIErrorResponse(response, operationName, endpoint);
   }
 
@@ -1051,7 +1103,7 @@ export class ErrorHandlingSystem {
 
     // Calculate error rates
     for (const [operation, metrics] of this.errorMetrics) {
-      const recentErrors = metrics.filter(m => Date.now() - m.timestamp < 300000); // Last 5 minutes
+      const recentErrors = metrics.filter((m: any) => Date.now() - m.timestamp < 300000); // Last 5 minutes
       errorRates[operation] = recentErrors.length;
     }
 
@@ -1173,10 +1225,7 @@ export class ErrorFactory {
 
 // ===== EXPORT ALL ERROR HANDLING COMPONENTS =====
 
-export {
-  ErrorHandlingSystem as default,
-  ErrorHandlingSystem
-};
+export default ErrorHandlingSystem;
 
 // Export error categories and severities
 export const ERROR_CATEGORIES = {
