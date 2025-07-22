@@ -6,7 +6,7 @@ import { serviceConfig } from '../config/service-config.js';
 
 // Import consolidated service implementations
 import { DatabaseService } from '../database/database-service.js';
-import { AIService } from '../ai/ai-service.js';
+import { AIService } from '../ai/ai-service-core.js';
 import { StorageService } from '../storage/storage-service.js';
 import { JobService } from '../job/job-service.js';
 import { AuthService } from '../auth/auth-service.js';
