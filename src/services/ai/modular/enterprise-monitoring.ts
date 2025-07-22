@@ -384,7 +384,7 @@ export class EnterpriseMonitoring {
 
     } catch (error) {
       console.error('Health assessment failed:', error);
-      this.recordSystemHealth(false, { error: error.message });
+      this.recordSystemHealth(false, { error: error instanceof Error ? error.message : String(error) });
       throw this.errorHandler.enhanceError(error, 'performDetailedHealthAssessment');
     }
   }
