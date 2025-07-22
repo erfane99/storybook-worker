@@ -589,7 +589,7 @@ export class ErrorHandlingSystem {
         { 
           service: 'ErrorHandlingSystem', 
           operation: 'performHealthCheckAndRecover',
-          originalError: healthError.message 
+          originalError: healthError instanceof Error ? healthError.message : String(healthError) 
         }
       );
     }
