@@ -209,7 +209,14 @@ export class ErrorHandlingSystem {
     if (error instanceof AIServiceError) {
       error.context.operation = operationName;
       if (context) {
-        error.context = { ...error.context, ...context };
+        error = {
+  ...error,
+  context: {
+    ...(error.context ?? {}),
+    ...context
+  }
+};
+
       }
       return error;
     }
