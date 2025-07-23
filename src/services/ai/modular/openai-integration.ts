@@ -30,19 +30,17 @@ import {
   AIValidationError,
   AINetworkError,
   ErrorHandlingSystem,
-  ErrorContext,
-  RetryOptions
+  ErrorContext
 } from './error-handling-system.js';
 
 import {
-  PROFESSIONAL_PROMPT_TEMPLATES,
   AI_SERVICE_ENTERPRISE_CONSTANTS,
   ERROR_HANDLING_CONSTANTS
 } from './constants-and-types.js';
 
-// ===== TYPES AND INTERFACES =====
+// ===== TYPES AND INTERFACES (FIXED: No duplicate exports) =====
 
-export interface OpenAICallOptions {
+interface OpenAICallOptions {
   enableRetry?: boolean;
   enableCircuitBreaker?: boolean;
   enableMetrics?: boolean;
@@ -51,7 +49,7 @@ export interface OpenAICallOptions {
   baseDelay?: number;
 }
 
-export interface OpenAIParameters {
+interface OpenAIParameters {
   model?: string;
   messages?: any[];
   prompt?: string;
@@ -65,7 +63,7 @@ export interface OpenAIParameters {
   [key: string]: any;
 }
 
-export interface CircuitBreakerState {
+interface CircuitBreakerState {
   failures: number;
   lastFailure: number;
   state: 'closed' | 'open' | 'half-open';
@@ -74,19 +72,30 @@ export interface CircuitBreakerState {
   successCount: number;
 }
 
-export interface RateLimitState {
+interface RateLimitState {
   count: number;
   resetTime: number;
   windowMs: number;
   maxRequests: number;
 }
 
-export interface RetryAttempt {
+interface RetryAttempt {
   attempt: number;
   error?: any;
   duration: number;
   timestamp: number;
   success: boolean;
+}
+
+interface RetryOptions {
+  operationName: string;
+  maxAttempts?: number;
+  baseDelay?: number;
+  maxDelay?: number;
+  learningEnabled?: boolean;
+  circuitBreakerEnabled?: boolean;
+  adaptiveBackoff?: boolean;
+  jitterEnabled?: boolean;
 }
 
 // ===== OPENAI INTEGRATION CLASS =====
@@ -464,12 +473,6 @@ export class OpenAIIntegration {
       }
     }
   }
-/**
- * ===== OPENAI INTEGRATION PART 2 =====
- * Circuit breaker management, rate limiting, optimization utilities, and high-level API methods
- * Continuation of openai-integration.ts
- */
-
   // 🔒 CIRCUIT BREAKER PATTERN (FROM CURRENTAISERV.TXT)
 
   private isCircuitBreakerOpen(endpoint: string): boolean {
@@ -749,43 +752,6 @@ export class OpenAIIntegration {
   }
 
   /**
-   * Analyze story for comic book adaptation (FROM BOTH FILES)
-   */
-  public async analyzeStoryForComic(
-    story: string,
-    audience: string,
-    panelCount: number = 12
-  ): Promise<any> {
-    const promptTemplate = PROFESSIONAL_PROMPT_TEMPLATES.storyAnalysis.base
-      .replace('{story}', story)
-      .replace('{audience}', audience)
-      .replace('{panelCount}', panelCount.toString());
-
-    // Add audience-specific requirements
-    let enhancedPrompt = promptTemplate;
-    if (audience === 'children' && PROFESSIONAL_PROMPT_TEMPLATES.storyAnalysis.children) {
-      enhancedPrompt += '\n\n' + PROFESSIONAL_PROMPT_TEMPLATES.storyAnalysis.children;
-    } else if (audience === 'young adults' && PROFESSIONAL_PROMPT_TEMPLATES.storyAnalysis.youngAdults) {
-      enhancedPrompt += '\n\n' + PROFESSIONAL_PROMPT_TEMPLATES.storyAnalysis.youngAdults;
-    } else if (audience === 'adults' && PROFESSIONAL_PROMPT_TEMPLATES.storyAnalysis.adults) {
-      enhancedPrompt += '\n\n' + PROFESSIONAL_PROMPT_TEMPLATES.storyAnalysis.adults;
-    }
-
-    try {
-      const result = await this.generateTextCompletion(enhancedPrompt, {
-        max_tokens: 3000,
-        temperature: 0.8
-      });
-
-      // Parse the result into structured format
-      return this.parseStoryAnalysisResult(result);
-    } catch (error: any) {
-      this.logger.error('Story analysis failed:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Generate image with character DNA consistency (FROM BOTH FILES)
    */
   public async generateImageWithDNA(
@@ -797,139 +763,29 @@ export class OpenAIIntegration {
     audience: string,
     visualDNA?: any
   ): Promise<string> {
-    // Use professional image generation template
-    let enhancedPrompt = PROFESSIONAL_PROMPT_TEMPLATES.imageGeneration.base
-      .replace('{description}', imagePrompt)
-      .replace('{characterDescription}', characterDescription)
-      .replace('{emotion}', emotion)
-      .replace('{panelType}', panelType)
-      .replace('{artStyle}', artStyle)
-      .replace('{audience}', audience);
+    // Build enhanced prompt with DNA consistency
+    let enhancedPrompt = `${imagePrompt}
+
+CHARACTER: ${characterDescription}
+EMOTION: ${emotion}
+PANEL_TYPE: ${panelType}
+ART_STYLE: ${artStyle}
+AUDIENCE: ${audience}`;
 
     // Add visual DNA consistency if available
-    if (visualDNA && PROFESSIONAL_PROMPT_TEMPLATES.imageGeneration.visualDNA) {
-      const dnaPrompt = PROFESSIONAL_PROMPT_TEMPLATES.imageGeneration.visualDNA
-        .replace('{visualDNA}', visualDNA.signature || '')
-        .replace('{facialDNA}', visualDNA.face || '')
-        .replace('{bodyDNA}', visualDNA.body || '')
-        .replace('{clothingDNA}', visualDNA.clothing || '')
-        .replace('{colorDNA}', visualDNA.colorDNA || '')
-        .replace('{artStyleDNA}', visualDNA.artStyleSignature || '');
+    if (visualDNA) {
+      const dnaPrompt = `
+VISUAL_DNA_CONSISTENCY:
+- Face: ${visualDNA.face || 'consistent facial features'}
+- Body: ${visualDNA.body || 'consistent body type'}
+- Clothing: ${visualDNA.clothing || 'signature clothing'}
+- Colors: ${visualDNA.colorDNA || 'consistent color palette'}
+- Style: ${visualDNA.artStyleSignature || artStyle}`;
       
-      enhancedPrompt += '\n\n' + dnaPrompt;
+      enhancedPrompt += dnaPrompt;
     }
 
     return await this.generateCartoonImage(enhancedPrompt);
-  }
-
-  /**
-   * Assess quality of generated content (FROM BOTH FILES)
-   */
-  public async assessContentQuality(
-    generatedContent: any,
-    originalContext: any,
-    audience: string
-  ): Promise<any> {
-    const promptTemplate = PROFESSIONAL_PROMPT_TEMPLATES.qualityAssessment.base
-      .replace('{content}', JSON.stringify(generatedContent).substring(0, 2000))
-      .replace('{context}', JSON.stringify(originalContext).substring(0, 1000))
-      .replace('{audience}', audience);
-
-    try {
-      const result = await this.generateTextCompletion(promptTemplate, {
-        max_tokens: 1500,
-        temperature: 0.3 // Lower temperature for more consistent quality assessment
-      });
-
-      return this.parseQualityAssessmentResult(result);
-    } catch (error: any) {
-      this.logger.error('Quality assessment failed:', error);
-      throw error;
-    }
-  }
-
-  // 🔧 PARSING UTILITIES
-
-  private parseStoryAnalysisResult(result: string): any {
-    try {
-      // Extract structured information from the analysis result
-      const analysis = {
-        storyBeats: this.extractStoryBeats(result),
-        characterDevelopment: this.extractCharacterDevelopment(result),
-        visualComposition: this.extractVisualComposition(result),
-        dialogueOptimization: this.extractDialogueOptimization(result),
-        pacingStrategy: this.extractPacingStrategy(result)
-      };
-
-      return analysis;
-    } catch (error) {
-      this.logger.warn('Failed to parse story analysis, returning raw result');
-      return { rawAnalysis: result };
-    }
-  }
-
-  private parseQualityAssessmentResult(result: string): any {
-    try {
-      // Extract quality metrics from the assessment result
-      const assessment = {
-        characterConsistency: this.extractScoreFromText(result, 'Character Consistency'),
-        narrativeCoherence: this.extractScoreFromText(result, 'Narrative Coherence'),
-        visualQuality: this.extractScoreFromText(result, 'Visual Quality'),
-        emotionalResonance: this.extractScoreFromText(result, 'Emotional Resonance'),
-        technicalExecution: this.extractScoreFromText(result, 'Technical Execution'),
-        audienceAlignment: this.extractScoreFromText(result, 'Audience Alignment'),
-        overallGrade: this.extractGradeFromText(result),
-        recommendations: this.extractRecommendations(result)
-      };
-
-      return assessment;
-    } catch (error) {
-      this.logger.warn('Failed to parse quality assessment, returning raw result');
-      return { rawAssessment: result };
-    }
-  }
-
-  private extractStoryBeats(text: string): string[] {
-    const beatMatches = text.match(/(?:story beats?|beats?):?\s*([^.]*)/gi);
-    return beatMatches ? beatMatches.map(match => match.trim()) : [];
-  }
-
-  private extractCharacterDevelopment(text: string): string[] {
-    const devMatches = text.match(/(?:character development|character growth):?\s*([^.]*)/gi);
-    return devMatches ? devMatches.map(match => match.trim()) : [];
-  }
-
-  private extractVisualComposition(text: string): string[] {
-    const visualMatches = text.match(/(?:visual composition|visual):?\s*([^.]*)/gi);
-    return visualMatches ? visualMatches.map(match => match.trim()) : [];
-  }
-
-  private extractDialogueOptimization(text: string): string[] {
-    const dialogueMatches = text.match(/(?:dialogue optimization|dialogue):?\s*([^.]*)/gi);
-    return dialogueMatches ? dialogueMatches.map(match => match.trim()) : [];
-  }
-
-  private extractPacingStrategy(text: string): string {
-    const pacingMatch = text.match(/(?:pacing strategy|pacing):?\s*([^.]*)/i);
-    return pacingMatch ? pacingMatch[1].trim() : 'moderate';
-  }
-
-  private extractScoreFromText(text: string, metric: string): number {
-    const scorePattern = new RegExp(`${metric}[:\\s]*(\\d+)(?:-\\d+)?`, 'i');
-    const match = text.match(scorePattern);
-    return match ? parseInt(match[1], 10) : 75; // Default score
-  }
-
-  private extractGradeFromText(text: string): string {
-    const gradePattern = /(?:grade|overall):?\s*([A-F][+-]?)/i;
-    const match = text.match(gradePattern);
-    return match ? match[1] : 'B';
-  }
-
-  private extractRecommendations(text: string): string[] {
-    const recPattern = /(?:recommendations?|improve):?\s*([^.]*)/gi;
-    const matches = text.match(recPattern);
-    return matches ? matches.map(match => match.trim()) : [];
   }
 
   // 🔄 HEALTH CHECK AND MONITORING
@@ -1138,12 +994,5 @@ export async function createValidatedOpenAIIntegration(
   return integration;
 }
 
-// ===== EXPORT TYPES =====
-
-export type {
-  OpenAICallOptions,
-  OpenAIParameters,
-  CircuitBreakerState,
-  RateLimitState,
-  RetryAttempt
-};
+// ===== EXPORT THE MAIN CLASS =====
+export default OpenAIIntegration;
