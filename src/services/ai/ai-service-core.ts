@@ -193,7 +193,7 @@ isInitialized(): boolean {
     // Step 4: Start enterprise monitoring
     this.startEnterpriseMonitoring();
 
-    this.isInitialized = true;
+    this._isInitialized = true;
     this.log('info', '✅ Revolutionary Modular AI Service fully initialized and operational');
   }
 
@@ -269,7 +269,7 @@ isInitialized(): boolean {
           const failedNames = failedValidations.map(v => v.name).join(', ');
           throw new AIServiceUnavailableError(
             `System readiness validation failed: ${failedNames}`,
-            { service: this.getName(), failedValidations: failedNames }
+            { service: this.getName(), operation: 'validateSystemReadiness' }
           );
         }
 
@@ -982,7 +982,7 @@ isInitialized(): boolean {
         this.enterpriseMonitoring.shutdown();
       }
       
-      this.isInitialized = false;
+      this._isInitialized = false;
       this.log('info', '✅ Service shutdown completed');
 
     } catch (error) {

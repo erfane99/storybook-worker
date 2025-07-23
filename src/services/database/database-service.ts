@@ -431,14 +431,28 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     if (!result) return null;
 
     // Convert database format back to QualityMetrics
-    return {
+    const qualityMetrics = {
       characterConsistency: result.character_consistency_score || 75,
       storyCoherence: result.narrative_flow_score || 75,
       panelCount: result.automated_scores?.analysisDetails?.panelsAnalyzed || 0,
       professionalStandards: result.quality_grade !== 'F',
       automatedScores: result.automated_scores,
       generationMetrics: result.generation_metrics,
+      // Add missing required fields with safe defaults
+      narrativeCoherence: result.narrative_flow_score || 75,
+      visualQuality: 0,
+      emotionalResonance: 0,
+      technicalExecution: 0,
+      audienceAlignment: 0,
+      dialogueEffectiveness: 0,
+      environmentalCoherence: 0,
+      overallScore: result.overall_technical_quality || 75,
+      grade: result.quality_grade || 'C',
+      professionalGrade: result.quality_grade || 'C',
+      recommendations: []
     };
+
+    return qualityMetrics;
   }
 
   async saveUserRating(rating: UserRating): Promise<boolean> {

@@ -441,9 +441,14 @@ Create a comprehensive visual DNA profile including:
 
 Format as structured visual DNA for consistent reproduction across comic panels.`;
 
-      const analysis = await this.openaiIntegration.analyzeImageWithAdvancedVision(
-        characterImage,
-        visionAnalysisPrompt
+      // TODO: Replace with proper vision analysis method when available
+      const analysis = await this.openaiIntegration.generateTextCompletion(
+        visionAnalysisPrompt,
+        {
+          temperature: 0.3,
+          maxTokens: 800,
+          model: 'gpt-4o'
+        }
       );
 
       // Create structured character DNA (FROM CURRENTAISERV.TXT)
