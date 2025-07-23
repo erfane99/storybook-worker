@@ -120,7 +120,7 @@ export class PatternLearningEngine {
   private openaiIntegration: OpenAIIntegration;
   private errorHandler: ErrorHandlingSystem;
   private config: PatternLearningConfig;
-  private learningEngine: {
+  private learningEngine!: {
     patterns: Map<string, LearningPattern>;
     evolution: Map<string, any>;
     predictions: Map<string, any>;
