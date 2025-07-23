@@ -1,7 +1,7 @@
 /**
  * ===== AI SERVICE CORE MODULE - MAIN ORCHESTRATOR =====
  * Enterprise-grade modular AI service that orchestrates all specialized engines
- * FIXED: Combines best features from both original files with complete modular architecture
+ * FIXED: Uses inherited error handling from ErrorAwareBaseService
  * 
  * File Location: lib/services/ai/ai-service-core.ts (REPLACES ORIGINAL AI SERVICE)
  * Dependencies: ALL modular components
@@ -62,7 +62,6 @@ import {
   DEFAULT_RETRY_CONFIG
 } from './modular/constants-and-types.js';
 
-import { ErrorHandlingSystem } from './modular/error-handling-system.js';
 import { OpenAIIntegration } from './modular/openai-integration.js';
 import { ComicGenerationEngine } from './modular/comic-generation-engine.js';
 import { NarrativeIntelligenceEngine } from './modular/narrative-intelligence.js';
@@ -82,7 +81,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
   private isInitialized: boolean = false;
 
   // ===== MODULAR ENGINES =====
-  private errorHandler: ErrorHandlingSystem;
+  // REMOVED: private errorHandler: ErrorHandlingSystem; (using inherited from base class)
   private openaiIntegration: OpenAIIntegration;
   private comicEngine: ComicGenerationEngine;
   private narrativeEngine: NarrativeIntelligenceEngine;
@@ -149,36 +148,39 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
     this.log('info', '🏗️ Initializing modular systems...');
 
     try {
-      // 1. Error Handling System (foundational - no dependencies)
-      this.errorHandler = new ErrorHandlingSystem();
-      this.log('info', '✅ Error Handling System initialized');
-
-      // 2. Enterprise Monitoring (needs error handler)
-      this.enterpriseMonitoring = new EnterpriseMonitoring(this.errorHandler);
+      // 1. Enterprise Monitoring (needs no dependencies for basic functionality)
+      // FIXED: Create a simple error handler for the monitoring system
+      const errorHandlerStub = {
+        validateAndSanitizeError: (error: any) => {
+          if (error instanceof Error) return error;
+          return new Error(String(error));
+        }
+      };
+      this.enterpriseMonitoring = new EnterpriseMonitoring(errorHandlerStub as any);
       this.log('info', '✅ Enterprise Monitoring System initialized');
 
-      // 3. OpenAI Integration (needs error handler)
+      // 2. OpenAI Integration (needs error handler)
       this.openaiIntegration = new OpenAIIntegration(this.apiKey!, this.learningEngine);
       this.log('info', '✅ OpenAI Integration initialized');
 
-      // 4. Visual DNA System (needs OpenAI and error handler)
-      this.visualDNASystem = new VisualDNASystem(this.openaiIntegration, this.errorHandler);
+      // 3. Visual DNA System (needs OpenAI and error handler)
+      this.visualDNASystem = new VisualDNASystem(this.openaiIntegration, errorHandlerStub as any);
       this.log('info', '✅ Visual DNA System initialized');
 
-      // 5. Narrative Intelligence Engine (needs OpenAI and error handler)
-      this.narrativeEngine = new NarrativeIntelligenceEngine(this.openaiIntegration, this.errorHandler);
+      // 4. Narrative Intelligence Engine (needs OpenAI and error handler)
+      this.narrativeEngine = new NarrativeIntelligenceEngine(this.openaiIntegration, errorHandlerStub as any);
       this.log('info', '✅ Narrative Intelligence Engine initialized');
 
-      // 6. Quality Metrics Engine (needs OpenAI and error handler)
-      this.qualityEngine = new QualityMetricsEngine(this.openaiIntegration, this.errorHandler);
+      // 5. Quality Metrics Engine (needs OpenAI and error handler)
+      this.qualityEngine = new QualityMetricsEngine(this.openaiIntegration, errorHandlerStub as any);
       this.log('info', '✅ Quality Metrics Engine initialized');
 
-      // 7. Pattern Learning Engine (needs OpenAI and error handler)
-      this.learningEngine = new PatternLearningEngine(this.openaiIntegration, this.errorHandler);
+      // 6. Pattern Learning Engine (needs OpenAI and error handler)
+      this.learningEngine = new PatternLearningEngine(this.openaiIntegration, errorHandlerStub as any);
       this.log('info', '✅ Pattern Learning Engine initialized');
 
-      // 8. Comic Generation Engine (needs ALL other systems)
-      this.comicEngine = new ComicGenerationEngine(this.openaiIntegration, this.errorHandler);
+      // 7. Comic Generation Engine (needs ALL other systems)
+      this.comicEngine = new ComicGenerationEngine(this.openaiIntegration, errorHandlerStub as any);
       this.log('info', '✅ Comic Generation Engine initialized');
 
       this.log('info', '🎯 All modular systems initialized successfully');
@@ -193,39 +195,48 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
    * Validate all systems are ready for production use
    */
   private async validateSystemReadiness(): Promise<void> {
-    this.log('info', '🔍 Validating system readiness...');
+    const result = await this.withErrorHandling(
+      async () => {
+        this.log('info', '🔍 Validating system readiness...');
 
-    const validations = [
-      { name: 'API Key', check: () => !!this.apiKey },
-      { name: 'Error Handler', check: () => !!this.errorHandler },
-      { name: 'OpenAI Integration', check: () => !!this.openaiIntegration },
-      { name: 'Comic Engine', check: () => !!this.comicEngine },
-      { name: 'Narrative Engine', check: () => !!this.narrativeEngine },
-      { name: 'Visual DNA System', check: () => !!this.visualDNASystem },
-      { name: 'Quality Engine', check: () => !!this.qualityEngine },
-      { name: 'Learning Engine', check: () => !!this.learningEngine },
-      { name: 'Enterprise Monitoring', check: () => !!this.enterpriseMonitoring },
-      { name: 'Storytelling Archetypes', check: () => Object.keys(STORYTELLING_ARCHETYPES).length > 0 },
-      { name: 'Professional Config', check: () => Object.keys(PROFESSIONAL_AUDIENCE_CONFIG).length === 3 }
-    ];
+        const validations = [
+          { name: 'API Key', check: () => !!this.apiKey },
+          { name: 'OpenAI Integration', check: () => !!this.openaiIntegration },
+          { name: 'Comic Engine', check: () => !!this.comicEngine },
+          { name: 'Narrative Engine', check: () => !!this.narrativeEngine },
+          { name: 'Visual DNA System', check: () => !!this.visualDNASystem },
+          { name: 'Quality Engine', check: () => !!this.qualityEngine },
+          { name: 'Learning Engine', check: () => !!this.learningEngine },
+          { name: 'Enterprise Monitoring', check: () => !!this.enterpriseMonitoring },
+          { name: 'Storytelling Archetypes', check: () => Object.keys(STORYTELLING_ARCHETYPES).length > 0 },
+          { name: 'Professional Config', check: () => Object.keys(PROFESSIONAL_AUDIENCE_CONFIG).length === 3 }
+        ];
 
-    const failedValidations = validations.filter(v => !v.check());
-    
-    if (failedValidations.length > 0) {
-      const failedNames = failedValidations.map(v => v.name).join(', ');
-      throw new AIServiceUnavailableError(
-        `System readiness validation failed: ${failedNames}`,
-        { service: this.getName(), failedValidations: failedNames }
-      );
+        const failedValidations = validations.filter(v => !v.check());
+        
+        if (failedValidations.length > 0) {
+          const failedNames = failedValidations.map(v => v.name).join(', ');
+          throw new AIServiceUnavailableError(
+            `System readiness validation failed: ${failedNames}`,
+            { service: this.getName(), failedValidations: failedNames }
+          );
+        }
+
+        // Additional enterprise monitoring validation
+        const isMonitoringReady = await this.enterpriseMonitoring.validateServiceReadiness();
+        if (!isMonitoringReady) {
+          throw new AIServiceUnavailableError('Enterprise monitoring system failed readiness validation');
+        }
+
+        this.log('info', '✅ All systems passed readiness validation');
+        return true;
+      },
+      'validateSystemReadiness'
+    );
+
+    if (!result.success) {
+      throw result.error;
     }
-
-    // Additional enterprise monitoring validation
-    const isMonitoringReady = await this.enterpriseMonitoring.validateServiceReadiness();
-    if (!isMonitoringReady) {
-      throw new AIServiceUnavailableError('Enterprise monitoring system failed readiness validation');
-    }
-
-    this.log('info', '✅ All systems passed readiness validation');
   }
 
   /**
@@ -260,12 +271,11 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
 
     this.log('info', '✅ Enterprise monitoring started');
   }
-
   // ===== MAIN SERVICE INTERFACE IMPLEMENTATION =====
 
   /**
    * Generate complete storybook with professional quality (MAIN METHOD - FROM BOTH FILES)
-   * FIXED: All TypeScript errors resolved
+   * FIXED: Uses inherited error handling from ErrorAwareBaseService
    */
   async generateStorybook(
     title: string,
@@ -277,395 +287,447 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
   ): Promise<AsyncResult<any, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    try {
-      this.log('info', `🎨 Starting professional storybook generation: "${title}"`);
-      this.log('info', `📊 Audience: ${audience}, Art Style: ${artStyle}`);
+    return this.withErrorHandling(
+      async () => {
+        this.log('info', `🎨 Starting professional storybook generation: "${title}"`);
+        this.log('info', `📊 Audience: ${audience}, Art Style: ${artStyle}`);
 
-      // Validation
-      if (!title || !story || !audience) {
-        throw new Error('Missing required parameters: title, story, and audience are required');
-      }
-
-      if (story.length < 50) {
-        throw new Error('Story must be at least 50 characters long for quality comic generation');
-      }
-
-      // Step 1: Create character DNA if image provided (FROM BOTH FILES)
-      let characterDNA: CharacterDNA | null = null;
-      if (characterImageUrl) {
-        this.log('info', '🧬 Creating character DNA with visual fingerprinting...');
-        characterDNA = await this.visualDNASystem.createMasterCharacterDNA(characterImageUrl, artStyle);
-        this.log('info', '✅ Character DNA created with visual consistency markers');
-      }
-
-      // Step 2: Generate professional comic with all advanced features (FROM BOTH FILES)
-      this.log('info', '🎭 Generating professional comic with narrative intelligence...');
-      
-      const sceneOptions: SceneGenerationOptions = {
-        story,
-        audience: audience as ModularAudienceType,
-        characterImage: characterImageUrl,
-        characterArtStyle: artStyle,
-        layoutType: 'comic-book-panels'
-      };
-
-      const comicResult = await this.comicEngine.generateScenesWithAudience(sceneOptions);
-      
-      this.log('info', `✅ Generated ${comicResult.pages.length} pages with ${comicResult.metadata.storyBeats} panels`);
-
-      // Step 3: Assess quality with professional grading (FROM BOTH FILES)
-      this.log('info', '📊 Calculating professional quality metrics...');
-      
-      const allPanels = comicResult.pages.flatMap((page: any) => page.scenes);
-      const qualityMetrics = await this.qualityEngine.calculateAdvancedQualityMetrics(
-        allPanels,
-        {
-          characterDNA,
-          targetAudience: audience as ModularAudienceType,
-          artStyle
+        // Validation
+        if (!title || !story || !audience) {
+          throw new Error('Missing required parameters: title, story, and audience are required');
         }
-      );
 
-      this.log('info', `✅ Quality assessment: ${qualityMetrics.overallScore}/100 (Grade: ${qualityMetrics.professionalGrade})`);
+        if (story.length < 50) {
+          throw new Error('Story must be at least 50 characters long for quality comic generation');
+        }
 
-      // Step 4: Store successful patterns for learning (FROM BOTH FILES)
-      if (qualityMetrics.overallScore >= 80) {
-        this.log('info', '🧠 Storing successful patterns for continuous improvement...');
+        // Step 1: Create character DNA if image provided (FROM BOTH FILES)
+        let characterDNA: CharacterDNA | null = null;
+        if (characterImageUrl) {
+          this.log('info', '🧬 Creating character DNA with visual fingerprinting...');
+          characterDNA = await this.visualDNASystem.createMasterCharacterDNA(characterImageUrl, artStyle);
+          this.log('info', '✅ Character DNA created with visual consistency markers');
+        }
+
+        // Step 2: Generate professional comic with all advanced features (FROM BOTH FILES)
+        this.log('info', '🎭 Generating professional comic with narrative intelligence...');
         
-        await this.learningEngine.storeSuccessfulPattern(
-          { audience, artStyle, story, characterDNA, title },
-          comicResult,
+        const sceneOptions: SceneGenerationOptions = {
+          story,
+          audience: audience as ModularAudienceType,
+          characterImage: characterImageUrl,
+          characterArtStyle: artStyle,
+          layoutType: 'comic-book-panels'
+        };
+
+        const comicResult = await this.comicEngine.generateScenesWithAudience(sceneOptions);
+        
+        this.log('info', `✅ Generated ${comicResult.pages.length} pages with ${comicResult.metadata.storyBeats} panels`);
+
+        // Step 3: Assess quality with professional grading (FROM BOTH FILES)
+        this.log('info', '📊 Calculating professional quality metrics...');
+        
+        const allPanels = comicResult.pages.flatMap((page: any) => page.scenes);
+        const qualityMetrics = await this.qualityEngine.calculateAdvancedQualityMetrics(
+          allPanels,
           {
-            characterConsistency: qualityMetrics.characterConsistency,
-            narrativeCoherence: qualityMetrics.narrativeCoherence,
-            visualQuality: qualityMetrics.visualQuality,
-            overallScore: qualityMetrics.overallScore
+            characterDNA,
+            targetAudience: audience as ModularAudienceType,
+            artStyle
           }
         );
-        
-        this.log('info', '✅ Successful patterns stored for future learning');
-      }
 
-      // Step 5: Record metrics and performance data
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('generateStorybook', duration, true);
-      this.enterpriseMonitoring.recordQualityMetrics(qualityMetrics.overallScore);
+        this.log('info', `✅ Quality assessment: ${qualityMetrics.overallScore}/100 (Grade: ${qualityMetrics.professionalGrade})`);
 
-      // Step 6: Format professional response (FROM BOTH FILES)
-      const result = {
-        success: true,
-        data: {
-          title,
-          story,
-          audience,
-          artStyle,
-          pages: comicResult.pages,
-          characterDNA,
-          qualityMetrics,
-          metadata: {
-            ...comicResult.metadata,
-            generationTime: duration,
-            version: AI_SERVICE_VERSION_INFO.version,
-            qualityGrade: qualityMetrics.professionalGrade,
-            professionalStandards: true,
-            advancedFeaturesUsed: [
-              'narrative_intelligence',
-              'visual_dna_fingerprinting',
-              'quality_assessment',
-              'pattern_learning'
-            ].filter(Boolean)
-          }
+        // Step 4: Store successful patterns for learning (FROM BOTH FILES)
+        if (qualityMetrics.overallScore >= 80) {
+          this.log('info', '🧠 Storing successful patterns for continuous improvement...');
+          
+          await this.learningEngine.storeSuccessfulPattern(
+            { audience, artStyle, story, characterDNA, title },
+            comicResult,
+            {
+              characterConsistency: qualityMetrics.characterConsistency,
+              narrativeCoherence: qualityMetrics.narrativeCoherence,
+              visualQuality: qualityMetrics.visualQuality,
+              overallScore: qualityMetrics.overallScore
+            }
+          );
+          
+          this.log('info', '✅ Successful patterns stored for future learning');
         }
-      };
 
-      this.log('info', `🎉 Storybook generation completed successfully in ${duration}ms`);
-      this.log('info', `🏆 Professional Grade: ${qualityMetrics.professionalGrade} (${qualityMetrics.overallScore}/100)`);
+        // Step 5: Record metrics and performance data
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generateStorybook', duration, true);
+        this.enterpriseMonitoring.recordQualityMetrics(qualityMetrics.overallScore);
 
-      return Result.success(result.data);
+        // Step 6: Format professional response (FROM BOTH FILES)
+        const result = {
+          success: true,
+          data: {
+            title,
+            story,
+            audience,
+            artStyle,
+            pages: comicResult.pages,
+            characterDNA,
+            qualityMetrics,
+            metadata: {
+              ...comicResult.metadata,
+              generationTime: duration,
+              version: AI_SERVICE_VERSION_INFO.version,
+              qualityGrade: qualityMetrics.professionalGrade,
+              professionalStandards: true,
+              advancedFeaturesUsed: [
+                'narrative_intelligence',
+                'visual_dna_fingerprinting',
+                'quality_assessment',
+                'pattern_learning'
+              ].filter(Boolean)
+            }
+          }
+        };
 
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.log('error', 'Storybook generation failed:', error);
-      
-      // Record failure metrics
-      this.enterpriseMonitoring.recordOperationMetrics('generateStorybook', duration, false);
-      
-      // Enhanced error handling with pattern learning
-      const enhancedError = this.errorHandler.handleError(error, 'generateStorybook', {
+        this.log('info', `🎉 Storybook generation completed successfully in ${duration}ms`);
+        this.log('info', `🏆 Professional Grade: ${qualityMetrics.professionalGrade} (${qualityMetrics.overallScore}/100)`);
+
+        return result.data;
+      },
+      'generateStorybook',
+      {
         title,
         audience,
         artStyle,
         storyLength: story?.length || 0,
         hasCharacterImage: !!characterImageUrl
-      });
-
-      return Result.failure(enhancedError);
-    }
+      }
+    ).then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        // Record failure metrics
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generateStorybook', duration, false);
+        return Result.failure(result.error);
+      }
+    });
   }
+
   /**
    * Generate comic scenes with audience optimization (FROM BOTH FILES)
-   * FIXED: All TypeScript errors resolved
+   * FIXED: Uses inherited error handling
    */
   async generateScenesWithAudience(options: SceneGenerationOptions): Promise<AsyncResult<SceneGenerationResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    try {
-      this.log('info', '🎨 Generating scenes with audience optimization...');
-      
-      const result = await this.comicEngine.generateScenesWithAudience(options);
-      
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('generateScenesWithAudience', duration, true);
-      
-      return Result.success(result);
-
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('generateScenesWithAudience', duration, false);
-      
-      const enhancedError = this.errorHandler.handleError(error, 'generateScenesWithAudience', options);
-      return Result.failure(enhancedError);
-    }
+    return this.withErrorHandling(
+      async () => {
+        this.log('info', '🎨 Generating scenes with audience optimization...');
+        
+        const result = await this.comicEngine.generateScenesWithAudience(options);
+        
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generateScenesWithAudience', duration, true);
+        
+        return result;
+      },
+      'generateScenesWithAudience',
+      options
+    ).then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generateScenesWithAudience', duration, false);
+        return Result.failure(result.error);
+      }
+    });
   }
 
   /**
    * Generate images with advanced options (FROM BOTH FILES)
-   * FIXED: All TypeScript errors resolved
+   * FIXED: Uses inherited error handling
    */
   async generateImages(options: ImageGenerationOptions): Promise<AsyncResult<ImageGenerationResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    try {
-      this.log('info', '🖼️ Generating images with advanced options...');
-      
-      const result = await this.openaiIntegration.generateImageWithDNA(
-        options.image_prompt,
-        options.character_description || '',
-        options.emotion,
-        'standard',
-        options.characterArtStyle || 'comic-book',
-        options.audience
-      );
-      
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, true);
-      
-      return Result.success({
-        url: result,
-        prompt_used: options.image_prompt,
-        reused: false
-      });
-
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, false);
-      
-      const enhancedError = this.errorHandler.handleError(error, 'generateImages', options);
-      return Result.failure(enhancedError);
-    }
+    return this.withErrorHandling(
+      async () => {
+        this.log('info', '🖼️ Generating images with advanced options...');
+        
+        const result = await this.openaiIntegration.generateImageWithDNA(
+          options.image_prompt,
+          options.character_description || '',
+          options.emotion,
+          'standard',
+          options.characterArtStyle || 'comic-book',
+          options.audience
+        );
+        
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, true);
+        
+        return {
+          url: result,
+          prompt_used: options.image_prompt,
+          reused: false
+        };
+      },
+      'generateImages',
+      options
+    ).then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, false);
+        return Result.failure(result.error);
+      }
+    });
   }
 
   /**
    * Create character descriptions with professional analysis (FROM BOTH FILES)
-   * FIXED: All TypeScript errors resolved
+   * FIXED: Uses inherited error handling
    */
   async createCharacterDescription(options: CharacterDescriptionOptions): Promise<AsyncResult<CharacterDescriptionResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    try {
-      this.log('info', '👤 Creating character description with professional analysis...');
-      
-      const characterDNA = await this.visualDNASystem.createMasterCharacterDNA(
-        options.imageUrl,
-        options.style || 'comic-book'
-      );
-      
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('createCharacterDescription', duration, true);
-      
-      return Result.success({
-        description: characterDNA.description,
-        cached: false
-      });
-
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('createCharacterDescription', duration, false);
-      
-      const enhancedError = this.errorHandler.handleError(error, 'createCharacterDescription', options);
-      return Result.failure(enhancedError);
-    }
+    return this.withErrorHandling(
+      async () => {
+        this.log('info', '👤 Creating character description with professional analysis...');
+        
+        const characterDNA = await this.visualDNASystem.createMasterCharacterDNA(
+          options.imageUrl,
+          options.style || 'comic-book'
+        );
+        
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('createCharacterDescription', duration, true);
+        
+        return {
+          description: characterDNA.description,
+          cached: false
+        };
+      },
+      'createCharacterDescription',
+      options
+    ).then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('createCharacterDescription', duration, false);
+        return Result.failure(result.error);
+      }
+    });
   }
 
   /**
    * Cartoonize images with professional quality (FROM BOTH FILES)
-   * FIXED: All TypeScript errors resolved
+   * FIXED: Uses inherited error handling
    */
   async cartoonizeImage(options: CartoonizeOptions): Promise<AsyncResult<CartoonizeResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    try {
-      this.log('info', '🎨 Cartoonizing image with professional quality...');
-      
-      // Use OpenAI integration for image processing
-      const result = await this.openaiIntegration.generateImageWithDNA(
-        `Transform this image into a ${options.style} cartoon style while maintaining character consistency`,
-        `Character from image: ${options.imageUrl}`,
-        'neutral',
-        'standard',
-        options.style,
-        'children'
-      );
-      
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('cartoonizeImage', duration, true);
-      
-      return Result.success({
-        url: result,
-        cached: false
-      });
-
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('cartoonizeImage', duration, false);
-      
-      const enhancedError = this.errorHandler.handleError(error, 'cartoonizeImage', options);
-      return Result.failure(enhancedError);
-    }
+    return this.withErrorHandling(
+      async () => {
+        this.log('info', '🎨 Cartoonizing image with professional quality...');
+        
+        // Use OpenAI integration for image processing
+        const result = await this.openaiIntegration.generateImageWithDNA(
+          `Transform this image into a ${options.style} cartoon style while maintaining character consistency`,
+          `Character from image: ${options.imageUrl}`,
+          'neutral',
+          'standard',
+          options.style,
+          'children'
+        );
+        
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('cartoonizeImage', duration, true);
+        
+        return {
+          url: result,
+          cached: false
+        };
+      },
+      'cartoonizeImage',
+      options
+    ).then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('cartoonizeImage', duration, false);
+        return Result.failure(result.error);
+      }
+    });
   }
 
   /**
    * Generate chat completions with professional context (FROM BOTH FILES)
-   * FIXED: All TypeScript errors resolved
+   * FIXED: Uses inherited error handling
    */
   async generateChatCompletion(options: ChatCompletionOptions): Promise<AsyncResult<ChatCompletionResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    try {
-      this.log('info', '💬 Generating chat completion with professional context...');
-      
-      const result = await this.openaiIntegration.generateTextCompletion(
-        options.messages[0]?.content || '',
-        {
-          temperature: options.temperature || 0.7,
-          maxTokens: options.maxTokens || 1000,
-          model: options.model || this.defaultModel
-        }
-      );
-      
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('generateChatCompletion', duration, true);
-      
-      return Result.success({
-        choices: [{
-          message: {
-            content: result,
-            role: 'assistant'
+    return this.withErrorHandling(
+      async () => {
+        this.log('info', '💬 Generating chat completion with professional context...');
+        
+        const result = await this.openaiIntegration.generateTextCompletion(
+          options.messages[0]?.content || '',
+          {
+            temperature: options.temperature || 0.7,
+            maxTokens: options.maxTokens || 1000,
+            model: options.model || this.defaultModel
           }
-        }],
-        model: options.model || this.defaultModel,
-        usage: {
-          prompt_tokens: 0,
-          completion_tokens: 0,
-          total_tokens: 0
-        }
-      });
-
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('generateChatCompletion', duration, false);
-      
-      const enhancedError = this.errorHandler.handleError(error, 'generateChatCompletion', options);
-      return Result.failure(enhancedError);
-    }
+        );
+        
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generateChatCompletion', duration, true);
+        
+        return {
+          choices: [{
+            message: {
+              content: result,
+              role: 'assistant'
+            }
+          }],
+          model: options.model || this.defaultModel,
+          usage: {
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0
+          }
+        };
+      },
+      'generateChatCompletion',
+      options
+    ).then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generateChatCompletion', duration, false);
+        return Result.failure(result.error);
+      }
+    });
   }
-
   // ===== MISSING INTERFACE IMPLEMENTATIONS - FIXED =====
 
   /**
    * Analyze story structure using advanced narrative intelligence
-   * FIXED: Added missing implementation
+   * FIXED: Uses inherited error handling
    */
   async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
-    try {
-      this.log('info', '📖 Analyzing story structure with narrative intelligence...');
-      
-      const narrativeIntel = await this.narrativeEngine.createNarrativeIntelligence(story, audience);
-      
-      // Create story analysis from narrative intelligence
-      const storyAnalysis: StoryAnalysis = {
-        storyBeats: [], // Would be populated by narrative engine
-        characterArc: narrativeIntel.characterGrowth,
-        visualFlow: ['establishing', 'development', 'climax', 'resolution'],
-        totalPanels: PROFESSIONAL_AUDIENCE_CONFIG[audience].totalPanels,
-        pagesRequired: PROFESSIONAL_AUDIENCE_CONFIG[audience].pagesPerStory,
-        dialoguePanels: Math.floor(PROFESSIONAL_AUDIENCE_CONFIG[audience].totalPanels * PROFESSIONAL_AUDIENCE_CONFIG[audience].speechBubbleRatio),
-        speechBubbleDistribution: {
-          standard: 60,
-          thought: 20,
-          shout: 20
-        }
-      };
-      
-      return storyAnalysis;
-      
-    } catch (error) {
-      this.log('error', 'Story analysis failed:', error);
-      throw this.errorHandler.handleError(error, 'analyzeStoryStructure');
+    const result = await this.withErrorHandling(
+      async () => {
+        this.log('info', '📖 Analyzing story structure with narrative intelligence...');
+        
+        const narrativeIntel = await this.narrativeEngine.createNarrativeIntelligence(story, audience);
+        
+        // Create story analysis from narrative intelligence
+        const storyAnalysis: StoryAnalysis = {
+          storyBeats: [], // Would be populated by narrative engine
+          characterArc: narrativeIntel.characterGrowth,
+          visualFlow: ['establishing', 'development', 'climax', 'resolution'],
+          totalPanels: PROFESSIONAL_AUDIENCE_CONFIG[audience].totalPanels,
+          pagesRequired: PROFESSIONAL_AUDIENCE_CONFIG[audience].pagesPerStory,
+          dialoguePanels: Math.floor(PROFESSIONAL_AUDIENCE_CONFIG[audience].totalPanels * PROFESSIONAL_AUDIENCE_CONFIG[audience].speechBubbleRatio),
+          speechBubbleDistribution: {
+            standard: 60,
+            thought: 20,
+            shout: 20
+          }
+        };
+        
+        return storyAnalysis;
+      },
+      'analyzeStoryStructure'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      this.log('error', 'Story analysis failed:', result.error);
+      throw result.error;
     }
   }
 
   /**
    * Create master character DNA with visual fingerprinting
-   * FIXED: Added missing implementation
+   * FIXED: Uses inherited error handling
    */
   async createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA> {
-    try {
-      return await this.visualDNASystem.createMasterCharacterDNA(imageUrl, artStyle);
-    } catch (error) {
-      throw this.errorHandler.handleError(error, 'createMasterCharacterDNA');
+    const result = await this.withErrorHandling(
+      async () => {
+        return await this.visualDNASystem.createMasterCharacterDNA(imageUrl, artStyle);
+      },
+      'createMasterCharacterDNA'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw result.error;
     }
   }
 
   /**
    * Create environmental DNA for world consistency
-   * FIXED: Added missing implementation
+   * FIXED: Uses inherited error handling
    */
   async createEnvironmentalDNA(storyBeats: any[], audience: AudienceType, artStyle?: string): Promise<EnvironmentalDNA> {
-    try {
-      return await this.visualDNASystem.createEnvironmentalDNA(storyBeats, audience, artStyle || 'comic-book');
-    } catch (error) {
-      throw this.errorHandler.handleError(error, 'createEnvironmentalDNA');
+    const result = await this.withErrorHandling(
+      async () => {
+        return await this.visualDNASystem.createEnvironmentalDNA(storyBeats, audience, artStyle || 'comic-book');
+      },
+      'createEnvironmentalDNA'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw result.error;
     }
   }
 
   /**
    * Analyze panel continuity for visual consistency
-   * FIXED: Added missing implementation
+   * FIXED: Uses inherited error handling
    */
   async analyzePanelContinuity(storyBeats: any[]): Promise<any> {
-    try {
-      this.log('info', '🔍 Analyzing panel continuity...');
-      
-      return {
-        continuityScore: 95,
-        visualTransitions: storyBeats.map((_, index) => ({
-          fromPanel: index,
-          toPanel: index + 1,
-          transitionType: 'smooth',
-          consistency: 'high'
-        })),
-        recommendations: ['Maintain character positioning', 'Consistent lighting']
-      };
-      
-    } catch (error) {
-      throw this.errorHandler.handleError(error, 'analyzePanelContinuity');
+    const result = await this.withErrorHandling(
+      async () => {
+        this.log('info', '🔍 Analyzing panel continuity...');
+        
+        return {
+          continuityScore: 95,
+          visualTransitions: storyBeats.map((_, index) => ({
+            fromPanel: index,
+            toPanel: index + 1,
+            transitionType: 'smooth',
+            consistency: 'high'
+          })),
+          recommendations: ['Maintain character positioning', 'Consistent lighting']
+        };
+      },
+      'analyzePanelContinuity'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw result.error;
     }
   }
 
   /**
    * Calculate advanced quality metrics for generated comic
-   * FIXED: Added missing implementation
+   * FIXED: Uses inherited error handling
    */
   async calculateQualityMetrics(
     generatedPanels: any[],
@@ -677,19 +739,26 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
       artStyle: string;
     }
   ): Promise<any> {
-    try {
-      return await this.qualityEngine.calculateAdvancedQualityMetrics(
-        generatedPanels,
-        originalContext
-      );
-    } catch (error) {
-      throw this.errorHandler.handleError(error, 'calculateQualityMetrics');
+    const result = await this.withErrorHandling(
+      async () => {
+        return await this.qualityEngine.calculateAdvancedQualityMetrics(
+          generatedPanels,
+          originalContext
+        );
+      },
+      'calculateQualityMetrics'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw result.error;
     }
   }
 
   /**
    * Generate quality recommendations based on metrics
-   * FIXED: Added missing implementation
+   * FIXED: No error handling needed for this utility method
    */
   generateQualityRecommendations(qualityMetrics: any): string[] {
     const recommendations: string[] = [];
@@ -711,7 +780,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
 
   /**
    * Store successful pattern for learning
-   * FIXED: Added missing implementation
+   * FIXED: Uses inherited error handling
    */
   async storeSuccessfulPattern(
     context: any,
@@ -719,33 +788,47 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
     qualityScores: QualityMetrics,
     userRatings?: any[]
   ): Promise<boolean> {
-    try {
-      await this.learningEngine.storeSuccessfulPattern(context, results, qualityScores, userRatings);
-      return true;
-    } catch (error) {
-      this.log('error', 'Failed to store successful pattern:', error);
+    const result = await this.withErrorHandling(
+      async () => {
+        await this.learningEngine.storeSuccessfulPattern(context, results, qualityScores, userRatings);
+        return true;
+      },
+      'storeSuccessfulPattern'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      this.log('error', 'Failed to store successful pattern:', result.error);
       return false;
     }
   }
 
   /**
    * Evolve prompts from successful patterns
-   * FIXED: Added missing implementation
+   * FIXED: Uses inherited error handling
    */
   async evolvePromptsFromPatterns(
     currentContext: any,
     pastSuccesses: any[]
   ): Promise<any> {
-    try {
-      return await this.learningEngine.evolvePromptsFromPatterns(currentContext, pastSuccesses);
-    } catch (error) {
-      throw this.errorHandler.handleError(error, 'evolvePromptsFromPatterns');
+    const result = await this.withErrorHandling(
+      async () => {
+        return await this.learningEngine.evolvePromptsFromPatterns(currentContext, pastSuccesses);
+      },
+      'evolvePromptsFromPatterns'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw result.error;
     }
   }
 
   /**
    * Find similar success patterns for learning
-   * FIXED: Added missing implementation
+   * FIXED: Uses inherited error handling
    */
   async findSimilarSuccessPatterns(
     context: {
@@ -757,12 +840,19 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
     },
     limit?: number
   ): Promise<any[]> {
-    try {
-      // This would typically query a database of success patterns
-      // For now, return empty array as placeholder
-      return [];
-    } catch (error) {
-      this.log('error', 'Failed to find similar patterns:', error);
+    const result = await this.withErrorHandling(
+      async () => {
+        // This would typically query a database of success patterns
+        // For now, return empty array as placeholder
+        return [];
+      },
+      'findSimilarSuccessPatterns'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      this.log('error', 'Failed to find similar patterns:', result.error);
       return [];
     }
   }
@@ -771,7 +861,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
 
   /**
    * Check service health across all modular components
-   * FIXED: All TypeScript errors resolved
+   * FIXED: Uses inherited error handling
    */
   async isHealthy(): Promise<boolean> {
     try {
@@ -787,7 +877,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
 
   /**
    * Get comprehensive metrics across all systems
-   * FIXED: All TypeScript errors resolved
+   * FIXED: No error handling needed for this getter method
    */
   getComprehensiveMetrics(): ComprehensiveMetrics {
     try {
@@ -800,7 +890,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
 
   /**
    * Get service registration information
-   * FIXED: All TypeScript errors resolved
+   * FIXED: No error handling needed for this getter method
    */
   getServiceRegistration(): ServiceRegistration {
     return this.enterpriseMonitoring.getServiceRegistration();
@@ -808,13 +898,20 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
 
   /**
    * Validate service readiness for production use
-   * FIXED: All TypeScript errors resolved
+   * FIXED: Uses inherited error handling
    */
   async validateReadiness(): Promise<boolean> {
-    try {
-      return await this.enterpriseMonitoring.validateServiceReadiness();
-    } catch (error) {
-      this.log('error', 'Readiness validation failed:', error);
+    const result = await this.withErrorHandling(
+      async () => {
+        return await this.enterpriseMonitoring.validateServiceReadiness();
+      },
+      'validateReadiness'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      this.log('error', 'Readiness validation failed:', result.error);
       return false;
     }
   }
@@ -824,7 +921,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
   /**
    * Graceful service shutdown
    */
-  async shutdown(): Promise<void> {
+  protected async disposeService(): Promise<void> {
     this.log('info', '🔄 Starting graceful service shutdown...');
     
     try {
@@ -839,6 +936,17 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
     } catch (error) {
       this.log('error', 'Error during shutdown:', error);
       throw error;
+    }
+  }
+
+  // ===== HEALTH CHECK OVERRIDE =====
+
+  protected async checkServiceHealth(): Promise<boolean> {
+    try {
+      if (!this.isInitialized) return false;
+      return this.enterpriseMonitoring ? this.enterpriseMonitoring.isHealthy() : false;
+    } catch (error) {
+      return false;
     }
   }
 
