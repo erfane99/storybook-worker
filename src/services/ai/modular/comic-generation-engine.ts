@@ -24,7 +24,7 @@ import {
   EnvironmentalDNA,
   StoryAnalysis,
   StoryBeat,
-  ComicPage,
+  ComicPanel,
   ComicPanel,
   SceneGenerationOptions,
   SceneGenerationResult,
@@ -34,20 +34,20 @@ import {
   PROFESSIONAL_AUDIENCE_CONFIG,
   STORYTELLING_ARCHETYPES,
   VISUAL_COMPOSITION_RULES,
-  SPEECH_BUBBLE_STYLES,
+  SpeechBubbleStyle,
   COMIC_PANEL_TYPES,
   QUALITY_STANDARDS,
   AI_PROMPTS
-} from './constants-and-types.js';
+} from './constants-and-types';
 
 import { 
   ErrorHandlingSystem,
   AIServiceError,
   AIRateLimitError,
   AIContentPolicyError 
-} from './error-handling-system.js';
+} from './error-handling-system';
 
-import { OpenAIIntegration } from './openai-integration.js';
+import { OpenAIIntegration } from './openai-integration';
 
 /**
  * ===== COMIC GENERATION ENGINE CLASS =====
@@ -565,9 +565,9 @@ Format as structured visual DNA for consistent reproduction across comic panels.
     environmentalDNA: EnvironmentalDNA,
     config: any,
     artStyle: string
-  ): Promise<ComicPage[]> {
+  ): Promise<ComicPanel[]> {
     try {
-      const pages: ComicPage[] = [];
+      const pages: ComicPanel[] = [];
       const { storyBeats } = storyAnalysis;
       
       // Group story beats into pages (FROM BOTH FILES)
@@ -591,7 +591,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
           storyAnalysis.totalPanels
         );
 
-        const page: ComicPage = {
+        const page: ComicPanel = {
           pageNumber,
           scenes: panels,
           layoutType: 'comic-book-panels',
