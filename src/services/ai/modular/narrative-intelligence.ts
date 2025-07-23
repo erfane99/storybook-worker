@@ -22,16 +22,16 @@ import {
   STORYTELLING_ARCHETYPES,
   PROFESSIONAL_AUDIENCE_CONFIG,
   AI_PROMPTS
-} from './constants-and-types.js';
+} from './constants-and-types';
 
 import { 
   ErrorHandlingSystem,
   AIServiceError,
   AIRateLimitError,
   AIContentPolicyError 
-} from './error-handling-system.js';
+} from './error-handling-system';
 
-import { OpenAIIntegration } from './openai-integration.js';
+import { OpenAIIntegration } from './openai-integration';
 
 // ===== MISSING INTERFACE DEFINITIONS - FIXED =====
 
@@ -115,7 +115,7 @@ export class NarrativeIntelligenceEngine {
       const characterGrowth = await this.identifyCharacterGrowthOpportunities(story);
       
       // Step 4: Create emotional progression arc (FROM BOTH FILES)
-      const archetypeData = STORYTELLING_ARCHETYPES[archetypeResult.primaryArchetype];
+const archetypeData = STORYTELLING_ARCHETYPES[archetypeResult.primaryArchetype as keyof typeof STORYTELLING_ARCHETYPES];
       const emotionalArc = this.enhanceEmotionalArc(archetypeData.emotionalArc, thematicAnalysis);
 
       const narrativeIntel: NarrativeIntelligence = {
