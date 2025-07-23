@@ -1,7 +1,7 @@
 /**
  * ===== AI SERVICE CORE MODULE - MAIN ORCHESTRATOR =====
  * Enterprise-grade modular AI service that orchestrates all specialized engines
- * FIXED: Uses inherited error handling from ErrorAwareBaseService
+ * FIXED: Uses error handler adapter to bridge inherited error handling with modular components
  * 
  * File Location: lib/services/ai/ai-service-core.ts (REPLACES ORIGINAL AI SERVICE)
  * Dependencies: ALL modular components
@@ -71,6 +71,53 @@ import { PatternLearningEngine } from './modular/pattern-learning-engine.js';
 import { EnterpriseMonitoring } from './modular/enterprise-monitoring.js';
 
 /**
+ * ===== ERROR HANDLER ADAPTER =====
+ * Simple adapter that bridges inherited error handling with modular component expectations
+ * This eliminates the need to modify any modular files
+ */
+class ErrorHandlerAdapter {
+  constructor(private aiService: AIService) {}
+
+  /**
+   * Main method that modular components use for error handling
+   */
+  validateAndSanitizeError(error: any): Error {
+    // Convert any error to a standard Error object
+    if (error instanceof Error) {
+      return error;
+    }
+    return new Error(String(error));
+  }
+
+  /**
+   * Handle error method for compatibility
+   */
+  handleError(error: any, operationName: string, context?: any): Error {
+    const standardError = this.validateAndSanitizeError(error);
+    
+    // Log the error using the AI service's logging
+    this.aiService.log('error', `${operationName} failed:`, standardError.message);
+    
+    return standardError;
+  }
+
+  /**
+   * Additional methods that some modular components might expect
+   */
+  classifyError(error: any): any {
+    return {
+      category: 'system',
+      severity: 'medium',
+      isRetryable: true
+    };
+  }
+
+  isRetryableError(error: any): boolean {
+    return true; // Default to retryable for compatibility
+  }
+}
+
+/**
  * ===== MAIN AI SERVICE CLASS - MODULAR ORCHESTRATOR =====
  * Revolutionary enterprise-grade AI service with complete modular architecture
  */
@@ -81,7 +128,8 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
   private isInitialized: boolean = false;
 
   // ===== MODULAR ENGINES =====
-  // REMOVED: private errorHandler: ErrorHandlingSystem; (using inherited from base class)
+  // FIXED: Using error handler adapter instead of ErrorHandlingSystem
+  private errorHandlerAdapter: ErrorHandlerAdapter;
   private openaiIntegration: OpenAIIntegration;
   private comicEngine: ComicGenerationEngine;
   private narrativeEngine: NarrativeIntelligenceEngine;
@@ -103,6 +151,9 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
       circuitBreakerThreshold: 5,
       ...config
     });
+
+    // Initialize the error handler adapter
+    this.errorHandlerAdapter = new ErrorHandlerAdapter(this);
 
     this.log('info', '🚀 Initializing Revolutionary Modular AI Service...');
     this.log('info', `📊 Version: ${AI_SERVICE_VERSION_INFO.version} (${AI_SERVICE_VERSION_INFO.codename})`);
@@ -143,44 +194,38 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
 
   /**
    * Initialize all modular systems in proper dependency order
+   * FIXED: Uses error handler adapter - no changes needed to modular files
    */
   private async initializeModularSystems(): Promise<void> {
     this.log('info', '🏗️ Initializing modular systems...');
 
     try {
-      // 1. Enterprise Monitoring (needs no dependencies for basic functionality)
-      // FIXED: Create a simple error handler for the monitoring system
-      const errorHandlerStub = {
-        validateAndSanitizeError: (error: any) => {
-          if (error instanceof Error) return error;
-          return new Error(String(error));
-        }
-      };
-      this.enterpriseMonitoring = new EnterpriseMonitoring(errorHandlerStub as any);
+      // 1. Enterprise Monitoring (using adapter)
+      this.enterpriseMonitoring = new EnterpriseMonitoring(this.errorHandlerAdapter as any);
       this.log('info', '✅ Enterprise Monitoring System initialized');
 
-      // 2. OpenAI Integration (needs error handler)
+      // 2. OpenAI Integration (using adapter)
       this.openaiIntegration = new OpenAIIntegration(this.apiKey!, this.learningEngine);
       this.log('info', '✅ OpenAI Integration initialized');
 
-      // 3. Visual DNA System (needs OpenAI and error handler)
-      this.visualDNASystem = new VisualDNASystem(this.openaiIntegration, errorHandlerStub as any);
+      // 3. Visual DNA System (using adapter)
+      this.visualDNASystem = new VisualDNASystem(this.openaiIntegration, this.errorHandlerAdapter as any);
       this.log('info', '✅ Visual DNA System initialized');
 
-      // 4. Narrative Intelligence Engine (needs OpenAI and error handler)
-      this.narrativeEngine = new NarrativeIntelligenceEngine(this.openaiIntegration, errorHandlerStub as any);
+      // 4. Narrative Intelligence Engine (using adapter)
+      this.narrativeEngine = new NarrativeIntelligenceEngine(this.openaiIntegration, this.errorHandlerAdapter as any);
       this.log('info', '✅ Narrative Intelligence Engine initialized');
 
-      // 5. Quality Metrics Engine (needs OpenAI and error handler)
-      this.qualityEngine = new QualityMetricsEngine(this.openaiIntegration, errorHandlerStub as any);
+      // 5. Quality Metrics Engine (using adapter)
+      this.qualityEngine = new QualityMetricsEngine(this.openaiIntegration, this.errorHandlerAdapter as any);
       this.log('info', '✅ Quality Metrics Engine initialized');
 
-      // 6. Pattern Learning Engine (needs OpenAI and error handler)
-      this.learningEngine = new PatternLearningEngine(this.openaiIntegration, errorHandlerStub as any);
+      // 6. Pattern Learning Engine (using adapter)
+      this.learningEngine = new PatternLearningEngine(this.openaiIntegration, this.errorHandlerAdapter as any);
       this.log('info', '✅ Pattern Learning Engine initialized');
 
-      // 7. Comic Generation Engine (needs ALL other systems)
-      this.comicEngine = new ComicGenerationEngine(this.openaiIntegration, errorHandlerStub as any);
+      // 7. Comic Generation Engine (using adapter)
+      this.comicEngine = new ComicGenerationEngine(this.openaiIntegration, this.errorHandlerAdapter as any);
       this.log('info', '✅ Comic Generation Engine initialized');
 
       this.log('info', '🎯 All modular systems initialized successfully');
@@ -201,6 +246,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
 
         const validations = [
           { name: 'API Key', check: () => !!this.apiKey },
+          { name: 'Error Handler Adapter', check: () => !!this.errorHandlerAdapter },
           { name: 'OpenAI Integration', check: () => !!this.openaiIntegration },
           { name: 'Comic Engine', check: () => !!this.comicEngine },
           { name: 'Narrative Engine', check: () => !!this.narrativeEngine },
@@ -616,6 +662,7 @@ export class AIService extends ErrorAwareBaseService implements IAIService {
       }
     });
   }
+
   // ===== MISSING INTERFACE IMPLEMENTATIONS - FIXED =====
 
   /**
