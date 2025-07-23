@@ -125,7 +125,12 @@ class AIService extends ErrorAwareBaseService implements IAIService {
   // ===== CORE PROPERTIES =====
   private apiKey: string | null = null;
   private startTime: number = Date.now();
-  private isInitialized: boolean = false;
+  private _isInitialized: boolean = false;
+
+isInitialized(): boolean {
+  return this._isInitialized;
+}
+
 
   // ===== MODULAR ENGINES =====
   // FIXED: Using error handler adapter instead of ErrorHandlingSystem
