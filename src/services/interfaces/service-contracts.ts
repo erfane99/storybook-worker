@@ -10,25 +10,255 @@ import type { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types.js
 export type { JobData, JobType, JobStatus, JobMetrics };
 
 // ===== CONSOLIDATED AI SERVICE TYPES - SINGLE SOURCE OF TRUTH =====
-export type PanelType = 'standard' | 'wide' | 'tall' | 'splash';
+export type PanelType = 'standard' | 'wide' | 'tall' | 'splash' | 'establishing' | 'closeup';
 export type AudienceType = 'children' | 'young adults' | 'adults';
 export type GenreType = 'adventure' | 'siblings' | 'bedtime' | 'fantasy' | 'history';
 
-export interface SceneMetadata {
+// ===== MODULAR SYSTEM TYPES (ADDED FROM constants-and-types.ts) =====
+export type StoryArchetype = 'hero_journey' | 'redemption' | 'discovery' | 'transformation' | 'mystery' | 'adventure';
+export type QualityGrade = 'A+' | 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-';
+export type SpeechBubbleStyle = 'standard' | 'thought' | 'shout' | 'whisper' | 'narrative' | 'electronic' | 'magical';
+export type ErrorCategory = 'transient' | 'persistent' | 'configuration' | 'content' | 'system';
+export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+// ===== VISUAL DNA INTERFACES =====
+export interface VisualFingerprint {
+  face: string;
+  body: string;
+  clothing: string;
+  signature: string;
+  colorDNA: string;
+  artStyleSignature: string;
+}
+
+export interface NarrativeIntelligence {
+  storyArchetype: StoryArchetype;
+  emotionalArc: string[];
+  thematicElements: string[];
+  pacingStrategy: 'slow_build' | 'action_packed' | 'emotional_depth' | 'mystery_reveal';
+  characterGrowth: string[];
+  conflictProgression: string[];
+  confidence?: number;
+  alternativeArchetypes?: string[];
+  audienceAlignment?: number;
+  universalAppeal?: number;
+  reasoningFactors?: string[];
+}
+
+// ===== MISSING INTERFACES NEEDED BY MODULAR SYSTEM =====
+export interface ComicPage {
+  pageNumber: number;
+  scenes: ComicPanel[];
+  layoutType: string;
+  characterArtStyle: string;
+  panelCount: number;
+  dialoguePanels: number;
+  environmentalTheme: string;
+  professionalQuality: boolean;
+}
+
+export interface ComicPanel {
+  description: string;
+  emotion: string;
+  imagePrompt: string;
+  panelType: PanelType;
+  characterAction: string;
+  narrativePurpose: string;
+  visualPriority: string;
+  dialogue?: string;
+  hasSpeechBubble: boolean;
+  speechBubbleStyle?: string;
+  panelNumber: number;
+  pageNumber: number;
+  environmentalContext?: string;
+  professionalStandards: boolean;
+}
+
+export interface GenerationMetadata {
   discoveryPath: string;
-  patternType: 'direct' | 'nested' | 'discovered' | 'fallback';
+  patternType: 'direct' | 'nested' | 'discovered' | 'fallback' | 'optimized';
   qualityScore: number;
   originalStructure: string[];
   storyBeats: number;
   characterConsistencyEnabled: boolean;
+  environmentalConsistencyEnabled?: boolean;
   professionalStandards: boolean;
   dialoguePanels: number;
-  speechBubbleDistribution: any;
-  [key: string]: any; // Allow additional metadata properties
+  speechBubbleDistribution: Record<string, number>;
+  promptOptimization?: string;
+  visualFingerprintingUsed?: boolean;
+  narrativeIntelligenceApplied?: boolean;
+  qualityAssessmentEnabled?: boolean;
+  [key: string]: any;
+}
+
+export interface SceneMetadata extends GenerationMetadata {}
+
+// ===== ENHANCED AI SERVICE CONFIG =====
+export interface AIServiceConfig {
+  // Base service properties
+  name: string;
+  timeout: number;
+  retryAttempts: number;
+  retryDelay: number;
+  circuitBreakerThreshold: number;
+  
+  // AI-specific properties
+  maxTokens?: number;
+  temperature?: number;
+  model?: string;
+  imageModel?: string;
+  maxRetries?: number;
+  rateLimitPerMinute?: number;
+  enableAdvancedNarrative?: boolean;
+  enableVisualDNAFingerprinting?: boolean;
+  enablePredictiveQuality?: boolean;
+  enableCrossGenreLearning?: boolean;
+  
+  // Error handling config
+  errorHandling?: {
+    enableRetry?: boolean;
+    maxRetries?: number;
+    enableCircuitBreaker?: boolean;
+    enableCorrelation?: boolean;
+    enableMetrics?: boolean;
+    retryableCategories?: ErrorCategory[];
+  };
+}
+
+// ===== CIRCUIT BREAKER AND MONITORING =====
+export interface CircuitBreakerState {
+  failures: number;
+  lastFailure: number;
+  state: 'closed' | 'open' | 'half-open';
+  threshold: number;
+  timeout: number;
+  successCount: number;
+}
+
+export interface ServiceRegistration {
+  serviceId: string;
+  name: string;
+  version: string;
+  capabilities: string[];
+  healthEndpoint: string;
+  metricsEndpoint: string;
+  registrationTime: string;
+  lastHeartbeat: string;
+  status: 'active' | 'inactive' | 'degraded';
+}
+
+export interface MetricsCollector {
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  averageResponseTime: number;
+  circuitBreakerTrips: number;
+  lastRequestTime: string;
+  operationCounts: Map<string, number>;
+  operationTimes: Map<string, number[]>;
+  errorCounts: Map<string, number>;
+  systemHealth: Array<{
+    timestamp: string;
+    status: boolean;
+    details: any;
+  }>;
+  qualityScores: number[];
+  userSatisfactionScores: number[];
+}
+
+export interface ErrorClassification {
+  category: ErrorCategory;
+  severity: ErrorSeverity;
+  recoveryStrategy: string;
+  userMessage: string;
+  isRetryable: boolean;
+  estimatedRecoveryTime?: number;
+}
+
+// ===== COMPREHENSIVE METRICS =====
+export interface ComprehensiveMetrics {
+  timestamp: string;
+  serviceInfo: {
+    name: string;
+    version: string;
+    codename: string;
+    uptime: string;
+    status: string;
+    features: number;
+    capabilities: number;
+  };
+  operations: {
+    totalOperations: number;
+    successfulOperations: number;
+    failedOperations: number;
+    averageResponseTime: number;
+    operationsPerMinute: number;
+    operationCounts: { [key: string]: number };
+    errorCounts: { [key: string]: number };
+    operationTimes: { [key: string]: number[] };
+  };
+  quality: {
+    averageScore: number;
+    gradeDistribution: any;
+    qualityTrend: string;
+    userSatisfaction: number;
+    scoreDistribution: any;
+    totalAssessments: number;
+    recentQualityScore: number;
+    averageUserSatisfaction: number;
+  };
+  system: {
+    memoryUsage: string;
+    activeConnections: number;
+    circuitBreakers: number;
+    cacheHitRate: number;
+    healthChecks: number;
+    lastHealthCheck: any;
+    healthTrend: string;
+    activePatterns: number;
+    learningEngineStatus: string;
+    performanceScore: number;
+  };
+  advanced: {
+    narrativeIntelligence: {
+      archetypesLoaded: number;
+      status: string;
+      effectiveness: number;
+    };
+    visualDNAFingerprinting: {
+      cacheSize: number;
+      hitRate: number;
+      compressionEfficiency: number;
+      status: string;
+    };
+    selfLearningEngine: {
+      patternsStored: number;
+      evolutionCount: number;
+      learningEffectiveness: number;
+      status: string;
+    };
+    qualityAssessment: {
+      metricsTracked: number;
+      averageGrade: string;
+      improvementRate: number;
+      status: string;
+    };
+  };
+  performance: {
+    overallScore: number;
+    trend: string;
+    recommendations: string[];
+  };
+  enterprise: {
+    complianceScore: number;
+    reliabilityRating: number;
+    scalabilityIndex: number;
+    maintenanceHealth: number;
+  };
 }
 
 // ===== CHARACTER DESCRIPTION INTERFACES =====
-
 export interface CharacterDescriptionOptions {
   imageUrl: string;
   style?: string;
@@ -40,7 +270,6 @@ export interface CharacterDescriptionResult {
 }
 
 // ===== STORY GENERATION INTERFACES =====
-
 export interface StoryGenerationOptions {
   genre?: GenreType;
   characterDescription?: string;
@@ -56,55 +285,7 @@ export interface StoryGenerationResult {
   wordCount: number;
 }
 
-// ===== IMAGE GENERATION INTERFACES =====
-
-export interface EnvironmentalDNA {
-  primaryLocation: {
-    name: string;
-    type: 'indoor' | 'outdoor' | 'mixed';
-    description: string;
-    keyFeatures: string[];
-    colorPalette?: string[];
-    architecturalStyle?: string;
-  };
-  lightingContext: {
-    timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
-    weatherCondition: 'sunny' | 'cloudy' | 'rainy' | 'stormy' | 'snowy' | 'pleasant';
-    lightingMood: string;
-    shadowDirection?: string;
-    consistencyRules?: string[];
-  };
-  visualContinuity: {
-    backgroundElements: string[];
-    recurringObjects?: string[];
-    colorConsistency: {
-      dominantColors: string[];
-      accentColors: string[];
-      avoidColors?: string[];
-    };
-    perspectiveGuidelines?: string;
-  };
-  atmosphericElements?: string[] | {
-    ambientEffects?: string[];
-    particleEffects?: string[];
-    environmentalMood?: string;
-    seasonalContext?: string;
-  };
-  panelTransitions?: string[] | {
-    movementFlow?: string;
-    cameraMovement?: string;
-    spatialRelationships?: string;
-  };
-  metadata?: {
-    createdAt: string;
-    processingTime: number;
-    audience: AudienceType;
-    consistencyTarget: string;
-    fallback?: boolean;
-  };
-  error?: string;
-}
-
+// ===== ENHANCED CHARACTER DNA =====
 export interface CharacterDNA {
   sourceImage: string;
   description: string;
@@ -127,9 +308,79 @@ export interface CharacterDNA {
     processingTime: number;
     analysisMethod: string;
     confidenceScore: number;
+    artStyleOptimized?: string;
+    fingerprintGenerated?: boolean;
+    qualityScore?: number;
+    compressionApplied?: boolean;
   };
+  visualFingerprint?: VisualFingerprint;
+  facialFeatures?: string[];
+  bodyCharacteristics?: string;
+  clothingSignature?: string;
+  colorPalette?: string[];
+  artStyleAdaptation?: string;
+  consistencyMarkers?: string[];
 }
 
+// ===== ENHANCED ENVIRONMENTAL DNA =====
+export interface EnvironmentalDNA {
+  primaryLocation: {
+    name: string;
+    type: 'indoor' | 'outdoor' | 'mixed';
+    description: string;
+    keyFeatures: string[];
+    colorPalette?: string[];
+    architecturalStyle?: string;
+    characteristics?: string[];
+    visualElements?: string[];
+  };
+  lightingContext: {
+    timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
+    weatherCondition: 'sunny' | 'cloudy' | 'rainy' | 'stormy' | 'snowy' | 'pleasant';
+    lightingMood: string;
+    shadowDirection?: string;
+    consistencyRules?: string[];
+  };
+  visualContinuity: {
+    backgroundElements: string[];
+    recurringObjects?: string[];
+    colorConsistency: {
+      dominantColors: string[];
+      accentColors: string[];
+      avoidColors?: string[];
+    };
+    perspectiveGuidelines?: string;
+    transitionElements?: string[];
+    styleConsistency?: string;
+  };
+  atmosphericElements?: string[] | {
+    ambientEffects?: string[];
+    particleEffects?: string[];
+    environmentalMood?: string;
+    seasonalContext?: string;
+  };
+  panelTransitions?: string[] | {
+    movementFlow?: string;
+    cameraMovement?: string;
+    spatialRelationships?: string;
+  };
+  metadata?: {
+    createdAt: string;
+    processingTime: number;
+    audience: AudienceType;
+    consistencyTarget: string;
+    fallback?: boolean;
+  };
+  error?: string;
+  atmosphericConditions?: string[];
+  colorScheme?: string;
+  lightingConditions?: string;
+  spatialRelationships?: string[];
+  consistencyMarkers?: string[];
+  environmentalFlow?: string;
+}
+
+// ===== ENHANCED STORY BEAT =====
 export interface StoryBeat {
   beat: string;
   emotion: string;
@@ -142,9 +393,10 @@ export interface StoryBeat {
   hasSpeechBubble?: boolean;
   speechBubbleStyle?: string;
   cleanedDialogue?: string;
-  [key: string]: any; // Allow dynamic property access
+  [key: string]: any;
 }
 
+// ===== ENHANCED STORY ANALYSIS =====
 export interface StoryAnalysis {
   storyBeats: StoryBeat[];
   characterArc: string[];
@@ -153,12 +405,27 @@ export interface StoryAnalysis {
   pagesRequired: number;
   dialoguePanels?: number;
   speechBubbleDistribution?: Record<string, number>;
+  storyArchetype?: string;
+  emotionalArc?: string[];
+  thematicElements?: string[];
+  narrativeIntelligence?: {
+    archetypeApplied: string;
+    pacingStrategy: string;
+    characterGrowthIntegrated: boolean;
+  };
 }
 
+// ===== ENHANCED QUALITY METRICS =====
 export interface QualityMetrics {
   characterConsistency: number;
-  environmentalConsistency?: number;
-  storyCoherence: number;
+  narrativeCoherence: number;
+  visualQuality: number;
+  emotionalResonance: number;
+  technicalExecution: number;
+  audienceAlignment: number;
+  dialogueEffectiveness: number;
+  environmentalCoherence?: number;
+  storyCoherence?: number;
   panelCount: number;
   professionalStandards: boolean;
   environmentalDNAUsed?: boolean;
@@ -167,6 +434,16 @@ export interface QualityMetrics {
   parallelDuration?: number;
   successfulPanels?: number;
   performanceGain?: number;
+  overallScore: number;
+  grade?: string;
+  professionalGrade?: string;
+  recommendations: string[];
+  timestamp?: string;
+  detailedAnalysis?: {
+    strengths: string[];
+    improvements: string[];
+    recommendations: string[];
+  };
   // Automated Quality Scoring (0-100)
   automatedScores?: {
     characterConsistencyScore: number;
@@ -190,8 +467,203 @@ export interface QualityMetrics {
   };
 }
 
-// ===== USER RATING SYSTEM INTERFACES =====
+// ===== ADDITIONAL MODULAR INTERFACES =====
+export interface ThematicAnalysis {
+  primaryThemes: string[];
+  secondaryThemes: string[];
+  universalAppeal: number;
+  audienceAlignment: number;
+  emotionalResonance: number;
+}
 
+export interface ArchetypeDetectionResult {
+  primaryArchetype: StoryArchetype;
+  confidence: number;
+  alternativeArchetypes: string[];
+  reasoningFactors: string[];
+}
+
+export interface StoryAnalysisContext {
+  totalPanels: number;
+  pagesPerStory: number;
+  panelsPerPage: number;
+  complexity: string;
+  narrativeDepth: string;
+  speechBubbleRatio: number;
+}
+
+export interface EmotionalProgression {
+  startEmotion: string;
+  midEmotion: string;
+  endEmotion: string;
+  progression: string[];
+}
+
+export interface CharacterGrowthPattern {
+  initial: string;
+  development: string[];
+  final: string;
+}
+
+export interface PatternEvolutionResult {
+  originalContext: any;
+  evolvedPrompts: any;
+  improvementRationale: string;
+  patternsApplied: LearningPattern[];
+  contextMatch: {
+    similarity: number;
+    matchingFactors: string[];
+    adaptationRequired: string[];
+  };
+  expectedImprovements: {
+    characterConsistency: number;
+    environmentalCoherence: number;
+    narrativeFlow: number;
+    userSatisfaction: number;
+  };
+  confidenceScore: number;
+}
+
+export interface PatternLearningConfig {
+  enableSelfLearning: boolean;
+  patternStorageLimit: number;
+  evolutionThreshold: number;
+  effectivenessThreshold: number;
+}
+
+export interface QualityEngineConfig {
+  enableProfessionalGrading: boolean;
+  enableUserSatisfactionTracking: boolean;
+  qualityThresholds: {
+    excellent: number;
+    good: number;
+    acceptable: number;
+    needsImprovement: number;
+  };
+}
+
+export interface QualityAssessmentContext {
+  characterDNA?: CharacterDNA;
+  environmentalDNA?: EnvironmentalDNA;
+  storyAnalysis?: StoryAnalysis;
+  targetAudience: AudienceType;
+  artStyle: string;
+}
+
+export interface VisualDNAConfig {
+  enableFingerprinting: boolean;
+  cacheSize: number;
+  compressionLevel: string;
+  consistencyThreshold: number;
+}
+
+export interface DNAExtractionResult {
+  success: boolean;
+  dna: any;
+  confidence: number;
+}
+
+export interface HealthAssessment {
+  timestamp: string;
+  basicHealth: boolean;
+  systemComponents: any;
+  performance: any;
+  quality: any;
+  learning: any;
+}
+
+export interface ServiceValidation {
+  name: string;
+  check: () => boolean;
+  passed?: boolean;
+  timestamp?: string;
+}
+
+export interface EnterpriseMonitoringConfig {
+  enableRealTimeMetrics: boolean;
+  enableHealthChecking: boolean;
+  metricsRetentionDays: number;
+}
+
+export interface LearningPattern {
+  id: string;
+  timestamp: string;
+  contextAnalysis: {
+    audience: AudienceType;
+    artStyle: string;
+    storyArchetype: string;
+    storyLength: number;
+    complexityLevel: 'simple' | 'moderate' | 'complex';
+    characterType: string;
+    environmentalSetting: string;
+  };
+  storyPatterns: {
+    beatStructure: any[];
+    dialogueDistribution: any;
+    emotionalProgression: string[];
+    narrativeFlow: any;
+    panelTypeDistribution: any;
+    pacingStrategy: string;
+  };
+  visualPatterns: {
+    characterConsistency: number;
+    environmentalCoherence: number;
+    compositionPatterns: any[];
+    colorHarmony: any;
+    visualFlow: any;
+    panelTransitions: any;
+  };
+  engagementMetrics: {
+    userRating: number;
+    completionRate: number;
+    emotionalResonance: number;
+    comprehensionLevel: number;
+    rereadability: number;
+  };
+  technicalMetrics: {
+    generationTime: number;
+    promptEfficiency: number;
+    errorRate: number;
+    retryCount: number;
+    resourceUsage: string;
+  };
+  successFactors: {
+    keyStrengths: string[];
+    criticalElements: string[];
+    differentiators: string[];
+    replicableElements: string[];
+  };
+  learningMetadata: {
+    effectivenessScore: number;
+    userSatisfactionScore: number;
+    technicalQualityScore: number;
+    adaptabilityScore: number;
+    contextSimilarity: number;
+    evolutionPotential: number;
+  };
+}
+
+export interface ProfessionalComicStandards {
+  gradeLevel: QualityGrade;
+  qualityMetrics: {
+    characterConsistency: number;
+    narrativeCoherence: number;
+    visualQuality: number;
+    emotionalResonance: number;
+    technicalExecution: number;
+    audienceAlignment: number;
+    dialogueEffectiveness: number;
+    environmentalCoherence: number;
+  };
+  professionalRecommendations: string[];
+  panelComposition: 'rule_of_thirds' | 'center_focus' | 'dynamic_diagonal' | 'symmetrical';
+  visualHierarchy: 'character_first' | 'environment_first' | 'action_first' | 'emotion_first';
+  colorPsychology: 'warm_inviting' | 'cool_mysterious' | 'vibrant_energetic' | 'muted_dramatic';
+  readingFlow: 'traditional_lr' | 'manga_rl' | 'dynamic_flow' | 'splash_focus';
+  cinematicTechniques: string[];
+}
+
+// ===== USER RATING SYSTEM INTERFACES =====
 export interface UserRating {
   id: string;
   comicId: string;
@@ -278,7 +750,6 @@ export interface ImageGenerationResult {
 }
 
 // ===== CARTOONIZE INTERFACES =====
-
 export interface CartoonizeOptions {
   prompt: string;
   style: string;
@@ -292,7 +763,6 @@ export interface CartoonizeResult {
 }
 
 // ===== SCENE GENERATION INTERFACES =====
-
 export interface SceneGenerationOptions {
   story: string;
   audience?: AudienceType;
@@ -312,7 +782,6 @@ export interface SceneGenerationResult {
 }
 
 // ===== HEALTH MONITORING INTERFACES =====
-
 export interface IServiceHealth {
   /**
    * Check if service is healthy (computed property, not internal state)
@@ -334,7 +803,6 @@ export interface ServiceHealthStatus {
 }
 
 // ===== METRICS INTERFACES =====
-
 export interface IServiceMetrics {
   /**
    * Get performance metrics (computed, not raw internal state)
@@ -357,7 +825,6 @@ export interface ServiceMetrics {
 }
 
 // ===== LIFECYCLE MANAGEMENT INTERFACES =====
-
 export interface IServiceLifecycle {
   /**
    * Initialize the service
@@ -376,7 +843,6 @@ export interface IServiceLifecycle {
 }
 
 // ===== BUSINESS OPERATION INTERFACES =====
-
 export interface IDatabaseOperations {
   // Job Management
   getPendingJobs(filter?: JobFilter, limit?: number): Promise<JobData[]>;
@@ -506,7 +972,6 @@ export interface IAuthOperations {
 }
 
 // ===== SUBSCRIPTION OPERATIONS INTERFACE =====
-
 export interface ISubscriptionOperations {
   // Core Subscription Limit Checking
   checkUserLimits(userId: string, limitType?: string): Promise<LimitCheckResult>;
@@ -527,7 +992,6 @@ export interface ISubscriptionOperations {
 }
 
 // ===== CONFIGURATION INTERFACES =====
-
 export interface IServiceConfiguration {
   /**
    * Get service configuration (read-only)
@@ -551,7 +1015,6 @@ export interface IServiceConfiguration {
 }
 
 // ===== COMPOSITE SERVICE INTERFACES =====
-
 export interface IDatabaseService extends 
   IDatabaseOperations, 
   IServiceHealth, 
@@ -607,7 +1070,6 @@ export interface IAIService extends
 }
 
 // ===== SUCCESS PATTERN LEARNING INTERFACES =====
-
 export interface SuccessPattern {
   id: string;
   patternType: 'prompt_template' | 'environmental_context' | 'character_strategy' | 'dialogue_pattern';
@@ -644,24 +1106,6 @@ export interface SuccessPattern {
   successRate: number; // percentage
   createdAt: string;
   lastUsedAt: string;
-}
-
-export interface PatternEvolutionResult {
-  originalPrompt: string;
-  evolvedPrompt: string;
-  improvementRationale: string;
-  patternsApplied: SuccessPattern[];
-  contextMatch: {
-    similarity: number;
-    matchingFactors: string[];
-    adaptationRequired: string[];
-  };
-  expectedImprovements: {
-    characterConsistency: number;
-    environmentalCoherence: number;
-    narrativeFlow: number;
-    userSatisfaction: number;
-  };
 }
 
 export interface LearningMetrics {
@@ -714,7 +1158,6 @@ export interface IConfigService extends
 }
 
 // ===== CONTAINER INTERFACES =====
-
 export interface IServiceContainer {
   // Service Registration
   register<T>(token: string, factory: ServiceFactory<T>, options?: ServiceOptions): void;
@@ -744,7 +1187,6 @@ export interface ContainerHealthReport {
 }
 
 // ===== SUPPORTING TYPES =====
-
 export interface ServiceFactory<T> {
   (container: IServiceContainer): T | Promise<T>;
 }
@@ -836,7 +1278,6 @@ export interface UserContext {
 }
 
 // ===== SUBSCRIPTION TYPES =====
-
 export type UserTier = 'free' | 'basic' | 'premium' | 'admin';
 
 export interface SubscriptionLimits {
