@@ -23,16 +23,16 @@ import {
   EnvironmentalDNA,
   VisualFingerprint,
   StoryBeat
-} from './constants-and-types.js';
+} from './constants-and-types';
 
 import { 
   ErrorHandlingSystem,
   AIServiceError,
   AIRateLimitError,
   AIContentPolicyError 
-} from './error-handling-system.js';
+} from './error-handling-system';
 
-import { OpenAIIntegration } from './openai-integration.js';
+import { OpenAIIntegration } from './openai-integration';
 
 // ===== MISSING INTERFACE DEFINITIONS (FIXED) =====
 
@@ -76,9 +76,9 @@ export class VisualDNASystem {
   private openaiIntegration: OpenAIIntegration;
   private errorHandler: ErrorHandlingSystem;
   private config: VisualDNAConfig;
-  private visualDNACache: Map<string, VisualFingerprint>;
-  private dnaDatabase: Map<string, CharacterDNA>;
-  private compressionCache: Map<string, string>;
+private visualDNACache!: Map<string, VisualFingerprint>;
+private dnaDatabase!: Map<string, CharacterDNA>;
+private compressionCache!: Map<string, string>;
 
   constructor(
     openaiIntegration: OpenAIIntegration,
