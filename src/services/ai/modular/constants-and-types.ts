@@ -8,7 +8,7 @@
  */
 
 // ===== CORRECTED IMPORT PATHS =====
-import { ErrorAwareServiceConfig } from '../../../base/error-aware-base-service.js';
+import { ErrorAwareServiceConfig } from '../../base/error-aware-base-service.js';
 import { 
   ServiceConfig,
   CharacterDNA as BaseCharacterDNA,
@@ -28,8 +28,8 @@ import {
   ChatCompletionOptions,
   ChatCompletionResult,
   RetryConfig
-} from '../../../interfaces/service-contracts.js';
-import { ErrorCategory } from '../../../errors/index.js';
+} from '../../interfaces/service-contracts.js';
+import { ErrorCategory } from '../../errors/index.js';
 
 // ===== RE-EXPORT AND EXTEND BASE TYPES =====
 export type AudienceType = BaseAudienceType;
