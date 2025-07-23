@@ -17,7 +17,7 @@
  * - Comprehensive health monitoring and metrics collection (FROM BOTH FILES)
  */
 
-import { ErrorAwareBaseService } from '../base/error-aware-base-service.js';
+import { ErrorAwareBaseService } from '../base/error-aware-base-service';
 import { 
   IAIService,
   ServiceConfig,
@@ -36,7 +36,7 @@ import {
   CartoonizeResult,
   ChatCompletionOptions,
   ChatCompletionResult
-} from '../interfaces/service-contracts.js';
+} from '../interfaces/service-contracts';
 
 import { 
   Result,
@@ -46,7 +46,7 @@ import {
   AIRateLimitError,
   AIContentPolicyError,
   AITimeoutError
-} from '../errors/index.js';
+} from '../errors/index';
 
 // Import all our modular components - FIXED: Corrected import paths
 import {
@@ -60,15 +60,15 @@ import {
   PROFESSIONAL_AUDIENCE_CONFIG,
   STORYTELLING_ARCHETYPES,
   DEFAULT_RETRY_CONFIG
-} from './modular/constants-and-types.js';
+} from './modular/constants-and-types';
 
-import { OpenAIIntegration } from './modular/openai-integration.js';
-import { ComicGenerationEngine } from './modular/comic-generation-engine.js';
-import { NarrativeIntelligenceEngine } from './modular/narrative-intelligence.js';
-import { VisualDNASystem } from './modular/visual-dna-system.js';
-import { QualityMetricsEngine } from './modular/quality-metrics-engine.js';
-import { PatternLearningEngine } from './modular/pattern-learning-engine.js';
-import { EnterpriseMonitoring } from './modular/enterprise-monitoring.js';
+import { OpenAIIntegration } from './modular/openai-integration';
+import { ComicGenerationEngine } from './modular/comic-generation-engine';
+import { NarrativeIntelligenceEngine } from './modular/narrative-intelligence';
+import { VisualDNASystem } from './modular/visual-dna-system';
+import { QualityMetricsEngine } from './modular/quality-metrics-engine';
+import { PatternLearningEngine } from './modular/pattern-learning-engine';
+import { EnterpriseMonitoring } from './modular/enterprise-monitoring';
 
 /**
  * ===== ERROR HANDLER ADAPTER =====
@@ -96,7 +96,7 @@ class ErrorHandlerAdapter {
     const standardError = this.validateAndSanitizeError(error);
     
     // Log the error using the AI service's logging
-    this.aiService.log('error', `${operationName} failed:`, standardError.message);
+    this.log('error', `${operationName} failed:`, standardError.message);
     
     return standardError;
   }
@@ -121,7 +121,7 @@ class ErrorHandlerAdapter {
  * ===== MAIN AI SERVICE CLASS - MODULAR ORCHESTRATOR =====
  * Revolutionary enterprise-grade AI service with complete modular architecture
  */
-export class AIService extends ErrorAwareBaseService implements IAIService {
+class AIService extends ErrorAwareBaseService implements IAIService {
   // ===== CORE PROPERTIES =====
   private apiKey: string | null = null;
   private startTime: number = Date.now();
