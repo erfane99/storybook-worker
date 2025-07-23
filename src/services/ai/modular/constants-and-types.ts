@@ -59,9 +59,9 @@ import {
   ComprehensiveMetrics,
   ProfessionalComicStandards,
   AIServiceConfig
-} from '../../../interfaces/service-contracts.js';
+} from '../../../interfaces/service-contracts';
 
-import { ErrorAwareServiceConfig } from '../../../base/error-aware-base-service.js';
+import { ErrorAwareServiceConfig } from '../../../base/error-aware-base-service';
 
 // ===== RE-EXPORT TYPES FOR CONVENIENCE =====
 export type {
