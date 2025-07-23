@@ -1,6 +1,6 @@
 // Enhanced Job Processor - Professional Comic Book Generation with Character DNA System
 // ✅ ENHANCED: Story beat analysis, character consistency, and professional comic workflows
-import { serviceContainer } from '../../services/container/service-container.js';
+import { serviceContainer } from '../../services/container/service-container';
 import { 
   SERVICE_TOKENS, 
   IDatabaseService, 
@@ -12,15 +12,15 @@ import {
   EnvironmentalDNA,
   CharacterDNA,
   QualityMetrics
-} from '../../services/interfaces/service-contracts.js';
+} from '../../services/interfaces/service-contracts';
 import { 
   Result,
   ErrorFactory,
   ServiceError,
   createJobCorrelationContext,
   withCorrelationResult
-} from '../../services/errors/index.js';
-import { JobData, JobType, StorybookJobData, AutoStoryJobData, SceneJobData, CartoonizeJobData, ImageJobData } from '../types.js';
+} from '../../services/errors/index';
+import { JobData, JobType, StorybookJobData, AutoStoryJobData, SceneJobData, CartoonizeJobData, ImageJobData } from '../types';
 
 interface JobProcessingResult {
   success: boolean;
@@ -496,7 +496,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
     
     // Update running averages
     stats.averageCharacterConsistency = ((stats.averageCharacterConsistency * total) + comicQuality.qualityMetrics.characterConsistency) / (total + 1);
-    stats.averageStoryCoherence = ((stats.averageStoryCoherence * total) + comicQuality.qualityMetrics.storyCoherence) / (total + 1);
+    stats.averageStoryCoherence = ((stats.averageStoryCoherence * total) + (comicQuality?.qualityMetrics?.storyCoherence ?? 75)) / (total + 1);
     
     if (comicQuality.qualityMetrics.professionalStandards) {
       stats.professionalStandardsAchieved++;
@@ -504,7 +504,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
     
     stats.totalComicsGenerated++;
     
-    console.log(`📊 Comic quality updated: Consistency ${comicQuality.qualityMetrics.characterConsistency}%, Coherence ${comicQuality.qualityMetrics.storyCoherence}%, Standards: ${comicQuality.qualityMetrics.professionalStandards}`);
+    console.log(`📊 Comic quality updated: Consistency ${comicQuality.qualityMetrics.characterConsistency}%, Coherence ${(comicQuality?.qualityMetrics?.storyCoherence ?? 75)}%, Standards: ${comicQuality.qualityMetrics.professionalStandards}`);
   }
 
   @withCorrelationResult('enhanced-job-processor', 'processJob')
