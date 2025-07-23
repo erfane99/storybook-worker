@@ -1,6 +1,6 @@
 // Consolidated Database Service - Production Implementation with Direct Environment Variable Access
 import { createClient, SupabaseClient, PostgrestSingleResponse } from '@supabase/supabase-js';
-import { EnhancedBaseService } from '../base/enhanced-base-service.js';
+import { EnhancedBaseService } from '../base/enhanced-base-service';
 import { 
   IDatabaseService, 
   StorybookEntryData, 
@@ -14,7 +14,7 @@ import {
   QualityTrendData,
   SuccessPattern,
   LearningMetrics
-} from '../interfaces/service-contracts.js';
+} from '../interfaces/service-contracts';
 import { 
   Result,
   DatabaseConnectionError,
@@ -22,8 +22,8 @@ import {
   DatabaseTimeoutError,
   JobNotFoundError,
   ErrorFactory
-} from '../errors/index.js';
-import { JobData, JobType, JobStatus } from '../../lib/types.js';
+} from '../errors/index';
+import { JobData, JobType, JobStatus } from '../../lib/types';
 
 interface DatabaseConfig extends ServiceConfig {
   maxConnections: number;
@@ -433,7 +433,6 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     // Convert database format back to QualityMetrics
     return {
       characterConsistency: result.character_consistency_score || 75,
-      environmentalConsistency: result.environmental_coherence_score || 75,
       storyCoherence: result.narrative_flow_score || 75,
       panelCount: result.automated_scores?.analysisDetails?.panelsAnalyzed || 0,
       professionalStandards: result.quality_grade !== 'F',
