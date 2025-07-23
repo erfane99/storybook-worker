@@ -4,7 +4,7 @@
 // ✅ FIXED: Updated to match enterprise AI service implementation
 
 // ===== IMPORT AND RE-EXPORT JOB TYPES =====
-import type { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types.js';
+import type { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types';
 
 // Re-export job types so other modules can import them from here
 export type { JobData, JobType, JobStatus, JobMetrics };
