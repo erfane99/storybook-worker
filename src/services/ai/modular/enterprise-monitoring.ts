@@ -27,12 +27,12 @@ import {
   AI_SERVICE_ENTERPRISE_CONSTANTS,
   AI_SERVICE_VERSION_INFO,
   STORYTELLING_ARCHETYPES
-} from './constants-and-types.js';
+} from './constants-and-types';
 
 import { 
   ErrorHandlingSystem,
   AIServiceError
-} from './error-handling-system.js';
+} from './error-handling-system';
 
 /**
  * ===== ENTERPRISE MONITORING CLASS =====
@@ -207,7 +207,7 @@ export class EnterpriseMonitoring {
         .flat()
         .reduce((sum: number, time: number) => sum + time, 0);
       this.metricsCollector.averageResponseTime = this.metricsCollector.totalRequests > 0 
-        ? Math.round(totalTime / this.metricsCollector.totalRequests) 
+        ? Math.round(totalTime as number / this.metricsCollector.totalRequests) 
         : 0;
 
       // Cleanup old data for performance
@@ -380,7 +380,7 @@ export class EnterpriseMonitoring {
           operationCounts: Object.fromEntries(this.metricsCollector.operationCounts),
           errorCounts: Object.fromEntries(this.metricsCollector.errorCounts),
           operationTimes: Object.fromEntries(
-            Array.from(this.metricsCollector.operationTimes.entries()).map(([key, value]) => [key, value])
+            Array.from(this.metricsCollector.operationTimes.entries() as Iterable<[string, number[]]>).map(([key, value]) => [key, value])
           )
         },
         quality: qualityMetrics,
@@ -632,7 +632,7 @@ export class EnterpriseMonitoring {
 
   // Additional calculation methods - FIXED: All TypeScript errors resolved
   private calculateTotalOperations(): number {
-    return Array.from(this.metricsCollector.operationCounts.values()).reduce((a: number, b: number) => a + b, 0);
+    return Array.from(Array.from(this.metricsCollector.operationCounts.values()) as number[]).reduce((a: number, b: number) => a + b, 0);
   }
 
   private calculateSuccessfulOperations(): number {
@@ -642,7 +642,7 @@ export class EnterpriseMonitoring {
   }
 
   private calculateFailedOperations(): number {
-    return Array.from(this.metricsCollector.errorCounts.values()).reduce((a: number, b: number) => a + b, 0);
+    return Array.from(Array.from(this.metricsCollector.errorCounts.values()) as number[]).reduce((a: number, b: number) => a + b, 0);
   }
 
   private calculateAverageResponseTime(): number {
