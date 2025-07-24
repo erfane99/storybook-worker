@@ -212,9 +212,7 @@ export class QualityMetricsEngine {
 
         // Metadata
         timestamp: new Date().toISOString(),
-        panelCount: generatedPanels.length,
-        audience: originalContext.targetAudience,
-        artStyle: originalContext.artStyle
+        panelCount: generatedPanels.length
       };
 
       // Update quality trends (FROM CURRENTAISERV.TXT)
