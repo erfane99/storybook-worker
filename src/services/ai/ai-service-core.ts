@@ -79,6 +79,13 @@ class ErrorHandlerAdapter {
   constructor(private aiService: AIService) {}
 
   /**
+   * Add missing log method for ErrorHandlerAdapter
+   */
+  log(level: string, ...args: any[]) {
+    console.log(`[ErrorHandler-${level.toUpperCase()}]`, ...args);
+  }
+
+  /**
    * Main method that modular components use for error handling
    */
   validateAndSanitizeError(error: any): Error {
@@ -127,19 +134,14 @@ class AIService extends ErrorAwareBaseService implements IAIService {
   private startTime: number = Date.now();
   private _isInitialized: boolean = false;
 
-isInitialized(): boolean {
-  return this._isInitialized;
-}
-
+  isInitialized(): boolean {
+    return this._isInitialized;
+  }
 
   // ===== MODULAR ENGINES =====
   // FIXED: Using error handler adapter instead of ErrorHandlingSystem
   private errorHandlerAdapter: ErrorHandlerAdapter;
 
-  // Add missing log method for ErrorHandlerAdapter
-  log(...args: any[]) {
-    console.log('[ErrorHandler]', ...args);
-  }
   private openaiIntegration!: OpenAIIntegration;
   private comicEngine!: ComicGenerationEngine;
   private narrativeEngine!: NarrativeIntelligenceEngine;
@@ -358,7 +360,7 @@ isInitialized(): boolean {
         }
 
         // Step 1: Create character DNA if image provided (FROM BOTH FILES)
-        let characterDNA: CharacterDNA | null = null;
+        let characterDNA: CharacterDNA | undefined = undefined;
         if (characterImageUrl) {
           this.log('info', '🧬 Creating character DNA with visual fingerprinting...');
           characterDNA = await this.visualDNASystem.createMasterCharacterDNA(characterImageUrl, artStyle) || undefined;
@@ -463,7 +465,7 @@ isInitialized(): boolean {
         return AsyncResult.success(result.data);
       } else {
         const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
+        this.enterpriseMonitoring.recordOperationMetrics('generateStorybook', duration, false);
         return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
       }
     });
@@ -494,7 +496,7 @@ isInitialized(): boolean {
         return AsyncResult.success(result.data);
       } else {
         const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
+        this.enterpriseMonitoring.recordOperationMetrics('generateScenesWithAudience', duration, false);
         return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
       }
     });
@@ -502,12 +504,12 @@ isInitialized(): boolean {
 
   /**
    * Generate images with advanced options (FROM BOTH FILES)
-   * FIXED: Uses inherited error handling
+   * FIXED: Uses inherited error handling with correct AsyncResult pattern
    */
   async generateImages(options: ImageGenerationOptions): Promise<AsyncResult<ImageGenerationResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    const asyncResult = this.withErrorHandling(
+    const result = await this.withErrorHandling(
       async () => {
         this.log('info', '🖼️ Generating images with advanced options...');
         
@@ -533,7 +535,6 @@ isInitialized(): boolean {
       options
     );
 
-    const result = await asyncResult.toPromise();
     if (result.success) {
       return AsyncResult.success(result.data);
     } else {
@@ -545,12 +546,12 @@ isInitialized(): boolean {
 
   /**
    * Create character descriptions with professional analysis (FROM BOTH FILES)
-   * FIXED: Uses inherited error handling
+   * FIXED: Uses inherited error handling with correct AsyncResult pattern
    */
   async createCharacterDescription(options: CharacterDescriptionOptions): Promise<AsyncResult<CharacterDescriptionResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    const asyncResult = this.withErrorHandling(
+    const result = await this.withErrorHandling(
       async () => {
         this.log('info', '👤 Creating character description with professional analysis...');
         
@@ -571,7 +572,6 @@ isInitialized(): boolean {
       options
     );
 
-    const result = await asyncResult.toPromise();
     if (result.success) {
       return AsyncResult.success(result.data);
     } else {
@@ -583,12 +583,12 @@ isInitialized(): boolean {
 
   /**
    * Cartoonize images with professional quality (FROM BOTH FILES)
-   * FIXED: Uses inherited error handling
+   * FIXED: Uses inherited error handling with correct AsyncResult pattern
    */
   async cartoonizeImage(options: CartoonizeOptions): Promise<AsyncResult<CartoonizeResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    const asyncResult = this.withErrorHandling(
+    const result = await this.withErrorHandling(
       async () => {
         this.log('info', '🎨 Cartoonizing image with professional quality...');
         
@@ -614,7 +614,6 @@ isInitialized(): boolean {
       options
     );
 
-    const result = await asyncResult.toPromise();
     if (result.success) {
       return AsyncResult.success(result.data);
     } else {
@@ -626,12 +625,12 @@ isInitialized(): boolean {
 
   /**
    * Generate chat completions with professional context (FROM BOTH FILES)
-   * FIXED: Uses inherited error handling
+   * FIXED: Uses inherited error handling with correct AsyncResult pattern and fixed messages parameter
    */
   async generateChatCompletion(options: ChatCompletionOptions): Promise<AsyncResult<ChatCompletionResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    const asyncResult = this.withErrorHandling(
+    const result = await this.withErrorHandling(
       async () => {
         this.log('info', '💬 Generating chat completion with professional context...');
         
@@ -666,7 +665,6 @@ isInitialized(): boolean {
       { messages: options.messages, ...options }
     );
 
-    const result = await asyncResult.toPromise();
     if (result.success) {
       return AsyncResult.success(result.data);
     } else {
@@ -677,6 +675,29 @@ isInitialized(): boolean {
   }
 
   // ===== MISSING INTERFACE IMPLEMENTATIONS - FIXED =====
+
+  /**
+   * Generate story with options - interface compatibility method
+   */
+  async generateStoryWithOptions(prompt: string, options?: any): Promise<string> {
+    const result = await this.generateStorybook('Generated Story', prompt, '', 'children', 'storybook');
+    const resolvedResult = await result;
+    return 'success' in resolvedResult && resolvedResult.success ? JSON.stringify(resolvedResult.data) : '';
+  }
+
+  /**
+   * Process cartoonize - interface compatibility method  
+   */
+  async processCartoonize(options: CartoonizeOptions): Promise<AsyncResult<CartoonizeResult, AIServiceUnavailableError>> {
+    return this.cartoonizeImage(options);
+  }
+
+  /**
+   * Create chat completion - interface compatibility method
+   */
+  async createChatCompletion(messages: any[], options: any = {}): Promise<AsyncResult<ChatCompletionResult, AIServiceUnavailableError>> {
+    return this.generateChatCompletion({ messages, ...options });
+  }
 
   /**
    * Analyze story structure using advanced narrative intelligence
@@ -707,75 +728,6 @@ isInitialized(): boolean {
         return storyAnalysis;
       },
       'analyzeStoryStructure'
-    );
-
-    if (result.success) {
-      return result.data;
-    } else {
-      this.log('error', 'Story analysis failed:', result.error);
-      throw result.error;
-    }
-  }
-
-  /**
-   * Create master character DNA with visual fingerprinting
-   * FIXED: Uses inherited error handling
-   */
-  async createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA> {
-    const result = await this.withErrorHandling(
-      async () => {
-        return await this.visualDNASystem.createMasterCharacterDNA(imageUrl, artStyle);
-      },
-      'createMasterCharacterDNA'
-    );
-
-    if (result.success) {
-      return result.data;
-    } else {
-      throw result.error;
-    }
-  }
-
-  /**
-   * Create environmental DNA for world consistency
-   * FIXED: Uses inherited error handling
-   */
-  async createEnvironmentalDNA(storyBeats: any[], audience: AudienceType, artStyle?: string): Promise<EnvironmentalDNA> {
-    const result = await this.withErrorHandling(
-      async () => {
-        return await this.visualDNASystem.createEnvironmentalDNA(storyBeats, audience, artStyle || 'comic-book');
-      },
-      'createEnvironmentalDNA'
-    );
-
-    if (result.success) {
-      return result.data;
-    } else {
-      throw result.error;
-    }
-  }
-
-  /**
-   * Analyze panel continuity for visual consistency
-   * FIXED: Uses inherited error handling
-   */
-  async analyzePanelContinuity(storyBeats: any[]): Promise<any> {
-    const result = await this.withErrorHandling(
-      async () => {
-        this.log('info', '🔍 Analyzing panel continuity...');
-        
-        return {
-          continuityScore: 95,
-          visualTransitions: storyBeats.map((_, index) => ({
-            fromPanel: index,
-            toPanel: index + 1,
-            transitionType: 'smooth',
-            consistency: 'high'
-          })),
-          recommendations: ['Maintain character positioning', 'Consistent lighting']
-        };
-      },
-      'analyzePanelContinuity'
     );
 
     if (result.success) {
@@ -1029,14 +981,14 @@ isInitialized(): boolean {
   // ===== INTERFACE ALIASES FOR IAIService COMPATIBILITY =====
   async generateStory(prompt: string, options?: any): Promise<string> {
     const result = await this.generateStorybook('Generated Story', prompt, '', 'children', 'storybook');
-const resolvedResult = await result.toPromise();
-return resolvedResult.success ? JSON.stringify(resolvedResult.data) : '';
+    const resolvedResult = await result;
+    return 'success' in resolvedResult && resolvedResult.success ? JSON.stringify(resolvedResult.data) : '';
   }
 
   async generateCartoonImage(prompt: string): Promise<AsyncResult<string, AIServiceUnavailableError>> {
     const cartoonResult = await this.cartoonizeImage({ prompt, style: 'cartoon' });
-    const result = await cartoonResult.toPromise();
-    return result.success ? AsyncResult.success(result.data.url) : AsyncResult.failure(new AIServiceUnavailableError('Cartoon generation failed'));
+    const result = await cartoonResult;
+    return 'success' in result && result.success ? AsyncResult.success(result.data.url) : AsyncResult.failure(new AIServiceUnavailableError('Cartoon generation failed'));
   }
 
   generateSceneImage = this.generateImages;
@@ -1046,8 +998,8 @@ return resolvedResult.success ? JSON.stringify(resolvedResult.data) : '';
   async describeCharacter(imageUrlOrOptions: string | CharacterDescriptionOptions, prompt?: string): Promise<any> {
     if (typeof imageUrlOrOptions === 'string') {
       const descriptionResult = await this.createCharacterDescription({ imageUrl: imageUrlOrOptions, style: 'comic-book' });
-      const result = await descriptionResult.toPromise();
-      return result.success ? AsyncResult.success(result.data.description) : AsyncResult.failure(new AIServiceUnavailableError('Character description failed'));
+      const result = await descriptionResult;
+      return 'success' in result && result.success ? AsyncResult.success(result.data.description) : AsyncResult.failure(new AIServiceUnavailableError('Character description failed'));
     } else {
       return this.createCharacterDescription(imageUrlOrOptions);
     }
@@ -1103,3 +1055,72 @@ export async function initializeEnterpriseAIService(config?: Partial<AIServiceCo
 // Export the main class and factory functions
 export default AIService;
 export { AIService };
+    } else {
+      this.log('error', 'Story analysis failed:', result.error);
+      throw result.error;
+    }
+  }
+
+  /**
+   * Create master character DNA with visual fingerprinting
+   * FIXED: Uses inherited error handling
+   */
+  async createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA> {
+    const result = await this.withErrorHandling(
+      async () => {
+        return await this.visualDNASystem.createMasterCharacterDNA(imageUrl, artStyle);
+      },
+      'createMasterCharacterDNA'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw result.error;
+    }
+  }
+
+  /**
+   * Create environmental DNA for world consistency
+   * FIXED: Uses inherited error handling
+   */
+  async createEnvironmentalDNA(storyBeats: any[], audience: AudienceType, artStyle?: string): Promise<EnvironmentalDNA> {
+    const result = await this.withErrorHandling(
+      async () => {
+        return await this.visualDNASystem.createEnvironmentalDNA(storyBeats, audience, artStyle || 'comic-book');
+      },
+      'createEnvironmentalDNA'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw result.error;
+    }
+  }
+
+  /**
+   * Analyze panel continuity for visual consistency
+   * FIXED: Uses inherited error handling
+   */
+  async analyzePanelContinuity(storyBeats: any[]): Promise<any> {
+    const result = await this.withErrorHandling(
+      async () => {
+        this.log('info', '🔍 Analyzing panel continuity...');
+        
+        return {
+          continuityScore: 95,
+          visualTransitions: storyBeats.map((_, index) => ({
+            fromPanel: index,
+            toPanel: index + 1,
+            transitionType: 'smooth',
+            consistency: 'high'
+          })),
+          recommendations: ['Maintain character positioning', 'Consistent lighting']
+        };
+      },
+      'analyzePanelContinuity'
+    );
+
+    if (result.success) {
+      return result.data;
