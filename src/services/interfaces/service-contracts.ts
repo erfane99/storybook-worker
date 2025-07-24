@@ -20,7 +20,7 @@ import type { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types';
 export type { JobData, JobType, JobStatus, JobMetrics };
 
 // ===== CANONICAL Result-union ALIAS ★
-export type AIAsyncResult
+export type AIAsyncResult<
   T,
   E = AIServiceUnavailableError,
 > = AsyncResult<T, E>;
