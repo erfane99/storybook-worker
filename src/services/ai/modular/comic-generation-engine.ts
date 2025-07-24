@@ -798,6 +798,7 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
       visualPriority: this.ensureString(beat.visualPriority) || 'character',
       characterAction: this.ensureString(beat.characterAction) || 'standing',
       panelPurpose: this.ensureString(beat.panelPurpose) || 'narrative',
+      narrativeFunction: this.ensureString(beat.panelPurpose) || 'narrative',
       environment: this.ensureString(beat.environment) || 'general setting',
       dialogue: beat.dialogue || undefined,
       hasSpeechBubble: Boolean(beat.hasSpeechBubble),
