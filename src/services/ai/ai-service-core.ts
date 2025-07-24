@@ -789,12 +789,12 @@ isInitialized(): boolean {
   async calculateQualityMetrics(
     generatedPanels: any[],
     originalContext: {
-      characterDNA?: any;
-      environmentalDNA?: any;
-      storyAnalysis?: any;
-      targetAudience: string;
-      artStyle: string;
-    }
+  characterDNA?: CharacterDNA;
+  environmentalDNA?: EnvironmentalDNA;
+  storyAnalysis?: StoryAnalysis;
+  targetAudience: AudienceType;
+  artStyle: string;
+}
   ): Promise<any> {
     const result = await this.withErrorHandling(
       async () => {
