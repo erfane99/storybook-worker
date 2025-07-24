@@ -126,7 +126,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     setInterval(() => this.cleanupStaleJobs(), 300000);
     setInterval(() => this.checkAutoRecovery(), 60000);
   }
-// ===== ENHANCED HEALTH INTERFACE IMPLEMENTATION =====
+
+  // ===== ENHANCED HEALTH INTERFACE IMPLEMENTATION =====
 
   isHealthy(): boolean {
     try {
@@ -198,7 +199,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       lastCheck: new Date().toISOString(),
     };
   }
-// ===== SLIDING WINDOW FAILURE RATE CALCULATION =====
+
+  // ===== SLIDING WINDOW FAILURE RATE CALCULATION =====
 
   private calculateSlidingWindowFailureRate(): number {
     const recentResults = this.internalStats.recentResults;
@@ -271,7 +273,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     
     console.log('📊 Enhanced processor metrics reset - including comic quality tracking');
   }
-// ===== PUBLIC PROCESSING INTERFACE =====
+
+  // ===== PUBLIC PROCESSING INTERFACE =====
 
   getProcessingStats(): ProcessingStatistics {
     const errorStats = Object.fromEntries(this.internalStats.errorsByService);
@@ -364,7 +367,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
     console.log(`📈 Added enhanced job ${jobId} to processing queue (${this.currentlyProcessing.size}/${this.maxConcurrentJobs})`);
     return true;
   }
-private removeFromProcessing(jobId: string): void {
+
+  private removeFromProcessing(jobId: string): void {
     const jobInfo = this.currentlyProcessing.get(jobId);
     if (jobInfo) {
       const duration = Date.now() - jobInfo.startTime;
@@ -456,7 +460,8 @@ private removeFromProcessing(jobId: string): void {
       error: serviceError,
     };
   }
-private async processJobWithCleanup(job: JobData): Promise<void> {
+
+  private async processJobWithCleanup(job: JobData): Promise<void> {
     const startTime = Date.now();
     let result: JobProcessingResult;
 
@@ -510,7 +515,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
     
     // Update running averages
     stats.averageCharacterConsistency = ((stats.averageCharacterConsistency * total) + comicQuality.qualityMetrics.characterConsistency) / (total + 1);
-    stats.averageStoryCoherence = ((stats.averageStoryCoherence * total) + comicQuality.qualityMetrics.storyCoherence) / (total + 1);
+    stats.averageStoryCoherence = ((stats.averageStoryCoherence * total) + (comicQuality.qualityMetrics.storyCoherence || 0)) / (total + 1);
     
     if (comicQuality.qualityMetrics.professionalStandards) {
       stats.professionalStandardsAchieved++;
@@ -518,7 +523,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
     
     stats.totalComicsGenerated++;
     
-    console.log(`📊 Comic quality updated: Consistency ${comicQuality.qualityMetrics.characterConsistency}%, Coherence ${comicQuality.qualityMetrics.storyCoherence}%, Standards: ${comicQuality.qualityMetrics.professionalStandards}`);
+    console.log(`📊 Comic quality updated: Consistency ${comicQuality.qualityMetrics.characterConsistency}%, Coherence ${comicQuality.qualityMetrics.storyCoherence || 0}%, Standards: ${comicQuality.qualityMetrics.professionalStandards}`);
   }
 
   @withCorrelationResult('enhanced-job-processor', 'processJob')
@@ -633,7 +638,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
       if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
       
       // Create environmental DNA for consistent world-building
-      environmentalDNA = await (aiService as any).createEnvironmentalDNA(
+      environmentalDNA = await aiService.createEnvironmentalDNA(
         storyAnalysis || { storyBeats: pages.map((p: any, i: number) => ({ description: `Page ${i + 1}`, setting: 'general' })) },
         audience
       );
@@ -651,7 +656,8 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
       };
       await jobService.updateJobProgress(job.id, 25, 'Environmental context prepared (fallback mode)');
     }
-// PHASE 3: CHARACTER DNA CREATION
+
+    // PHASE 3: CHARACTER DNA CREATION
     console.log('🧬 PHASE 3: Character DNA Creation for Maximum Consistency...');
     let characterDescriptionToUse = character_description;
     let characterDNA: any = null;
@@ -676,8 +682,15 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         console.warn('⚠️ Character DNA creation failed, using fallback description method:', dnaError);
         
         if (!is_reused_image && !characterDescriptionToUse) {
-          const prompt = 'You are a professional character artist. Describe this character for maximum comic book consistency.';
-          characterDescriptionToUse = await aiService.describeCharacter(character_image, prompt);
+          // FIXED: Proper AsyncResult handling for describeCharacter
+          this.trackServiceUsage(job.id, 'ai');
+          const descriptionResult = await aiService.describeCharacter(character_image, 'You are a professional character artist. Describe this character for maximum comic book consistency.');
+          const resolvedDescription = await descriptionResult;
+          if (resolvedDescription && 'success' in resolvedDescription && resolvedDescription.success) {
+            characterDescriptionToUse = resolvedDescription.data;
+          } else {
+            characterDescriptionToUse = 'Character with consistent appearance';
+          }
         }
         
         await jobService.updateJobProgress(job.id, 35, 'Character analysis completed (fallback method)');
@@ -715,8 +728,8 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         this.trackServiceUsage(job.id, 'ai');
         if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
         
-        // Generate professional comic book layout
-        const sceneResult = await aiService.generateScenesWithAudience({
+        // FIXED: Proper AsyncResult handling for generateScenesWithAudience
+        const sceneResultAsync = await aiService.generateScenesWithAudience({
           story: story,
           audience: audience as any,
           characterImage: character_image,
@@ -725,8 +738,11 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
           enhancedContext: enhancedContext // Pass enhanced context with environmental DNA
         });
         
-        if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
-          pages = sceneResult.pages;
+        // Await and extract the actual result from AsyncResult
+        const sceneResult = await sceneResultAsync;
+        
+        if (sceneResult && 'success' in sceneResult && sceneResult.success && sceneResult.data?.pages && Array.isArray(sceneResult.data.pages)) {
+          pages = sceneResult.data.pages;
           console.log(`✅ Professional comic layout with environmental consistency: ${pages.length} pages with ${pages.reduce((total, page) => total + (page.scenes?.length || 0), 0)} total panels`);
         } else {
           throw new Error('Invalid scene generation result - no professional pages generated');
@@ -816,8 +832,8 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         
         console.log(`🎨 Generating professional panel ${panelNumber}/${totalPanels} (Page ${pageIndex + 1}, Scene ${sceneIndex + 1}) with environmental, character consistency + learned patterns...`);
         
-        // Enhanced scene image generation with environmental, character DNA + learned patterns
-        const imageResult = await aiService.generateSceneImage({
+        // FIXED: Proper AsyncResult handling for generateSceneImage
+        const imageResultAsync = await aiService.generateSceneImage({
           image_prompt: scene.imagePrompt,
           character_description: characterDescriptionToUse,
           emotion: scene.emotion || 'neutral',
@@ -830,16 +846,26 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
           environmentalContext: enhancedContext // Pass environmental context to image generation
         });
         
+        // Await and extract the actual result from AsyncResult
+        const imageResult = await imageResultAsync;
+        
+        let finalImageResult;
+        if (imageResult && 'success' in imageResult && imageResult.success) {
+          finalImageResult = imageResult.data;
+        } else {
+          throw new Error('Image generation failed - no valid result returned');
+        }
+        
         // Calculate consistency scores
         const panelConsistency = characterDNA ? 95 : 75; // Higher with DNA
         const envConsistency = environmentalDNA && !environmentalDNA.fallback ? 90 : 70; // Higher with environmental DNA
         
         const enhancedScene = {
           ...scene,
-          generatedImage: imageResult.url,
+          generatedImage: finalImageResult.url,
           characterArtStyle: character_art_style,
           layoutType: layout_type,
-          promptUsed: imageResult.prompt_used,
+          promptUsed: finalImageResult.prompt_used,
           characterDescription: characterDescriptionToUse,
           characterConsistency: panelConsistency,
           environmentalConsistency: envConsistency,
@@ -892,7 +918,8 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         throw new Error(`COMIC GENERATION FAILED: Panel ${panelNumber}/${totalPanels} could not be generated. Error: ${error instanceof Error ? error.message : String(error)}. Scene: ${scene.description || 'No description'}. Prompt length: ${scene.imagePrompt?.length || 0}. No fallbacks allowed - comic generation aborted.`);
       }
     });
-console.log(`⚡ Starting parallel generation of ${panelPromises.length} panels...`);
+
+    console.log(`⚡ Starting parallel generation of ${panelPromises.length} panels...`);
     const startParallelTime = Date.now();
     
     // Wait for all panels to complete (or fail immediately)
