@@ -116,7 +116,7 @@ export class NarrativeIntelligenceEngine {
       
       // Step 4: Create emotional progression arc (FROM BOTH FILES)
 const archetypeData = STORYTELLING_ARCHETYPES[archetypeResult.primaryArchetype as keyof typeof STORYTELLING_ARCHETYPES];
-      const emotionalArc = this.enhanceEmotionalArc(archetypeData.emotionalArc, thematicAnalysis);
+      const emotionalArc = this.enhanceEmotionalArc([...archetypeData.emotionalArc], thematicAnalysis);
 
       const narrativeIntel: NarrativeIntelligence = {
         storyArchetype: archetypeResult.primaryArchetype,
