@@ -135,13 +135,13 @@ isInitialized(): boolean {
   // ===== MODULAR ENGINES =====
   // FIXED: Using error handler adapter instead of ErrorHandlingSystem
   private errorHandlerAdapter: ErrorHandlerAdapter;
-  private openaiIntegration: OpenAIIntegration;
-  private comicEngine: ComicGenerationEngine;
-  private narrativeEngine: NarrativeIntelligenceEngine;
-  private visualDNASystem: VisualDNASystem;
-  private qualityEngine: QualityMetricsEngine;
-  private learningEngine: PatternLearningEngine;
-  private enterpriseMonitoring: EnterpriseMonitoring;
+  private openaiIntegration!: OpenAIIntegration;
+  private comicEngine!: ComicGenerationEngine;
+  private narrativeEngine!: NarrativeIntelligenceEngine;
+  private visualDNASystem!: VisualDNASystem;
+  private qualityEngine!: QualityMetricsEngine;
+  private learningEngine!: PatternLearningEngine;
+  private enterpriseMonitoring!: EnterpriseMonitoring;
 
   // ===== SERVICE CONFIGURATION =====
   private readonly defaultModel: string = 'gpt-4o';
