@@ -6,7 +6,17 @@ export { EnhancedBaseService } from './base/enhanced-base-service.js';
 export { ErrorAwareBaseService } from './base/error-aware-base-service.js';
 
 // ===== SERVICE INTERFACES =====
-export * from './interfaces/service-contracts.js';
+export {
+  IService,
+  IAIService,
+  IJobProcessor,
+  IDatabaseService,
+  ICloudinaryService,
+  ISubscriptionService,
+  ErrorCategory,
+  ErrorSeverity
+} from './interfaces/service-contracts.js';
+
 
 // ===== ERROR HANDLING SYSTEM =====
 export * from './errors/index.js';
