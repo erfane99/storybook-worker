@@ -455,6 +455,8 @@ export interface QualityMetrics {
   professionalGrade?: string;
   recommendations: string[];
   timestamp?: string;
+  audience?: AudienceType;
+  artStyle?: string;
   detailedAnalysis?: {
     strengths: string[];
     improvements: string[];
