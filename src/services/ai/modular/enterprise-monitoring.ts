@@ -820,7 +820,8 @@ export class EnterpriseMonitoring {
         userSatisfaction: 0,
         scoreDistribution: {},
         totalAssessments: 0,
-        recentQualityScore: 0
+        recentQualityScore: 0,
+        averageUserSatisfaction: 0
       },
       system: {
         memoryUsage: 'unknown',
