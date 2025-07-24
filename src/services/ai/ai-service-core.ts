@@ -465,7 +465,7 @@ isInitialized(): boolean {
         // Record failure metrics
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateStorybook', duration, false);
-        return Result.failure(result.error);
+        return AsyncResult.failure(result.error);
       }
     });
   }
@@ -496,7 +496,7 @@ isInitialized(): boolean {
       } else {
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateScenesWithAudience', duration, false);
-        return Result.failure(result.error);
+        return AsyncResult.failure(result.error);
       }
     });
   }
@@ -538,7 +538,7 @@ isInitialized(): boolean {
       } else {
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, false);
-        return Result.failure(result.error);
+        return AsyncResult.failure(result.error);
       }
     });
   }
@@ -575,7 +575,7 @@ isInitialized(): boolean {
       } else {
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('createCharacterDescription', duration, false);
-        return Result.failure(result.error);
+        return AsyncResult.failure(result.error);
       }
     });
   }
@@ -617,7 +617,7 @@ isInitialized(): boolean {
       } else {
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('cartoonizeImage', duration, false);
-        return Result.failure(result.error);
+        return AsyncResult.failure(result.error);
       }
     });
   }
@@ -668,7 +668,7 @@ isInitialized(): boolean {
       } else {
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateChatCompletion', duration, false);
-        return Result.failure(result.error);
+        return AsyncResult.failure(result.error);
       }
     });
   }
