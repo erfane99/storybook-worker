@@ -12,7 +12,6 @@ export type {
   ICloudinaryService,
   ISceneGenerationService,
   ICartoonizationService,
-  IAIService,
 } from './interfaces/service-contracts.js';
 
 // ===== ERROR HANDLING SYSTEM =====
