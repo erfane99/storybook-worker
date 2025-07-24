@@ -446,6 +446,11 @@ Format as structured visual DNA for consistent reproduction across comic panels.
           model: 'gpt-4o'
         }
       );
+          temperature: 0.3,
+          maxTokens: 800,
+          model: 'gpt-4o'
+        }
+      );
 
       // Create structured character DNA (FROM CURRENTAISERV.TXT)
       const characterDNA: CharacterDNA = {

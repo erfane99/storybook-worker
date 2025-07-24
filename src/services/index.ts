@@ -26,3 +26,11 @@ export { ServiceRegistry } from './registry/service-registry.js';
 
 // ===== CONSOLIDATED SERVICE CONFIG =====
 export { serviceConfig } from './config/service-config.js';
+
+// ===== TYPE ALIASES FOR BACKWARDS COMPATIBILITY =====
+export type {
+  IJobProcessor,
+  ICloudinaryService,
+  ISceneGenerationService,
+  ICartoonizationService,
+} from './interfaces/service-contracts.js';

@@ -135,6 +135,11 @@ isInitialized(): boolean {
   // ===== MODULAR ENGINES =====
   // FIXED: Using error handler adapter instead of ErrorHandlingSystem
   private errorHandlerAdapter: ErrorHandlerAdapter;
+
+  // Add missing log method for ErrorHandlerAdapter
+  log(...args: any[]) {
+    console.log('[ErrorHandler]', ...args);
+  }
   private openaiIntegration!: OpenAIIntegration;
   private comicEngine!: ComicGenerationEngine;
   private narrativeEngine!: NarrativeIntelligenceEngine;

@@ -550,7 +550,7 @@ export class EnterpriseMonitoring {
 
   private calculateAverageQualityScore(): number {
     const scores = this.metricsCollector.qualityScores;
-    return scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
+    return scores.length > 0 ? Math.round((scores as number[]).reduce<number>((a, b) => a + b, 0) / scores.length) : 0;
   }
 
   private calculateScoreDistribution(): Record<string, number> {
@@ -564,7 +564,7 @@ export class EnterpriseMonitoring {
 
   private calculateAverageUserSatisfaction(): number {
     const scores = this.metricsCollector.userSatisfactionScores;
-    return scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
+    return scores.length > 0 ? Math.round((scores as number[]).reduce<number>((a, b) => a + b, 0) / scores.length) : 0;
   }
 
   private calculateQualityTrend(recentScores: number[]): string {
@@ -648,7 +648,7 @@ export class EnterpriseMonitoring {
 
   private calculateAverageResponseTime(): number {
     const allTimes = Array.from(this.metricsCollector.operationTimes.values()).flat();
-    return allTimes.length > 0 ? Math.round(allTimes.reduce((a: number, b: number) => a + b, 0) / allTimes.length) : 0;
+    return allTimes.length > 0 ? Math.round((allTimes as number[]).reduce<number>((a, b) => a + b, 0) / allTimes.length) : 0;
   }
 
   private calculateOperationsPerMinute(): number {

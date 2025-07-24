@@ -3,11 +3,26 @@
 // Combines enhanced functionality with standard interfaces
 // ✅ FIXED: Updated to match enterprise AI service implementation
 
+// ===== TYPE IMPORTS FOR RESULT PATTERN ★
+import type {
+  AsyncResult,
+  Success,
+  Failure,
+  ServiceError,
+  AIServiceUnavailableError,
+} from '../errors/index.js';
+
 // ===== IMPORT AND RE-EXPORT JOB TYPES =====
 import type { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types';
 
 // Re-export job types so other modules can import them from here
 export type { JobData, JobType, JobStatus, JobMetrics };
+
+// ===== CANONICAL Result-union ALIAS ★
+export type AIAsyncResult<
+  T,
+  E = AIServiceUnavailableError,
+> = AsyncResult<T, E>;
 
 // ===== CONSOLIDATED AI SERVICE TYPES - SINGLE SOURCE OF TRUTH =====
 export type PanelType = 'standard' | 'wide' | 'tall' | 'splash' | 'establishing' | 'closeup';
@@ -784,9 +799,9 @@ export interface SceneGenerationResult {
 // ===== HEALTH MONITORING INTERFACES =====
 export interface IServiceHealth {
   /**
-   * Check if service is healthy (computed property, not internal state)
+   * Can be sync or async ★
    */
-  isHealthy(): boolean;
+  isHealthy(): boolean | Promise<boolean>;
   
   /**
    * Get health status with meaningful indicators
@@ -915,24 +930,24 @@ export interface IAIOperations {
   analyzePanelContinuity(storyBeats: any[]): Promise<any>;
   
   // Enhanced Scene Generation with Audience Support
-  generateScenesWithAudience(options: SceneGenerationOptions): Promise<SceneGenerationResult>;
+  generateScenesWithAudience(options: SceneGenerationOptions): Promise<AIAsyncResult<SceneGenerationResult>>;
   
   // Image Generation
-  generateCartoonImage(prompt: string): Promise<string>;
-  generateSceneImage(options: ImageGenerationOptions): Promise<ImageGenerationResult>;
+  generateCartoonImage(prompt: string): Promise<AIAsyncResult<string>>;
+  generateSceneImage(options: ImageGenerationOptions): Promise<AIAsyncResult<ImageGenerationResult>>;
   
   // Vision Analysis - Method Overloading for Different Use Cases
-  describeCharacter(imageUrl: string, prompt: string): Promise<string>;
-  describeCharacter(options: CharacterDescriptionOptions): Promise<CharacterDescriptionResult>;
+  describeCharacter(imageUrl: string, prompt: string): Promise<AIAsyncResult<string>>;
+  describeCharacter(options: CharacterDescriptionOptions): Promise<AIAsyncResult<CharacterDescriptionResult>>;
   
   // Story Generation
-  generateStoryWithOptions(options: StoryGenerationOptions): Promise<StoryGenerationResult>;
+  generateStoryWithOptions(options: StoryGenerationOptions): Promise<AIAsyncResult<StoryGenerationResult>>;
   
   // Cartoonize Operations
-  processCartoonize(options: CartoonizeOptions): Promise<CartoonizeResult>;
+  processCartoonize(options: CartoonizeOptions): Promise<AIAsyncResult<CartoonizeResult>>;
   
   // Chat Completion
-  createChatCompletion(options: ChatCompletionOptions): Promise<ChatCompletionResult>;
+  createChatCompletion(options: ChatCompletionOptions): Promise<AIAsyncResult<ChatCompletionResult>>;
 }
 
 export interface IStorageOperations {
@@ -1333,3 +1348,8 @@ export const SERVICE_TOKENS = {
 } as const;
 
 export type ServiceToken = typeof SERVICE_TOKENS[keyof typeof SERVICE_TOKENS];
+
+export type IJobProcessor = IJobService;
+export type ICloudinaryService = IStorageService;
+export type ISceneGenerationService = IAIService;
+export type ICartoonizationService = IAIService;
