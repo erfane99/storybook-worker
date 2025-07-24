@@ -23,7 +23,7 @@ export type { JobData, JobType, JobStatus, JobMetrics };
 export type AIAsyncResult<
   T,
   E = AIServiceUnavailableError,
-> = AsyncResult<T, E>;
+> = AsyncResult<T, E extends BaseServiceError ? E : AIServiceUnavailableError>;
 
 // ===== CONSOLIDATED AI SERVICE TYPES - SINGLE SOURCE OF TRUTH =====
 export type PanelType = 'standard' | 'wide' | 'tall' | 'splash' | 'establishing' | 'closeup';
