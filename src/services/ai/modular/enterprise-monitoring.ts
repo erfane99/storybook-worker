@@ -385,7 +385,10 @@ export class EnterpriseMonitoring {
             Array.from(this.metricsCollector.operationTimes.entries()).map(([key, value]) => [key, value])
           )
         },
-        quality: qualityMetrics,
+        quality: {
+          ...qualityMetrics,
+          averageUserSatisfaction: this.calculateAverageUserSatisfaction()
+        },
         system: systemMetrics,
         advanced: advancedMetrics,
         performance: {
