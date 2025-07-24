@@ -777,10 +777,10 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
       timestamp: new Date().toISOString(),
       panelCount: generatedPanels.length,
       detailedAnalysis: {
-        strengths: this.identifyQualityStrengths(metrics),
-        improvements: this.identifyQualityImprovements(metrics),
-        recommendations: this.generateQualityRecommendations(metrics)
-      }
+  strengths: this.identifyQualityStrengths(metrics),
+  improvements: this.identifyQualityImprovements(metrics),
+  recommendations: this.generateQualityRecommendations(metrics)
+}
     };
   }
 
