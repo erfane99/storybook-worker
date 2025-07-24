@@ -111,7 +111,7 @@ export class ComicGenerationEngine {
 
       return {
         pages,
-        audience,
+        audience: options.audience || 'children',
         characterImage,
         layoutType,
         characterArtStyle,
