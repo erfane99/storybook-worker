@@ -593,7 +593,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
           storyAnalysis.totalPanels
         );
 
-        const page: ComicPanel = {
+        const pagePanel: any = {
           pageNumber,
           scenes: panels,
           layoutType: 'comic-book-panels',
@@ -601,7 +601,18 @@ Format as structured visual DNA for consistent reproduction across comic panels.
           panelCount: panels.length,
           dialoguePanels: panels.filter(p => p.hasSpeechBubble).length,
           environmentalTheme: environmentalDNA.primaryLocation.name,
-          professionalQuality: true
+          professionalQuality: true,
+          // Required ComicPanel properties
+          description: `Page ${pageNumber}`,
+          emotion: 'neutral',
+          imagePrompt: '',
+          panelType: 'standard' as PanelType,
+          characterAction: 'page layout',
+          narrativePurpose: 'page container',
+          visualPriority: 'layout',
+          hasSpeechBubble: false,
+          panelNumber: 0,
+          professionalStandards: true
         };
 
         pages.push(page);
