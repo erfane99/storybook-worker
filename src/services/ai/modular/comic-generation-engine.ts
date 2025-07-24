@@ -853,6 +853,7 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
         visualPriority: 'character',
         characterAction: i === 0 ? 'introducing' : i === totalPanels - 1 ? 'concluding' : 'progressing',
         panelPurpose: i === 0 ? 'introduction' : i === totalPanels - 1 ? 'resolution' : 'development',
+        narrativeFunction: i === 0 ? 'introduction' : i === totalPanels - 1 ? 'resolution' : 'development',
         environment: 'story setting',
         hasSpeechBubble: i % 3 === 0,
         dialogue: i % 3 === 0 ? `Dialogue for panel ${i + 1}` : undefined,
