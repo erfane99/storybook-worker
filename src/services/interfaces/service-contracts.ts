@@ -9,6 +9,7 @@ import type {
   Success,
   Failure,
   ServiceError,
+  BaseServiceError,
   AIServiceUnavailableError,
 } from '../errors/index.js';
 
