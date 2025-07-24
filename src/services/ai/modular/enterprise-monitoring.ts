@@ -116,6 +116,7 @@ export class EnterpriseMonitoring {
     console.log('🏛️ Initializing service registry...');
     
     this.serviceRegistry = {
+      serviceId: `ai-service-${Date.now()}`,
       name: 'ModularEnterpriseAIService',
       version: AI_SERVICE_VERSION_INFO.version,
       capabilities: [
@@ -134,6 +135,7 @@ export class EnterpriseMonitoring {
       ],
       healthEndpoint: '/health',
       metricsEndpoint: '/metrics',
+      registrationTime: new Date().toISOString(),
       lastHeartbeat: new Date().toISOString(),
       status: 'active'
     };
