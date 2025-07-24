@@ -586,7 +586,7 @@ isInitialized(): boolean {
   async cartoonizeImage(options: CartoonizeOptions): Promise<AsyncResult<CartoonizeResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    return this.withErrorHandling(
+    const asyncResult = this.withErrorHandling(
       async () => {
         this.log('info', '🎨 Cartoonizing image with professional quality...');
         
@@ -610,15 +610,16 @@ isInitialized(): boolean {
       },
       'cartoonizeImage',
       options
-    ).then(result => {
-      if (result.success) {
-        return AsyncResult.success(result.data);
-      } else {
-        const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
-        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
-      }
-    });
+    );
+
+    const result = await asyncResult.toPromise();
+    if (result.success) {
+      return AsyncResult.success(result.data);
+    } else {
+      const duration = Date.now() - startTime;
+      this.enterpriseMonitoring.recordOperationMetrics('cartoonizeImage', duration, false);
+      return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
+    }
   }
 
   /**
@@ -628,7 +629,7 @@ isInitialized(): boolean {
   async generateChatCompletion(options: ChatCompletionOptions): Promise<AsyncResult<ChatCompletionResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    return this.withErrorHandling(
+    const asyncResult = this.withErrorHandling(
       async () => {
         this.log('info', '💬 Generating chat completion with professional context...');
         
@@ -660,16 +661,17 @@ isInitialized(): boolean {
         };
       },
       'generateChatCompletion',
-      options
-    ).then(result => {
-      if (result.success) {
-        return AsyncResult.success(result.data);
-      } else {
-        const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
-        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
-      }
-    });
+      { messages, ...options }
+    );
+
+    const result = await asyncResult.toPromise();
+    if (result.success) {
+      return AsyncResult.success(result.data);
+    } else {
+      const duration = Date.now() - startTime;
+      this.enterpriseMonitoring.recordOperationMetrics('createChatCompletion', duration, false);
+      return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
+    }
   }
 
   // ===== MISSING INTERFACE IMPLEMENTATIONS - FIXED =====
