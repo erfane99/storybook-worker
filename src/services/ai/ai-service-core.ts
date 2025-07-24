@@ -920,17 +920,15 @@ isInitialized(): boolean {
    * Check service health across all modular components
    * FIXED: Uses inherited error handling
    */
-  async isHealthy(): Promise<boolean> {
-    try {
-      if (!this.isInitialized) return false;
-      
-      return this.enterpriseMonitoring.isHealthy();
-
-    } catch (error) {
-      this.log('error', 'Health check failed:', error);
-      return false;
-    }
+  isHealthy(): boolean {
+  try {
+    if (!this._isInitialized) return false;
+    return this.enterpriseMonitoring?.isHealthy?.() ?? false;
+  } catch (error) {
+    this.log('error', 'Health check failed:', error);
+    return false;
   }
+}
 
   /**
    * Get comprehensive metrics across all systems
