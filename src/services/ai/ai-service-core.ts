@@ -458,14 +458,13 @@ isInitialized(): boolean {
         storyLength: story?.length || 0,
         hasCharacterImage: !!characterImageUrl
       }
-    ).then(result => {
+   ).then(result => {
       if (result.success) {
-        return Result.success(result.data);
+        return AsyncResult.success(result.data);
       } else {
-        // Record failure metrics
         const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('generateStorybook', duration, false);
-        return AsyncResult.failure(result.error);
+        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
+        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
       }
     });
   }
@@ -492,11 +491,11 @@ isInitialized(): boolean {
       options
     ).then(result => {
       if (result.success) {
-        return Result.success(result.data);
+        return AsyncResult.success(result.data);
       } else {
         const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('generateScenesWithAudience', duration, false);
-        return AsyncResult.failure(result.error);
+        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
+        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
       }
     });
   }
@@ -534,11 +533,11 @@ isInitialized(): boolean {
       options
     ).then(result => {
       if (result.success) {
-        return Result.success(result.data);
+        return AsyncResult.success(result.data);
       } else {
         const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, false);
-        return AsyncResult.failure(result.error);
+        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
+        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
       }
     });
   }
@@ -571,11 +570,11 @@ isInitialized(): boolean {
       options
     ).then(result => {
       if (result.success) {
-        return Result.success(result.data);
+        return AsyncResult.success(result.data);
       } else {
         const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('createCharacterDescription', duration, false);
-        return AsyncResult.failure(result.error);
+        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
+        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
       }
     });
   }
@@ -613,11 +612,11 @@ isInitialized(): boolean {
       options
     ).then(result => {
       if (result.success) {
-        return Result.success(result.data);
+        return AsyncResult.success(result.data);
       } else {
         const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('cartoonizeImage', duration, false);
-        return AsyncResult.failure(result.error);
+        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
+        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
       }
     });
   }
@@ -664,11 +663,11 @@ isInitialized(): boolean {
       options
     ).then(result => {
       if (result.success) {
-        return Result.success(result.data);
+        return AsyncResult.success(result.data);
       } else {
         const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('generateChatCompletion', duration, false);
-        return AsyncResult.failure(result.error);
+        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
+        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
       }
     });
   }
