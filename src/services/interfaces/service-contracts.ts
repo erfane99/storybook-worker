@@ -22,7 +22,7 @@ export type { JobData, JobType, JobStatus, JobMetrics };
 // ===== CANONICAL Result-union ALIAS ★
 export type AIAsyncResult
   T,
-  E extends BaseServiceError = AIServiceUnavailableError,
+  E = AIServiceUnavailableError,
 > = AsyncResult<T, E>;
 
 // ===== CONSOLIDATED AI SERVICE TYPES - SINGLE SOURCE OF TRUTH =====
