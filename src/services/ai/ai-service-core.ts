@@ -977,18 +977,23 @@ class AIService extends ErrorAwareBaseService implements IAIService {
     const minutes = Math.floor((uptimeSeconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
   }
-  
   // ===== INTERFACE ALIASES FOR IAIService COMPATIBILITY =====
   async generateStory(prompt: string, options?: any): Promise<string> {
     const result = await this.generateStorybook('Generated Story', prompt, '', 'children', 'storybook');
     const resolvedResult = await result;
-    return 'success' in resolvedResult && resolvedResult.success ? JSON.stringify(resolvedResult.data) : '';
+    if (resolvedResult && 'success' in resolvedResult && resolvedResult.success) {
+      return JSON.stringify(resolvedResult.data);
+    }
+    return '';
   }
 
   async generateCartoonImage(prompt: string): Promise<AsyncResult<string, AIServiceUnavailableError>> {
     const cartoonResult = await this.cartoonizeImage({ prompt, style: 'cartoon' });
     const result = await cartoonResult;
-    return 'success' in result && result.success ? AsyncResult.success(result.data.url) : AsyncResult.failure(new AIServiceUnavailableError('Cartoon generation failed'));
+    if (result && 'success' in result && result.success) {
+      return AsyncResult.success(result.data.url);
+    }
+    return AsyncResult.failure(new AIServiceUnavailableError('Cartoon generation failed'));
   }
 
   generateSceneImage = this.generateImages;
@@ -999,12 +1004,14 @@ class AIService extends ErrorAwareBaseService implements IAIService {
     if (typeof imageUrlOrOptions === 'string') {
       const descriptionResult = await this.createCharacterDescription({ imageUrl: imageUrlOrOptions, style: 'comic-book' });
       const result = await descriptionResult;
-      return 'success' in result && result.success ? AsyncResult.success(result.data.description) : AsyncResult.failure(new AIServiceUnavailableError('Character description failed'));
+      if (result && 'success' in result && result.success) {
+        return AsyncResult.success(result.data.description);
+      }
+      return AsyncResult.failure(new AIServiceUnavailableError('Character description failed'));
     } else {
       return this.createCharacterDescription(imageUrlOrOptions);
     }
   }
-
 }
 
 // ===== EXPORT CONFIGURATIONS =====
@@ -1055,72 +1062,3 @@ export async function initializeEnterpriseAIService(config?: Partial<AIServiceCo
 // Export the main class and factory functions
 export default AIService;
 export { AIService };
-    } else {
-      this.log('error', 'Story analysis failed:', result.error);
-      throw result.error;
-    }
-  }
-
-  /**
-   * Create master character DNA with visual fingerprinting
-   * FIXED: Uses inherited error handling
-   */
-  async createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA> {
-    const result = await this.withErrorHandling(
-      async () => {
-        return await this.visualDNASystem.createMasterCharacterDNA(imageUrl, artStyle);
-      },
-      'createMasterCharacterDNA'
-    );
-
-    if (result.success) {
-      return result.data;
-    } else {
-      throw result.error;
-    }
-  }
-
-  /**
-   * Create environmental DNA for world consistency
-   * FIXED: Uses inherited error handling
-   */
-  async createEnvironmentalDNA(storyBeats: any[], audience: AudienceType, artStyle?: string): Promise<EnvironmentalDNA> {
-    const result = await this.withErrorHandling(
-      async () => {
-        return await this.visualDNASystem.createEnvironmentalDNA(storyBeats, audience, artStyle || 'comic-book');
-      },
-      'createEnvironmentalDNA'
-    );
-
-    if (result.success) {
-      return result.data;
-    } else {
-      throw result.error;
-    }
-  }
-
-  /**
-   * Analyze panel continuity for visual consistency
-   * FIXED: Uses inherited error handling
-   */
-  async analyzePanelContinuity(storyBeats: any[]): Promise<any> {
-    const result = await this.withErrorHandling(
-      async () => {
-        this.log('info', '🔍 Analyzing panel continuity...');
-        
-        return {
-          continuityScore: 95,
-          visualTransitions: storyBeats.map((_, index) => ({
-            fromPanel: index,
-            toPanel: index + 1,
-            transitionType: 'smooth',
-            consistency: 'high'
-          })),
-          recommendations: ['Maintain character positioning', 'Consistent lighting']
-        };
-      },
-      'analyzePanelContinuity'
-    );
-
-    if (result.success) {
-      return result.data;
