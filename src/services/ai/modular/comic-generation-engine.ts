@@ -742,8 +742,8 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
   ): Promise<any> {
     console.log('📊 Calculating advanced quality metrics...');
 
-    const metrics = {
-      characterConsistency: await this.measureAdvancedCharacterConsistency(
+    const metrics: any = {
+  characterConsistency: await this.measureAdvancedCharacterConsistency(
         generatedPanels, 
         originalContext.characterDNA
       ),
