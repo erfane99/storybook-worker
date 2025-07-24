@@ -1025,7 +1025,8 @@ isInitialized(): boolean {
   // ===== INTERFACE ALIASES FOR IAIService COMPATIBILITY =====
   async generateStory(prompt: string, options?: any): Promise<string> {
     const result = await this.generateStorybook('Generated Story', prompt, '', 'children', 'storybook');
-    return result.success ? JSON.stringify(result.data) : '';
+const resolvedResult = await result.toPromise();
+return resolvedResult.success ? JSON.stringify(resolvedResult.data) : '';
   }
 
   async generateCartoonImage(prompt: string): Promise<AsyncResult<string, AIServiceUnavailableError>> {
