@@ -41,8 +41,8 @@ import {
 export class EnterpriseMonitoring {
   private errorHandler: ErrorHandlingSystem;
   private config: EnterpriseMonitoringConfig;
-  private serviceRegistry: ServiceRegistration;
-  private metricsCollector: MetricsCollector;
+  private serviceRegistry!: ServiceRegistration;
+  private metricsCollector!: MetricsCollector;
   private startTime: number = Date.now();
   private healthMonitoringInterval?: NodeJS.Timeout;
 
