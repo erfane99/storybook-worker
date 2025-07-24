@@ -361,7 +361,7 @@ isInitialized(): boolean {
         let characterDNA: CharacterDNA | null = null;
         if (characterImageUrl) {
           this.log('info', '🧬 Creating character DNA with visual fingerprinting...');
-          characterDNA = await this.visualDNASystem.createMasterCharacterDNA(characterImageUrl, artStyle);
+          characterDNA = await this.visualDNASystem.createMasterCharacterDNA(characterImageUrl, artStyle) || undefined;
           this.log('info', '✅ Character DNA created with visual consistency markers');
         }
 
