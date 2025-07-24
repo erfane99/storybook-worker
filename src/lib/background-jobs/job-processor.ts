@@ -1,26 +1,39 @@
 // Enhanced Job Processor - Professional Comic Book Generation with Character DNA System
 // ✅ ENHANCED: Story beat analysis, character consistency, and professional comic workflows
+
 import { serviceContainer } from '../../services/container/service-container.js';
-import { 
-  SERVICE_TOKENS, 
-  IDatabaseService, 
-  IAIService, 
+
+import {
+  SERVICE_TOKENS,
+  IDatabaseService,
+  IAIService,
   IJobService,
   IServiceHealth,
   IServiceMetrics,
   ComicGenerationResult,
   EnvironmentalDNA,
   CharacterDNA,
-  QualityMetrics
+  QualityMetrics,
 } from '../../services/interfaces/service-contracts.js';
-import { 
+
+import {
   Result,
   ErrorFactory,
   ServiceError,
   createJobCorrelationContext,
-  withCorrelationResult
+  withCorrelationResult,
 } from '../../services/errors/index.js';
-import { JobData, JobType, StorybookJobData, AutoStoryJobData, SceneJobData, CartoonizeJobData, ImageJobData } from '../../types.js';
+
+// ✅ FIXED: Corrected type-only import without '.js' extension
+import type {
+  JobData,
+  JobType,
+  StorybookJobData,
+  AutoStoryJobData,
+  SceneJobData,
+  CartoonizeJobData,
+  ImageJobData,
+} from '../types';
 
 interface JobProcessingResult {
   success: boolean;
@@ -60,6 +73,7 @@ interface ProcessorHealthStatus {
   serviceHealth: Record<string, boolean>;
   lastCheck: string;
 }
+
 // ===== ENHANCED PRODUCTION JOB PROCESSOR =====
 
 export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
