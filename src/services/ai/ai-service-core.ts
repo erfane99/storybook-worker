@@ -507,7 +507,7 @@ isInitialized(): boolean {
   async generateImages(options: ImageGenerationOptions): Promise<AsyncResult<ImageGenerationResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    return this.withErrorHandling(
+    const asyncResult = this.withErrorHandling(
       async () => {
         this.log('info', '🖼️ Generating images with advanced options...');
         
@@ -531,15 +531,16 @@ isInitialized(): boolean {
       },
       'generateImages',
       options
-    ).then(result => {
-      if (result.success) {
-        return AsyncResult.success(result.data);
-      } else {
-        const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
-        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
-      }
-    });
+    );
+
+    const result = await asyncResult.toPromise();
+    if (result.success) {
+      return AsyncResult.success(result.data);
+    } else {
+      const duration = Date.now() - startTime;
+      this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, false);
+      return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
+    }
   }
 
   /**
@@ -549,7 +550,7 @@ isInitialized(): boolean {
   async createCharacterDescription(options: CharacterDescriptionOptions): Promise<AsyncResult<CharacterDescriptionResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    return this.withErrorHandling(
+    const asyncResult = this.withErrorHandling(
       async () => {
         this.log('info', '👤 Creating character description with professional analysis...');
         
@@ -568,15 +569,16 @@ isInitialized(): boolean {
       },
       'createCharacterDescription',
       options
-    ).then(result => {
-      if (result.success) {
-        return AsyncResult.success(result.data);
-      } else {
-        const duration = Date.now() - startTime;
-        this.enterpriseMonitoring.recordOperationMetrics('methodName', duration, false);
-        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
-      }
-    });
+    );
+
+    const result = await asyncResult.toPromise();
+    if (result.success) {
+      return AsyncResult.success(result.data);
+    } else {
+      const duration = Date.now() - startTime;
+      this.enterpriseMonitoring.recordOperationMetrics('createCharacterDescription', duration, false);
+      return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
+    }
   }
 
   /**
@@ -661,7 +663,7 @@ isInitialized(): boolean {
         };
       },
       'generateChatCompletion',
-      { messages, ...options }
+      { messages: options.messages, ...options }
     );
 
     const result = await asyncResult.toPromise();
@@ -669,7 +671,7 @@ isInitialized(): boolean {
       return AsyncResult.success(result.data);
     } else {
       const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('createChatCompletion', duration, false);
+      this.enterpriseMonitoring.recordOperationMetrics('generateChatCompletion', duration, false);
       return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
     }
   }
@@ -1032,7 +1034,8 @@ return resolvedResult.success ? JSON.stringify(resolvedResult.data) : '';
   }
 
   async generateCartoonImage(prompt: string): Promise<AsyncResult<string, AIServiceUnavailableError>> {
-    const result = await this.cartoonizeImage({ prompt, style: 'cartoon' });
+    const cartoonResult = await this.cartoonizeImage({ prompt, style: 'cartoon' });
+    const result = await cartoonResult.toPromise();
     return result.success ? AsyncResult.success(result.data.url) : AsyncResult.failure(new AIServiceUnavailableError('Cartoon generation failed'));
   }
 
@@ -1042,7 +1045,8 @@ return resolvedResult.success ? JSON.stringify(resolvedResult.data) : '';
   async describeCharacter(options: CharacterDescriptionOptions): Promise<AsyncResult<CharacterDescriptionResult, AIServiceUnavailableError>>;
   async describeCharacter(imageUrlOrOptions: string | CharacterDescriptionOptions, prompt?: string): Promise<any> {
     if (typeof imageUrlOrOptions === 'string') {
-      const result = await this.createCharacterDescription({ imageUrl: imageUrlOrOptions, style: 'comic-book' });
+      const descriptionResult = await this.createCharacterDescription({ imageUrl: imageUrlOrOptions, style: 'comic-book' });
+      const result = await descriptionResult.toPromise();
       return result.success ? AsyncResult.success(result.data.description) : AsyncResult.failure(new AIServiceUnavailableError('Character description failed'));
     } else {
       return this.createCharacterDescription(imageUrlOrOptions);
