@@ -61,7 +61,7 @@ import {
   AIServiceConfig
 } from '../../interfaces/service-contracts';
 
-import { ErrorAwareServiceConfig } from '../../../base/error-aware-base-service';
+import { ErrorAwareServiceConfig } from '../../base/error-aware-base-service';
 
 // ===== RE-EXPORT TYPES FOR CONVENIENCE =====
 export type {
