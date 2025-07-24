@@ -25,17 +25,13 @@ import {
   StoryAnalysis,
   StoryBeat,
   ComicPanel,
-  ComicPanel,
   SceneGenerationOptions,
   SceneGenerationResult,
-  GenerationMetadata,
   ImageGenerationOptions,
   ImageGenerationResult,
   PROFESSIONAL_AUDIENCE_CONFIG,
   STORYTELLING_ARCHETYPES,
-  VISUAL_COMPOSITION_RULES,
   SpeechBubbleStyle,
-  COMIC_PANEL_TYPES,
   QUALITY_STANDARDS,
   AI_PROMPTS
 } from './constants-and-types';
@@ -84,7 +80,7 @@ export class ComicGenerationEngine {
 
       // Validation (FROM BOTH FILES)
       if (!story || story.trim().length < 50) {
-        throw new AIServiceError('Story must be at least 50 characters long.');
+        throw new Error('Story must be at least 50 characters long.');
       }
 
       console.log(`🎨 Generating professional comic book layout for ${audience} audience...`);
@@ -102,7 +98,7 @@ export class ComicGenerationEngine {
       const environmentalDNA = await this.createEnvironmentalDNA(storyAnalysis.storyBeats, audience, characterArtStyle);
 
       // Step 4: Generate professional comic book pages with optimized prompts (FROM BOTH FILES)
-      const config = PROFESSIONAL_AUDIENCE_CONFIG[audience];
+      const config = PROFESSIONAL_AUDIENCE_CONFIG[audience as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
       const pages = await this.generateOptimizedComicBookPages(
         storyAnalysis, 
         characterDNA, 
@@ -161,7 +157,7 @@ export class ComicGenerationEngine {
    */
   private async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
     try {
-      const config = PROFESSIONAL_AUDIENCE_CONFIG[audience];
+      const config = PROFESSIONAL_AUDIENCE_CONFIG[audience as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
       
       // Determine story archetype based on content analysis (FROM AISERVNOW.TXT)
       const narrativeIntel = await this.determineNarrativeIntelligence(story, audience);
@@ -174,7 +170,7 @@ export class ComicGenerationEngine {
 STORY TO ANALYZE:
 "${story}"
 
-${AI_PROMPTS.storyAnalysis[audience]}
+${AI_PROMPTS.storyAnalysis[audience as keyof typeof AI_PROMPTS.storyAnalysis]}
 
 🎯 CRITICAL JSON SCHEMA COMPLIANCE:
 You MUST return EXACTLY this structure with ALL fields completed for EVERY beat.
@@ -906,7 +902,7 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
       'young adults': ['deep_blue', 'warm_orange', 'forest_green'],
       adults: ['navy_blue', 'burnt_orange', 'olive_green']
     };
-    return audienceColors[audience] || audienceColors.children;
+    return audienceColors[audience as keyof typeof audienceColors] || audienceColors.children;
   }
 
   private determineLightingMood(beats: StoryBeat[], audience: AudienceType): string {
@@ -915,7 +911,7 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
       'young adults': 'dynamic_engaging',
       adults: 'sophisticated_nuanced'
     };
-    return moodMap[audience] || 'bright_cheerful';
+    return moodMap[audience as keyof typeof moodMap] || 'bright_cheerful';
   }
 
   private extractBackgroundElements(environments: string[]): string[] {
@@ -936,7 +932,7 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
       'young adults': ['dynamic_shadows', 'energy_effects'],
       adults: ['subtle_atmosphere', 'realistic_lighting']
     };
-    return effects[audience] || effects.children;
+    return effects[audience as keyof typeof effects] || effects.children;
   }
 
   private determineEnvironmentalMood(audience: AudienceType): string {
@@ -945,7 +941,7 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
       'young adults': 'adventurous_exciting',
       adults: 'sophisticated_immersive'
     };
-    return moods[audience] || 'playful_inviting';
+    return moods[audience as keyof typeof moods] || 'playful_inviting';
   }
 
   // Character DNA extraction methods
