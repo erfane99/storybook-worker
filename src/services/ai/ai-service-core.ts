@@ -1023,10 +1023,28 @@ isInitialized(): boolean {
   }
   
   // ===== INTERFACE ALIASES FOR IAIService COMPATIBILITY =====
-generateStory = this.generateStorybook;
-generateCartoonImage = this.cartoonizeImage;
-generateSceneImage = this.generateImages;
-describeCharacter = this.createCharacterDescription;
+  async generateStory(prompt: string, options?: any): Promise<string> {
+    const result = await this.generateStorybook('Generated Story', prompt, '', 'children', 'storybook');
+    return result.success ? JSON.stringify(result.data) : '';
+  }
+
+  async generateCartoonImage(prompt: string): Promise<AsyncResult<string, AIServiceUnavailableError>> {
+    const result = await this.cartoonizeImage({ prompt, style: 'cartoon' });
+    return result.success ? AsyncResult.success(result.data.url) : AsyncResult.failure(new AIServiceUnavailableError('Cartoon generation failed'));
+  }
+
+  generateSceneImage = this.generateImages;
+  
+  async describeCharacter(imageUrl: string, prompt: string): Promise<AsyncResult<string, AIServiceUnavailableError>>;
+  async describeCharacter(options: CharacterDescriptionOptions): Promise<AsyncResult<CharacterDescriptionResult, AIServiceUnavailableError>>;
+  async describeCharacter(imageUrlOrOptions: string | CharacterDescriptionOptions, prompt?: string): Promise<any> {
+    if (typeof imageUrlOrOptions === 'string') {
+      const result = await this.createCharacterDescription({ imageUrl: imageUrlOrOptions, style: 'comic-book' });
+      return result.success ? AsyncResult.success(result.data.description) : AsyncResult.failure(new AIServiceUnavailableError('Character description failed'));
+    } else {
+      return this.createCharacterDescription(imageUrlOrOptions);
+    }
+  }
 
 }
 
