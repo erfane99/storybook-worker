@@ -380,7 +380,8 @@ export class EnterpriseMonitoring {
           operationCounts: Object.fromEntries(this.metricsCollector.operationCounts),
           errorCounts: Object.fromEntries(this.metricsCollector.errorCounts),
           operationTimes: Object.fromEntries(
-            Array.from(this.metricsCollector.operationTimes.entries() as Iterable<[string, number[]]>).map(([key, value]) => [key, value])
+  Array.from(this.metricsCollector.operationTimes.entries()).map(([key, value]) => [key, value])
+)
           )
         },
         quality: qualityMetrics,
