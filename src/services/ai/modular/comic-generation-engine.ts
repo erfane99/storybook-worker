@@ -615,7 +615,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
           professionalStandards: true
         };
 
-        pages.push(page);
+        pages.push(pagePanel);
       }
 
       console.log(`✅ Generated ${pages.length} pages with professional quality standards`);
