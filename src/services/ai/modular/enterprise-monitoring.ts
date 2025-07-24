@@ -633,7 +633,7 @@ export class EnterpriseMonitoring {
 
   // Additional calculation methods - FIXED: All TypeScript errors resolved
   private calculateTotalOperations(): number {
-    return Array.from(Array.from(this.metricsCollector.operationCounts.values()) as number[]).reduce((a: number, b: number) => a + b, 0);
+    return [...this.metricsCollector.operationCounts.values()].reduce((a: number, b: number) => a + b, 0);
   }
 
   private calculateSuccessfulOperations(): number {
