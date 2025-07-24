@@ -1024,6 +1024,13 @@ isInitialized(): boolean {
     const minutes = Math.floor((uptimeSeconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
   }
+  
+  // ===== INTERFACE ALIASES FOR IAIService COMPATIBILITY =====
+generateStory = this.generateStorybook;
+generateCartoonImage = this.cartoonizeImage;
+generateSceneImage = this.generateImages;
+describeCharacter = this.createCharacterDescription;
+
 }
 
 // ===== EXPORT CONFIGURATIONS =====
