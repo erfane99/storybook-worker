@@ -1258,8 +1258,8 @@ Following the ${storyArchetype} pattern, they grew and learned valuable lessons,
     const resolvedResult = await result;
     // FIXED: Proper data access pattern with await
     if (resolvedResult && 'success' in resolvedResult && resolvedResult.success) {
-      return JSON.stringify(resolvedResult.data);
-    }
+  return JSON.stringify((resolvedResult as any).data);
+}
     return '';
   }
 
