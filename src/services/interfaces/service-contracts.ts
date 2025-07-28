@@ -11,6 +11,8 @@ import type {
   ServiceError,
   BaseServiceError,
   AIServiceUnavailableError,
+  ErrorCategory,
+  ErrorSeverity
 } from '../errors/index.js';
 
 // ===== IMPORT AND RE-EXPORT JOB TYPES =====
@@ -34,8 +36,9 @@ export type GenreType = 'adventure' | 'siblings' | 'bedtime' | 'fantasy' | 'hist
 export type StoryArchetype = 'hero_journey' | 'redemption' | 'discovery' | 'transformation' | 'mystery' | 'adventure';
 export type QualityGrade = 'A+' | 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-';
 export type SpeechBubbleStyle = 'standard' | 'thought' | 'shout' | 'whisper' | 'narrative' | 'electronic' | 'magical';
-export type ErrorCategory = 'transient' | 'persistent' | 'configuration' | 'content' | 'system';
-export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+// ===== RE-EXPORT ERROR TYPES FROM SINGLE SOURCE OF TRUTH =====
+export type { ErrorCategory, ErrorSeverity };
 
 // ===== VISUAL DNA INTERFACES =====
 export interface VisualFingerprint {
@@ -484,7 +487,6 @@ export interface QualityMetrics {
     costEfficiency: number;
   };
 }
-
 // ===== ADDITIONAL MODULAR INTERFACES =====
 export interface ThematicAnalysis {
   primaryThemes: string[];
