@@ -116,7 +116,7 @@ export {
 
 export {
   ErrorFactory,
-  
+  BaseServiceError,
   // Database Errors
   DatabaseConnectionError,
   DatabaseQueryError,
