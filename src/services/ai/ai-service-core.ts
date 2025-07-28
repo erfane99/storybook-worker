@@ -35,7 +35,9 @@ import {
   CartoonizeOptions,
   CartoonizeResult,
   ChatCompletionOptions,
-  ChatCompletionResult
+  ChatCompletionResult,
+  StoryGenerationOptions,
+  StoryGenerationResult
 } from '../interfaces/service-contracts';
 
 import { 
@@ -47,6 +49,9 @@ import {
   AIContentPolicyError,
   AITimeoutError
 } from '../errors/index';
+
+// FIXED: Import ErrorCategory from the correct path (error-types.ts)
+import { ErrorCategory } from '../errors/error-types';
 
 // Import all our modular components - FIXED: Corrected import paths
 import {
@@ -155,12 +160,25 @@ class AIService extends ErrorAwareBaseService implements IAIService {
   private readonly defaultImageModel: string = 'dall-e-3';
 
   constructor(config?: Partial<AIServiceConfig>) {
+    // FIXED: Use ErrorCategory from error-types.ts instead of service-contracts.ts
     super({
       name: 'ModularEnterpriseAIService',
       timeout: config?.timeout || 120000,
       retryAttempts: config?.maxRetries || 3,
       retryDelay: config?.retryDelay || 1000,
       circuitBreakerThreshold: 5,
+      errorHandling: {
+        enableRetry: true,
+        maxRetries: 3,
+        enableCircuitBreaker: true,
+        enableCorrelation: true,
+        enableMetrics: true,
+        retryableCategories: [
+          ErrorCategory.NETWORK,
+          ErrorCategory.TIMEOUT,
+          ErrorCategory.EXTERNAL_SERVICE
+        ]
+      },
       ...config
     });
 
@@ -333,7 +351,7 @@ class AIService extends ErrorAwareBaseService implements IAIService {
 
   /**
    * Generate complete storybook with professional quality (MAIN METHOD - FROM BOTH FILES)
-   * FIXED: Uses inherited error handling from ErrorAwareBaseService
+   * FIXED: Return proper AsyncResult type and handle Result conversion
    */
   async generateStorybook(
     title: string,
@@ -345,7 +363,8 @@ class AIService extends ErrorAwareBaseService implements IAIService {
   ): Promise<AsyncResult<any, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    return this.withErrorHandling(
+    // FIXED: Convert Result to AsyncResult with proper error type conversion
+    const resultPromise = this.withErrorHandling(
       async () => {
         this.log('info', `🎨 Starting professional storybook generation: "${title}"`);
         this.log('info', `📊 Audience: ${audience}, Art Style: ${artStyle}`);
@@ -422,35 +441,32 @@ class AIService extends ErrorAwareBaseService implements IAIService {
 
         // Step 6: Format professional response (FROM BOTH FILES)
         const result = {
-          success: true,
-          data: {
-            title,
-            story,
-            audience,
-            artStyle,
-            pages: comicResult.pages,
-            characterDNA,
-            qualityMetrics,
-            metadata: {
-              ...comicResult.metadata,
-              generationTime: duration,
-              version: AI_SERVICE_VERSION_INFO.version,
-              qualityGrade: qualityMetrics.professionalGrade,
-              professionalStandards: true,
-              advancedFeaturesUsed: [
-                'narrative_intelligence',
-                'visual_dna_fingerprinting',
-                'quality_assessment',
-                'pattern_learning'
-              ].filter(Boolean)
-            }
+          title,
+          story,
+          audience,
+          artStyle,
+          pages: comicResult.pages,
+          characterDNA,
+          qualityMetrics,
+          metadata: {
+            ...comicResult.metadata,
+            generationTime: duration,
+            version: AI_SERVICE_VERSION_INFO.version,
+            qualityGrade: qualityMetrics.professionalGrade,
+            professionalStandards: true,
+            advancedFeaturesUsed: [
+              'narrative_intelligence',
+              'visual_dna_fingerprinting',
+              'quality_assessment',
+              'pattern_learning'
+            ].filter(Boolean)
           }
         };
 
         this.log('info', `🎉 Storybook generation completed successfully in ${duration}ms`);
         this.log('info', `🏆 Professional Grade: ${qualityMetrics.professionalGrade} (${qualityMetrics.overallScore}/100)`);
 
-        return result.data;
+        return result;
       },
       'generateStorybook',
       {
@@ -460,25 +476,34 @@ class AIService extends ErrorAwareBaseService implements IAIService {
         storyLength: story?.length || 0,
         hasCharacterImage: !!characterImageUrl
       }
-   ).then(result => {
+   );
+
+    // FIXED: Convert Result to AsyncResult and handle error type conversion
+    return new AsyncResult(resultPromise.then(result => {
       if (result.success) {
-        return AsyncResult.success(result.data);
+        return Result.success(result.data);
       } else {
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateStorybook', duration, false);
-        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
+        // Convert ServiceError to AIServiceUnavailableError
+        const aiError = new AIServiceUnavailableError(result.error.message, {
+          service: this.getName(),
+          operation: 'generateStorybook'
+        });
+        return Result.failure(aiError);
       }
-    });
+    }));
   }
 
   /**
    * Generate comic scenes with audience optimization (FROM BOTH FILES)
-   * FIXED: Uses inherited error handling
+   * FIXED: Return proper AsyncResult type and handle Result conversion
    */
   async generateScenesWithAudience(options: SceneGenerationOptions): Promise<AsyncResult<SceneGenerationResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    return this.withErrorHandling(
+    // FIXED: Convert Result to AsyncResult with proper error type conversion
+    const resultPromise = this.withErrorHandling(
       async () => {
         this.log('info', '🎨 Generating scenes with audience optimization...');
         
@@ -491,25 +516,33 @@ class AIService extends ErrorAwareBaseService implements IAIService {
       },
       'generateScenesWithAudience',
       options
-    ).then(result => {
+    );
+
+    // FIXED: Convert Result to AsyncResult and handle error type conversion
+    return new AsyncResult(resultPromise.then(result => {
       if (result.success) {
-        return AsyncResult.success(result.data);
+        return Result.success(result.data);
       } else {
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateScenesWithAudience', duration, false);
-        return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
+        // Convert ServiceError to AIServiceUnavailableError
+        const aiError = new AIServiceUnavailableError(result.error.message, {
+          service: this.getName(),
+          operation: 'generateScenesWithAudience'
+        });
+        return Result.failure(aiError);
       }
-    });
+    }));
   }
 
   /**
    * Generate images with advanced options (FROM BOTH FILES)
-   * FIXED: Uses inherited error handling with correct AsyncResult pattern
+   * FIXED: Return proper AsyncResult type and handle Result conversion
    */
   async generateImages(options: ImageGenerationOptions): Promise<AsyncResult<ImageGenerationResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    const result = await this.withErrorHandling(
+    const resultPromise = this.withErrorHandling(
       async () => {
         this.log('info', '🖼️ Generating images with advanced options...');
         
@@ -535,23 +568,30 @@ class AIService extends ErrorAwareBaseService implements IAIService {
       options
     );
 
-    if (result.success) {
-      return AsyncResult.success(result.data);
-    } else {
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, false);
-      return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
-    }
+    // FIXED: Convert Result to AsyncResult and handle error type conversion
+    return new AsyncResult(resultPromise.then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, false);
+        // Convert ServiceError to AIServiceUnavailableError
+        const aiError = new AIServiceUnavailableError(result.error.message, {
+          service: this.getName(),
+          operation: 'generateImages'
+        });
+        return Result.failure(aiError);
+      }
+    }));
   }
-
-  /**
+/**
    * Create character descriptions with professional analysis (FROM BOTH FILES)
-   * FIXED: Uses inherited error handling with correct AsyncResult pattern
+   * FIXED: Return proper AsyncResult type and handle Result conversion
    */
   async createCharacterDescription(options: CharacterDescriptionOptions): Promise<AsyncResult<CharacterDescriptionResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    const result = await this.withErrorHandling(
+    const resultPromise = this.withErrorHandling(
       async () => {
         this.log('info', '👤 Creating character description with professional analysis...');
         
@@ -572,23 +612,31 @@ class AIService extends ErrorAwareBaseService implements IAIService {
       options
     );
 
-    if (result.success) {
-      return AsyncResult.success(result.data);
-    } else {
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('createCharacterDescription', duration, false);
-      return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
-    }
+    // FIXED: Convert Result to AsyncResult and handle error type conversion
+    return new AsyncResult(resultPromise.then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('createCharacterDescription', duration, false);
+        // Convert ServiceError to AIServiceUnavailableError
+        const aiError = new AIServiceUnavailableError(result.error.message, {
+          service: this.getName(),
+          operation: 'createCharacterDescription'
+        });
+        return Result.failure(aiError);
+      }
+    }));
   }
 
   /**
    * Cartoonize images with professional quality (FROM BOTH FILES)
-   * FIXED: Uses inherited error handling with correct AsyncResult pattern
+   * FIXED: Return proper AsyncResult type and handle Result conversion
    */
   async cartoonizeImage(options: CartoonizeOptions): Promise<AsyncResult<CartoonizeResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    const result = await this.withErrorHandling(
+    const resultPromise = this.withErrorHandling(
       async () => {
         this.log('info', '🎨 Cartoonizing image with professional quality...');
         
@@ -614,23 +662,31 @@ class AIService extends ErrorAwareBaseService implements IAIService {
       options
     );
 
-    if (result.success) {
-      return AsyncResult.success(result.data);
-    } else {
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('cartoonizeImage', duration, false);
-      return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
-    }
+    // FIXED: Convert Result to AsyncResult and handle error type conversion
+    return new AsyncResult(resultPromise.then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('cartoonizeImage', duration, false);
+        // Convert ServiceError to AIServiceUnavailableError
+        const aiError = new AIServiceUnavailableError(result.error.message, {
+          service: this.getName(),
+          operation: 'cartoonizeImage'
+        });
+        return Result.failure(aiError);
+      }
+    }));
   }
 
   /**
    * Generate chat completions with professional context (FROM BOTH FILES)
-   * FIXED: Uses inherited error handling with correct AsyncResult pattern and fixed messages parameter
+   * FIXED: Return proper AsyncResult type, fix method signature, and handle Result conversion
    */
   async generateChatCompletion(options: ChatCompletionOptions): Promise<AsyncResult<ChatCompletionResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
-    const result = await this.withErrorHandling(
+    const resultPromise = this.withErrorHandling(
       async () => {
         this.log('info', '💬 Generating chat completion with professional context...');
         
@@ -662,27 +718,63 @@ class AIService extends ErrorAwareBaseService implements IAIService {
         };
       },
       'generateChatCompletion',
-      { messages: options.messages, ...options }
+      // FIXED: Remove duplicate messages property
+      options
     );
 
-    if (result.success) {
-      return AsyncResult.success(result.data);
-    } else {
-      const duration = Date.now() - startTime;
-      this.enterpriseMonitoring.recordOperationMetrics('generateChatCompletion', duration, false);
-      return AsyncResult.failure(new AIServiceUnavailableError(result.error.message));
-    }
+    // FIXED: Convert Result to AsyncResult and handle error type conversion
+    return new AsyncResult(resultPromise.then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generateChatCompletion', duration, false);
+        // Convert ServiceError to AIServiceUnavailableError
+        const aiError = new AIServiceUnavailableError(result.error.message, {
+          service: this.getName(),
+          operation: 'generateChatCompletion'
+        });
+        return Result.failure(aiError);
+      }
+    }));
   }
 
   // ===== MISSING INTERFACE IMPLEMENTATIONS - FIXED =====
 
   /**
    * Generate story with options - interface compatibility method
+   * FIXED: Correct method signature to match interface
    */
-  async generateStoryWithOptions(prompt: string, options?: any): Promise<string> {
-    const result = await this.generateStorybook('Generated Story', prompt, '', 'children', 'storybook');
-    const resolvedResult = await result;
-    return 'success' in resolvedResult && resolvedResult.success ? JSON.stringify(resolvedResult.data) : '';
+  async generateStoryWithOptions(options: StoryGenerationOptions): Promise<AsyncResult<StoryGenerationResult, AIServiceUnavailableError>> {
+    const resultPromise = this.withErrorHandling(
+      async () => {
+        // Use the narrative engine to generate story
+        const result = await this.narrativeEngine.generateStoryFromGenre(
+          options.genre || 'adventure',
+          options.characterDescription || '',
+          options.audience || 'children'
+        );
+        
+        return {
+          story: result.story,
+          title: result.title || 'Generated Story',
+          wordCount: result.story.length
+        };
+      },
+      'generateStoryWithOptions'
+    );
+
+    return new AsyncResult(resultPromise.then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        const aiError = new AIServiceUnavailableError(result.error.message, {
+          service: this.getName(),
+          operation: 'generateStoryWithOptions'
+        });
+        return Result.failure(aiError);
+      }
+    }));
   }
 
   /**
@@ -694,9 +786,10 @@ class AIService extends ErrorAwareBaseService implements IAIService {
 
   /**
    * Create chat completion - interface compatibility method
+   * FIXED: Correct method signature to match interface
    */
-  async createChatCompletion(messages: any[], options: any = {}): Promise<AsyncResult<ChatCompletionResult, AIServiceUnavailableError>> {
-    return this.generateChatCompletion({ messages, ...options });
+  async createChatCompletion(options: ChatCompletionOptions): Promise<AsyncResult<ChatCompletionResult, AIServiceUnavailableError>> {
+    return this.generateChatCompletion(options);
   }
 
   /**
@@ -744,12 +837,12 @@ class AIService extends ErrorAwareBaseService implements IAIService {
   async calculateQualityMetrics(
     generatedPanels: any[],
     originalContext: {
-  characterDNA?: CharacterDNA;
-  environmentalDNA?: EnvironmentalDNA;
-  storyAnalysis?: StoryAnalysis;
-  targetAudience: AudienceType;
-  artStyle: string;
-}
+      characterDNA?: CharacterDNA;
+      environmentalDNA?: EnvironmentalDNA;
+      storyAnalysis?: StoryAnalysis;
+      targetAudience: AudienceType;
+      artStyle: string;
+    }
   ): Promise<any> {
     const result = await this.withErrorHandling(
       async () => {
@@ -876,14 +969,14 @@ class AIService extends ErrorAwareBaseService implements IAIService {
    * FIXED: Uses inherited error handling
    */
   isHealthy(): boolean {
-  try {
-    if (!this._isInitialized) return false;
-    return this.enterpriseMonitoring?.isHealthy?.() ?? false;
-  } catch (error) {
-    this.log('error', 'Health check failed:', error);
-    return false;
+    try {
+      if (!this._isInitialized) return false;
+      return this.enterpriseMonitoring?.isHealthy?.() ?? false;
+    } catch (error) {
+      this.log('error', 'Health check failed:', error);
+      return false;
+    }
   }
-}
 
   /**
    * Get comprehensive metrics across all systems
@@ -977,10 +1070,18 @@ class AIService extends ErrorAwareBaseService implements IAIService {
     const minutes = Math.floor((uptimeSeconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
   }
+
   // ===== INTERFACE ALIASES FOR IAIService COMPATIBILITY =====
   async generateStory(prompt: string, options?: any): Promise<string> {
-    const result = await this.generateStorybook('Generated Story', prompt, '', 'children', 'storybook');
+    const storyOptions: StoryGenerationOptions = {
+      genre: options?.genre || 'adventure',
+      characterDescription: options?.characterDescription || '',
+      audience: options?.audience || 'children'
+    };
+    
+    const result = await this.generateStoryWithOptions(storyOptions);
     const resolvedResult = await result;
+    // FIXED: Proper data access pattern
     if (resolvedResult && 'success' in resolvedResult && resolvedResult.success) {
       return JSON.stringify(resolvedResult.data);
     }
@@ -989,11 +1090,15 @@ class AIService extends ErrorAwareBaseService implements IAIService {
 
   async generateCartoonImage(prompt: string): Promise<AsyncResult<string, AIServiceUnavailableError>> {
     const cartoonResult = await this.cartoonizeImage({ prompt, style: 'cartoon' });
-    const result = await cartoonResult;
-    if (result && 'success' in result && result.success) {
-      return AsyncResult.success(result.data.url);
-    }
-    return AsyncResult.failure(new AIServiceUnavailableError('Cartoon generation failed'));
+    
+    // FIXED: Convert AsyncResult<CartoonizeResult> to AsyncResult<string>
+    return new AsyncResult(cartoonResult.toPromise().then(result => {
+      if (result.success) {
+        return Result.success(result.data.url);
+      } else {
+        return Result.failure(result.error);
+      }
+    }));
   }
 
   generateSceneImage = this.generateImages;
@@ -1003,11 +1108,15 @@ class AIService extends ErrorAwareBaseService implements IAIService {
   async describeCharacter(imageUrlOrOptions: string | CharacterDescriptionOptions, prompt?: string): Promise<any> {
     if (typeof imageUrlOrOptions === 'string') {
       const descriptionResult = await this.createCharacterDescription({ imageUrl: imageUrlOrOptions, style: 'comic-book' });
-      const result = await descriptionResult;
-      if (result && 'success' in result && result.success) {
-        return AsyncResult.success(result.data.description);
-      }
-      return AsyncResult.failure(new AIServiceUnavailableError('Character description failed'));
+      
+      // FIXED: Convert AsyncResult<CharacterDescriptionResult> to AsyncResult<string>
+      return new AsyncResult(descriptionResult.toPromise().then(result => {
+        if (result.success) {
+          return Result.success(result.data.description);
+        } else {
+          return Result.failure(result.error);
+        }
+      }));
     } else {
       return this.createCharacterDescription(imageUrlOrOptions);
     }
