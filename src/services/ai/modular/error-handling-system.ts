@@ -123,401 +123,11 @@ export abstract class AIServiceError extends BaseServiceError {
 }
 
 // ===== ERROR HANDLING SYSTEM CLASS =====
+// SURGICALLY FIXED: Moved all class properties INSIDE the class body
 
 export class ErrorHandlingSystem {
-  private calculateAverageRetries(metrics: any[]): number {
-    if (metrics.length === 0) return 0;
-    const totalRetries = metrics.reduce((sum: number, m: any) => sum + m.totalAttempts, 0);
-    return totalRetries / metrics.length;
-  }
-
-  private findMostCommonCategory(metrics: any[]): string {
-    if (metrics.length === 0) return 'unknown';
-    
-    const categories: Record<string, number> = {};
-    for (const metric of metrics) {
-      const category = metric.classification?.category || 'unknown';
-      categories[category] = (categories[category] || 0) + 1;
-    }
-    
-    return Object.entries(categories)
-      .sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0] || 'unknown';
-  }
-
-  private getTopFailingOperations(): Array<{ operation: string; errors: number; errorRate: string }> {
-    return Array.from(this.errorMetrics.entries())
-      .map(([operation, metrics]) => ({
-        operation,
-        errors: metrics.length,
-        errorRate: `${((metrics.length / 100) * 100).toFixed(1)}%` // Assuming 100 is max tracked
-      }))
-      .sort((a, b) => b.errors - a.errors)
-      .slice(0, 5);
-  }
-
-  // ===== UTILITY METHODS FOR ERROR HANDLING =====
-
-  public isRetryableError(error: any): boolean {
-    return this.classifyError(error).isRetryable;
-  }
-
-  public getUserFriendlyMessage(error: any): string {
-    return this.classifyError(error).userMessage;
-  }
-
-  public getEstimatedRecoveryTime(error: any): number {
-    return this.classifyError(error).estimatedRecoveryTime || 60000;
-  }
-
-  public async createErrorFromResponse(response: Response, operationName: string, endpoint: string): Promise<never> {
-    return this.handleAPIErrorResponse(response, operationName, endpoint);
-  }
-
-  // ===== HTTP ERROR RESPONSE HANDLING =====
-
-  private async handleAPIErrorResponse(response: Response, operationName: string, endpoint: string): Promise<never> {
-    let errorData: any = {};
-    
-    try {
-      errorData = await response.json();
-    } catch {
-      // Ignore JSON parsing errors - use default error structure
-    }
-
-    const errorMessage = errorData.error?.message || errorData.message || `HTTP ${response.status}`;
-    const errorCode = errorData.error?.code || errorData.code;
-    const errorType = errorData.error?.type || errorData.type;
-
-    // Enhanced context from both files
-    const context: ErrorContext = {
-      service: 'ErrorHandlingSystem',
-      operation: operationName,
-      endpoint,
-      errorCode,
-      httpStatus: response.status,
-      timestamp: Date.now()
-    };
-
-    // Add additional context from response headers
-    if (response.headers.get('retry-after')) {
-      context.retryAfter = response.headers.get('retry-after');
-    }
-
-    // Enhanced HTTP status code handling
-    switch (response.status) {
-      case 400:
-        throw new AIContentPolicyError(
-          `Bad request: ${errorMessage}`,
-          { ...context, errorType: errorType || 'bad_request' }
-        );
-
-      case 401:
-        throw new AIAuthenticationError(
-          `Authentication failed: ${errorMessage}`,
-          { ...context, errorType: errorType || 'authentication_failed' }
-        );
-
-      case 403:
-        throw new AIContentPolicyError(
-          `Forbidden: ${errorMessage}`,
-          { ...context, errorType: errorType || 'forbidden' }
-        );
-
-      case 422:
-        throw new AIContentPolicyError(
-          `Validation failed: ${errorMessage}`,
-          { ...context, errorType: errorType || 'validation_error' }
-        );
-
-      case 429:
-        throw new AIRateLimitError(
-          `Rate limit exceeded: ${errorMessage}`,
-          { 
-            ...context, 
-            errorType: errorType || 'rate_limit_exceeded',
-            retryAfter: response.headers.get('retry-after')
-          }
-        );
-
-      case 500:
-        throw new AIServiceUnavailableError(
-          `Internal server error: ${errorMessage}`,
-          { ...context, errorType: errorType || 'internal_server_error' }
-        );
-
-      case 502:
-        throw new AIServiceUnavailableError(
-          `Bad gateway: ${errorMessage}`,
-          { ...context, errorType: errorType || 'bad_gateway' }
-        );
-
-      case 503:
-        throw new AIServiceUnavailableError(
-          `Service unavailable: ${errorMessage}`,
-          { ...context, errorType: errorType || 'service_unavailable' }
-        );
-
-      case 504:
-        throw new AITimeoutError(
-          `Gateway timeout: ${errorMessage}`,
-          { ...context, errorType: errorType || 'gateway_timeout' }
-        );
-
-      default:
-        if (response.status >= 500) {
-          throw new AIServiceUnavailableError(
-            `Server error: ${errorMessage}`,
-            { ...context, errorType: errorType || 'server_error' }
-          );
-        } else if (response.status >= 400) {
-          throw new AIContentPolicyError(
-            `Client error: ${errorMessage}`,
-            { ...context, errorType: errorType || 'client_error' }
-          );
-        } else {
-          throw new AIServiceUnavailableError(
-            `Unexpected response: ${errorMessage}`,
-            { ...context, errorType: errorType || 'unexpected_response' }
-          );
-        }
-    }
-  }
-
-  // ===== ERROR VALIDATION AND SANITIZATION =====
-
-  public validateAndSanitizeError(error: any): BaseServiceError {
-    // If already a properly typed BaseServiceError, return as-is
-    if (error instanceof BaseServiceError) {
-      return error;
-    }
-
-    // Convert generic errors to BaseServiceError
-    if (error instanceof Error) {
-      const message = this.sanitizeErrorMessage(error.message);
-      const context: ErrorContext = {
-        originalError: error.message,
-        timestamp: Date.now()
-      };
-
-      // Classify the generic error and convert to appropriate service error
-      const classification = this.classifyError(error);
-      
-      switch (classification.category) {
-        case ErrorCategory.NETWORK:
-          return new AIServiceUnavailableError(message, context);
-        case ErrorCategory.CONFIGURATION:
-          return new AIContentPolicyError(message, context);
-        case ErrorCategory.VALIDATION:
-          return new AIContentPolicyError(message, context);
-        default:
-          return new AIServiceUnavailableError(message, context);
-      }
-    }
-
-    // Handle non-Error objects
-    const message = this.sanitizeErrorMessage(String(error));
-    return new AIServiceUnavailableError(message, {
-      originalError: String(error),
-      timestamp: Date.now()
-    });
-  }
-
-  private sanitizeErrorMessage(message: string): string {
-    // Remove potentially sensitive information
-    return message
-      .replace(/api[_-]?key[s]?[:\s]*[^\s]+/gi, 'api_key: [REDACTED]')
-      .replace(/token[s]?[:\s]*[^\s]+/gi, 'token: [REDACTED]')
-      .replace(/password[s]?[:\s]*[^\s]+/gi, 'password: [REDACTED]')
-      .replace(/secret[s]?[:\s]*[^\s]+/gi, 'secret: [REDACTED]')
-      .substring(0, ERROR_HANDLING_CONSTANTS.MAX_ERROR_MESSAGE_LENGTH);
-  }
-
-  // ===== CLEANUP AND MAINTENANCE =====
-
-  public clearErrorMetrics(operationName?: string): void {
-    if (operationName) {
-      this.errorMetrics.delete(operationName);
-      this.logger.log(`🧹 Cleared error metrics for ${operationName}`);
-    } else {
-      this.errorMetrics.clear();
-      this.logger.log('🧹 Cleared all error metrics');
-    }
-  }
-
-  public resetCircuitBreaker(operationName: string): void {
-    if (this.circuitBreakerStates.has(operationName)) {
-      const state = this.circuitBreakerStates.get(operationName)!;
-      state.state = 'closed';
-      state.failures = 0;
-      state.successCount = 0;
-      this.logger.log(`🔄 Reset circuit breaker for ${operationName}`);
-    }
-  }
-
-  public getServiceHealth(): {
-    isHealthy: boolean;
-    circuitBreakers: Record<string, CircuitBreakerState>;
-    errorRates: Record<string, number>;
-    recommendations: string[];
-  } {
-    const circuitBreakers = Object.fromEntries(this.circuitBreakerStates);
-    const errorRates: Record<string, number> = {};
-    const recommendations: string[] = [];
-
-    // Calculate error rates
-    for (const [operation, metrics] of this.errorMetrics) {
-      const recentErrors = metrics.filter((m: any) => Date.now() - m.timestamp < 300000); // Last 5 minutes
-      errorRates[operation] = recentErrors.length;
-    }
-
-    // Check for unhealthy conditions
-    const hasOpenCircuits = Array.from(this.circuitBreakerStates.values()).some(s => s.state === 'open');
-    const highErrorOperations = Object.entries(errorRates).filter(([, rate]) => rate > 10);
-    
-    const isHealthy = !hasOpenCircuits && highErrorOperations.length === 0;
-
-    // Generate recommendations
-    if (hasOpenCircuits) {
-      recommendations.push('Some circuit breakers are open - investigate failing operations');
-    }
-    
-    if (highErrorOperations.length > 0) {
-      recommendations.push(`High error rates detected in: ${highErrorOperations.map(([op]) => op).join(', ')}`);
-    }
-    
-    if (isHealthy) {
-      recommendations.push('Error handling system is operating normally');
-    }
-
-    return {
-      isHealthy,
-      circuitBreakers,
-      errorRates,
-      recommendations
-    };
-  }
-
-  // ===== DIAGNOSTIC UTILITIES =====
-
-  public generateDiagnosticReport(): string {
-    const health = this.getServiceHealth();
-    const analytics = this.getErrorAnalytics();
-    
-    const report = [
-      '🏥 ERROR HANDLING SYSTEM DIAGNOSTIC REPORT',
-      '='.repeat(50),
-      '',
-      `🔍 Overall Health: ${health.isHealthy ? '✅ HEALTHY' : '❌ UNHEALTHY'}`,
-      `📊 Total Operations: ${analytics.totalOperations}`,
-      `🚨 Total Errors: ${analytics.totalErrors}`,
-      `🔄 Average Retries: ${analytics.averageRetries.toFixed(2)}`,
-      '',
-      '🔒 Circuit Breaker Status:',
-      ...Object.entries(health.circuitBreakers).map(([op, state]) => 
-        `  ${op}: ${state.state.toUpperCase()} (failures: ${state.failures})`
-      ),
-      '',
-      '📈 Error Rates (last 5 minutes):',
-      ...Object.entries(health.errorRates).map(([op, rate]) => 
-        `  ${op}: ${rate} errors`
-      ),
-      '',
-      '🏆 Top Failing Operations:',
-      ...analytics.topFailingOperations.map((op: any) => 
-        `  ${op.operation}: ${op.errors} errors`
-      ),
-      '',
-      '💡 Recommendations:',
-      ...health.recommendations.map((rec: string) => `  • ${rec}`),
-      '',
-      `📅 Report Generated: ${new Date().toISOString()}`
-    ];
-
-    return report.join('\n');
-  }
-
-  // ===== DISPOSE METHOD =====
-
-  public dispose(): void {
-    this.circuitBreakerStates.clear();
-    this.errorMetrics.clear();
-    this.logger.log('🧹 ErrorHandlingSystem disposed and cleaned up');
-  }
-}
-
-// ===== FACTORY FUNCTIONS AND UTILITIES =====
-
-export class ErrorFactory {
-  public static createFromHttpResponse(
-    response: Response,
-    operationName: string,
-    endpoint: string
-  ): Promise<BaseServiceError> {
-    const errorHandler = ErrorHandlingSystem.getInstance();
-    return errorHandler.createErrorFromResponse(response, operationName, endpoint) as Promise<BaseServiceError>;
-  }
-
-  public static createRateLimitError(message: string, context?: ErrorContext): AIRateLimitError {
-    return new AIRateLimitError(message, context);
-  }
-
-  public static createContentPolicyError(message: string, context?: ErrorContext): AIContentPolicyError {
-    return new AIContentPolicyError(message, context);
-  }
-
-  public static createTimeoutError(message: string, context?: ErrorContext): AITimeoutError {
-    return new AITimeoutError(message, context);
-  }
-
-  public static createAuthenticationError(message: string, context?: ErrorContext): AIAuthenticationError {
-    return new AIAuthenticationError(message, context);
-  }
-
-  public static createServiceUnavailableError(message: string, context?: ErrorContext): AIServiceUnavailableError {
-    return new AIServiceUnavailableError(message, context);
-  }
-}
-
-// ===== EXPORT ALL ERROR HANDLING COMPONENTS =====
-
-export default ErrorHandlingSystem;
-
-// ===== EXPORT AI ERROR CLASSES FOR OTHER MODULAR FILES =====
-// These exports are needed by narrative-intelligence.ts, openai-integration.ts, visual-dna-system.ts
-export {
-  AIServiceUnavailableError,
-  AIRateLimitError,
-  AIContentPolicyError,
-  AITimeoutError,
-  AIAuthenticationError
-};
-
-// Create aliases for non-existent error classes that other files might expect
-export const AIValidationError = AIContentPolicyError;
-export const AINetworkError = AIServiceUnavailableError;
-
-// Export error categories and severities
-export const ERROR_CATEGORIES = {
-  VALIDATION: ErrorCategory.VALIDATION,
-  AUTHENTICATION: ErrorCategory.AUTHENTICATION,
-  AUTHORIZATION: ErrorCategory.AUTHORIZATION,
-  NETWORK: ErrorCategory.NETWORK,
-  TIMEOUT: ErrorCategory.TIMEOUT,
-  RATE_LIMIT: ErrorCategory.RATE_LIMIT,
-  RESOURCE: ErrorCategory.RESOURCE,
-  CONFIGURATION: ErrorCategory.CONFIGURATION,
-  BUSINESS_LOGIC: ErrorCategory.BUSINESS_LOGIC,
-  EXTERNAL_SERVICE: ErrorCategory.EXTERNAL_SERVICE,
-  SYSTEM: ErrorCategory.SYSTEM,
-  UNKNOWN: ErrorCategory.UNKNOWN
-} as const;
-
-export const ERROR_SEVERITIES = {
-  LOW: ErrorSeverity.LOW,
-  MEDIUM: ErrorSeverity.MEDIUM,
-  HIGH: ErrorSeverity.HIGH,
-  CRITICAL: ErrorSeverity.CRITICAL
-} as const; static instance: ErrorHandlingSystem;
+  // FIXED: All class properties moved inside the class body
+  private static instance: ErrorHandlingSystem;
   
   // Circuit breaker state management
   private circuitBreakerStates: Map<string, CircuitBreakerState> = new Map();
@@ -779,8 +389,7 @@ export const ERROR_SEVERITIES = {
     const finalDelay = Math.min(calculatedDelay, maxDelay);
     return Math.round(finalDelay);
   }
-
-  // ===== ADVANCED ERROR CLASSIFICATION =====
+// ===== ADVANCED ERROR CLASSIFICATION =====
 
   public classifyError(error: any): ErrorClassification {
     // AI Service specific errors
@@ -1235,4 +844,396 @@ export const ERROR_SEVERITIES = {
     return types;
   }
 
-  private
+  private calculateAverageRetries(metrics: any[]): number {
+    if (metrics.length === 0) return 0;
+    const totalRetries = metrics.reduce((sum: number, m: any) => sum + m.totalAttempts, 0);
+    return totalRetries / metrics.length;
+  }
+
+  private findMostCommonCategory(metrics: any[]): string {
+    if (metrics.length === 0) return 'unknown';
+    
+    const categories: Record<string, number> = {};
+    for (const metric of metrics) {
+      const category = metric.classification?.category || 'unknown';
+      categories[category] = (categories[category] || 0) + 1;
+    }
+    
+    return Object.entries(categories)
+      .sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0] || 'unknown';
+  }
+
+  private getTopFailingOperations(): Array<{ operation: string; errors: number; errorRate: string }> {
+    return Array.from(this.errorMetrics.entries())
+      .map(([operation, metrics]) => ({
+        operation,
+        errors: metrics.length,
+        errorRate: `${((metrics.length / 100) * 100).toFixed(1)}%` // Assuming 100 is max tracked
+      }))
+      .sort((a, b) => b.errors - a.errors)
+      .slice(0, 5);
+  }
+
+  // ===== UTILITY METHODS FOR ERROR HANDLING =====
+
+  public isRetryableError(error: any): boolean {
+    return this.classifyError(error).isRetryable;
+  }
+
+  public getUserFriendlyMessage(error: any): string {
+    return this.classifyError(error).userMessage;
+  }
+
+  public getEstimatedRecoveryTime(error: any): number {
+    return this.classifyError(error).estimatedRecoveryTime || 60000;
+  }
+
+  public async createErrorFromResponse(response: Response, operationName: string, endpoint: string): Promise<never> {
+    return this.handleAPIErrorResponse(response, operationName, endpoint);
+  }
+
+  // ===== HTTP ERROR RESPONSE HANDLING =====
+
+  private async handleAPIErrorResponse(response: Response, operationName: string, endpoint: string): Promise<never> {
+    let errorData: any = {};
+    
+    try {
+      errorData = await response.json();
+    } catch {
+      // Ignore JSON parsing errors - use default error structure
+    }
+
+    const errorMessage = errorData.error?.message || errorData.message || `HTTP ${response.status}`;
+    const errorCode = errorData.error?.code || errorData.code;
+    const errorType = errorData.error?.type || errorData.type;
+
+    // Enhanced context from both files
+    const context: ErrorContext = {
+      service: 'ErrorHandlingSystem',
+      operation: operationName,
+      endpoint,
+      errorCode,
+      httpStatus: response.status,
+      timestamp: Date.now()
+    };
+
+    // Add additional context from response headers
+    if (response.headers.get('retry-after')) {
+      context.retryAfter = response.headers.get('retry-after');
+    }
+
+    // Enhanced HTTP status code handling
+    switch (response.status) {
+      case 400:
+        throw new AIContentPolicyError(
+          `Bad request: ${errorMessage}`,
+          { ...context, errorType: errorType || 'bad_request' }
+        );
+
+      case 401:
+        throw new AIAuthenticationError(
+          `Authentication failed: ${errorMessage}`,
+          { ...context, errorType: errorType || 'authentication_failed' }
+        );
+
+      case 403:
+        throw new AIContentPolicyError(
+          `Forbidden: ${errorMessage}`,
+          { ...context, errorType: errorType || 'forbidden' }
+        );
+
+      case 422:
+        throw new AIContentPolicyError(
+          `Validation failed: ${errorMessage}`,
+          { ...context, errorType: errorType || 'validation_error' }
+        );
+
+      case 429:
+        throw new AIRateLimitError(
+          `Rate limit exceeded: ${errorMessage}`,
+          { 
+            ...context, 
+            errorType: errorType || 'rate_limit_exceeded',
+            retryAfter: response.headers.get('retry-after')
+          }
+        );
+
+      case 500:
+        throw new AIServiceUnavailableError(
+          `Internal server error: ${errorMessage}`,
+          { ...context, errorType: errorType || 'internal_server_error' }
+        );
+
+      case 502:
+        throw new AIServiceUnavailableError(
+          `Bad gateway: ${errorMessage}`,
+          { ...context, errorType: errorType || 'bad_gateway' }
+        );
+
+      case 503:
+        throw new AIServiceUnavailableError(
+          `Service unavailable: ${errorMessage}`,
+          { ...context, errorType: errorType || 'service_unavailable' }
+        );
+
+      case 504:
+        throw new AITimeoutError(
+          `Gateway timeout: ${errorMessage}`,
+          { ...context, errorType: errorType || 'gateway_timeout' }
+        );
+
+      default:
+        if (response.status >= 500) {
+          throw new AIServiceUnavailableError(
+            `Server error: ${errorMessage}`,
+            { ...context, errorType: errorType || 'server_error' }
+          );
+        } else if (response.status >= 400) {
+          throw new AIContentPolicyError(
+            `Client error: ${errorMessage}`,
+            { ...context, errorType: errorType || 'client_error' }
+          );
+        } else {
+          throw new AIServiceUnavailableError(
+            `Unexpected response: ${errorMessage}`,
+            { ...context, errorType: errorType || 'unexpected_response' }
+          );
+        }
+    }
+  }
+
+  // ===== ERROR VALIDATION AND SANITIZATION =====
+
+  public validateAndSanitizeError(error: any): BaseServiceError {
+    // If already a properly typed BaseServiceError, return as-is
+    if (error instanceof BaseServiceError) {
+      return error;
+    }
+
+    // Convert generic errors to BaseServiceError
+    if (error instanceof Error) {
+      const message = this.sanitizeErrorMessage(error.message);
+      const context: ErrorContext = {
+        originalError: error.message,
+        timestamp: Date.now()
+      };
+
+      // Classify the generic error and convert to appropriate service error
+      const classification = this.classifyError(error);
+      
+      switch (classification.category) {
+        case ErrorCategory.NETWORK:
+          return new AIServiceUnavailableError(message, context);
+        case ErrorCategory.CONFIGURATION:
+          return new AIContentPolicyError(message, context);
+        case ErrorCategory.VALIDATION:
+          return new AIContentPolicyError(message, context);
+        default:
+          return new AIServiceUnavailableError(message, context);
+      }
+    }
+
+    // Handle non-Error objects
+    const message = this.sanitizeErrorMessage(String(error));
+    return new AIServiceUnavailableError(message, {
+      originalError: String(error),
+      timestamp: Date.now()
+    });
+  }
+
+  private sanitizeErrorMessage(message: string): string {
+    // Remove potentially sensitive information
+    return message
+      .replace(/api[_-]?key[s]?[:\s]*[^\s]+/gi, 'api_key: [REDACTED]')
+      .replace(/token[s]?[:\s]*[^\s]+/gi, 'token: [REDACTED]')
+      .replace(/password[s]?[:\s]*[^\s]+/gi, 'password: [REDACTED]')
+      .replace(/secret[s]?[:\s]*[^\s]+/gi, 'secret: [REDACTED]')
+      .substring(0, ERROR_HANDLING_CONSTANTS.MAX_ERROR_MESSAGE_LENGTH);
+  }
+
+  // ===== CLEANUP AND MAINTENANCE =====
+
+  public clearErrorMetrics(operationName?: string): void {
+    if (operationName) {
+      this.errorMetrics.delete(operationName);
+      this.logger.log(`🧹 Cleared error metrics for ${operationName}`);
+    } else {
+      this.errorMetrics.clear();
+      this.logger.log('🧹 Cleared all error metrics');
+    }
+  }
+
+  public resetCircuitBreaker(operationName: string): void {
+    if (this.circuitBreakerStates.has(operationName)) {
+      const state = this.circuitBreakerStates.get(operationName)!;
+      state.state = 'closed';
+      state.failures = 0;
+      state.successCount = 0;
+      this.logger.log(`🔄 Reset circuit breaker for ${operationName}`);
+    }
+  }
+
+  public getServiceHealth(): {
+    isHealthy: boolean;
+    circuitBreakers: Record<string, CircuitBreakerState>;
+    errorRates: Record<string, number>;
+    recommendations: string[];
+  } {
+    const circuitBreakers = Object.fromEntries(this.circuitBreakerStates);
+    const errorRates: Record<string, number> = {};
+    const recommendations: string[] = [];
+
+    // Calculate error rates
+    for (const [operation, metrics] of this.errorMetrics) {
+      const recentErrors = metrics.filter((m: any) => Date.now() - m.timestamp < 300000); // Last 5 minutes
+      errorRates[operation] = recentErrors.length;
+    }
+
+    // Check for unhealthy conditions
+    const hasOpenCircuits = Array.from(this.circuitBreakerStates.values()).some(s => s.state === 'open');
+    const highErrorOperations = Object.entries(errorRates).filter(([, rate]) => rate > 10);
+    
+    const isHealthy = !hasOpenCircuits && highErrorOperations.length === 0;
+
+    // Generate recommendations
+    if (hasOpenCircuits) {
+      recommendations.push('Some circuit breakers are open - investigate failing operations');
+    }
+    
+    if (highErrorOperations.length > 0) {
+      recommendations.push(`High error rates detected in: ${highErrorOperations.map(([op]) => op).join(', ')}`);
+    }
+    
+    if (isHealthy) {
+      recommendations.push('Error handling system is operating normally');
+    }
+
+    return {
+      isHealthy,
+      circuitBreakers,
+      errorRates,
+      recommendations
+    };
+  }
+
+  // ===== DIAGNOSTIC UTILITIES =====
+
+  public generateDiagnosticReport(): string {
+    const health = this.getServiceHealth();
+    const analytics = this.getErrorAnalytics();
+    
+    const report = [
+      '🏥 ERROR HANDLING SYSTEM DIAGNOSTIC REPORT',
+      '='.repeat(50),
+      '',
+      `🔍 Overall Health: ${health.isHealthy ? '✅ HEALTHY' : '❌ UNHEALTHY'}`,
+      `📊 Total Operations: ${analytics.totalOperations}`,
+      `🚨 Total Errors: ${analytics.totalErrors}`,
+      `🔄 Average Retries: ${analytics.averageRetries.toFixed(2)}`,
+      '',
+      '🔒 Circuit Breaker Status:',
+      ...Object.entries(health.circuitBreakers).map(([op, state]) => 
+        `  ${op}: ${state.state.toUpperCase()} (failures: ${state.failures})`
+      ),
+      '',
+      '📈 Error Rates (last 5 minutes):',
+      ...Object.entries(health.errorRates).map(([op, rate]) => 
+        `  ${op}: ${rate} errors`
+      ),
+      '',
+      '🏆 Top Failing Operations:',
+      ...analytics.topFailingOperations.map((op: any) => 
+        `  ${op.operation}: ${op.errors} errors`
+      ),
+      '',
+      '💡 Recommendations:',
+      ...health.recommendations.map((rec: string) => `  • ${rec}`),
+      '',
+      `📅 Report Generated: ${new Date().toISOString()}`
+    ];
+
+    return report.join('\n');
+  }
+
+  // ===== DISPOSE METHOD =====
+
+  public dispose(): void {
+    this.circuitBreakerStates.clear();
+    this.errorMetrics.clear();
+    this.logger.log('🧹 ErrorHandlingSystem disposed and cleaned up');
+  }
+}
+
+// ===== FACTORY FUNCTIONS AND UTILITIES =====
+
+export class ErrorFactory {
+  public static createFromHttpResponse(
+    response: Response,
+    operationName: string,
+    endpoint: string
+  ): Promise<BaseServiceError> {
+    const errorHandler = ErrorHandlingSystem.getInstance();
+    return errorHandler.createErrorFromResponse(response, operationName, endpoint) as Promise<BaseServiceError>;
+  }
+
+  public static createRateLimitError(message: string, context?: ErrorContext): AIRateLimitError {
+    return new AIRateLimitError(message, context);
+  }
+
+  public static createContentPolicyError(message: string, context?: ErrorContext): AIContentPolicyError {
+    return new AIContentPolicyError(message, context);
+  }
+
+  public static createTimeoutError(message: string, context?: ErrorContext): AITimeoutError {
+    return new AITimeoutError(message, context);
+  }
+
+  public static createAuthenticationError(message: string, context?: ErrorContext): AIAuthenticationError {
+    return new AIAuthenticationError(message, context);
+  }
+
+  public static createServiceUnavailableError(message: string, context?: ErrorContext): AIServiceUnavailableError {
+    return new AIServiceUnavailableError(message, context);
+  }
+}
+
+// ===== EXPORT ALL ERROR HANDLING COMPONENTS =====
+
+export default ErrorHandlingSystem;
+
+// ===== EXPORT AI ERROR CLASSES FOR OTHER MODULAR FILES =====
+// These exports are needed by narrative-intelligence.ts, openai-integration.ts, visual-dna-system.ts
+export {
+  AIServiceUnavailableError,
+  AIRateLimitError,
+  AIContentPolicyError,
+  AITimeoutError,
+  AIAuthenticationError
+};
+
+// Create aliases for non-existent error classes that other files might expect
+export const AIValidationError = AIContentPolicyError;
+export const AINetworkError = AIServiceUnavailableError;
+
+// Export error categories and severities
+export const ERROR_CATEGORIES = {
+  VALIDATION: ErrorCategory.VALIDATION,
+  AUTHENTICATION: ErrorCategory.AUTHENTICATION,
+  AUTHORIZATION: ErrorCategory.AUTHORIZATION,
+  NETWORK: ErrorCategory.NETWORK,
+  TIMEOUT: ErrorCategory.TIMEOUT,
+  RATE_LIMIT: ErrorCategory.RATE_LIMIT,
+  RESOURCE: ErrorCategory.RESOURCE,
+  CONFIGURATION: ErrorCategory.CONFIGURATION,
+  BUSINESS_LOGIC: ErrorCategory.BUSINESS_LOGIC,
+  EXTERNAL_SERVICE: ErrorCategory.EXTERNAL_SERVICE,
+  SYSTEM: ErrorCategory.SYSTEM,
+  UNKNOWN: ErrorCategory.UNKNOWN
+} as const;
+
+export const ERROR_SEVERITIES = {
+  LOW: ErrorSeverity.LOW,
+  MEDIUM: ErrorSeverity.MEDIUM,
+  HIGH: ErrorSeverity.HIGH,
+  CRITICAL: ErrorSeverity.CRITICAL
+} as const;
