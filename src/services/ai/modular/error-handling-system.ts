@@ -36,19 +36,25 @@ import {
 } from './constants-and-types.js';
 
 // ===== ERROR CONTEXT INTERFACES =====
+// SURGICALLY FIXED: Updated ErrorContext to match BaseServiceError expected format
 
 export interface ErrorContext {
   service?: string;
   operation?: string;
-  endpoint?: string;
-  errorCode?: string;
-  httpStatus?: number;
-  retryAfter?: string | null;
-  timeout?: number;
-  originalError?: string;
-  timestamp?: number;
-  attempt?: number;
-  [key: string]: any;
+  details?: {
+    endpoint?: string;
+    errorCode?: string;
+    httpStatus?: number;
+    retryAfter?: string | null;
+    timeout?: number;
+    originalError?: string;
+    errorType?: string;
+    timestamp?: number;
+    attempt?: number;
+    [key: string]: any;
+  };
+  correlationId?: string;
+  cause?: Error;
 }
 
 export interface ErrorClassification {
@@ -115,7 +121,7 @@ export abstract class AIServiceError extends BaseServiceError {
     return {
       name: this.name,
       message: this.message,
-      context: this.context,
+      details: this.details,
       timestamp: this.timestamp,
       retryContext: this.retryContext
     };
@@ -183,9 +189,13 @@ export class ErrorHandlingSystem {
     if (error instanceof BaseServiceError) {
       // FIXED: Use spread operator to avoid readonly property assignment
       const newContext = {
-        ...error.context,
+        service: error.service,
         operation: operationName,
-        ...context
+        details: {
+          ...error.details,
+          ...context
+        },
+        correlationId: error.correlationId
       };
       
       // Create a new error instance with enhanced context
@@ -198,9 +208,11 @@ export class ErrorHandlingSystem {
     const errorContext: ErrorContext = {
       service: 'ErrorHandlingSystem',
       operation: operationName,
-      originalError: errorMessage,
-      timestamp: Date.now(),
-      ...context
+      details: {
+        originalError: errorMessage,
+        timestamp: Date.now(),
+        ...context
+      }
     };
 
     // Classify the error and create appropriate service error
@@ -540,19 +552,19 @@ export class ErrorHandlingSystem {
         case RETRY_STRATEGIES.CONTENT_MODIFICATION_REQUIRED:
           throw new AIContentPolicyError(
             'Content modification required - this error cannot be automatically recovered',
-            { service: 'ErrorHandlingSystem', strategy, operation: operationName }
+            { service: 'ErrorHandlingSystem', details: { strategy }, operation: operationName }
           );
 
         case RETRY_STRATEGIES.SERVICE_RECONFIGURATION_REQUIRED:
           throw new AIAuthenticationError(
             'Service reconfiguration required - this error cannot be automatically recovered',
-            { service: 'ErrorHandlingSystem', strategy, operation: operationName }
+            { service: 'ErrorHandlingSystem', details: { strategy }, operation: operationName }
           );
 
         case RETRY_STRATEGIES.INPUT_VALIDATION_REQUIRED:
           throw new AIContentPolicyError(
             'Input validation required - this error cannot be automatically recovered',
-            { service: 'ErrorHandlingSystem', strategy, operation: operationName }
+            { service: 'ErrorHandlingSystem', details: { strategy }, operation: operationName }
           );
 
         case RETRY_STRATEGIES.LOG_AND_FALLBACK:
@@ -616,7 +628,9 @@ export class ErrorHandlingSystem {
         { 
           service: 'ErrorHandlingSystem', 
           operation: 'performHealthCheckAndRecover',
-          originalError: healthError?.message || 'Unknown health error'
+          details: {
+            originalError: healthError?.message || 'Unknown health error'
+          }
         }
       );
     }
@@ -708,10 +722,12 @@ export class ErrorHandlingSystem {
     const enhancedContext: ErrorContext = {
       service: 'ErrorHandlingSystem',
       operation: operationName,
-      timestamp: Date.now(),
-      originalError: originalError.message,
-      attempts: attempts.length,
-      totalDuration: attempts.reduce((sum, a) => sum + a.duration, 0)
+      details: {
+        timestamp: Date.now(),
+        originalError: originalError.message,
+        attempts: attempts.length,
+        totalDuration: attempts.reduce((sum, a) => sum + a.duration, 0)
+      }
     };
 
     // Create enhanced error with same type as original
@@ -789,7 +805,7 @@ export class ErrorHandlingSystem {
       totalDuration: attempts.reduce((sum, a) => sum + a.duration, 0),
       classification: this.classifyError(error),
       timestamp: Date.now(),
-      context: error.context
+      details: error.details
     };
 
     if (!this.errorMetrics.has(operationName)) {
@@ -911,15 +927,17 @@ export class ErrorHandlingSystem {
     const context: ErrorContext = {
       service: 'ErrorHandlingSystem',
       operation: operationName,
-      endpoint,
-      errorCode,
-      httpStatus: response.status,
-      timestamp: Date.now()
+      details: {
+        endpoint,
+        errorCode,
+        httpStatus: response.status,
+        timestamp: Date.now()
+      }
     };
 
     // Add additional context from response headers
     if (response.headers.get('retry-after')) {
-      context.retryAfter = response.headers.get('retry-after');
+      context.details!.retryAfter = response.headers.get('retry-after');
     }
 
     // Enhanced HTTP status code handling
@@ -927,25 +945,25 @@ export class ErrorHandlingSystem {
       case 400:
         throw new AIContentPolicyError(
           `Bad request: ${errorMessage}`,
-          { ...context, errorType: errorType || 'bad_request' }
+          { ...context, details: { ...context.details, errorType: errorType || 'bad_request' } }
         );
 
       case 401:
         throw new AIAuthenticationError(
           `Authentication failed: ${errorMessage}`,
-          { ...context, errorType: errorType || 'authentication_failed' }
+          { ...context, details: { ...context.details, errorType: errorType || 'authentication_failed' } }
         );
 
       case 403:
         throw new AIContentPolicyError(
           `Forbidden: ${errorMessage}`,
-          { ...context, errorType: errorType || 'forbidden' }
+          { ...context, details: { ...context.details, errorType: errorType || 'forbidden' } }
         );
 
       case 422:
         throw new AIContentPolicyError(
           `Validation failed: ${errorMessage}`,
-          { ...context, errorType: errorType || 'validation_error' }
+          { ...context, details: { ...context.details, errorType: errorType || 'validation_error' } }
         );
 
       case 429:
@@ -953,50 +971,53 @@ export class ErrorHandlingSystem {
           `Rate limit exceeded: ${errorMessage}`,
           { 
             ...context, 
-            errorType: errorType || 'rate_limit_exceeded',
-            retryAfter: response.headers.get('retry-after')
+            details: { 
+              ...context.details, 
+              errorType: errorType || 'rate_limit_exceeded',
+              retryAfter: response.headers.get('retry-after')
+            }
           }
         );
 
       case 500:
         throw new AIServiceUnavailableError(
           `Internal server error: ${errorMessage}`,
-          { ...context, errorType: errorType || 'internal_server_error' }
+          { ...context, details: { ...context.details, errorType: errorType || 'internal_server_error' } }
         );
 
       case 502:
         throw new AIServiceUnavailableError(
           `Bad gateway: ${errorMessage}`,
-          { ...context, errorType: errorType || 'bad_gateway' }
+          { ...context, details: { ...context.details, errorType: errorType || 'bad_gateway' } }
         );
 
       case 503:
         throw new AIServiceUnavailableError(
           `Service unavailable: ${errorMessage}`,
-          { ...context, errorType: errorType || 'service_unavailable' }
+          { ...context, details: { ...context.details, errorType: errorType || 'service_unavailable' } }
         );
 
       case 504:
         throw new AITimeoutError(
           `Gateway timeout: ${errorMessage}`,
-          { ...context, errorType: errorType || 'gateway_timeout' }
+          { ...context, details: { ...context.details, errorType: errorType || 'gateway_timeout' } }
         );
 
       default:
         if (response.status >= 500) {
           throw new AIServiceUnavailableError(
             `Server error: ${errorMessage}`,
-            { ...context, errorType: errorType || 'server_error' }
+            { ...context, details: { ...context.details, errorType: errorType || 'server_error' } }
           );
         } else if (response.status >= 400) {
           throw new AIContentPolicyError(
             `Client error: ${errorMessage}`,
-            { ...context, errorType: errorType || 'client_error' }
+            { ...context, details: { ...context.details, errorType: errorType || 'client_error' } }
           );
         } else {
           throw new AIServiceUnavailableError(
             `Unexpected response: ${errorMessage}`,
-            { ...context, errorType: errorType || 'unexpected_response' }
+            { ...context, details: { ...context.details, errorType: errorType || 'unexpected_response' } }
           );
         }
     }
@@ -1014,8 +1035,10 @@ export class ErrorHandlingSystem {
     if (error instanceof Error) {
       const message = this.sanitizeErrorMessage(error.message);
       const context: ErrorContext = {
-        originalError: error.message,
-        timestamp: Date.now()
+        details: {
+          originalError: error.message,
+          timestamp: Date.now()
+        }
       };
 
       // Classify the generic error and convert to appropriate service error
@@ -1036,8 +1059,10 @@ export class ErrorHandlingSystem {
     // Handle non-Error objects
     const message = this.sanitizeErrorMessage(String(error));
     return new AIServiceUnavailableError(message, {
-      originalError: String(error),
-      timestamp: Date.now()
+      details: {
+        originalError: String(error),
+        timestamp: Date.now()
+      }
     });
   }
 
