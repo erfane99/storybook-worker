@@ -150,7 +150,7 @@ export class OpenAIIntegration {
     if (options.enableCircuitBreaker !== false && this.isCircuitBreakerOpen(endpoint)) {
       throw new AIServiceUnavailableError(
         `Circuit breaker is open for endpoint: ${endpoint}`,
-        { service: 'OpenAIIntegration', operation: operationName, endpoint }
+        { service: 'OpenAIIntegration', operation: operationName, details: { endpoint } }
       );
     }
 
@@ -158,7 +158,7 @@ export class OpenAIIntegration {
     if (!this.checkRateLimit(endpoint)) {
       throw new AIRateLimitError(
         'Rate limit exceeded for endpoint',
-        { service: 'OpenAIIntegration', operation: operationName, endpoint }
+        { service: 'OpenAIIntegration', operation: operationName, details: { endpoint } }
       );
     }
 
@@ -252,7 +252,7 @@ export class OpenAIIntegration {
       if (error.name === 'AbortError') {
         throw new AITimeoutError(
           `Request timed out after ${timeout}ms`,
-          { service: 'OpenAIIntegration', operation: operationName, timeout }
+          { service: 'OpenAIIntegration', operation: operationName, details: { timeout } }
         );
       }
       
@@ -270,7 +270,7 @@ export class OpenAIIntegration {
       // Convert unknown errors to service unavailable
       throw new AIServiceUnavailableError(
         `API request failed: ${error.message}`,
-        { service: 'OpenAIIntegration', operation: operationName, originalError: error.message }
+        { service: 'OpenAIIntegration', operation: operationName, details: { originalError: error.message } }
       );
     }
   }
@@ -328,15 +328,17 @@ export class OpenAIIntegration {
     const context: ErrorContext = {
       service: 'OpenAIIntegration',
       operation: operationName,
-      endpoint,
-      errorCode,
-      httpStatus: response.status,
-      timestamp: Date.now()
+      details: {
+        endpoint,
+        errorCode,
+        httpStatus: response.status,
+        timestamp: Date.now()
+      }
     };
 
     // Add retry-after header if present
     if (response.headers.get('retry-after')) {
-      context.retryAfter = response.headers.get('retry-after');
+      context.details!.retryAfter = response.headers.get('retry-after');
     }
 
     // FROM AISERVNOW.TXT: Enhanced HTTP status code handling
@@ -344,25 +346,25 @@ export class OpenAIIntegration {
       case 400:
         throw new AIContentPolicyError(
           `Bad request: ${errorMessage}`,
-          { ...context, errorType: errorType || 'bad_request' }
+          { ...context, details: { ...context.details, errorType: errorType || 'bad_request' } }
         );
 
       case 401:
         throw new AIAuthenticationError(
           `Authentication failed: ${errorMessage}`,
-          { ...context, errorType: errorType || 'authentication_failed' }
+          { ...context, details: { ...context.details, errorType: errorType || 'authentication_failed' } }
         );
 
       case 403:
         throw new AIContentPolicyError(
           `Forbidden: ${errorMessage}`,
-          { ...context, errorType: errorType || 'forbidden' }
+          { ...context, details: { ...context.details, errorType: errorType || 'forbidden' } }
         );
 
       case 422:
         throw new AIValidationError(
           `Validation failed: ${errorMessage}`,
-          { ...context, errorType: errorType || 'validation_error' }
+          { ...context, details: { ...context.details, errorType: errorType || 'validation_error' } }
         );
 
       case 429:
@@ -370,50 +372,53 @@ export class OpenAIIntegration {
           `Rate limit exceeded: ${errorMessage}`,
           { 
             ...context, 
-            errorType: errorType || 'rate_limit_exceeded',
-            retryAfter: response.headers.get('retry-after')
+            details: { 
+              ...context.details, 
+              errorType: errorType || 'rate_limit_exceeded',
+              retryAfter: response.headers.get('retry-after')
+            }
           }
         );
 
       case 500:
         throw new AIServiceUnavailableError(
           `Internal server error: ${errorMessage}`,
-          { ...context, errorType: errorType || 'internal_server_error' }
+          { ...context, details: { ...context.details, errorType: errorType || 'internal_server_error' } }
         );
 
       case 502:
         throw new AIServiceUnavailableError(
           `Bad gateway: ${errorMessage}`,
-          { ...context, errorType: errorType || 'bad_gateway' }
+          { ...context, details: { ...context.details, errorType: errorType || 'bad_gateway' } }
         );
 
       case 503:
         throw new AIServiceUnavailableError(
           `Service unavailable: ${errorMessage}`,
-          { ...context, errorType: errorType || 'service_unavailable' }
+          { ...context, details: { ...context.details, errorType: errorType || 'service_unavailable' } }
         );
 
       case 504:
         throw new AITimeoutError(
           `Gateway timeout: ${errorMessage}`,
-          { ...context, errorType: errorType || 'gateway_timeout' }
+          { ...context, details: { ...context.details, errorType: errorType || 'gateway_timeout' } }
         );
 
       default:
         if (response.status >= 500) {
           throw new AIServiceUnavailableError(
             `Server error: ${errorMessage}`,
-            { ...context, errorType: errorType || 'server_error' }
+            { ...context, details: { ...context.details, errorType: errorType || 'server_error' } }
           );
         } else if (response.status >= 400) {
           throw new AIValidationError(
             `Client error: ${errorMessage}`,
-            { ...context, errorType: errorType || 'client_error' }
+            { ...context, details: { ...context.details, errorType: errorType || 'client_error' } }
           );
         } else {
           throw new AIServiceUnavailableError(
             `Unexpected response: ${errorMessage}`,
-            { ...context, errorType: errorType || 'unexpected_response' }
+            { ...context, details: { ...context.details, errorType: errorType || 'unexpected_response' } }
           );
         }
     }
@@ -425,7 +430,7 @@ export class OpenAIIntegration {
     if (!result) {
       throw new AIServiceUnavailableError(
         'Empty response from OpenAI API',
-        { service: 'OpenAIIntegration', operation: operationName, endpoint }
+        { service: 'OpenAIIntegration', operation: operationName, details: { endpoint } }
       );
     }
 
@@ -434,14 +439,14 @@ export class OpenAIIntegration {
       if (!result.choices || !Array.isArray(result.choices) || result.choices.length === 0) {
         throw new AIServiceUnavailableError(
           'Invalid chat completion response structure',
-          { service: 'OpenAIIntegration', operation: operationName, endpoint }
+          { service: 'OpenAIIntegration', operation: operationName, details: { endpoint } }
         );
       }
 
       if (!result.choices[0].message) {
         throw new AIServiceUnavailableError(
           'Missing message in chat completion response',
-          { service: 'OpenAIIntegration', operation: operationName, endpoint }
+          { service: 'OpenAIIntegration', operation: operationName, details: { endpoint } }
         );
       }
     }
@@ -451,14 +456,14 @@ export class OpenAIIntegration {
       if (!result.data || !Array.isArray(result.data) || result.data.length === 0) {
         throw new AIServiceUnavailableError(
           'Invalid image generation response structure',
-          { service: 'OpenAIIntegration', operation: operationName, endpoint }
+          { service: 'OpenAIIntegration', operation: operationName, details: { endpoint } }
         );
       }
 
       if (!result.data[0].url) {
         throw new AIServiceUnavailableError(
           'Missing image URL in generation response',
-          { service: 'OpenAIIntegration', operation: operationName, endpoint }
+          { service: 'OpenAIIntegration', operation: operationName, details: { endpoint } }
         );
       }
     }
@@ -468,7 +473,7 @@ export class OpenAIIntegration {
       if (!result.choices || !Array.isArray(result.choices) || result.choices.length === 0) {
         throw new AIServiceUnavailableError(
           'Invalid completion response structure',
-          { service: 'OpenAIIntegration', operation: operationName, endpoint }
+          { service: 'OpenAIIntegration', operation: operationName, details: { endpoint } }
         );
       }
     }
