@@ -19,6 +19,20 @@
  */
 
 // ===== FIXED IMPORT PATHS =====
+// FIXED: Import from proper error-types.ts location for single source of truth
+import { 
+  ErrorCategory,
+  ErrorSeverity,
+  BaseServiceError,
+  AIServiceUnavailableError,
+  AIRateLimitError,
+  AIContentPolicyError,
+  AITimeoutError,
+  AIAuthenticationError,
+  AIValidationError,
+  AINetworkError
+} from '../errors/error-types.js';
+
 // Import from constants-and-types.ts (our foundation module)
 import {
   ErrorClassification,
@@ -209,14 +223,10 @@ export class ErrorHandlingSystem {
     if (error instanceof AIServiceError) {
       error.context.operation = operationName;
       if (context) {
-        error = {
-  ...error,
-  context: {
-    ...(error.context ?? {}),
-    ...context
-  }
-};
-
+        error.context = {
+          ...error.context,
+          ...context
+        };
       }
       return error;
     }
@@ -235,15 +245,14 @@ export class ErrorHandlingSystem {
     const classification = this.classifyError(error);
     
     switch (classification.category) {
-      case 'transient':
+      case ErrorCategory.NETWORK: // FIXED: 'transient' -> ErrorCategory.NETWORK
         return new AIServiceUnavailableError(errorMessage, errorContext);
-      case 'configuration':
+      case ErrorCategory.CONFIGURATION: // FIXED: 'configuration' -> ErrorCategory.CONFIGURATION
         return new AIValidationError(errorMessage, errorContext);
-      case 'content':
+      case ErrorCategory.VALIDATION: // FIXED: 'content' -> ErrorCategory.VALIDATION
         return new AIContentPolicyError(errorMessage, errorContext);
-      case 'persistent':
+      case ErrorCategory.SYSTEM: // FIXED: 'persistent' -> ErrorCategory.SYSTEM
         return new AIServiceUnavailableError(errorMessage, errorContext);
-      case 'system':
       default:
         return new AIServiceUnavailableError(errorMessage, errorContext);
     }
@@ -407,8 +416,8 @@ export class ErrorHandlingSystem {
     // AI Service specific errors (FROM BOTH FILES)
     if (error instanceof AIRateLimitError) {
       return {
-        category: 'transient',
-        severity: 'medium',
+        category: ErrorCategory.RATE_LIMIT, // FIXED: 'transient' -> ErrorCategory.RATE_LIMIT
+        severity: ErrorSeverity.MEDIUM, // FIXED: 'medium' -> ErrorSeverity.MEDIUM
         recoveryStrategy: RETRY_STRATEGIES.EXPONENTIAL_BACKOFF_WITH_JITTER,
         userMessage: 'Service is temporarily busy. Please wait a moment and try again.',
         isRetryable: true,
@@ -418,8 +427,8 @@ export class ErrorHandlingSystem {
 
     if (error instanceof AIContentPolicyError) {
       return {
-        category: 'content',
-        severity: 'high',
+        category: ErrorCategory.VALIDATION, // FIXED: 'content' -> ErrorCategory.VALIDATION
+        severity: ErrorSeverity.HIGH, // FIXED: 'high' -> ErrorSeverity.HIGH
         recoveryStrategy: RETRY_STRATEGIES.CONTENT_MODIFICATION_REQUIRED,
         userMessage: 'The content cannot be processed due to policy restrictions. Please try a different story or character.',
         isRetryable: false
@@ -428,8 +437,8 @@ export class ErrorHandlingSystem {
 
     if (error instanceof AITimeoutError) {
       return {
-        category: 'transient',
-        severity: 'medium',
+        category: ErrorCategory.TIMEOUT, // FIXED: 'transient' -> ErrorCategory.TIMEOUT
+        severity: ErrorSeverity.MEDIUM, // FIXED: 'medium' -> ErrorSeverity.MEDIUM
         recoveryStrategy: RETRY_STRATEGIES.RETRY_WITH_LONGER_TIMEOUT,
         userMessage: 'The request is taking longer than expected. Please try again.',
         isRetryable: true,
@@ -439,8 +448,8 @@ export class ErrorHandlingSystem {
 
     if (error instanceof AIAuthenticationError) {
       return {
-        category: 'configuration',
-        severity: 'critical',
+        category: ErrorCategory.AUTHENTICATION, // FIXED: 'configuration' -> ErrorCategory.AUTHENTICATION
+        severity: ErrorSeverity.CRITICAL, // FIXED: 'critical' -> ErrorSeverity.CRITICAL
         recoveryStrategy: RETRY_STRATEGIES.SERVICE_RECONFIGURATION_REQUIRED,
         userMessage: 'Service authentication error. Please contact support.',
         isRetryable: false
@@ -449,8 +458,8 @@ export class ErrorHandlingSystem {
 
     if (error instanceof AIServiceUnavailableError) {
       return {
-        category: 'persistent',
-        severity: 'high',
+        category: ErrorCategory.EXTERNAL_SERVICE, // FIXED: 'persistent' -> ErrorCategory.EXTERNAL_SERVICE
+        severity: ErrorSeverity.HIGH, // FIXED: 'high' -> ErrorSeverity.HIGH
         recoveryStrategy: RETRY_STRATEGIES.SERVICE_HEALTH_CHECK_AND_RETRY,
         userMessage: 'AI service is temporarily unavailable. Please try again in a few minutes.',
         isRetryable: true,
@@ -460,8 +469,8 @@ export class ErrorHandlingSystem {
 
     if (error instanceof AIValidationError) {
       return {
-        category: 'configuration',
-        severity: 'medium',
+        category: ErrorCategory.VALIDATION, // FIXED: 'configuration' -> ErrorCategory.VALIDATION
+        severity: ErrorSeverity.MEDIUM, // FIXED: 'medium' -> ErrorSeverity.MEDIUM
         recoveryStrategy: RETRY_STRATEGIES.INPUT_VALIDATION_REQUIRED,
         userMessage: 'Invalid input provided. Please check your request and try again.',
         isRetryable: false
@@ -470,8 +479,8 @@ export class ErrorHandlingSystem {
 
     if (error instanceof AINetworkError) {
       return {
-        category: 'transient',
-        severity: 'medium',
+        category: ErrorCategory.NETWORK, // FIXED: 'transient' -> ErrorCategory.NETWORK
+        severity: ErrorSeverity.MEDIUM, // FIXED: 'medium' -> ErrorSeverity.MEDIUM
         recoveryStrategy: RETRY_STRATEGIES.NETWORK_RETRY_WITH_BACKOFF,
         userMessage: 'Network connectivity issue. Please check your connection and try again.',
         isRetryable: true,
@@ -482,8 +491,8 @@ export class ErrorHandlingSystem {
     // Generic error classification (FROM AISERVNOW.TXT)
     if (error.message?.includes('timeout')) {
       return {
-        category: 'transient',
-        severity: 'medium',
+        category: ErrorCategory.TIMEOUT, // FIXED: 'transient' -> ErrorCategory.TIMEOUT
+        severity: ErrorSeverity.MEDIUM, // FIXED: 'medium' -> ErrorSeverity.MEDIUM
         recoveryStrategy: RETRY_STRATEGIES.NETWORK_RETRY_WITH_BACKOFF,
         userMessage: 'Request timed out. Please try again.',
         isRetryable: true,
@@ -493,8 +502,8 @@ export class ErrorHandlingSystem {
 
     if (error.message?.includes('network') || error.message?.includes('connection')) {
       return {
-        category: 'transient',
-        severity: 'medium',
+        category: ErrorCategory.NETWORK, // FIXED: 'transient' -> ErrorCategory.NETWORK
+        severity: ErrorSeverity.MEDIUM, // FIXED: 'medium' -> ErrorSeverity.MEDIUM
         recoveryStrategy: RETRY_STRATEGIES.NETWORK_RETRY_WITH_BACKOFF,
         userMessage: 'Network connectivity issue. Please check your connection and try again.',
         isRetryable: true,
@@ -504,8 +513,8 @@ export class ErrorHandlingSystem {
 
     if (error.message?.includes('rate limit') || error.message?.includes('quota')) {
       return {
-        category: 'transient',
-        severity: 'medium',
+        category: ErrorCategory.RATE_LIMIT, // FIXED: 'transient' -> ErrorCategory.RATE_LIMIT
+        severity: ErrorSeverity.MEDIUM, // FIXED: 'medium' -> ErrorSeverity.MEDIUM
         recoveryStrategy: RETRY_STRATEGIES.EXPONENTIAL_BACKOFF_WITH_JITTER,
         userMessage: 'Service is temporarily busy. Please wait a moment and try again.',
         isRetryable: true,
@@ -515,14 +524,15 @@ export class ErrorHandlingSystem {
 
     // Unknown error
     return {
-      category: 'system',
-      severity: 'high',
+      category: ErrorCategory.SYSTEM, // FIXED: 'system' -> ErrorCategory.SYSTEM
+      severity: ErrorSeverity.HIGH, // FIXED: 'high' -> ErrorSeverity.HIGH
       recoveryStrategy: RETRY_STRATEGIES.LOG_AND_FALLBACK,
       userMessage: 'An unexpected error occurred. Please try again or contact support if the problem persists.',
       isRetryable: true,
       estimatedRecoveryTime: 60000 // 1 minute
     };
   }
+
   // ===== RECOVERY STRATEGY EXECUTION (FROM AISERVNOW.TXT) =====
 
   public async executeRecoveryStrategy(
@@ -1047,11 +1057,11 @@ export class ErrorHandlingSystem {
       const classification = this.classifyError(error);
       
       switch (classification.category) {
-        case 'transient':
+        case ErrorCategory.NETWORK: // FIXED: 'transient' -> ErrorCategory.NETWORK
           return new AIServiceUnavailableError(message, context);
-        case 'configuration':
+        case ErrorCategory.CONFIGURATION: // FIXED: 'configuration' -> ErrorCategory.CONFIGURATION
           return new AIValidationError(message, context);
-        case 'content':
+        case ErrorCategory.VALIDATION: // FIXED: 'content' -> ErrorCategory.VALIDATION
           return new AIContentPolicyError(message, context);
         default:
           return new AIServiceUnavailableError(message, context);
@@ -1236,16 +1246,23 @@ export default ErrorHandlingSystem;
 
 // Export error categories and severities
 export const ERROR_CATEGORIES = {
-  TRANSIENT: 'transient',
-  PERSISTENT: 'persistent',
-  CONFIGURATION: 'configuration',
-  CONTENT: 'content',
-  SYSTEM: 'system'
+  VALIDATION: ErrorCategory.VALIDATION,
+  AUTHENTICATION: ErrorCategory.AUTHENTICATION,
+  AUTHORIZATION: ErrorCategory.AUTHORIZATION,
+  NETWORK: ErrorCategory.NETWORK,
+  TIMEOUT: ErrorCategory.TIMEOUT,
+  RATE_LIMIT: ErrorCategory.RATE_LIMIT,
+  RESOURCE: ErrorCategory.RESOURCE,
+  CONFIGURATION: ErrorCategory.CONFIGURATION,
+  BUSINESS_LOGIC: ErrorCategory.BUSINESS_LOGIC,
+  EXTERNAL_SERVICE: ErrorCategory.EXTERNAL_SERVICE,
+  SYSTEM: ErrorCategory.SYSTEM,
+  UNKNOWN: ErrorCategory.UNKNOWN
 } as const;
 
 export const ERROR_SEVERITIES = {
-  LOW: 'low',
-  MEDIUM: 'medium',
-  HIGH: 'high',
-  CRITICAL: 'critical'
+  LOW: ErrorSeverity.LOW,
+  MEDIUM: ErrorSeverity.MEDIUM,
+  HIGH: ErrorSeverity.HIGH,
+  CRITICAL: ErrorSeverity.CRITICAL
 } as const;
