@@ -73,7 +73,6 @@ import {
 export type {
   StructuredError,
   ServiceError,
-  BaseServiceError,
   ValidationError,
   NetworkError,
   DatabaseError,
