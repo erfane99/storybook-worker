@@ -482,6 +482,20 @@ export class ErrorFactory {
 
 export default ErrorHandlingSystem;
 
+// ===== EXPORT AI ERROR CLASSES FOR OTHER MODULAR FILES =====
+// These exports are needed by narrative-intelligence.ts, openai-integration.ts, visual-dna-system.ts
+export {
+  AIServiceUnavailableError,
+  AIRateLimitError,
+  AIContentPolicyError,
+  AITimeoutError,
+  AIAuthenticationError
+};
+
+// Create aliases for non-existent error classes that other files might expect
+export const AIValidationError = AIContentPolicyError;
+export const AINetworkError = AIServiceUnavailableError;
+
 // Export error categories and severities
 export const ERROR_CATEGORIES = {
   VALIDATION: ErrorCategory.VALIDATION,
