@@ -66,7 +66,7 @@ export class ComicGenerationEngine {
   /**
    * Generate professional comic book scenes with optimized prompt architecture
    * Combines best features from both original files
-   * FIXED: All TypeScript errors resolved
+   * FIXED: All TypeScript errors resolved, including undefined audience variable
    */
   async generateScenesWithAudience(options: SceneGenerationOptions): Promise<SceneGenerationResult> {
     try {
@@ -111,6 +111,7 @@ export class ComicGenerationEngine {
 
       return {
         pages,
+        // FIXED: Use options.audience instead of undefined audience variable
         audience: options.audience || 'children',
         characterImage,
         layoutType,
@@ -141,7 +142,7 @@ export class ComicGenerationEngine {
     } catch (error) {
       console.error('❌ Comic generation failed:', error);
       throw this.errorHandler.handleError(error, 'generateScenesWithAudience', {
-        audience,
+        audience: options.audience,
         storyLength: options.story?.length || 0,
         hasCharacterImage: !!options.characterImage
       });
@@ -413,8 +414,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
       return this.createFallbackStoryAnalysis(config, narrativeIntel);
     }
   }
-
-  // ===== CHARACTER DNA CREATION (FROM CURRENTAISERV.TXT) =====
+// ===== CHARACTER DNA CREATION (FROM CURRENTAISERV.TXT) =====
 
   /**
    * Create master character DNA with visual fingerprinting
@@ -754,7 +754,7 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
     console.log('📊 Calculating advanced quality metrics...');
 
     const metrics: any = {
-  characterConsistency: await this.measureAdvancedCharacterConsistency(
+      characterConsistency: await this.measureAdvancedCharacterConsistency(
         generatedPanels, 
         originalContext.characterDNA
       ),
@@ -788,10 +788,10 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
       timestamp: new Date().toISOString(),
       panelCount: generatedPanels.length,
       detailedAnalysis: {
-  strengths: this.identifyQualityStrengths(metrics),
-  improvements: this.identifyQualityImprovements(metrics),
-  recommendations: this.generateQualityRecommendations(metrics)
-}
+        strengths: this.identifyQualityStrengths(metrics),
+        improvements: this.identifyQualityImprovements(metrics),
+        recommendations: this.generateQualityRecommendations(metrics)
+      }
     };
   }
 
