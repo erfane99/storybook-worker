@@ -460,8 +460,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
       error: serviceError,
     };
   }
-
-  private async processJobWithCleanup(job: JobData): Promise<void> {
+private async processJobWithCleanup(job: JobData): Promise<void> {
     const startTime = Date.now();
     let result: JobProcessingResult;
 
@@ -687,7 +686,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
           const descriptionResult = await aiService.describeCharacter(character_image, 'You are a professional character artist. Describe this character for maximum comic book consistency.');
           const resolvedDescription = await descriptionResult;
           if (resolvedDescription && 'success' in resolvedDescription && resolvedDescription.success) {
-            characterDescriptionToUse = resolvedDescription.data;
+            characterDescriptionToUse = (resolvedDescription as any).data;
           } else {
             characterDescriptionToUse = 'Character with consistent appearance';
           }
@@ -741,8 +740,8 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         // Await and extract the actual result from AsyncResult
         const sceneResult = await sceneResultAsync;
         
-        if (sceneResult && 'success' in sceneResult && sceneResult.success && sceneResult.data?.pages && Array.isArray(sceneResult.data.pages)) {
-          pages = sceneResult.data.pages;
+        if (sceneResult && 'success' in sceneResult && sceneResult.success && (sceneResult as any).data?.pages && Array.isArray((sceneResult as any).data.pages)) {
+          pages = (sceneResult as any).data.pages;
           console.log(`✅ Professional comic layout with environmental consistency: ${pages.length} pages with ${pages.reduce((total, page) => total + (page.scenes?.length || 0), 0)} total panels`);
         } else {
           throw new Error('Invalid scene generation result - no professional pages generated');
@@ -851,7 +850,7 @@ export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
         
         let finalImageResult;
         if (imageResult && 'success' in imageResult && imageResult.success) {
-          finalImageResult = imageResult.data;
+          finalImageResult = (imageResult as any).data;
         } else {
           throw new Error('Image generation failed - no valid result returned');
         }
