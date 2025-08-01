@@ -1,6 +1,6 @@
 // Consolidated Database Service - Production Implementation with Direct Environment Variable Access
 import { createClient, SupabaseClient, PostgrestSingleResponse } from '@supabase/supabase-js';
-import { EnhancedBaseService } from '../base/enhanced-base-service';
+import { EnhancedBaseService } from '../base/enhanced-base-service.js';
 import { 
   IDatabaseService, 
   StorybookEntryData, 
