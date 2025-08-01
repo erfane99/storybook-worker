@@ -23,16 +23,16 @@ import {
   EnvironmentalDNA,
   VisualFingerprint,
   StoryBeat
-} from './constants-and-types';
+} from './constants-and-types.js';
 
 import { 
   ErrorHandlingSystem,
   AIServiceError,
   AIRateLimitError,
   AIContentPolicyError 
-} from './error-handling-system';
+} from './error-handling-system.js';
 
-import { OpenAIIntegration } from './openai-integration';
+import { OpenAIIntegration } from './openai-integration.js';
 
 // ===== MISSING INTERFACE DEFINITIONS (FIXED) =====
 

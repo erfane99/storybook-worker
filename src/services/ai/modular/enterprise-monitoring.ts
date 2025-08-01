@@ -27,12 +27,12 @@ import {
   AI_SERVICE_ENTERPRISE_CONSTANTS,
   AI_SERVICE_VERSION_INFO,
   STORYTELLING_ARCHETYPES
-} from './constants-and-types';
+} from './constants-and-types.js';
 
 import { 
   ErrorHandlingSystem,
   AIServiceError
-} from './error-handling-system';
+} from './error-handling-system.js';
 
 /**
  * ===== ENTERPRISE MONITORING CLASS =====

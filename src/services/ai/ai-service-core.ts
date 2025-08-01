@@ -39,7 +39,7 @@ import {
   ChatCompletionResult,
   StoryGenerationOptions,
   StoryGenerationResult
-} from '../interfaces/service-contracts';
+} from '../interfaces/service-contracts.js';
 
 import { 
   Result,
@@ -49,10 +49,10 @@ import {
   AIRateLimitError,
   AIContentPolicyError,
   AITimeoutError
-} from '../errors/index';
+} from '../errors/index.js';
 
 // FIXED: Import ErrorCategory from the correct path (error-types.ts) to resolve enum conflicts
-import { ErrorCategory } from '../errors/error-types';
+import { ErrorCategory } from '../errors/error-types.js';
 
 // Import all our modular components - FIXED: Corrected import paths
 import {
@@ -66,15 +66,15 @@ import {
   PROFESSIONAL_AUDIENCE_CONFIG,
   STORYTELLING_ARCHETYPES,
   DEFAULT_RETRY_CONFIG
-} from './modular/constants-and-types';
+} from './modular/constants-and-types.js';
 
-import { OpenAIIntegration } from './modular/openai-integration';
-import { ComicGenerationEngine } from './modular/comic-generation-engine';
-import { NarrativeIntelligenceEngine } from './modular/narrative-intelligence';
-import { VisualDNASystem } from './modular/visual-dna-system';
-import { QualityMetricsEngine } from './modular/quality-metrics-engine';
-import { PatternLearningEngine } from './modular/pattern-learning-engine';
-import { EnterpriseMonitoring } from './modular/enterprise-monitoring';
+import { OpenAIIntegration } from './modular/openai-integration.js';
+import { ComicGenerationEngine } from './modular/comic-generation-engine.js';
+import { NarrativeIntelligenceEngine } from './modular/narrative-intelligence.js';
+import { VisualDNASystem } from './modular/visual-dna-system.js';
+import { QualityMetricsEngine } from './modular/quality-metrics-engine.js';
+import { PatternLearningEngine } from './modular/pattern-learning-engine.js';
+import { EnterpriseMonitoring } from './modular/enterprise-monitoring.js';
 
 /**
  * ===== ERROR HANDLER ADAPTER =====
