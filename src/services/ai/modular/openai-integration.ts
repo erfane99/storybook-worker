@@ -672,17 +672,21 @@ export class OpenAIIntegration {
     const sanitizedPrompt = this.sanitizePrompt(prompt);
     const optimizedPrompt = this.optimizePromptLength(sanitizedPrompt);
 
+    // Filter out invalid parameters to prevent OpenAI API errors
+    const cleanOptions = { ...options };
+    delete (cleanOptions as any).maxTokens; // Remove camelCase version that causes API errors
+
     const parameters: OpenAIParameters = {
-      model: options.model || this.defaultModel,
+      model: cleanOptions.model || this.defaultModel,
       messages: [
         {
           role: 'user',
           content: optimizedPrompt
         }
       ],
-      max_tokens: options.max_tokens || 2000,
-      temperature: options.temperature || 0.7,
-      ...options
+      max_tokens: cleanOptions.max_tokens || 2000,
+      temperature: cleanOptions.temperature || 0.7,
+      ...cleanOptions
     };
 
     try {
