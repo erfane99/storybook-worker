@@ -1240,12 +1240,13 @@ Following the ${storyArchetype} pattern, they grew and learned valuable lessons,
         this.openaiIntegration.dispose();
       }
       
-      if (this.learningEngine && typeof this.learningEngine.dispose === 'function') {
-        this.learningEngine.dispose();
+      // Safe cleanup of engine references
+      if (this.learningEngine) {
+        this.learningEngine = undefined as any;
       }
       
-      if (this.qualityEngine && typeof this.qualityEngine.dispose === 'function') {
-        this.qualityEngine.dispose();
+      if (this.qualityEngine) {
+        this.qualityEngine = undefined as any;
       }
       
       // Clear any remaining references
