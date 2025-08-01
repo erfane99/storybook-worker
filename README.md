@@ -1,2 +1,2 @@
 # storybook-worker
-Dedicated job processing service for StoryCanvas
+Dedicated job processing service for StoryCanvas new
