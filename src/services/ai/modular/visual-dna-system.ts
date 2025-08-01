@@ -28,6 +28,7 @@ import {
 import { 
   ErrorHandlingSystem,
   AIServiceError,
+  AIServiceUnavailableError,
   AIRateLimitError,
   AIContentPolicyError 
 } from './error-handling-system.js';
