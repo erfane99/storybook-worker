@@ -175,15 +175,11 @@ const archetypeData = STORYTELLING_ARCHETYPES[archetypeResult.primaryArchetype a
       };
 
     } catch (error) {
-      console.warn('AI archetype detection failed, using pattern matching');
-      const fallbackArchetype = this.detectStoryArchetypeFromPatterns(story);
-      
-      return {
-        primaryArchetype: fallbackArchetype as StoryArchetype,
-        confidence: 60,
-        alternativeArchetypes: ['discovery', 'hero_journey'],
-        reasoningFactors: ['pattern_matching_only']
-      };
+      } catch (error) {
+      throw new AIServiceUnavailableError(
+        'Cannot guarantee story quality: AI narrative analysis required for professional comic generation',
+        { service: 'NarrativeIntelligenceEngine', operation: 'detectStoryArchetypeWithConfidence' }
+      );
     }
   }
 
