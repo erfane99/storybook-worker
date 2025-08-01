@@ -996,6 +996,14 @@ Following the ${storyArchetype} pattern, they grew and learned valuable lessons,
           }
         };
         
+        // Validate story structure meets quality requirements
+        if (storyAnalysis.totalPanels < 1) {
+          throw new AIServiceUnavailableError(
+            'Cannot guarantee story quality: Story analysis produced insufficient content - minimum story structure required for professional comic generation',
+            { service: 'AIService', operation: 'analyzeStoryStructure' }
+          );
+        }
+        
         return storyAnalysis;
       },
       'analyzeStoryStructure'
