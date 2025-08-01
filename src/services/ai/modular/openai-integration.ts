@@ -216,7 +216,7 @@ export class OpenAIIntegration {
 
     // FROM CURRENTAISERV.TXT: Enhanced fetch with timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const timeoutId = setTimeout(() => controller.abort(), validatedTimeout);
 
     try {
       console.log(`🔄 OpenAI API call: ${operationName} to ${endpoint}`);
