@@ -146,6 +146,11 @@ export class OpenAIIntegration {
     operationName: string = 'api_call',
     options: OpenAICallOptions = {}
   ): Promise<T> {
+    // Validate timeout for consistency
+    const validatedTimeout = Math.max(10000, Math.min(timeout, 300000)); // 10s min, 5min max
+    if (validatedTimeout !== timeout) {
+      this.logger.warn(`⚠️ Timeout adjusted from ${timeout}ms to ${validatedTimeout}ms for operation: ${operationName}`);
+    }
     // FROM CURRENTAISERV.TXT: Circuit breaker check
     if (options.enableCircuitBreaker !== false && this.isCircuitBreakerOpen(endpoint)) {
       throw new AIServiceUnavailableError(
