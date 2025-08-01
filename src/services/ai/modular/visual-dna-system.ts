@@ -197,9 +197,11 @@ Focus on creating a comprehensive character profile that enables perfect visual 
           model: 'gpt-4o'
         }
       );
-    } catch (error) {
-      console.warn('Advanced vision analysis failed, using fallback description');
-      return this.createFallbackCharacterDescription(artStyle);
+    } catch (error: any) {
+      throw new AIServiceUnavailableError(
+        'Cannot guarantee character consistency: AI visual analysis failed - character DNA extraction required for professional comic quality',
+        { service: 'VisualDNASystem', operation: 'analyzeImageWithAdvancedVision' }
+      );
     }
   }
 
