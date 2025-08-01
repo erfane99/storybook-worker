@@ -590,9 +590,23 @@ export class OpenAIIntegration {
     const operationMetrics = this.metrics.get(operationName)!;
     operationMetrics.push(metrics);
     
-    // Keep only last 100 metrics per operation
-    if (operationMetrics.length > 100) {
-      operationMetrics.splice(0, operationMetrics.length - 100);
+    // Keep only last 50 metrics per operation to prevent memory leaks
+    if (operationMetrics.length > 50) {
+      operationMetrics.splice(0, operationMetrics.length - 50);
+    }
+    
+    // Clean up old circuit breaker states to prevent memory leaks
+    this.cleanupOldCircuitBreakers();
+  }
+
+  private cleanupOldCircuitBreakers(): void {
+    const now = Date.now();
+    const fiveMinutes = 300000;
+    
+    for (const [endpoint, state] of this.circuitBreakerStates) {
+      if (now - state.lastFailure > fiveMinutes && state.state === 'closed') {
+        this.circuitBreakerStates.delete(endpoint);
+      }
     }
   }
 
