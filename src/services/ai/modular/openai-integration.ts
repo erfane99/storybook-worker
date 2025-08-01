@@ -256,7 +256,7 @@ export class OpenAIIntegration {
         );
       }
       
-      // Re-throw our custom errors as-is
+      // Consistent error handling: Re-throw our custom errors as-is
       if (error instanceof AIServiceUnavailableError || 
           error instanceof AIAuthenticationError ||
           error instanceof AIRateLimitError ||
@@ -264,13 +264,23 @@ export class OpenAIIntegration {
           error instanceof AITimeoutError ||
           error instanceof AIValidationError ||
           error instanceof AINetworkError) {
+        // Add operation context for better debugging
+        error.details = { ...error.details, operation: operationName, timestamp: Date.now() };
         throw error;
       }
       
-      // Convert unknown errors to service unavailable
+      // Convert unknown errors to service unavailable with consistent context
       throw new AIServiceUnavailableError(
-        `API request failed: ${error.message}`,
-        { service: 'OpenAIIntegration', operation: operationName, details: { originalError: error.message } }
+        `OpenAI API request failed: ${error.message}`,
+        { 
+          service: 'OpenAIIntegration', 
+          operation: operationName, 
+          details: { 
+            originalError: error.message,
+            errorType: error.constructor.name,
+            timestamp: Date.now()
+          } 
+        }
       );
     }
   }
