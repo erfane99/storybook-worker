@@ -528,13 +528,30 @@ class AIService extends ErrorAwareBaseService implements IAIService {
         this.log('info', `🎨 Starting professional storybook generation: "${title}"`);
         this.log('info', `📊 Audience: ${audience}, Art Style: ${artStyle}`);
 
-        // Validation
-        if (!title || !story || !audience) {
-          throw new Error('Missing required parameters: title, story, and audience are required');
+        // Enhanced input validation for quality assurance
+        if (!title || typeof title !== 'string' || title.trim().length === 0) {
+          throw new AIServiceUnavailableError('Invalid title: Title is required for professional comic generation', 
+            { service: 'AIService', operation: 'generateStorybook' });
         }
 
-        if (story.length < 50) {
-          throw new Error('Story must be at least 50 characters long for quality comic generation');
+        if (!story || typeof story !== 'string' || story.trim().length < 50) {
+          throw new AIServiceUnavailableError('Invalid story: Story must be at least 50 characters long for quality comic generation',
+            { service: 'AIService', operation: 'generateStorybook' });
+        }
+
+        if (!audience || !['children', 'young adults', 'adults'].includes(audience)) {
+          throw new AIServiceUnavailableError('Invalid audience: Valid audience selection required for professional comic generation',
+            { service: 'AIService', operation: 'generateStorybook' });
+        }
+
+        if (!artStyle || typeof artStyle !== 'string' || artStyle.trim().length === 0) {
+          throw new AIServiceUnavailableError('Invalid art style: Art style selection required for professional comic generation',
+            { service: 'AIService', operation: 'generateStorybook' });
+        }
+
+        if (characterImageUrl && (typeof characterImageUrl !== 'string' || !characterImageUrl.startsWith('http'))) {
+          throw new AIServiceUnavailableError('Invalid character image URL: Valid image URL required for character consistency',
+            { service: 'AIService', operation: 'generateStorybook' });
         }
 
         // Step 1: Create character DNA if image provided (FROM BOTH FILES)
