@@ -17,7 +17,7 @@
  * - Comprehensive health monitoring and metrics collection (FROM BOTH FILES)
  */
 
-import { ErrorAwareBaseService } from '../base/error-aware-base-service';
+import { ErrorAwareBaseService } from '../base/error-aware-base-service.js';
 import { 
   IAIService,
   ServiceConfig,
