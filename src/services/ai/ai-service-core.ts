@@ -1231,13 +1231,28 @@ Following the ${storyArchetype} pattern, they grew and learned valuable lessons,
     this.log('info', '🔄 Starting graceful service shutdown...');
     
     try {
-      // Shutdown enterprise monitoring
+      // Comprehensive resource cleanup
       if (this.enterpriseMonitoring) {
         this.enterpriseMonitoring.shutdown();
       }
       
+      if (this.openaiIntegration) {
+        this.openaiIntegration.dispose();
+      }
+      
+      if (this.learningEngine && typeof this.learningEngine.dispose === 'function') {
+        this.learningEngine.dispose();
+      }
+      
+      if (this.qualityEngine && typeof this.qualityEngine.dispose === 'function') {
+        this.qualityEngine.dispose();
+      }
+      
+      // Clear any remaining references
+      this.errorHandlerAdapter = null as any;
+      
       this._isInitialized = false;
-      this.log('info', '✅ Service shutdown completed');
+      this.log('info', '✅ Service shutdown completed with full resource cleanup');
 
     } catch (error) {
       this.log('error', 'Error during shutdown:', error);
