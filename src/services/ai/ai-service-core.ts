@@ -383,12 +383,15 @@ class AIService extends ErrorAwareBaseService implements IAIService {
         
         // Use the comic engine's environmental DNA creation logic
         // This method exists in the comic engine's private methods, so we'll create a simple implementation
+        // Validate storyBeats to prevent runtime errors
+        const validStoryBeats = Array.isArray(storyBeats) ? storyBeats : [];
+        
         const environmentalDNA: EnvironmentalDNA = {
           primaryLocation: {
-            name: storyBeats[0]?.environment || 'story setting',
+            name: validStoryBeats[0]?.environment || 'story setting',
             type: 'mixed',
             description: 'Story environment with consistent visual elements',
-            keyFeatures: storyBeats.map(beat => beat.environment).filter(Boolean),
+            keyFeatures: validStoryBeats.map(beat => beat.environment).filter(Boolean),
             colorPalette: this.determineColorPalette(audience),
             architecturalStyle: artStyle || 'storybook'
           },
