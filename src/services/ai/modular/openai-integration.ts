@@ -206,6 +206,9 @@ export class OpenAIIntegration {
   ): Promise<T> {
     const startTime = Date.now();
 
+    // Validate timeout for consistency
+    const validatedTimeout = Math.max(10000, Math.min(timeout, 300000)); // 10s min, 5min max
+
     // FROM BOTH FILES: Parameter transformation and validation
     const transformedParams = this.transformOpenAIParameters(parameters);
     
@@ -269,8 +272,7 @@ export class OpenAIIntegration {
           error instanceof AITimeoutError ||
           error instanceof AIValidationError ||
           error instanceof AINetworkError) {
-        // Add operation context for better debugging
-        error.details = { ...error.details, operation: operationName, timestamp: Date.now() };
+        // Re-throw custom errors as-is (details are read-only)
         throw error;
       }
       
