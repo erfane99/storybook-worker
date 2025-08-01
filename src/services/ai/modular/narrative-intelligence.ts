@@ -275,16 +275,11 @@ Return ONLY the archetype name: hero_journey, discovery, transformation, redempt
       };
 
     } catch (error) {
-      console.warn('AI thematic analysis failed, using pattern extraction');
-      const fallbackThemes = this.extractThemesFromPatterns(story);
-      
-      return {
-        primaryThemes: fallbackThemes.slice(0, 3),
-        secondaryThemes: fallbackThemes.slice(3),
-        universalAppeal: 75,
-        audienceAlignment: 80,
-        emotionalResonance: fallbackThemes.includes('friendship') ? 90 : 70
-      };
+      } catch (error) {
+      throw new AIServiceUnavailableError(
+        'Cannot guarantee story quality: AI thematic analysis required for professional comic generation',
+        { service: 'NarrativeIntelligenceEngine', operation: 'analyzeThematicDepth' }
+      );
     }
   }
 
