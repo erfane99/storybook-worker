@@ -34,16 +34,16 @@ import {
   SpeechBubbleStyle,
   QUALITY_STANDARDS,
   AI_PROMPTS
-} from './constants-and-types';
+} from './constants-and-types.js';
 
 import { 
   ErrorHandlingSystem,
   AIServiceError,
   AIRateLimitError,
   AIContentPolicyError 
-} from './error-handling-system';
+} from './error-handling-system.js';
 
-import { OpenAIIntegration } from './openai-integration';
+import { OpenAIIntegration } from './openai-integration.js';
 
 /**
  * ===== COMIC GENERATION ENGINE CLASS =====
