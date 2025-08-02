@@ -802,136 +802,165 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     
     console.log(`🚀 Prepared ${panelTasks.length} panel generation tasks for parallel processing`);
     
-    // ===== PARALLEL PANEL GENERATION WITH REAL-TIME PROGRESS =====
-    const panelResults = new Map<string, any>();
-    let completedPanels = 0;
-    
-    // Create progress tracking function
-    const updatePanelProgress = async (panelNumber: number, totalPanels: number, status: string) => {
-      const overallProgress = Math.round(55 + ((completedPanels / totalPanels) * 40));
-      await jobService.updateJobProgress(
-        job.id,
-        overallProgress,
-        `${status} panel ${panelNumber}/${totalPanels} with environmental, character consistency + learned patterns`
-      );
-    };
-    
-    // Generate all panels in parallel using Promise.allSettled for error resilience
-    const panelPromises = panelTasks.map(async (task) => {
-      const { pageIndex, sceneIndex, scene, panelNumber, totalPanels } = task;
-      const panelKey = `${pageIndex}-${sceneIndex}`;
-      
-      try {
-        // Update progress for this panel start
-        await updatePanelProgress(panelNumber, totalPanels, 'Generating professional');
-        
-        this.trackServiceUsage(job.id, 'ai');
-        if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
-        
-        console.log(`🎨 Generating professional panel ${panelNumber}/${totalPanels} (Page ${pageIndex + 1}, Scene ${sceneIndex + 1}) with environmental, character consistency + learned patterns...`);
-        
-        // FIXED: Proper AsyncResult handling for generateSceneImage
-        const imageResultAsync = await aiService.generateSceneImage({
-          image_prompt: scene.imagePrompt,
-          character_description: characterDescriptionToUse,
-          emotion: scene.emotion || 'neutral',
-          audience: audience,
-          isReusedImage: is_reused_image,
-          cartoon_image: character_image,
-          characterArtStyle: character_art_style,
-          layoutType: layout_type,
-          panelType: scene.panelType || 'standard',
-          environmentalContext: enhancedContext // Pass environmental context to image generation
-        });
-        
-        // Await and extract the actual result from AsyncResult
-        const imageResult = await imageResultAsync;
-        
-        let finalImageResult;
-        if (imageResult && 'success' in imageResult && imageResult.success) {
-          finalImageResult = (imageResult as any).data;
-        } else {
-          throw new Error('Image generation failed - no valid result returned');
-        }
-        
-        // Calculate consistency scores
-        const panelConsistency = characterDNA ? 95 : 75; // Higher with DNA
-        const envConsistency = environmentalDNA && !environmentalDNA.fallback ? 90 : 70; // Higher with environmental DNA
-        
-        const enhancedScene = {
-          ...scene,
-          generatedImage: finalImageResult.url,
-          characterArtStyle: character_art_style,
-          layoutType: layout_type,
-          promptUsed: finalImageResult.prompt_used,
-          characterDescription: characterDescriptionToUse,
-          characterConsistency: panelConsistency,
-          environmentalConsistency: envConsistency,
-          professionalStandards: true,
-          characterDNAUsed: !!characterDNA,
-          environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
-          enhancedContextUsed: true,
-          panelNumber: panelNumber,
-          parallelGenerated: true
-        };
-        
-        // Store result
-        panelResults.set(panelKey, enhancedScene);
-        
-        // Update completion tracking
-        completedPanels++;
-        this.updateComicGenerationProgress(job.id, { panelsGenerated: completedPanels });
-        
-        // Update progress for this panel completion
-        await updatePanelProgress(panelNumber, totalPanels, 'Completed professional');
-        
-        console.log(`✅ Professional panel ${panelNumber}/${totalPanels} generated with ${panelConsistency}% character consistency, ${envConsistency}% environmental consistency + learned patterns`);
-        
-        return {
-          success: true,
-          panelKey,
-          scene: enhancedScene,
-          consistency: { character: panelConsistency, environmental: envConsistency }
-        };
-        
-      } catch (error) {
-        console.error(`❌ CRITICAL FAILURE: Panel ${panelNumber}/${totalPanels} generation failed`);
-        console.error(`❌ Error details:`, error);
-        console.error(`❌ Error stack:`, error instanceof Error ? error.stack : 'No stack trace available');
-        console.error(`❌ Scene data that failed:`, JSON.stringify(scene, null, 2));
-        console.error(`❌ Image prompt that failed:`, scene.imagePrompt);
-        console.error(`❌ Image prompt length:`, scene.imagePrompt?.length || 0);
-        console.error(`❌ Character description:`, characterDescriptionToUse);
-        console.error(`❌ Panel generation context:`, {
-          panelNumber,
-          totalPanels,
-          pageIndex,
-          sceneIndex,
-          audience,
-          character_art_style,
-          layout_type,
-          is_reused_image
-        });
-        
-        throw new Error(`COMIC GENERATION FAILED: Panel ${panelNumber}/${totalPanels} could not be generated. Error: ${error instanceof Error ? error.message : String(error)}. Scene: ${scene.description || 'No description'}. Prompt length: ${scene.imagePrompt?.length || 0}. No fallbacks allowed - comic generation aborted.`);
-      }
-    });
+   // ===== QUALITY-FIRST BATCHED PARALLEL GENERATION =====
+const panelResults = new Map<string, any>();
+let completedPanels = 0;
 
-    console.log(`⚡ Starting parallel generation of ${panelPromises.length} panels...`);
-    const startParallelTime = Date.now();
+// Rate limit configuration (5 images per minute)
+const RATE_LIMIT_BATCH_SIZE = 5;
+const RATE_LIMIT_WAIT_TIME = 65000; // 65 seconds to be safe
+
+// Create progress tracking function
+const updateBatchProgress = async (batchNumber: number, totalBatches: number, panelsInBatch: number, status: string) => {
+  const overallProgress = Math.round(55 + ((completedPanels / totalPanels) * 40));
+  await jobService.updateJobProgress(
+    job.id,
+    overallProgress,
+    `${status} batch ${batchNumber}/${totalBatches} (${panelsInBatch} panels) with environmental, character consistency + learned patterns`
+  );
+};
+
+// Split panels into batches respecting rate limits
+const panelBatches: Array<Array<typeof panelTasks[0]>> = [];
+for (let i = 0; i < panelTasks.length; i += RATE_LIMIT_BATCH_SIZE) {
+  panelBatches.push(panelTasks.slice(i, i + RATE_LIMIT_BATCH_SIZE));
+}
+
+console.log(`🎨 QUALITY-FIRST: Starting batched generation of ${panelTasks.length} panels in ${panelBatches.length} batches (respecting OpenAI rate limits)...`);
+const startBatchedTime = Date.now();
+
+// Process each batch with rate limiting
+for (let batchIndex = 0; batchIndex < panelBatches.length; batchIndex++) {
+  const batch = panelBatches[batchIndex];
+  const batchNumber = batchIndex + 1;
+  
+  console.log(`🎨 Processing batch ${batchNumber}/${panelBatches.length} with ${batch.length} panels...`);
+  await updateBatchProgress(batchNumber, panelBatches.length, batch.length, 'Starting quality generation for');
+
+  // Generate all panels in current batch in parallel
+  const batchPromises = batch.map(async (task) => {
+    const { pageIndex, sceneIndex, scene, panelNumber, totalPanels } = task;
+    const panelKey = `${pageIndex}-${sceneIndex}`;
     
-    // Wait for all panels to complete (or fail immediately)
-    const panelResultsArray = await Promise.allSettled(panelPromises);
-    
-    const parallelDuration = Date.now() - startParallelTime;
-    console.log(`⚡ PARALLEL PROCESSING COMPLETE: ${panelResultsArray.length} panels in ${parallelDuration}ms`);
-    
-    // Process results and calculate final consistency scores
-    const successfulPanels = panelResultsArray.filter(result => 
-      result.status === 'fulfilled' && result.value.success
-    ).length;
-    
-    console.log(`📊 PARALLEL RESULTS: ${successfulPanels} successful panels`);
+    try {
+      this.trackServiceUsage(job.id, 'ai');
+      if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
+      
+      console.log(`🎨 Generating professional panel ${panelNumber}/${totalPanels} (Page ${pageIndex + 1}, Scene ${sceneIndex + 1}) with environmental, character consistency + learned patterns...`);
+      
+      // FIXED: Proper AsyncResult handling for generateSceneImage
+      const imageResultAsync = await aiService.generateSceneImage({
+        image_prompt: scene.imagePrompt,
+        character_description: characterDescriptionToUse,
+        emotion: scene.emotion || 'neutral',
+        audience: audience,
+        isReusedImage: is_reused_image,
+        cartoon_image: character_image,
+        characterArtStyle: character_art_style,
+        layoutType: layout_type,
+        panelType: scene.panelType || 'standard',
+        environmentalContext: enhancedContext // Pass environmental context to image generation
+      });
+      
+      // Await and extract the actual result from AsyncResult
+      const imageResult = await imageResultAsync.unwrap();
+      
+      let finalImageResult;
+      if (imageResult && 'success' in imageResult && imageResult.success) {
+        finalImageResult = (imageResult as any).data;
+      } else {
+        throw new Error('Image generation failed - no valid result returned');
+      }
+      
+      // Calculate consistency scores
+      const panelConsistency = characterDNA ? 95 : 75; // Higher with DNA
+      const envConsistency = environmentalDNA && !environmentalDNA.fallback ? 90 : 70; // Higher with environmental DNA
+      
+      const enhancedScene = {
+        ...scene,
+        generatedImage: finalImageResult.url,
+        characterArtStyle: character_art_style,
+        layoutType: layout_type,
+        promptUsed: finalImageResult.prompt_used,
+        characterDescription: characterDescriptionToUse,
+        characterConsistency: panelConsistency,
+        environmentalConsistency: envConsistency,
+        professionalStandards: true,
+        characterDNAUsed: !!characterDNA,
+        environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
+        enhancedContextUsed: true,
+        panelNumber: panelNumber,
+        batchGenerated: true
+      };
+      
+      // Store result
+      panelResults.set(panelKey, enhancedScene);
+      
+      // Update completion tracking
+      completedPanels++;
+      this.updateComicGenerationProgress(job.id, { panelsGenerated: completedPanels });
+      
+      console.log(`✅ Professional panel ${panelNumber}/${totalPanels} generated with ${panelConsistency}% character consistency, ${envConsistency}% environmental consistency + learned patterns`);
+      
+      return {
+        success: true,
+        panelKey,
+        scene: enhancedScene,
+        consistency: { character: panelConsistency, environmental: envConsistency }
+      };
+      
+    } catch (error) {
+      console.error(`❌ CRITICAL FAILURE: Panel ${panelNumber}/${totalPanels} generation failed`);
+      console.error(`❌ Error details:`, error);
+      console.error(`❌ Error stack:`, error instanceof Error ? error.stack : 'No stack trace available');
+      console.error(`❌ Scene data that failed:`, JSON.stringify(scene, null, 2));
+      console.error(`❌ Image prompt that failed:`, scene.imagePrompt);
+      console.error(`❌ Image prompt length:`, scene.imagePrompt?.length || 0);
+      console.error(`❌ Character description:`, characterDescriptionToUse);
+      console.error(`❌ Panel generation context:`, {
+        panelNumber,
+        totalPanels,
+        pageIndex,
+        sceneIndex,
+        audience,
+        character_art_style,
+        layout_type,
+        is_reused_image
+      });
+      
+      throw new Error(`COMIC GENERATION FAILED: Panel ${panelNumber}/${totalPanels} could not be generated. Error: ${error instanceof Error ? error.message : String(error)}. Scene: ${scene.description || 'No description'}. Prompt length: ${scene.imagePrompt?.length || 0}. No fallbacks allowed - comic generation aborted.`);
+    }
+  });
+
+  // Wait for current batch to complete
+  const batchResults = await Promise.allSettled(batchPromises);
+  
+  // Process batch results
+  batchResults.forEach((result, index) => {
+    if (result.status === 'fulfilled' && result.value.success) {
+      // Result already stored in panelResults map
+    } else {
+      const task = batch[index];
+      throw new Error(`Missing panel result for ${task.pageIndex}-${task.sceneIndex} - comic generation failed`);
+    }
+  });
+
+  console.log(`✅ Batch ${batchNumber}/${panelBatches.length} completed: ${batch.length} high-quality panels generated`);
+  await updateBatchProgress(batchNumber, panelBatches.length, batch.length, 'Completed quality generation for');
+
+  // Wait between batches (except for the last batch)
+  if (batchIndex < panelBatches.length - 1) {
+    console.log(`⏳ Waiting ${RATE_LIMIT_WAIT_TIME/1000} seconds before next batch (respecting OpenAI rate limits for quality)...`);
+    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_WAIT_TIME));
+  }
+}
+
+const batchedDuration = Date.now() - startBatchedTime;
+console.log(`🎨 QUALITY-FIRST BATCHED PROCESSING COMPLETE: ${panelTasks.length} panels in ${batchedDuration}ms with zero quality compromise`);
+
+// Calculate aggregate consistency scores from batched results
+const successfulPanels = panelTasks.length; // All panels should succeed with proper rate limiting
+console.log(`📊 BATCHED RESULTS: ${successfulPanels} successful panels`);
     
     // Calculate aggregate consistency scores from parallel results
     panelResultsArray.forEach(result => {
