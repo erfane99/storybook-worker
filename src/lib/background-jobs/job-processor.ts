@@ -740,12 +740,12 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         // Await and extract the actual result from AsyncResult
         const sceneResult = await sceneResultAsync;
         
-        if (sceneResult && 'success' in sceneResult && sceneResult.success && (sceneResult as any).data?.pages && Array.isArray((sceneResult as any).data.pages)) {
-          pages = (sceneResult as any).data.pages;
-          console.log(`✅ Professional comic layout with environmental consistency: ${pages.length} pages with ${pages.reduce((total, page) => total + (page.scenes?.length || 0), 0)} total panels`);
-        } else {
-          throw new Error('Invalid scene generation result - no professional pages generated');
-        }
+        if (sceneResult && 'success' in sceneResult && sceneResult.success && sceneResult.data?.pages && Array.isArray(sceneResult.data.pages)) {
+  pages = sceneResult.data.pages;
+  console.log(`✅ Professional comic layout with environmental consistency: ${pages.length} pages with ${pages.reduce((total, page) => total + (page.scenes?.length || 0), 0)} total panels`);
+} else {
+  throw new Error('Invalid scene generation result - no professional pages generated');
+}
         
         await jobService.updateJobProgress(job.id, 55, `Professional comic layout with environmental consistency: ${pages.length} pages`);
         
