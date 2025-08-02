@@ -165,12 +165,12 @@ class AIService extends ErrorAwareBaseService implements IAIService {
     super({
       name: 'ModularEnterpriseAIService',
       timeout: config?.timeout || 120000,
-      retryAttempts: config?.maxRetries || 3,
+      retryAttempts: config?.maxRetries || 1,
       retryDelay: config?.retryDelay || 1000,
       circuitBreakerThreshold: 5,
       errorHandling: {
         enableRetry: true,
-        maxRetries: 3,
+        maxRetries: 1,
         enableCircuitBreaker: true,
         enableCorrelation: true,
         enableMetrics: true,
@@ -1353,7 +1353,7 @@ export function createEnterpriseAIService(config?: Partial<AIServiceConfig>): AI
     enableVisualDNAFingerprinting: true,
     enablePredictiveQuality: true,
     enableCrossGenreLearning: true,
-    maxRetries: 3,
+    maxRetries: 1,
     retryDelay: 1000,
     timeout: 120000,
     ...config
