@@ -686,10 +686,10 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
           const descriptionResult = await aiService.describeCharacter(character_image, 'You are a professional character artist. Describe this character for maximum comic book consistency.');
           const resolvedDescription = await descriptionResult;
           if (resolvedDescription && 'success' in resolvedDescription && resolvedDescription.success) {
-            characterDescriptionToUse = (resolvedDescription as any).data;
-          } else {
-            characterDescriptionToUse = 'Character with consistent appearance';
-          }
+  characterDescriptionToUse = resolvedDescription.data;
+} else {
+  characterDescriptionToUse = 'Character with consistent appearance';
+}
         }
         
         await jobService.updateJobProgress(job.id, 35, 'Character analysis completed (fallback method)');
