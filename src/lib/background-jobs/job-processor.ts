@@ -812,7 +812,7 @@ const RATE_LIMIT_WAIT_TIME = 65000; // 65 seconds to be safe
 
 // Create progress tracking function
 const updateBatchProgress = async (batchNumber: number, totalBatches: number, panelsInBatch: number, status: string) => {
-  const overallProgress = Math.round(55 + ((completedPanels / totalPanels) * 40));
+  const overallProgress = Math.round(55 + ((completedPanels / totalScenes) * 40));
   await jobService.updateJobProgress(
     job.id,
     overallProgress,
@@ -962,13 +962,15 @@ console.log(`🎨 QUALITY-FIRST BATCHED PROCESSING COMPLETE: ${panelTasks.length
 const successfulPanels = panelTasks.length; // All panels should succeed with proper rate limiting
 console.log(`📊 BATCHED RESULTS: ${successfulPanels} successful panels`);
     
-    // Calculate aggregate consistency scores from parallel results
-    panelResultsArray.forEach(result => {
-      if (result.status === 'fulfilled' && result.value.consistency) {
-        characterConsistencyScore += result.value.consistency.character;
-        environmentalConsistencyScore += result.value.consistency.environmental;
-      }
-    });
+    // Calculate aggregate consistency scores from batched results
+for (const [panelKey, scene] of panelResults.entries()) {
+  if (scene.characterConsistency) {
+    characterConsistencyScore += scene.characterConsistency;
+  }
+  if (scene.environmentalConsistency) {
+    environmentalConsistencyScore += scene.environmentalConsistency;
+  }
+}
     
     // ===== RECONSTRUCT PAGES FROM PARALLEL RESULTS =====
     for (const [pageIndex, page] of pages.entries()) {
@@ -997,7 +999,7 @@ console.log(`📊 BATCHED RESULTS: ${successfulPanels} successful panels`);
         environmentalDNAEnabled: !!environmentalDNA && !environmentalDNA.fallback,
         enhancedContextEnabled: true,
         parallelProcessed: true,
-        parallelDuration: parallelDuration,
+        parallelDuration: batchedDuration,
         successfulPanels: updatedScenes.length,
         panelCount: updatedScenes.length,
         environmentalConsistency: environmentalConsistencyScore / updatedScenes.length
@@ -1045,7 +1047,7 @@ console.log(`📊 BATCHED RESULTS: ${successfulPanels} successful panels`);
       recommendations: [],
       environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
       parallelProcessed: true,
-      parallelDuration: parallelDuration,
+      parallelDuration: batchedDuration,
       successfulPanels: successfulPanels,
       enhancedContextUsed: true,
       learnedPatternsApplied: true,
@@ -1061,7 +1063,7 @@ console.log(`📊 BATCHED RESULTS: ${successfulPanels} successful panels`);
       qualityMetrics,
       characterDNAUsed: !!characterDNA,
       parallelProcessed: true,
-      parallelDuration: parallelDuration,
+      parallelDuration: batchedDuration,
       environmentalDNAUsed: !!environmentalDNA && !environmentalDNA.fallback,
       storyAnalysisUsed: !!storyAnalysis,
       professionalStandards: true,
