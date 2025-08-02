@@ -685,7 +685,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
           this.trackServiceUsage(job.id, 'ai');
           const descriptionResult = await aiService.describeCharacter(character_image, 'You are a professional character artist. Describe this character for maximum comic book consistency.');
           const resolvedDescription = await descriptionResult;
-          if (resolvedDescription && 'success' in resolvedDescription && resolvedDescription.success) {
+          if (resolvedDescription && resolvedDescription.success) {
   characterDescriptionToUse = resolvedDescription.data;
 } else {
   characterDescriptionToUse = 'Character with consistent appearance';
@@ -740,7 +740,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         // Await and extract the actual result from AsyncResult
         const sceneResult = await sceneResultAsync;
         
-        if (sceneResult && 'success' in sceneResult && sceneResult.success && sceneResult.data?.pages && Array.isArray(sceneResult.data.pages)) {
+        if (sceneResult && sceneResult.success && sceneResult.data?.pages && Array.isArray(sceneResult.data.pages)) {
   pages = sceneResult.data.pages;
   console.log(`✅ Professional comic layout with environmental consistency: ${pages.length} pages with ${pages.reduce((total, page) => total + (page.scenes?.length || 0), 0)} total panels`);
 } else {
