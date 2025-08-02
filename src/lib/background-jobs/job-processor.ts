@@ -863,14 +863,14 @@ for (let batchIndex = 0; batchIndex < panelBatches.length; batchIndex++) {
       });
       
       // Await and extract the actual result from AsyncResult
-      const imageResult = await imageResultAsync.unwrap();
-      
-      let finalImageResult;
-      if (imageResult && 'success' in imageResult && imageResult.success) {
-        finalImageResult = (imageResult as any).data;
-      } else {
-        throw new Error('Image generation failed - no valid result returned');
-      }
+const imageResult = await imageResultAsync.unwrap();
+
+let finalImageResult;
+if (imageResult && imageResult.url) {
+  finalImageResult = imageResult;
+} else {
+  throw new Error('Image generation failed - no valid result returned');
+}
       
       // Calculate consistency scores
       const panelConsistency = characterDNA ? 95 : 75; // Higher with DNA
