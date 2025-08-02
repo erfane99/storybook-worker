@@ -682,11 +682,10 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         
         if (!is_reused_image && !characterDescriptionToUse) {
           // FIXED: Proper AsyncResult handling for describeCharacter
-          this.trackServiceUsage(job.id, 'ai');
-          const descriptionResult = await aiService.describeCharacter(character_image, 'You are a professional character artist. Describe this character for maximum comic book consistency.');
-          const resolvedDescription = await descriptionResult;
-          if (resolvedDescription && resolvedDescription.success) {
-  characterDescriptionToUse = resolvedDescription.data;
+this.trackServiceUsage(job.id, 'ai');
+const resolvedDescription = await aiService.describeCharacter(character_image, 'You are a professional character artist. Describe this character for maximum comic book consistency.');
+if (resolvedDescription && typeof resolvedDescription === 'string') {
+  characterDescriptionToUse = resolvedDescription;
 } else {
   characterDescriptionToUse = 'Character with consistent appearance';
 }
@@ -728,20 +727,17 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
         
         // FIXED: Proper AsyncResult handling for generateScenesWithAudience
-        const sceneResultAsync = await aiService.generateScenesWithAudience({
-          story: story,
-          audience: audience as any,
-          characterImage: character_image,
-          characterArtStyle: character_art_style,
-          layoutType: layout_type,
-          enhancedContext: enhancedContext // Pass enhanced context with environmental DNA
-        });
-        
-        // Await and extract the actual result from AsyncResult
-        const sceneResult = await sceneResultAsync;
-        
-        if (sceneResult && sceneResult.success && sceneResult.data?.pages && Array.isArray(sceneResult.data.pages)) {
-  pages = sceneResult.data.pages;
+const sceneResult = await aiService.generateScenesWithAudience({
+  story: story,
+  audience: audience as any,
+  characterImage: character_image,
+  characterArtStyle: character_art_style,
+  layoutType: layout_type,
+  enhancedContext: enhancedContext // Pass enhanced context with environmental DNA
+});
+
+if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
+  pages = sceneResult.pages;
   console.log(`✅ Professional comic layout with environmental consistency: ${pages.length} pages with ${pages.reduce((total, page) => total + (page.scenes?.length || 0), 0)} total panels`);
 } else {
   throw new Error('Invalid scene generation result - no professional pages generated');
