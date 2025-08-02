@@ -683,7 +683,8 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         if (!is_reused_image && !characterDescriptionToUse) {
           // FIXED: Proper AsyncResult handling for describeCharacter
 this.trackServiceUsage(job.id, 'ai');
-const resolvedDescription = await aiService.describeCharacter(character_image, 'You are a professional character artist. Describe this character for maximum comic book consistency.');
+const descriptionAsync = await aiService.describeCharacter(character_image, 'You are a professional character artist. Describe this character for maximum comic book consistency.');
+const resolvedDescription = await descriptionAsync.unwrap();
 if (resolvedDescription && typeof resolvedDescription === 'string') {
   characterDescriptionToUse = resolvedDescription;
 } else {
@@ -727,14 +728,16 @@ if (resolvedDescription && typeof resolvedDescription === 'string') {
         if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
         
         // FIXED: Proper AsyncResult handling for generateScenesWithAudience
-const sceneResult = await aiService.generateScenesWithAudience({
+const sceneResultAsync = await aiService.generateScenesWithAudience({
   story: story,
   audience: audience as any,
   characterImage: character_image,
   characterArtStyle: character_art_style,
   layoutType: layout_type,
-  enhancedContext: enhancedContext // Pass enhanced context with environmental DNA
+  enhancedContext: enhancedContext
 });
+
+const sceneResult = await sceneResultAsync.unwrap();
 
 if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
   pages = sceneResult.pages;
