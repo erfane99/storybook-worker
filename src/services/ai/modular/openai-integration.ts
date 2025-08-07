@@ -1108,33 +1108,32 @@ export class OpenAIIntegration {
    */
   private validateAPIResponse(result: any, endpoint: string, operationName: string): void {
     if (!result) {
-  throw new AIServiceUnavailableError('Empty response from OpenAI API', {
-    service: 'OpenAIIntegration',
-    operation: operationName,
-    details: { endpoint }
-  });
-}
+      throw new AIServiceUnavailableError('Empty response from OpenAI API', {
+        service: 'OpenAIIntegration',
+        operation: operationName,
+        details: { endpoint }
+      });
     }
 
     if (endpoint.includes('/chat/completions')) {
-  if (!result.choices || !Array.isArray(result.choices) || result.choices.length === 0) {
-    throw new AIServiceUnavailableError('Invalid chat completion response structure', {
-      service: 'OpenAIIntegration',
-      operation: operationName,
-      details: { endpoint }
-    });
-  }
-}
+      if (!result.choices || !Array.isArray(result.choices) || result.choices.length === 0) {
+        throw new AIServiceUnavailableError('Invalid chat completion response structure', {
+          service: 'OpenAIIntegration',
+          operation: operationName,
+          details: { endpoint }
+        });
+      }
+    }
 
     if (endpoint.includes('/images/generations')) {
-  if (!result.data || !Array.isArray(result.data) || result.data.length === 0) {
-    throw new AIServiceUnavailableError('Invalid image generation response structure', {
-      service: 'OpenAIIntegration',
-      operation: operationName,
-      details: { endpoint }
-    });
-  }
-}
+      if (!result.data || !Array.isArray(result.data) || result.data.length === 0) {
+        throw new AIServiceUnavailableError('Invalid image generation response structure', {
+          service: 'OpenAIIntegration',
+          operation: operationName,
+          details: { endpoint }
+        });
+      }
+    }
   }
 
   /**
