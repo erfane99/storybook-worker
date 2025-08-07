@@ -1068,37 +1068,45 @@ export class OpenAIIntegration {
         throw new AIContentPolicyError(`Bad request: ${errorMessage}`, {
           service: 'OpenAIIntegration',
           operation: operationName,
-          endpoint,
-          errorCode,
-          httpStatus: 400
+          details: {
+            endpoint,
+            errorCode,
+            httpStatus: 400
+          }
         });
 
       case 401:
         throw new AIAuthenticationError(`Authentication failed: ${errorMessage}`, {
           service: 'OpenAIIntegration',
           operation: operationName,
-          endpoint,
-          errorCode,
-          httpStatus: 401
+          details: {
+            endpoint,
+            errorCode,
+            httpStatus: 401
+          }
         });
 
       case 429:
         throw new AIRateLimitError(`Rate limit exceeded: ${errorMessage}`, {
           service: 'OpenAIIntegration',
           operation: operationName,
-          endpoint,
-          errorCode,
-          httpStatus: 429,
-          retryAfter: response.headers.get('retry-after')
+          details: {
+            endpoint,
+            errorCode,
+            httpStatus: 429,
+            retryAfter: response.headers.get('retry-after')
+          }
         });
 
       default:
         throw new AIServiceUnavailableError(`Server error: ${errorMessage}`, {
           service: 'OpenAIIntegration',
           operation: operationName,
-          endpoint,
-          errorCode,
-          httpStatus: response.status
+          details: {
+            endpoint,
+            errorCode,
+            httpStatus: response.status
+          }
         });
     }
   }
