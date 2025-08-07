@@ -154,10 +154,10 @@ export class VisualDNASystem {
   private openaiIntegration: OpenAIIntegration;
   private errorHandler: ErrorHandlingSystem;
   private config: VisualDNAConfig;
-  private visualDNACache: Map<string, VisualFingerprint>;
-  private dnaDatabase: Map<string, CharacterDNA>;
-  private compressionCache: Map<string, string>;
-  private consistencyScores: Map<string, number>;
+  private visualDNACache: Map<string, VisualFingerprint> = new Map();
+  private dnaDatabase: Map<string, CharacterDNA> = new Map();
+  private compressionCache: Map<string, string> = new Map();
+  private consistencyScores: Map<string, number> = new Map();
 
   constructor(
     openaiIntegration: OpenAIIntegration,
@@ -229,7 +229,8 @@ VISUAL FINGERPRINT: ${this.formatFingerprint(visualFingerprint)}
 This character MUST appear IDENTICAL in every single panel. ANY deviation is unacceptable.`,
           artStyleIntegration: `Render in ${artStyle} style while maintaining EXACT character features`,
           variationGuidance: 'NO variations allowed. Character must be 100% consistent.',
-          },
+          consistencyChecklist: consistencyChecklist
+        },
         metadata: {
           createdAt: new Date().toISOString(),
           processingTime: Date.now(),
