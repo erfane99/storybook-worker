@@ -887,7 +887,7 @@ Focus on elements that ensure perfect visual consistency across all comic panels
   }
 
   private determineArchitecturalStyle(environments: string[], artStyle: string): string {
-    const styles = {
+    const styles: Record<string, string> = {
       storybook: 'whimsical_rounded',
       'comic-book': 'dynamic_angular',
       anime: 'detailed_stylized',
@@ -969,7 +969,7 @@ Focus on elements that ensure perfect visual consistency across all comic panels
       .filter(([_, count]) => count > 1)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([word]: [string, number]) => word);
+      .map(([word, _count]) => word);
   }
 
   private extractDominantColors(environments: string[], audience: AudienceType): string[] {
