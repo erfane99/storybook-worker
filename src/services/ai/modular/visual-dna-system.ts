@@ -969,7 +969,7 @@ Focus on elements that ensure perfect visual consistency across all comic panels
       .filter(([_, count]) => count > 1)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([word]) => word);
+      .map(([word]: [string, number]) => word);
   }
 
   private extractDominantColors(environments: string[], audience: AudienceType): string[] {
@@ -984,11 +984,11 @@ Focus on elements that ensure perfect visual consistency across all comic panels
     };
     
     const envType = environments[0]?.toLowerCase().includes('indoor') ? 'indoor' : 'outdoor';
-    return accentOptions[envType] || accentOptions.outdoor;
+    return accentOptions[envType as keyof typeof accentOptions] || accentOptions.outdoor;
   }
 
   private identifyConflictingColors(artStyle: string): string[] {
-    const conflicts = {
+    const conflicts: Record<string, string[]> = {
       storybook: ['harsh_black', 'neon_colors'],
       'comic-book': ['muddy_brown', 'pale_pastels'],
       anime: ['muted_grays', 'desaturated_tones'],
