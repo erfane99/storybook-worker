@@ -822,19 +822,9 @@ Audience: ${options.audience}`;
         this.log('info', '🎨 Cartoonizing image with professional quality...');
         
         // Use OpenAI integration for image processing
-       // Build enhanced prompt with DNA information
-        const enhancedPrompt = `${imagePrompt}
-Character DNA: ${JSON.stringify(characterDNA)}
-Environment: ${JSON.stringify(environmentalDNA)}`;
+        const cartoonPrompt = `Transform this image into a ${options.style} cartoon style while maintaining character consistency. Character from image: ${options.imageUrl}`;
         
-        const result = await this.openaiIntegration.generateCartoonImage(enhancedPrompt);
-          `Transform this image into a ${options.style} cartoon style while maintaining character consistency`,
-          `Character from image: ${options.imageUrl}`,
-          'neutral',
-          'standard',
-          options.style,
-          'children'
-        );
+        const result = await this.openaiIntegration.generateCartoonImage(cartoonPrompt);
         
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('cartoonizeImage', duration, true);
@@ -1311,8 +1301,8 @@ Following the ${storyArchetype} pattern, they grew and learned valuable lessons,
     const resolvedResult = await result;
     // FIXED: Proper data access pattern with await
     if (resolvedResult && 'success' in resolvedResult && resolvedResult.success) {
-  return JSON.stringify((resolvedResult as any).data);
-}
+      return JSON.stringify((resolvedResult as any).data);
+    }
     return '';
   }
 
