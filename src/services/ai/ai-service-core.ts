@@ -236,9 +236,9 @@ class AIService extends ErrorAwareBaseService implements IAIService {
       this.enterpriseMonitoring = new EnterpriseMonitoring(this.errorHandlerAdapter as any);
       this.log('info', '✅ Enterprise Monitoring System initialized');
 
-      // 2. OpenAI Integration (using adapter)
-      this.openaiIntegration = new OpenAIIntegration(this.apiKey!, this.learningEngine);
-      this.log('info', '✅ OpenAI Integration initialized');
+      // 2. OpenAI Integration (using adapter) - Initialize without learningEngine first
+this.openaiIntegration = new OpenAIIntegration(this.apiKey!, undefined);
+this.log('info', '✅ OpenAI Integration initialized');
 
       // 3. Visual DNA System (using adapter)
       this.visualDNASystem = new VisualDNASystem(this.openaiIntegration, this.errorHandlerAdapter as any);
@@ -253,8 +253,13 @@ class AIService extends ErrorAwareBaseService implements IAIService {
       this.log('info', '✅ Quality Metrics Engine initialized');
 
       // 6. Pattern Learning Engine (using adapter)
-      this.learningEngine = new PatternLearningEngine(this.openaiIntegration, this.errorHandlerAdapter as any);
-      this.log('info', '✅ Pattern Learning Engine initialized');
+this.learningEngine = new PatternLearningEngine(this.openaiIntegration, this.errorHandlerAdapter as any);
+this.log('info', '✅ Pattern Learning Engine initialized');
+
+// Now set the learning engine in OpenAI Integration
+if (this.openaiIntegration && typeof (this.openaiIntegration as any).setLearningEngine === 'function') {
+  (this.openaiIntegration as any).setLearningEngine(this.learningEngine);
+}
 
       // 7. Comic Generation Engine (using adapter)
       this.comicEngine = new ComicGenerationEngine(this.openaiIntegration, this.errorHandlerAdapter as any);
