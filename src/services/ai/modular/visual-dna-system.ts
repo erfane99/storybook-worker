@@ -228,8 +228,7 @@ VISUAL FINGERPRINT: ${this.formatFingerprint(visualFingerprint)}
 
 This character MUST appear IDENTICAL in every single panel. ANY deviation is unacceptable.`,
           artStyleIntegration: `Render in ${artStyle} style while maintaining EXACT character features`,
-          variationGuidance: 'NO variations allowed. Character must be 100% consistent.',
-          consistencyChecklist: consistencyChecklist
+          variationGuidance: 'NO variations allowed. Character must be 100% consistent.'
         },
         metadata: {
           createdAt: new Date().toISOString(),
