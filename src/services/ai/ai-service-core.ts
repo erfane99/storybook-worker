@@ -236,8 +236,8 @@ class AIService extends ErrorAwareBaseService implements IAIService {
       this.enterpriseMonitoring = new EnterpriseMonitoring(this.errorHandlerAdapter as any);
       this.log('info', '✅ Enterprise Monitoring System initialized');
 
-      // 2. OpenAI Integration (using adapter) - Initialize without learningEngine first
-this.openaiIntegration = new OpenAIIntegration(this.apiKey!, undefined);
+      // 2. OpenAI Integration (using adapter) - Initialize with error handler adapter
+      this.openaiIntegration = new OpenAIIntegration(this.apiKey!, this.errorHandlerAdapter as any);
 this.log('info', '✅ OpenAI Integration initialized');
 
       // 3. Visual DNA System (using adapter)
@@ -726,14 +726,14 @@ if (this.openaiIntegration && typeof (this.openaiIntegration as any).setLearning
       async () => {
         this.log('info', '🖼️ Generating images with advanced options...');
         
-        const result = await this.openaiIntegration.generateImageWithDNA(
-          options.image_prompt,
-          options.character_description || '',
-          options.emotion,
-          'standard',
-          options.characterArtStyle || 'comic-book',
-          options.audience
-        );
+        // Build enhanced prompt with DNA information
+        const enhancedPrompt = `${options.image_prompt}
+Character: ${options.character_description || ''}
+Emotion: ${options.emotion}
+Art Style: ${options.characterArtStyle || 'comic-book'}
+Audience: ${options.audience}`;
+        
+        const result = await this.openaiIntegration.generateCartoonImage(enhancedPrompt);
         
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, true);
@@ -822,7 +822,12 @@ if (this.openaiIntegration && typeof (this.openaiIntegration as any).setLearning
         this.log('info', '🎨 Cartoonizing image with professional quality...');
         
         // Use OpenAI integration for image processing
-        const result = await this.openaiIntegration.generateImageWithDNA(
+       // Build enhanced prompt with DNA information
+        const enhancedPrompt = `${imagePrompt}
+Character DNA: ${JSON.stringify(characterDNA)}
+Environment: ${JSON.stringify(environmentalDNA)}`;
+        
+        const result = await this.openaiIntegration.generateCartoonImage(enhancedPrompt);
           `Transform this image into a ${options.style} cartoon style while maintaining character consistency`,
           `Character from image: ${options.imageUrl}`,
           'neutral',
@@ -1241,9 +1246,8 @@ Following the ${storyArchetype} pattern, they grew and learned valuable lessons,
         this.enterpriseMonitoring.shutdown();
       }
       
-      if (this.openaiIntegration) {
-        this.openaiIntegration.dispose();
-      }
+      // OpenAI Integration doesn't have a dispose method, just clear references
+      // No cleanup needed for OpenAI Integration
       
       // Safe cleanup of engine references
       if (this.learningEngine) {
