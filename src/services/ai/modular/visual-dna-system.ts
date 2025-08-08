@@ -211,8 +211,8 @@ export class VisualDNASystem {
         artStyle
       );
 
-      // Step 4: Create consistency verification checklist
-      const consistencyChecklist = this.createConsistencyChecklist(visualDNA);
+      // Step 4: Consistency checklist will be generated on demand when formatting for image generation
+      // const consistencyChecklist = this.createConsistencyChecklist(visualDNA);
 
       // Step 5: Build ENHANCED character DNA structure
       const characterDNA: CharacterDNA = {
@@ -508,9 +508,12 @@ Focus on elements that ensure perfect visual consistency across all comic panels
     const consistencyPrompt = ENHANCED_AI_PROMPTS.imageGeneration.characterConsistency
       .replace('{characterDNA}', characterDNA.consistencyPrompts.basePrompt);
 
+    // Generate consistency checklist from visualDNA
+    const consistencyChecklist = this.createConsistencyChecklist(characterDNA.visualDNA);
+
     const scenePrompt = ENHANCED_AI_PROMPTS.imageGeneration.sceneGeneration
       .replace('{sceneDescription}', sceneDescription)
-      .replace('{characterChecklist}', characterDNA.consistencyPrompts.consistencyChecklist?.join('\n') || '');
+      .replace('{characterChecklist}', consistencyChecklist.join('\n'));
 
     return `${consistencyPrompt}\n\n${scenePrompt}`;
   }
@@ -957,7 +960,7 @@ Focus on elements that ensure perfect visual consistency across all comic panels
     
     beats.forEach(beat => {
       const words = beat.description?.toLowerCase().split(/\s+/) || [];
-      words.forEach(word => {
+      words.forEach((word: string) => {
         if (word.length > 4 && !['the', 'and', 'that', 'this', 'with'].includes(word)) {
           objectCounts[word] = (objectCounts[word] || 0) + 1;
         }
