@@ -672,6 +672,16 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         characterDNA = await aiService.createMasterCharacterDNA(character_image, character_art_style);
         characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
         
+        // STORE CHARACTER DNA IN DATABASE
+        await databaseService.query(
+          `UPDATE storybook_jobs 
+           SET character_dna = $1, 
+               visual_fingerprint = $2 
+           WHERE id = $3`,
+          [characterDNA, characterDNA.visualFingerprint || JSON.stringify(characterDNA.visualDNA), job.id]
+        );
+        console.log('✅ Character DNA stored in database for consistency tracking');
+        
         this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
         console.log('✅ Professional character DNA created with maximum consistency protocols');
         
@@ -727,13 +737,16 @@ if (resolvedDescription && typeof resolvedDescription === 'string') {
         this.trackServiceUsage(job.id, 'ai');
         if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
         
-        // FIXED: Proper AsyncResult handling for generateScenesWithAudience
+        // FIXED: Pass Character DNA to scene generation
 const sceneResultAsync = await aiService.generateScenesWithAudience({
   story: story,
   audience: audience as any,
   characterImage: character_image,
   characterArtStyle: character_art_style,
   layoutType: layout_type,
+  characterDNA: characterDNA,  // ADD THIS LINE - Pass Character DNA
+  environmentalDNA: environmentalDNA,  // ADD THIS LINE - Pass Environmental DNA
+  enforceConsistency: true,  // ADD THIS LINE - Enable strict consistency
   enhancedContext: enhancedContext
 });
 
@@ -741,7 +754,7 @@ const sceneResult = await sceneResultAsync.unwrap();
 
 if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
   pages = sceneResult.pages;
-  console.log(`✅ Professional comic layout with environmental consistency: ${pages.length} pages with ${pages.reduce((total, page) => total + (page.scenes?.length || 0), 0)} total panels`);
+  console.log(`✅ Professional comic layout with CHARACTER DNA consistency: ${pages.length} pages with ${pages.reduce((total, page) => total + (page.scenes?.length || 0), 0)} total panels`);
 } else {
   throw new Error('Invalid scene generation result - no professional pages generated');
 }
@@ -846,12 +859,22 @@ for (let batchIndex = 0; batchIndex < panelBatches.length; batchIndex++) {
       this.trackServiceUsage(job.id, 'ai');
       if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
       
-      console.log(`🎨 Generating professional panel ${panelNumber}/${totalPanels} (Page ${pageIndex + 1}, Scene ${sceneIndex + 1}) with environmental, character consistency + learned patterns...`);
+      console.log(`🎨 Generating professional panel ${panelNumber}/${totalPanels} (Page ${pageIndex + 1}, Scene ${sceneIndex + 1}) with CHARACTER DNA consistency...`);
       
-      // FIXED: Proper AsyncResult handling for generateSceneImage
+      // BUILD CONSISTENCY-ENFORCED PROMPT
+      const consistencyEnforcedPrompt = `CRITICAL: Character MUST match this EXACT appearance:
+${characterDNA ? characterDNA.description : characterDescriptionToUse}
+${characterDNA && characterDNA.visualFingerprint ? `Visual Fingerprint: ${characterDNA.visualFingerprint}` : ''}
+${characterDNA && characterDNA.consistencyChecklist ? `Consistency Requirements: ${characterDNA.consistencyChecklist.join(', ')}` : ''}
+
+Scene: ${scene.imagePrompt}
+
+IMPORTANT: The character must look EXACTLY the same as described above. Any deviation is unacceptable.`;
+      
+      // FIXED: Pass Character DNA to image generation
       const imageResultAsync = await aiService.generateSceneImage({
-        image_prompt: scene.imagePrompt,
-        character_description: characterDescriptionToUse,
+        image_prompt: consistencyEnforcedPrompt,  // Use enhanced prompt
+        character_description: characterDNA ? characterDNA.description : characterDescriptionToUse,  // Use DNA description
         emotion: scene.emotion || 'neutral',
         audience: audience,
         isReusedImage: is_reused_image,
@@ -859,7 +882,12 @@ for (let batchIndex = 0; batchIndex < panelBatches.length; batchIndex++) {
         characterArtStyle: character_art_style,
         layoutType: layout_type,
         panelType: scene.panelType || 'standard',
-        environmentalContext: enhancedContext // Pass environmental context to image generation
+        characterDNA: characterDNA,  // ADD THIS - Pass full Character DNA
+        environmentalDNA: environmentalDNA,  // ADD THIS - Pass Environmental DNA
+        previousPanelContext: panelNumber > 1 ? `Previous panel: ${panelTasks[panelNumber - 2]?.scene?.description || ''}` : undefined,  // ADD THIS - Context from previous panel
+        panelNumber: panelNumber,  // ADD THIS - Track panel number
+        totalPanels: totalPanels,  // ADD THIS - Track total panels
+        environmentalContext: enhancedContext
       });
       
       // Await and extract the actual result from AsyncResult
@@ -1053,13 +1081,31 @@ for (const [panelKey, scene] of panelResults.entries()) {
       learnedPatternsApplied: true,
     };
 
+    // STORE FINAL CHARACTER CONSISTENCY SCORE
+    await databaseService.query(
+      `UPDATE storybook_jobs 
+       SET character_consistency_score = $1,
+           story_context = $2
+       WHERE id = $3`,
+      [Math.round(averageConsistency), 
+       JSON.stringify({
+         environmentalDNA: environmentalDNA,
+         storyAnalysis: storyAnalysis,
+         characterDNA: characterDNA,
+         qualityMetrics: qualityMetrics
+       }),
+       job.id]
+    );
+
     await jobService.markJobCompleted(job.id, {
       storybook_id: storybookEntry.id,
       pages: updatedPages,
       has_errors: false,
       characterArtStyle: character_art_style,
       layoutType: layout_type,
-      characterDescription: characterDescriptionToUse,
+      characterDescription: characterDNA ? characterDNA.description : characterDescriptionToUse,  // Use DNA description
+      characterDNA: characterDNA,  // ADD - Store full Character DNA
+      visualFingerprint: characterDNA?.visualFingerprint,  // ADD - Store fingerprint
       qualityMetrics,
       characterDNAUsed: !!characterDNA,
       parallelProcessed: true,
@@ -1072,7 +1118,11 @@ for (const [panelKey, scene] of panelResults.entries()) {
     });
 
     console.log(`✅ ENHANCED storybook job completed: ${job.id}`);
-    console.log(`🎭 Character: ${qualityMetrics.characterConsistency}%, 🌍 Environmental: ${qualityMetrics.environmentalConsistency}%, 📖 Story: ${qualityMetrics.storyCoherence}%`);
+    console.log(`🎭 Character DNA: ${characterDNA ? 'ACTIVE' : 'FALLBACK'}`);
+    console.log(`🎭 Character Consistency: ${qualityMetrics.characterConsistency}%`);
+    console.log(`🌍 Environmental: ${qualityMetrics.environmentalConsistency}%`);
+    console.log(`📖 Story: ${qualityMetrics.storyCoherence}%`);
+    console.log(`🔍 Visual Fingerprint: ${characterDNA?.visualFingerprint ? 'SET' : 'NONE'}`);
 
     return {
       success: true,
@@ -1121,9 +1171,12 @@ for (const [panelKey, scene] of panelResults.entries()) {
         lightingContext: environmentalDNA?.lightingContext || { timeOfDay: 'afternoon', lightingMood: 'bright' },
         visualContinuity: environmentalDNA?.visualContinuity || {},
         
-        // Character Context
+        // ENHANCED Character Context with DNA
         characterDNA: characterDNA || null,
-        characterDescription: characterDescription,
+        characterDescription: characterDNA ? characterDNA.description : characterDescription,  // CHANGED - Use DNA description if available
+        characterVisualFingerprint: characterDNA?.visualFingerprint || null,  // ADD - Visual fingerprint
+        characterConsistencyChecklist: characterDNA?.consistencyChecklist || [],  // ADD - Consistency checklist
+        characterVisualDNA: characterDNA?.visualDNA || null,  // ADD - Visual DNA details
         characterArtStyle: jobConfig.character_art_style,
         characterImage: jobConfig.character_image,
         
@@ -1135,9 +1188,9 @@ for (const [panelKey, scene] of panelResults.entries()) {
         layoutType: jobConfig.layout_type,
         isReusedImage: jobConfig.is_reused_image,
         
-        // Quality Targets
+        // ENHANCED Quality Targets for Character DNA
         qualityTargets: {
-          characterConsistency: 95,
+          characterConsistency: characterDNA ? 98 : 95,  // CHANGED - Higher target with DNA
           environmentalConsistency: 90,
           storyCoherence: 85,
           professionalStandards: true
