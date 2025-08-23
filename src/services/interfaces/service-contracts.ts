@@ -322,6 +322,7 @@ export interface CharacterDNA {
     artStyleIntegration: string;
     variationGuidance: string;
   };
+  consistencyChecklist?: string[];
   metadata: {
     createdAt: string;
     processingTime: number;
@@ -397,6 +398,41 @@ export interface EnvironmentalDNA {
   spatialRelationships?: string[];
   consistencyMarkers?: string[];
   environmentalFlow?: string;
+}
+
+// ===== STORY CONTEXT FOR CONTINUITY =====
+export interface StoryContext {
+  storyBeats: StoryBeat[];
+  environmentalDNA: EnvironmentalDNA;
+  narrativeFlow: {
+    currentBeat: number;
+    previousSceneContext?: string;
+    nextSceneHint?: string;
+    emotionalArc: string[];
+  };
+  characterDevelopment: {
+    emotionalState: string;
+    relationships: Record<string, string>;
+    growth: string[];
+  };
+}
+
+// ===== ENHANCED SCENE OPTIONS WITH DNA =====
+export interface EnhancedSceneGenerationOptions extends SceneGenerationOptions {
+  characterDNA?: CharacterDNA;
+  storyContext?: StoryContext;
+  previousSceneImage?: string;
+  enforceConsistency?: boolean;
+}
+
+// ===== JOB PROCESSING CONTEXT =====
+export interface JobProcessingContext {
+  jobId: string;
+  userId: string;
+  characterDNA?: CharacterDNA;
+  storyContext?: StoryContext;
+  visualFingerprint?: string;
+  consistencyScore?: number;
 }
 
 // ===== ENHANCED STORY BEAT =====
