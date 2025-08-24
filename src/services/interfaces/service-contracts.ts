@@ -918,6 +918,9 @@ export interface IDatabaseOperations {
   getUserRatings(comicId: string): Promise<UserRating[]>;
   getQualityTrends(timeframe: string, limit?: number): Promise<QualityTrendData[]>;
   
+  // Generic Query Method
+  query<T>(queryFn: (supabase: any) => Promise<{ data: T | null; error: any }>): Promise<T | null>;
+  
   // Success Pattern Learning System
   saveSuccessPattern(pattern: SuccessPattern): Promise<boolean>;
   getSuccessPatterns(
