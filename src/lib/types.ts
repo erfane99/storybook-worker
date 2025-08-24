@@ -166,7 +166,6 @@ export interface SceneGenerationOptions {
   characterImage?: string;
   audience: AudienceType;
   characterDescription?: string;
-  characterDNA?: CharacterDNA;
 }
 
 export interface ImageGenerationOptions {
@@ -177,7 +176,6 @@ export interface ImageGenerationOptions {
   isReusedImage?: boolean;
   cartoon_image?: string;
   style?: string;
-  characterDNA?: CharacterDNA;
 }
 
 export interface CartoonizeOptions {

@@ -810,10 +810,6 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     };
   }
 
-  async query<T>(queryFn: (supabase: any) => Promise<{ data: T | null; error: any }>): Promise<T | null> {
-    return this.executeQuery<T>('Generic query operation', queryFn);
-  }
-
   // ===== PRIVATE HELPER METHODS =====
 
   private async testConnection(): Promise<void> {
