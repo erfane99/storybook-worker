@@ -673,10 +673,13 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
         
         // STORE CHARACTER DNA IN DATABASE
-        await jobService.updateJobData(job.id, {
-          character_dna: characterDNA,
-          visual_fingerprint: characterDNA.visualFingerprint || JSON.stringify(characterDNA.visualDNA)
-        });
+        await databaseService.query(
+          `UPDATE storybook_jobs 
+           SET character_dna = $1, 
+               visual_fingerprint = $2 
+           WHERE id = $3`,
+          [characterDNA, characterDNA.visualFingerprint || JSON.stringify(characterDNA.visualDNA), job.id]
+        );
         console.log('✅ Character DNA stored in database for consistency tracking');
         
         this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
@@ -1087,14 +1090,20 @@ for (const [panelKey, scene] of panelResults.entries()) {
 
     // STORE FINAL CHARACTER CONSISTENCY SCORE
     await jobService.updateJobData(job.id, {
-      character_consistency_score: Math.round(averageConsistency),
-      story_context: JSON.stringify({
-        environmentalDNA: environmentalDNA,
-        storyAnalysis: storyAnalysis,
-        characterDNA: characterDNA,
-        qualityMetrics: qualityMetrics
-      })
-    });
+      await databaseService.query(
+      `UPDATE storybook_jobs 
+       SET character_consistency_score = $1,
+           story_context = $2
+       WHERE id = $3`,
+      [Math.round(averageConsistency), 
+       JSON.stringify({
+         environmentalDNA: environmentalDNA,
+         storyAnalysis: storyAnalysis,
+         characterDNA: characterDNA,
+         qualityMetrics: qualityMetrics
+       }),
+       job.id]
+    );
 
     await jobService.markJobCompleted(job.id, {
       storybook_id: storybookEntry.id,
