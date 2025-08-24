@@ -673,13 +673,10 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
         
         // STORE CHARACTER DNA IN DATABASE
-        await databaseService.query(
-          `UPDATE storybook_jobs 
-           SET character_dna = $1, 
-               visual_fingerprint = $2 
-           WHERE id = $3`,
-          [characterDNA, characterDNA.visualFingerprint || JSON.stringify(characterDNA.visualDNA), job.id]
-        );
+        await jobService.updateJobData(job.id, {
+          character_dna: characterDNA,
+          visual_fingerprint: characterDNA.visualFingerprint || JSON.stringify(characterDNA.visualDNA)
+        });
         console.log('✅ Character DNA stored in database for consistency tracking');
         
         this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
@@ -744,10 +741,12 @@ const sceneResultAsync = await aiService.generateScenesWithAudience({
   characterImage: character_image,
   characterArtStyle: character_art_style,
   layoutType: layout_type,
-  characterDNA: characterDNA,  // ADD THIS LINE - Pass Character DNA
-  environmentalDNA: environmentalDNA,  // ADD THIS LINE - Pass Environmental DNA
-  enforceConsistency: true,  // ADD THIS LINE - Enable strict consistency
-  enhancedContext: enhancedContext
+  enhancedContext: {
+    ...enhancedContext,
+    characterDNA: characterDNA,  // Pass Character DNA through enhanced context
+    environmentalDNA: environmentalDNA,  // Pass Environmental DNA through enhanced context
+    enforceConsistency: true  // Enable strict consistency through enhanced context
+  }
 });
 
 const sceneResult = await sceneResultAsync.unwrap();
@@ -882,10 +881,15 @@ IMPORTANT: The character must look EXACTLY the same as described above. Any devi
         characterArtStyle: character_art_style,
         layoutType: layout_type,
         panelType: scene.panelType || 'standard',
-        characterDNA: characterDNA,  // ADD THIS - Pass full Character DNA
-        environmentalDNA: environmentalDNA,  // ADD THIS - Pass Environmental DNA
-        previousPanelContext: panelNumber > 1 ? `Previous panel: ${panelTasks[panelNumber - 2]?.scene?.description || ''}` : undefined,  // ADD THIS - Context from previous panel
-        panelNumber: panelNumber,  // ADD THIS - Track panel number
+        // Pass DNA and additional context through environmentalContext which already exists in the interface
+        environmentalContext: {
+          ...enhancedContext,
+          characterDNA: characterDNA,
+          environmentalDNA: environmentalDNA,
+          previousPanelContext: panelNumber > 1 ? `Previous panel: ${panelTasks[panelNumber - 2]?.scene?.description || ''}` : undefined,
+          panelNumber: panelNumber,
+          totalPanels: totalPanels
+        }
         totalPanels: totalPanels,  // ADD THIS - Track total panels
         environmentalContext: enhancedContext
       });
@@ -1082,20 +1086,15 @@ for (const [panelKey, scene] of panelResults.entries()) {
     };
 
     // STORE FINAL CHARACTER CONSISTENCY SCORE
-    await databaseService.query(
-      `UPDATE storybook_jobs 
-       SET character_consistency_score = $1,
-           story_context = $2
-       WHERE id = $3`,
-      [Math.round(averageConsistency), 
-       JSON.stringify({
-         environmentalDNA: environmentalDNA,
-         storyAnalysis: storyAnalysis,
-         characterDNA: characterDNA,
-         qualityMetrics: qualityMetrics
-       }),
-       job.id]
-    );
+    await jobService.updateJobData(job.id, {
+      character_consistency_score: Math.round(averageConsistency),
+      story_context: JSON.stringify({
+        environmentalDNA: environmentalDNA,
+        storyAnalysis: storyAnalysis,
+        characterDNA: characterDNA,
+        qualityMetrics: qualityMetrics
+      })
+    });
 
     await jobService.markJobCompleted(job.id, {
       storybook_id: storybookEntry.id,
