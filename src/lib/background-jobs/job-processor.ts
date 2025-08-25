@@ -1087,8 +1087,7 @@ for (const [panelKey, scene] of panelResults.entries()) {
     };
 
     // STORE FINAL CHARACTER CONSISTENCY SCORE
-    await jobService.updateJobData(job.id, {
-      await databaseService.query(
+    await databaseService.query(
       `UPDATE storybook_jobs 
        SET character_consistency_score = $1,
            story_context = $2
@@ -1266,7 +1265,6 @@ for (const [panelKey, scene] of panelResults.entries()) {
         patternError: error.message
       };
     }
-  }
   }
 
   private extractCharacterDescriptionFromDNA(characterDNA: any): string {
