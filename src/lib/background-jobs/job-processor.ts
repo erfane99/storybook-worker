@@ -1232,7 +1232,6 @@ for (const [panelKey, scene] of panelResults.entries()) {
         error: error.message
       };
     }
-  }
 
   private async applyLearnedPatterns(enhancedContext: any, jobId: string): Promise<any> {
     console.log('🧠 Applying learned success patterns to enhance context...');
