@@ -875,8 +875,8 @@ IMPORTANT: The character must look EXACTLY the same as described above. Any devi
       
       // FIXED: Pass Character DNA to image generation
       const imageResultAsync = await aiService.generateSceneImage({
-        image_prompt: consistencyEnforcedPrompt,  // Use enhanced prompt
-        character_description: characterDNA ? characterDNA.description : characterDescriptionToUse,  // Use DNA description
+        image_prompt: consistencyEnforcedPrompt,
+        character_description: characterDNA ? characterDNA.description : characterDescriptionToUse,
         emotion: scene.emotion || 'neutral',
         audience: audience,
         isReusedImage: is_reused_image,
@@ -884,7 +884,7 @@ IMPORTANT: The character must look EXACTLY the same as described above. Any devi
         characterArtStyle: character_art_style,
         layoutType: layout_type,
         panelType: scene.panelType || 'standard',
-        // Pass DNA and additional context through environmentalContext which already exists in the interface
+        totalPanels: totalPanels,
         environmentalContext: {
           ...enhancedContext,
           characterDNA: characterDNA,
@@ -893,8 +893,6 @@ IMPORTANT: The character must look EXACTLY the same as described above. Any devi
           panelNumber: panelNumber,
           totalPanels: totalPanels
         }
-        totalPanels: totalPanels,  // ADD THIS - Track total panels
-        environmentalContext: enhancedContext
       });
       
       // Await and extract the actual result from AsyncResult
