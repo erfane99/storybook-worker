@@ -673,13 +673,26 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
         
         // STORE CHARACTER DNA IN DATABASE
-        await databaseService.query(
-          `UPDATE storybook_jobs 
-           SET character_dna = $1, 
-               visual_fingerprint = $2 
-           WHERE id = $3`,
-          [characterDNA, characterDNA.visualFingerprint || JSON.stringify(characterDNA.visualDNA), job.id]
-        );
+        try {
+          await databaseService.executeQuery(
+            'Store character DNA',
+            async (supabase) => {
+              const response = await supabase
+                .from('storybook_jobs')
+                .update({
+                  character_dna: characterDNA,
+                  visual_fingerprint: characterDNA?.visualFingerprint || JSON.stringify(characterDNA?.visualDNA || {})
+                })
+                .eq('id', job.id)
+                .select('id')
+                .single();
+              return { data: response.data, error: response.error };
+            }
+          );
+          console.log('✅ Character DNA stored in database for consistency tracking');
+        } catch (error) {
+          console.warn('⚠️ Character DNA storage failed, but generation will continue:', error);
+        }
         console.log('✅ Character DNA stored in database for consistency tracking');
         
         this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
@@ -884,7 +897,6 @@ IMPORTANT: The character must look EXACTLY the same as described above. Any devi
         characterArtStyle: character_art_style,
         layoutType: layout_type,
         panelType: scene.panelType || 'standard',
-        totalPanels: totalPanels,
         environmentalContext: {
           ...enhancedContext,
           characterDNA: characterDNA,
@@ -1087,20 +1099,31 @@ for (const [panelKey, scene] of panelResults.entries()) {
     };
 
     // STORE FINAL CHARACTER CONSISTENCY SCORE
-    await databaseService.query(
-      `UPDATE storybook_jobs 
-       SET character_consistency_score = $1,
-           story_context = $2
-       WHERE id = $3`,
-      [Math.round(averageConsistency), 
-       JSON.stringify({
-         environmentalDNA: environmentalDNA,
-         storyAnalysis: storyAnalysis,
-         characterDNA: characterDNA,
-         qualityMetrics: qualityMetrics
-       }),
-       job.id]
-    );
+    try {
+      await databaseService.executeQuery(
+        'Store character consistency score',
+        async (supabase) => {
+          const response = await supabase
+            .from('storybook_jobs')
+            .update({
+              character_consistency_score: Math.round(averageConsistency),
+              story_context: JSON.stringify({
+                environmentalDNA: environmentalDNA,
+                storyAnalysis: storyAnalysis,
+                characterDNA: characterDNA,
+                qualityMetrics: qualityMetrics
+              })
+            })
+            .eq('id', job.id)
+            .select('id')
+            .single();
+          return { data: response.data, error: response.error };
+        }
+      );
+      console.log(`✅ Character consistency score stored: ${Math.round(averageConsistency)}%`);
+    } catch (error) {
+      console.warn('⚠️ Character consistency storage failed, but job completion will proceed:', error);
+    }
 
     await jobService.markJobCompleted(job.id, {
       storybook_id: storybookEntry.id,
