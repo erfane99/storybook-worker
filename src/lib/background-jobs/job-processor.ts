@@ -1181,7 +1181,7 @@ for (const [panelKey, scene] of panelResults.entries()) {
         
         // ENHANCED Character Context with DNA
         characterDNA: characterDNA || null,
-        characterDescription: characterDNA ? characterDNA.description : characterDescription,  // CHANGED - Use DNA description if available
+        characterDescription: characterDNA ? characterDNA.description : characterDescriptionToUse,  // CHANGED - Use DNA description if available
         characterVisualFingerprint: characterDNA?.visualFingerprint || null,  // ADD - Visual fingerprint
         characterConsistencyChecklist: characterDNA?.consistencyChecklist || [],  // ADD - Consistency checklist
         characterVisualDNA: characterDNA?.visualDNA || null,  // ADD - Visual DNA details
@@ -1232,6 +1232,7 @@ for (const [panelKey, scene] of panelResults.entries()) {
         error: error.message
       };
     }
+  }
 
   private async applyLearnedPatterns(enhancedContext: any, jobId: string): Promise<any> {
     console.log('🧠 Applying learned success patterns to enhance context...');
@@ -1267,6 +1268,7 @@ for (const [panelKey, scene] of panelResults.entries()) {
         patternError: error.message
       };
     }
+  }
   }
 
   private extractCharacterDescriptionFromDNA(characterDNA: any): string {
