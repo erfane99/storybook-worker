@@ -803,6 +803,11 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     const totalScenes = pages.reduce((total, page) => total + (page.scenes?.length || 0), 0);
     let characterConsistencyScore = 0;
     let environmentalConsistencyScore = 0;
+    
+    // Initialize averages early to avoid use-before-declaration
+    let averageConsistency = 0;
+    let averageEnvironmentalConsistency = 0;
+    const storyCoherence = storyAnalysis ? 90 : 70;
 
     console.log(`🎨 PHASE 6: Generating ${totalScenes} professional comic panels with environmental, character consistency + learned patterns...`);
     console.log(`🌍 Environmental DNA: ${environmentalDNA?.primaryLocation?.name || 'Fallback'}`);
@@ -1065,9 +1070,9 @@ for (const [panelKey, scene] of panelResults.entries()) {
     this.trackServiceUsage(job.id, 'database');
     servicesUsed.push('database');
     
-    const averageConsistency = characterConsistencyScore / totalScenes;
-    const averageEnvironmentalConsistency = environmentalConsistencyScore / totalScenes;
-    const storyCoherence = storyAnalysis ? 90 : 70;
+    // Recalculate final averages with actual scores
+    averageConsistency = totalScenes > 0 ? characterConsistencyScore / totalScenes : 0;
+    averageEnvironmentalConsistency = totalScenes > 0 ? environmentalConsistencyScore / totalScenes : 0;
     
     const storybookEntry = await databaseService.saveStorybookEntry({
       title,
