@@ -672,27 +672,35 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         characterDNA = await aiService.createMasterCharacterDNA(character_image, character_art_style);
         characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
         
-        // STORE CHARACTER DNA IN DATABASE
-        try {
-          await databaseService.executeQuery(
-            'Store character DNA',
-            async (supabase) => {
-              const response = await supabase
-                .from('storybook_jobs')
-                .update({
-                  character_dna: characterDNA,
-                  visual_fingerprint: characterDNA?.visualFingerprint || JSON.stringify(characterDNA?.visualDNA || {})
-                })
-                .eq('id', job.id)
-                .select('id')
-                .single();
-              return { data: response.data, error: response.error };
-            }
-          );
-          console.log('✅ Character DNA stored in database for consistency tracking');
-        } catch (error) {
-          console.warn('⚠️ Character DNA storage failed, but generation will continue:', error);
+        // STORE FINAL CHARACTER CONSISTENCY SCORE
+    try {
+      await databaseService.executeTransaction([
+        async (supabase) => {
+          const { data, error } = await supabase
+            .from('storybook_jobs')
+            .update({
+              character_consistency_score: Math.round(averageConsistency),
+              story_context: JSON.stringify({
+                environmentalDNA: environmentalDNA,
+                storyAnalysis: storyAnalysis,
+                characterDNA: characterDNA,
+                qualityMetrics: qualityMetrics
+              })
+            })
+            .eq('id', job.id)
+            .select('id')
+            .single();
+          
+          if (error) {
+            throw new Error(`Character consistency storage failed: ${error.message}`);
+          }
+          return data;
         }
+      ]);
+      console.log(`✅ Character consistency score stored: ${Math.round(averageConsistency)}%`);
+    } catch (error) {
+      console.warn('⚠️ Character consistency storage failed, but job completion will proceed:', error);
+    }
         console.log('✅ Character DNA stored in database for consistency tracking');
         
         this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
