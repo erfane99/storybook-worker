@@ -1080,26 +1080,10 @@ for (const [panelKey, scene] of panelResults.entries()) {
     };
 
     // STORE FINAL CHARACTER CONSISTENCY SCORE
-    try {
-     await databaseService.query(
-        `UPDATE storybook_jobs 
-         SET character_consistency_score = $1,
-             story_context = $2
-         WHERE id = $3`,
-        [Math.round(averageConsistency), 
-         JSON.stringify({
-           environmentalDNA: environmentalDNA,
-           storyAnalysis: storyAnalysis,
-           characterDNA: characterDNA,
-           qualityMetrics: qualityMetrics
-         }),
-         job.id]
-      );
-      console.log(`✅ Character consistency score stored: ${Math.round(averageConsistency)}%`);
-    } catch (error) {
-      console.warn('⚠️ Character consistency storage failed, but job completion will proceed:', error);
-    }
-
+    // Character DNA and consistency scores are passed to markJobCompleted below
+    console.log(`📊 Character consistency score: ${Math.round(averageConsistency)}%`);
+    console.log(`🧬 Character DNA: ${characterDNA ? 'Created and will be stored' : 'Using fallback'}`);
+    
     await jobService.markJobCompleted(job.id, {
       storybook_id: storybookEntry.id,
       pages: updatedPages,
