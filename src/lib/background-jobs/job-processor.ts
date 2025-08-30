@@ -671,38 +671,6 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         // Use enhanced AI service for character DNA creation
         characterDNA = await aiService.createMasterCharacterDNA(character_image, character_art_style);
         characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
-        
-        // STORE FINAL CHARACTER CONSISTENCY SCORE
-    try {
-      await databaseService.executeTransaction([
-        async (supabase) => {
-          const { data, error } = await supabase
-            .from('storybook_jobs')
-            .update({
-              character_consistency_score: Math.round(averageConsistency),
-              story_context: JSON.stringify({
-                environmentalDNA: environmentalDNA,
-                storyAnalysis: storyAnalysis,
-                characterDNA: characterDNA,
-                qualityMetrics: qualityMetrics
-              })
-            })
-            .eq('id', job.id)
-            .select('id')
-            .single();
-          
-          if (error) {
-            throw new Error(`Character consistency storage failed: ${error.message}`);
-          }
-          return data;
-        }
-      ]);
-      console.log(`✅ Character consistency score stored: ${Math.round(averageConsistency)}%`);
-    } catch (error) {
-      console.warn('⚠️ Character consistency storage failed, but job completion will proceed:', error);
-    }
-        console.log('✅ Character DNA stored in database for consistency tracking');
-        
         this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
         console.log('✅ Professional character DNA created with maximum consistency protocols');
         
@@ -1113,25 +1081,19 @@ for (const [panelKey, scene] of panelResults.entries()) {
 
     // STORE FINAL CHARACTER CONSISTENCY SCORE
     try {
-      await databaseService.executeQuery(
-        'Store character consistency score',
-        async (supabase) => {
-          const response = await supabase
-            .from('storybook_jobs')
-            .update({
-              character_consistency_score: Math.round(averageConsistency),
-              story_context: JSON.stringify({
-                environmentalDNA: environmentalDNA,
-                storyAnalysis: storyAnalysis,
-                characterDNA: characterDNA,
-                qualityMetrics: qualityMetrics
-              })
-            })
-            .eq('id', job.id)
-            .select('id')
-            .single();
-          return { data: response.data, error: response.error };
-        }
+     await databaseService.query(
+        `UPDATE storybook_jobs 
+         SET character_consistency_score = $1,
+             story_context = $2
+         WHERE id = $3`,
+        [Math.round(averageConsistency), 
+         JSON.stringify({
+           environmentalDNA: environmentalDNA,
+           storyAnalysis: storyAnalysis,
+           characterDNA: characterDNA,
+           qualityMetrics: qualityMetrics
+         }),
+         job.id]
       );
       console.log(`✅ Character consistency score stored: ${Math.round(averageConsistency)}%`);
     } catch (error) {
