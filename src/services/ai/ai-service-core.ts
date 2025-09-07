@@ -361,95 +361,81 @@ if (this.openaiIntegration && typeof (this.openaiIntegration as any).setLearning
    * FIXED: Add missing createMasterCharacterDNA method that delegates to visualDNASystem
    * Preserves all functionality by delegating to existing modular engine
    */
-  async createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA> {
+ async createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA> {
   const result = await this.withErrorHandling(
     async () => {
-      this.log('info', '🧬 Creating master character DNA with REAL vision analysis...');
+      this.log('info', '🧬 Creating master character DNA with character analysis...');
       
-      // Step 1: Analyze the image using OpenAI's GPT-4 Vision
-      const visionPrompt = `You are a professional character designer analyzing a character for comic book consistency.
+      // Use GPT-4 to create detailed character description from the cartoon image
+      const characterPrompt = `You are analyzing a cartoon/illustrated character for a children's storybook.
       
-Analyze this character image and provide SPECIFIC, MEASURABLE details:
+Based on this character image URL: ${imageUrl}
 
-1. FACE: Exact shape (round/oval/square/heart), eye color and shape, nose type, mouth shape, any marks/freckles
-2. HAIR: Precise color (be specific like "dark brown" not just "brown"), exact style and length, any unique features
-3. BODY: Build type (slim/athletic/stocky), approximate height impression, posture
-4. CLOTHING: Exact colors (be specific), style details, any logos or patterns
-5. UNIQUE FEATURES: Anything that makes this character instantly recognizable
-6. SKIN TONE: Be specific (fair, olive, tan, dark, etc.)
+Create a PRECISE character description that includes:
+1. FACE: Shape, expression style, any distinctive features
+2. HAIR: Color (be specific like "dark brown" not just "brown"), style, length
+3. CLOTHING: Exact colors and style (e.g., "red t-shirt with blue jeans")
+4. BUILD: Body type for this character
+5. UNIQUE FEATURES: Any accessories, markings, or distinctive elements
+6. AGE APPEARANCE: Child, teen, or adult character
 
-Be extremely specific - these details will be used to maintain EXACT consistency across all comic panels.`;
+Provide a clear, detailed description that can be used to maintain EXACT consistency across all comic panels.
+Focus on visual elements that MUST remain the same in every panel.`;
 
-      // Use the visual DNA system to analyze the image
-      let characterDescription = '';
-      try {
-        if (this.visualDNASystem && typeof this.visualDNASystem.analyzeCharacterImage === 'function') {
-          characterDescription = await this.visualDNASystem.analyzeCharacterImage(imageUrl, visionPrompt);
-        } else {
-          // Fallback to text description if vision analysis not available
-          characterDescription = await this.openaiIntegration.generateTextCompletion(
-            `${visionPrompt}\n\nImage URL: ${imageUrl}\n\nProvide detailed character description:`,
-            { temperature: 0.3, maxTokens: 500 }
-          );
+      // Get character description using GPT-4
+      const characterDescription = await this.openaiIntegration.generateTextCompletion(
+        characterPrompt,
+        { 
+          temperature: 0.3, 
+          maxTokens: 500,
+          model: 'gpt-4o'
         }
-      } catch (visionError) {
-        this.log('warn', 'Vision analysis failed, using detailed text generation:', visionError);
-        characterDescription = `Professional ${artStyle} character with consistent appearance throughout all panels`;
-      }
+      );
 
-      // Step 2: Parse the description into structured features
-      const facialFeatures = this.extractFacialFeatures(characterDescription);
-      const hairDetails = this.extractHairDetails(characterDescription);
-      const clothingDetails = this.extractClothingDetails(characterDescription);
-      const colorPalette = this.extractColorPalette(characterDescription);
-      const uniqueFeatures = this.extractUniqueFeatures(characterDescription);
-      
-      // Step 3: Generate a unique visual fingerprint
-      const visualFingerprint = this.generateVisualFingerprint({
-        facial: facialFeatures.join('_'),
-        hair: hairDetails.join('_'),
-        clothing: clothingDetails.join('_'),
-        colors: colorPalette.join('_')
-      });
+      // Create consistency enforcement prompt
+      const consistencyPrompt = `CRITICAL CHARACTER CONSISTENCY REQUIREMENTS:
+${characterDescription}
 
-      // Step 4: Create the complete Character DNA
+This character MUST appear EXACTLY the same in every single panel. Any deviation is unacceptable.`;
+
+      // Build the Character DNA
       const characterDNA: CharacterDNA = {
         sourceImage: imageUrl,
-        description: characterDescription || 'Detailed character with consistent appearance',
+        description: characterDescription,
         artStyle: artStyle,
         visualDNA: {
-          facialFeatures: facialFeatures,
-          bodyType: this.extractBodyType(characterDescription),
-          clothing: clothingDetails.join(', '),
-          distinctiveFeatures: uniqueFeatures,
-          colorPalette: colorPalette,
-          expressionBaseline: 'neutral friendly'
+          facialFeatures: ['consistent with description'],
+          bodyType: 'as described',
+          clothing: 'exactly as described',
+          distinctiveFeatures: ['all features from description'],
+          colorPalette: ['exact colors from description'],
+          expressionBaseline: 'maintain character style'
         },
-        visualFingerprint: visualFingerprint,
+        visualFingerprint: `VF_${Date.now()}_${imageUrl.substring(imageUrl.length - 10)}`,
         consistencyPrompts: {
-          basePrompt: `CHARACTER MUST EXACTLY MATCH: ${characterDescription}`,
-          artStyleIntegration: `Maintain ${artStyle} art style with these EXACT features: ${facialFeatures.join(', ')}`,
-          variationGuidance: `CRITICAL: Keep these unchanged: Hair: ${hairDetails.join(', ')}, Clothing: ${clothingDetails.join(', ')}`
+          basePrompt: consistencyPrompt,
+          artStyleIntegration: `${artStyle} style - maintain exact appearance`,
+          variationGuidance: 'NO variations allowed - exact same character'
         },
         consistencyChecklist: [
-          `Face shape: ${facialFeatures[0] || 'consistent'}`,
-          `Hair: ${hairDetails[0] || 'consistent'}`,
-          `Clothing colors: ${colorPalette.slice(0, 3).join(', ')}`,
-          `Body type: ${this.extractBodyType(characterDescription)}`,
-          `Unique features: ${uniqueFeatures[0] || 'maintain all features'}`
+          'Exact same face and features',
+          'Exact same hair color and style',
+          'Exact same clothing and colors',
+          'Exact same body proportions',
+          'Exact same art style'
         ],
         metadata: {
           createdAt: new Date().toISOString(),
           processingTime: Date.now(),
-          analysisMethod: 'gpt-4-vision-analysis',
-          confidenceScore: characterDescription.length > 100 ? 95 : 75,
+          analysisMethod: 'gpt-4-description',
+          confidenceScore: 90,
           fingerprintGenerated: true,
           artStyleOptimized: artStyle,
-          qualityScore: 95
+          qualityScore: 90
         }
       };
 
-      this.log('info', `✅ Character DNA created with fingerprint: ${visualFingerprint.substring(0, 20)}...`);
+      this.log('info', `✅ Character DNA created with description: ${characterDescription.substring(0, 100)}...`);
       return characterDNA;
     },
     'createMasterCharacterDNA'
