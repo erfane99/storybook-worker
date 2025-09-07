@@ -849,20 +849,55 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
    * FIXED: Return proper AsyncResult type and handle Result conversion
    */
   async generateImages(options: ImageGenerationOptions): Promise<AsyncResult<ImageGenerationResult, AIServiceUnavailableError>> {
-    const startTime = Date.now();
-    
-    const resultPromise = this.withErrorHandling(
-      async () => {
-        this.log('info', '🖼️ Generating images with advanced options...');
-        
-        // Build enhanced prompt with DNA information
-        const enhancedPrompt = `${options.image_prompt}
+  const startTime = Date.now();
+  
+  const resultPromise = this.withErrorHandling(
+    async () => {
+      this.log('info', '🖼️ Generating images with CHARACTER DNA ENFORCEMENT...');
+      
+      // Extract Character DNA if passed in environmental context
+      const characterDNA = options.environmentalContext?.characterDNA;
+      const environmentalDNA = options.environmentalContext?.environmentalDNA;
+      
+      // Build ENFORCED prompt with Character DNA
+      let enhancedPrompt = '';
+      
+      if (characterDNA && characterDNA.description) {
+        // CRITICAL: Enforce Character DNA
+        enhancedPrompt = `CRITICAL CHARACTER CONSISTENCY REQUIREMENTS:
+${characterDNA.description}
+
+${characterDNA.consistencyChecklist ? 'MUST MAINTAIN:\n' + characterDNA.consistencyChecklist.join('\n') : ''}
+
+SCENE DESCRIPTION:
+${options.image_prompt}
+
+CHARACTER EMOTION: ${options.emotion}
+ART STYLE: ${options.characterArtStyle || 'comic-book'} - maintain EXACT style consistency
+AUDIENCE: ${options.audience}
+
+IMPORTANT: The character MUST look EXACTLY as described above. ANY deviation from the character description is a FAILURE.`;
+      } else {
+        // Fallback to basic prompt if no DNA
+        enhancedPrompt = `${options.image_prompt}
 Character: ${options.character_description || ''}
 Emotion: ${options.emotion}
 Art Style: ${options.characterArtStyle || 'comic-book'}
 Audience: ${options.audience}`;
-        
-        const result = await this.openaiIntegration.generateCartoonImage(enhancedPrompt);
+      }
+      
+      // Add environmental consistency if available
+      if (environmentalDNA && environmentalDNA.primaryLocation) {
+        enhancedPrompt += `\n\nENVIRONMENT CONSISTENCY:
+Setting: ${environmentalDNA.primaryLocation.name}
+Key Elements: ${environmentalDNA.primaryLocation.keyFeatures?.slice(0, 3).join(', ')}
+Color Palette: ${environmentalDNA.primaryLocation.colorPalette?.slice(0, 3).join(', ')}
+Lighting: ${environmentalDNA.lightingContext?.lightingMood}`;
+      }
+      
+      this.log('info', `📝 Prompt with DNA enforcement (${enhancedPrompt.length} chars)`);
+      
+      const result = await this.openaiIntegration.generateCartoonImage(enhancedPrompt);
         
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, true);
