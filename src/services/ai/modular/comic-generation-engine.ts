@@ -632,7 +632,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
 
   /**
    * Generate individual panels for a page with professional standards
-   * FIXED: All TypeScript errors resolved
+   * ENHANCED: Actually generates images instead of just prompts
    */
   private async generatePanelsForPage(
     pageBeats: StoryBeat[],
@@ -645,11 +645,13 @@ Format as structured visual DNA for consistent reproduction across comic panels.
   ): Promise<ComicPanel[]> {
     const panels: ComicPanel[] = [];
     
+    console.log(`🎨 Generating ${pageBeats.length} actual images for page ${pageNumber}...`);
+    
     for (let beatIndex = 0; beatIndex < pageBeats.length; beatIndex++) {
       const beat = pageBeats[beatIndex];
       const panelNumber = (pageNumber - 1) * config.panelsPerPage + beatIndex + 1;
 
-      // Build optimized image prompt (FROM BOTH FILES)
+      // Build optimized image prompt
       const imagePrompt = this.buildOptimizedImagePrompt(
         beat,
         characterDNA,
@@ -659,29 +661,74 @@ Format as structured visual DNA for consistent reproduction across comic panels.
         { panelNumber, totalPanels, pageNumber }
       );
 
-      // Determine panel type based on story beat (FROM AISERVNOW.TXT)
+      // Determine panel type based on story beat
       const panelType = this.determinePanelType(beat, beatIndex, pageBeats.length);
 
-      const panel: ComicPanel = {
-        description: beat.beat,
-        emotion: beat.emotion,
-        imagePrompt,
-        panelType,
-        characterAction: beat.characterAction,
-        narrativePurpose: beat.panelPurpose,
-        visualPriority: beat.visualPriority,
-        dialogue: beat.dialogue,
-        hasSpeechBubble: beat.hasSpeechBubble || false,
-        speechBubbleStyle: beat.speechBubbleStyle,
-        panelNumber,
-        pageNumber,
-        environmentalContext: beat.environment,
-        professionalStandards: true
-      };
+      console.log(`🖼️ Generating actual image for panel ${panelNumber}/${totalPanels} (${panelType})...`);
 
-      panels.push(panel);
+      try {
+        // CRITICAL CHANGE: Actually generate the image using OpenAI
+        const imageUrl = await this.openaiIntegration.generateCartoonImage(imagePrompt);
+        
+        console.log(`✅ Panel ${panelNumber} image generated successfully`);
+
+        const panel: ComicPanel = {
+          description: beat.beat,
+          emotion: beat.emotion,
+          imagePrompt,
+          generatedImage: imageUrl,  // ADD: Actual generated image URL
+          panelType,
+          characterAction: beat.characterAction,
+          narrativePurpose: beat.panelPurpose,
+          visualPriority: beat.visualPriority,
+          dialogue: beat.dialogue,
+          hasSpeechBubble: beat.hasSpeechBubble || false,
+          speechBubbleStyle: beat.speechBubbleStyle,
+          panelNumber,
+          pageNumber,
+          environmentalContext: beat.environment,
+          professionalStandards: true,
+          imageGenerated: true,  // ADD: Flag showing image was generated
+          characterDNAUsed: !!characterDNA,  // ADD: Track DNA usage
+          environmentalDNAUsed: !!environmentalDNA  // ADD: Track environmental DNA usage
+        };
+
+        panels.push(panel);
+
+      } catch (imageError) {
+        console.error(`❌ Failed to generate image for panel ${panelNumber}:`, imageError);
+        
+        // Create panel with prompt only as fallback
+        const fallbackPanel: ComicPanel = {
+          description: beat.beat,
+          emotion: beat.emotion,
+          imagePrompt,
+          generatedImage: null,  // No image generated
+          panelType,
+          characterAction: beat.characterAction,
+          narrativePurpose: beat.panelPurpose,
+          visualPriority: beat.visualPriority,
+          dialogue: beat.dialogue,
+          hasSpeechBubble: beat.hasSpeechBubble || false,
+          speechBubbleStyle: beat.speechBubbleStyle,
+          panelNumber,
+          pageNumber,
+          environmentalContext: beat.environment,
+          professionalStandards: true,
+          imageGenerated: false,
+          imageGenerationError: imageError.message || 'Image generation failed'
+        };
+        
+        panels.push(fallbackPanel);
+      }
+
+      // Add small delay between images to respect rate limits
+      if (beatIndex < pageBeats.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
+    console.log(`✅ Generated ${panels.length} panels for page ${pageNumber}`);
     return panels;
   }
 
