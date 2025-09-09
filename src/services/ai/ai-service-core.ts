@@ -846,80 +846,138 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
 
   /**
    * Generate images with advanced options (FROM BOTH FILES)
-   * FIXED: Return proper AsyncResult type and handle Result conversion
+   * ENHANCED: World-class prompt architecture with all professional elements
    */
   async generateImages(options: ImageGenerationOptions): Promise<AsyncResult<ImageGenerationResult, AIServiceUnavailableError>> {
-  const startTime = Date.now();
-  
-  const resultPromise = this.withErrorHandling(
-    async () => {
-      this.log('info', '🖼️ Generating images with CHARACTER DNA ENFORCEMENT...');
-      
-      // Extract Character DNA if passed in environmental context
-      const characterDNA = options.environmentalContext?.characterDNA;
-      const environmentalDNA = options.environmentalContext?.environmentalDNA;
-      
-      // Build ENFORCED prompt with Character DNA
-      let enhancedPrompt = '';
-      
-      if (characterDNA && characterDNA.description) {
-        // CRITICAL: Enforce Character DNA
-        enhancedPrompt = `CRITICAL CHARACTER CONSISTENCY REQUIREMENTS:
+    const startTime = Date.now();
+    
+    const resultPromise = this.withErrorHandling(
+      async () => {
+        this.log('info', '🖼️ Generating images with WORLD-CLASS prompt architecture...');
+        
+        // Extract DNA elements
+        const characterDNA = options.environmentalContext?.characterDNA;
+        const environmentalDNA = options.environmentalContext?.environmentalDNA;
+        const panelNumber = options.environmentalContext?.panelNumber || 1;
+        const totalPanels = options.environmentalContext?.totalPanels || 1;
+        
+        // Panel type specifications (from original files)
+        const panelSpecs: Record<string, string> = {
+          'standard': 'Standard comic panel with balanced composition',
+          'wide': 'Wide panoramic panel showing full environmental context',
+          'tall': 'Tall dramatic panel emphasizing vertical action and emotion',
+          'splash': 'Large splash panel for maximum visual impact',
+          'closeup': 'Intimate close-up panel revealing character emotion',
+          'establishing': 'Establishing shot panel setting the scene and atmosphere'
+        };
+        
+        const panelType = options.panelType || 'standard';
+        const panelSpec = panelSpecs[panelType] || panelSpecs.standard;
+        
+        // Build WORLD-CLASS prompt with all elements
+        let worldClassPrompt = '';
+        
+        // 1. PANEL TYPE & COMPOSITION
+        worldClassPrompt += `${panelSpec}\n\n`;
+        
+        // 2. CHARACTER DNA ENFORCEMENT (highest priority)
+        if (characterDNA && characterDNA.description) {
+          worldClassPrompt += `CHARACTER CONSISTENCY CRITICAL - EXACT MATCH REQUIRED:
 ${characterDNA.description}
+${characterDNA.visualFingerprint ? `Visual Fingerprint: ${characterDNA.visualFingerprint}` : ''}
+${characterDNA.consistencyChecklist ? 'MUST MAINTAIN: ' + characterDNA.consistencyChecklist.slice(0, 5).join(', ') : ''}
 
-${characterDNA.consistencyChecklist ? 'MUST MAINTAIN:\n' + characterDNA.consistencyChecklist.join('\n') : ''}
-
-SCENE DESCRIPTION:
+`;
+        } else if (options.character_description) {
+          worldClassPrompt += `CHARACTER: ${options.character_description}\n\n`;
+        }
+        
+        // 3. SCENE DESCRIPTION (the actual action)
+        worldClassPrompt += `SCENE ACTION:
 ${options.image_prompt}
 
-CHARACTER EMOTION: ${options.emotion}
-ART STYLE: ${options.characterArtStyle || 'comic-book'} - maintain EXACT style consistency
-AUDIENCE: ${options.audience}
-
-IMPORTANT: The character MUST look EXACTLY as described above. ANY deviation from the character description is a FAILURE.`;
-      } else {
-        // Fallback to basic prompt if no DNA
-        enhancedPrompt = `${options.image_prompt}
-Character: ${options.character_description || ''}
-Emotion: ${options.emotion}
-Art Style: ${options.characterArtStyle || 'comic-book'}
-Audience: ${options.audience}`;
-      }
-      
-      // Add environmental consistency if available
-      if (environmentalDNA && environmentalDNA.primaryLocation) {
-        enhancedPrompt += `\n\nENVIRONMENT CONSISTENCY:
+`;
+        
+        // 4. EMOTIONAL CONTEXT & EXPRESSION
+        if (options.emotion) {
+          worldClassPrompt += `EMOTION: ${options.emotion} - character displays clear ${options.emotion} expression and body language\n`;
+        }
+        
+        // 5. ENVIRONMENTAL CONSISTENCY
+        if (environmentalDNA && environmentalDNA.primaryLocation) {
+          worldClassPrompt += `
+ENVIRONMENT CONSISTENCY:
 Setting: ${environmentalDNA.primaryLocation.name}
-Key Elements: ${environmentalDNA.primaryLocation.keyFeatures?.slice(0, 3).join(', ')}
-Color Palette: ${environmentalDNA.primaryLocation.colorPalette?.slice(0, 3).join(', ')}
-Lighting: ${environmentalDNA.lightingContext?.lightingMood}`;
-      }
-      
-      this.log('info', `📝 Prompt with DNA enforcement (${enhancedPrompt.length} chars)`);
-      
-      const result = await this.openaiIntegration.generateCartoonImage(enhancedPrompt);
+Atmosphere: ${environmentalDNA.lightingContext?.lightingMood || 'bright and inviting'}
+Key Elements: ${environmentalDNA.primaryLocation.keyFeatures?.slice(0, 3).join(', ') || 'consistent background'}
+Color Palette: ${environmentalDNA.primaryLocation.colorPalette?.slice(0, 3).join(', ') || 'vibrant colors'}
+Time of Day: ${environmentalDNA.lightingContext?.timeOfDay || 'afternoon'}
+
+`;
+        }
+        
+        // 6. PROFESSIONAL QUALITY SPECIFICATIONS
+        const audienceSpecs = {
+          'children': 'bright, colorful, friendly, safe, whimsical imagery',
+          'young adults': 'dynamic, engaging, detailed, sophisticated, cinematic',
+          'adults': 'nuanced, complex, cinematic, professional, publication-ready'
+        };
+        
+        worldClassPrompt += `QUALITY SPECIFICATIONS:
+Style: ${options.characterArtStyle || 'storybook'} professional comic art
+Audience: ${audienceSpecs[options.audience] || audienceSpecs.children}
+Panel ${panelNumber}/${totalPanels}
+TARGET: Publication-ready, high-quality comic illustration
+Composition: Clear focal point, professional layout, visual storytelling excellence
+Quality Level: Highest possible detail and artistic execution
+
+`;
+        
+        // 7. CRITICAL CONSISTENCY REQUIREMENTS
+        worldClassPrompt += `CRITICAL REQUIREMENTS:
+- Character MUST look EXACTLY identical to all previous panels
+- Maintain absolute style consistency throughout
+- Professional comic book quality standards required
+- Any deviation from character appearance is unacceptable`;
+        
+        // INTELLIGENT COMPRESSION if needed
+        if (worldClassPrompt.length > 3800) {
+          this.log('warn', `Prompt too long (${worldClassPrompt.length} chars), applying intelligent compression...`);
+          worldClassPrompt = this.compressPromptIntelligently(worldClassPrompt);
+          this.log('info', `Compressed to ${worldClassPrompt.length} chars while preserving critical elements`);
+        }
+        
+        this.log('info', `📝 World-class prompt created (${worldClassPrompt.length} chars) with DNA: ${!!characterDNA}, Env: ${!!environmentalDNA}`);
+        
+        // Generate the image with world-class prompt
+        const result = await this.openaiIntegration.generateCartoonImage(worldClassPrompt);
         
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, true);
         
         return {
           url: result,
-          prompt_used: options.image_prompt,
-          reused: false
+          prompt_used: worldClassPrompt,
+          reused: false,
+          quality: 'world-class',
+          dnaEnforced: !!characterDNA,
+          environmentEnforced: !!environmentalDNA,
+          panelType: panelType,
+          panelNumber: panelNumber,
+          totalPanels: totalPanels
         };
       },
       'generateImages',
       options
     );
 
-    // FIXED: Convert Result to AsyncResult and handle error type conversion
+    // Convert Result to AsyncResult
     return new AsyncResult(resultPromise.then(result => {
       if (result.success) {
         return Result.success(result.data);
       } else {
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, false);
-        // Convert ServiceError to AIServiceUnavailableError
         const aiError = new AIServiceUnavailableError(result.error.message, {
           service: this.getName(),
           operation: 'generateImages'
@@ -927,6 +985,63 @@ Lighting: ${environmentalDNA.lightingContext?.lightingMood}`;
         return Result.failure(aiError);
       }
     }));
+  }
+
+  /**
+   * Intelligent prompt compression that preserves critical elements
+   * Prioritizes Character DNA, scene action, and quality specs
+   */
+  private compressPromptIntelligently(prompt: string): string {
+    const lines = prompt.split('\n').filter(line => line.trim());
+    const essential: string[] = [];
+    
+    // Priority 1: Character consistency (MOST IMPORTANT)
+    const characterLines = lines.filter(line => 
+      line.includes('CHARACTER CONSISTENCY CRITICAL') ||
+      line.includes('Visual Fingerprint:') ||
+      line.includes('MUST MAINTAIN:') ||
+      (line.length > 20 && line.toLowerCase().includes('character'))
+    ).slice(0, 4);
+    essential.push(...characterLines);
+    
+    // Priority 2: Scene action (CORE CONTENT)
+    const sceneLines = lines.filter(line => 
+      line.includes('SCENE ACTION:') ||
+      (line.length > 15 && !line.includes(':') && !line.includes('CRITICAL'))
+    ).slice(0, 3);
+    essential.push(...sceneLines);
+    
+    // Priority 3: Style and quality
+    const qualityLines = lines.filter(line =>
+      line.includes('Style:') ||
+      line.includes('TARGET:') ||
+      line.includes('Panel')
+    ).slice(0, 3);
+    essential.push(...qualityLines);
+    
+    // Priority 4: Emotion
+    const emotionLines = lines.filter(line => line.includes('EMOTION:')).slice(0, 1);
+    essential.push(...emotionLines);
+    
+    // Build compressed prompt
+    let compressed = essential.join('\n');
+    
+    // Further compress if still too long
+    if (compressed.length > 3800) {
+      compressed = essential.map(line => 
+        line.length > 100 ? line.substring(0, 100) : line
+      ).join('\n');
+    }
+    
+    // Nuclear option - ultra minimal
+    if (compressed.length > 3800) {
+      const character = characterLines[0] || 'Consistent character';
+      const scene = sceneLines[0] || 'Comic panel scene';
+      const style = qualityLines[0] || 'Professional comic art';
+      compressed = `${character}\n${scene}\n${style}\nHigh quality illustration`;
+    }
+    
+    return compressed;
   }
 
   /**
