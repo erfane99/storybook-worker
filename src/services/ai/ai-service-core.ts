@@ -1266,54 +1266,72 @@ Following the ${storyArchetype} pattern, they grew and learned valuable lessons,
     return this.generateChatCompletion(options);
   }
 
-  /**
-   * Analyze story structure using advanced narrative intelligence
-   * FIXED: Uses inherited error handling
-   */
   async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
   const result = await this.withErrorHandling(
     async () => {
-      this.log('info', '📖 Creating professional story beats for world-class comic...');
+      this.log('info', '📖 Creating CINEMATIC story beats for world-class comic...');
       
       const panelCount = PROFESSIONAL_AUDIENCE_CONFIG[audience].totalPanels;
       
-      const analysisPrompt = `You are a world-class comic book writer creating a visually stunning ${audience} comic.
+      // Enhanced prompt incorporating best practices from original files
+      const analysisPrompt = `You are a world-class comic book writer and visual storyteller creating a masterpiece ${audience} comic.
 
-STORY TO ADAPT:
+STORY TO TRANSFORM:
 "${story}"
 
-Create exactly ${panelCount} comic panels that transform this story into a cinematic, engaging visual narrative.
+Create exactly ${panelCount} CINEMATIC comic panels that transform this story into a visually stunning narrative.
 
-For EACH of the ${panelCount} panels, provide:
+For EACH of the ${panelCount} panels, provide RICH DETAIL:
 {
-  "beat": "Specific moment/action happening in this panel",
-  "imagePrompt": "DETAILED 50+ word description: Setting, character position, action, facial expression, lighting, mood, background details, colors",
-  "emotion": "Character's emotion (happy/sad/excited/curious/scared/surprised/determined/peaceful)",
-  "characterAction": "Specific physical action the character is doing",
-  "visualPriority": "What viewers should focus on (character-face/character-action/environment/object)",
-  "environment": "Detailed setting description with specific objects and atmosphere",
-  "panelPurpose": "Why this panel matters to the story progression"
+  "beat": "Specific cinematic moment - what's happening in this exact frame",
+  "imagePrompt": "ULTRA-DETAILED 80+ word description including:
+    - Exact character position and pose (e.g., 'standing with arms crossed, weight on left foot')
+    - Facial expression details (e.g., 'wide eyes with raised eyebrows showing surprise')
+    - Environmental details (at least 3 specific objects or features)
+    - Lighting direction and quality (e.g., 'warm sunlight from upper left casting soft shadows')
+    - Color mood (e.g., 'warm golden hour tones with purple shadows')
+    - Camera angle (e.g., 'low angle looking up' or 'bird's eye view')
+    - Depth and composition (e.g., 'character in foreground, trees framing mid-ground, mountains in background')
+    Make this so detailed an artist could draw it without seeing any other reference",
+  "emotion": "Primary emotion (happy/sad/excited/curious/scared/surprised/determined/peaceful/angry/confused)",
+  "characterAction": "SPECIFIC physical action verb phrase (e.g., 'reaching toward the glowing orb' not just 'reaching')",
+  "visualPriority": "Exact focal point (character-face/character-full/action/environment/object-specific)",
+  "environment": "RICH setting with 5+ environmental details (e.g., 'sunny forest clearing with tall pine trees, wildflowers dotting the grass, a small stream babbling nearby, butterflies in the air, moss-covered rocks')",
+  "panelPurpose": "Story function (establish/develop/reveal/climax/transition/resolve)",
+  "cameraAngle": "Specific shot type (close-up/medium/wide/extreme-wide/over-shoulder/POV/dutch-angle)",
+  "lightingNote": "Specific lighting setup for mood",
+  "compositionNote": "Rule of thirds, golden ratio, or other composition principle"
 }
 
-Requirements:
-- Make each panel visually distinct and engaging
-- Include rich environmental details (objects, lighting, atmosphere)
-- Vary shot types (close-up, wide shot, medium shot)
-- Build emotional progression throughout the story
-- Create a satisfying visual narrative arc
+CRITICAL REQUIREMENTS:
+- Each panel must be visually distinct - no two panels should look similar
+- Vary camera angles dramatically between panels for visual interest
+- Include specific props and environmental details that enhance the story
+- Build emotional progression: ${audience === 'children' ? 'wonder → curiosity → challenge → triumph' : audience === 'young adults' ? 'intrigue → tension → action → revelation' : 'complexity → conflict → climax → resolution'}
+- Use cinematic techniques: establishing shots, reaction shots, action sequences, emotional close-ups
+- Every imagePrompt must be so detailed it could stand alone as an art brief
+
+PANEL PROGRESSION GUIDANCE:
+- Panel 1: Establishing shot setting the world and tone
+- Panels 2-${Math.floor(panelCount * 0.3)}: Building tension and character
+- Panels ${Math.floor(panelCount * 0.3) + 1}-${Math.floor(panelCount * 0.7)}: Core action and conflict
+- Panels ${Math.floor(panelCount * 0.7) + 1}-${panelCount - 1}: Climax and resolution buildup  
+- Panel ${panelCount}: Satisfying conclusion with emotional payoff
 
 Return as JSON:
 {
-  "storyBeats": [array of ${panelCount} panel objects],
+  "storyBeats": [array of ${panelCount} richly detailed panel objects],
   "totalPanels": ${panelCount},
-  "pagesRequired": ${PROFESSIONAL_AUDIENCE_CONFIG[audience].pagesPerStory}
+  "pagesRequired": ${PROFESSIONAL_AUDIENCE_CONFIG[audience].pagesPerStory},
+  "emotionalArc": ["emotion1", "emotion2", "emotion3", "emotion4"],
+  "visualThemes": ["consistent visual elements that appear throughout"]
 }`;
 
       const response = await this.openaiIntegration.generateTextCompletion(
         analysisPrompt,
         {
           temperature: 0.7,
-          maxTokens: 3000,
+          maxTokens: 4000,  // Increased for richer descriptions
           model: 'gpt-4o'
         }
       );
@@ -1328,22 +1346,22 @@ Return as JSON:
         parsed = { storyBeats: [], totalPanels: panelCount };
       }
       
-      // Ensure we have the right number of beats
-      if (!parsed.storyBeats || parsed.storyBeats.length !== panelCount) {
-        this.log('warn', `Expected ${panelCount} beats, got ${parsed.storyBeats?.length || 0}, adjusting...`);
-      }
+      // Validate and enhance beats
+      const enrichedBeats = this.enrichStoryBeats(parsed.storyBeats || [], panelCount, audience);
       
       const storyAnalysis: StoryAnalysis = {
-        storyBeats: parsed.storyBeats || [],
+        storyBeats: enrichedBeats,
         characterArc: ['introduction', 'development', 'challenge', 'resolution'],
-        visualFlow: ['establishing', 'rising action', 'climax', 'resolution'],
+        visualFlow: parsed.visualThemes || ['establishing', 'rising action', 'climax', 'resolution'],
         totalPanels: panelCount,
         pagesRequired: PROFESSIONAL_AUDIENCE_CONFIG[audience].pagesPerStory,
         dialoguePanels: Math.floor(panelCount * 0.4),
-        speechBubbleDistribution: { standard: 60, thought: 20, shout: 20 }
+        speechBubbleDistribution: { standard: 60, thought: 20, shout: 20 },
+        emotionalArc: parsed.emotionalArc || ['curious', 'engaged', 'challenged', 'triumphant'],
+        cinematicQuality: true
       };
       
-      this.log('info', `✅ Created ${storyAnalysis.storyBeats.length} rich story beats for world-class comic`);
+      this.log('info', `✅ Created ${storyAnalysis.storyBeats.length} CINEMATIC story beats with rich visual detail`);
       return storyAnalysis;
     },
     'analyzeStoryStructure'
@@ -1354,6 +1372,78 @@ Return as JSON:
   } else {
     throw result.error;
   }
+}
+
+/**
+ * Enrich story beats with additional cinematic details
+ */
+private enrichStoryBeats(beats: any[], targetCount: number, audience: AudienceType): StoryBeat[] {
+  // Ensure we have the right number of beats
+  while (beats.length < targetCount) {
+    beats.push(this.createCinematicBeat(beats.length, targetCount, audience));
+  }
+  
+  return beats.slice(0, targetCount).map((beat, index) => ({
+    beat: beat.beat || `Cinematic moment ${index + 1}`,
+    imagePrompt: beat.imagePrompt || this.generateCinematicPrompt(index, targetCount, audience),
+    emotion: beat.emotion || this.determineEmotionForBeat(index, targetCount),
+    characterAction: beat.characterAction || 'engaging with the story',
+    visualPriority: beat.visualPriority || 'character-full',
+    environment: beat.environment || 'richly detailed setting',
+    panelPurpose: beat.panelPurpose || this.determinePanelPurpose(index, targetCount),
+    narrativeFunction: beat.panelPurpose || this.determinePanelPurpose(index, targetCount),
+    cameraAngle: beat.cameraAngle || this.determineCameraAngle(index, targetCount),
+    lightingNote: beat.lightingNote || 'professional cinematic lighting',
+    compositionNote: beat.compositionNote || 'rule of thirds with dynamic composition',
+    hasSpeechBubble: beat.hasSpeechBubble || (index % 3 === 0),
+    dialogue: beat.dialogue,
+    speechBubbleStyle: beat.speechBubbleStyle || 'standard'
+  }));
+}
+
+private createCinematicBeat(index: number, total: number, audience: AudienceType): any {
+  const position = index / total;
+  return {
+    beat: position < 0.2 ? 'Establishing the scene' : position < 0.8 ? 'Story development' : 'Resolution moment',
+    imagePrompt: this.generateCinematicPrompt(index, total, audience),
+    emotion: this.determineEmotionForBeat(index, total),
+    characterAction: 'actively engaged in story',
+    visualPriority: 'character-action',
+    environment: 'detailed atmospheric setting',
+    panelPurpose: this.determinePanelPurpose(index, total)
+  };
+}
+
+private generateCinematicPrompt(index: number, total: number, audience: AudienceType): string {
+  const position = index / total;
+  const shotTypes = ['wide establishing shot', 'medium character shot', 'close-up emotional shot', 'action shot', 'reaction shot'];
+  const shot = shotTypes[index % shotTypes.length];
+  
+  return `${shot} with rich environmental detail, professional composition, cinematic lighting, 
+          ${audience === 'children' ? 'bright cheerful colors' : 'sophisticated color grading'}, 
+          clear focal point, depth of field, atmospheric perspective`;
+}
+
+private determineEmotionForBeat(index: number, total: number): string {
+  const position = index / total;
+  if (position < 0.2) return 'curious';
+  if (position < 0.4) return 'engaged';
+  if (position < 0.6) return 'challenged';
+  if (position < 0.8) return 'determined';
+  return 'satisfied';
+}
+
+private determinePanelPurpose(index: number, total: number): string {
+  const position = index / total;
+  if (position < 0.15) return 'establish';
+  if (position < 0.7) return 'develop';
+  if (position < 0.85) return 'climax';
+  return 'resolve';
+}
+
+private determineCameraAngle(index: number, total: number): string {
+  const angles = ['wide', 'medium', 'close-up', 'over-shoulder', 'low-angle', 'high-angle', 'dutch-angle'];
+  return angles[index % angles.length];
 }
 
   /**
