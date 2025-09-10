@@ -796,7 +796,13 @@ export interface ImageGenerationOptions {
   characterArtStyle?: string;
   layoutType?: string;
   panelType?: PanelType;
-  environmentalContext?: EnvironmentalDNA;
+  environmentalContext?: {
+    characterDNA?: CharacterDNA;
+    environmentalDNA?: EnvironmentalDNA;
+    panelNumber?: number;
+    totalPanels?: number;
+    enforceConsistency?: boolean;
+  };
 }
 
 export interface ComicGenerationResult {
