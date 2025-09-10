@@ -91,6 +91,14 @@ export interface ComicPanel {
   pageNumber: number;
   environmentalContext?: string;
   professionalStandards: boolean;
+  // Enhanced properties for Character DNA system
+  generatedImage?: string | null;
+  imageGenerated?: boolean;
+  characterDNAUsed?: boolean;
+  environmentalDNAUsed?: boolean;
+  imageGenerationError?: string;
+  characterConsistency?: number;
+  environmentalConsistency?: number;
 }
 
 export interface GenerationMetadata {
@@ -468,6 +476,7 @@ export interface StoryAnalysis {
     pacingStrategy: string;
     characterGrowthIntegrated: boolean;
   };
+  cinematicQuality?: boolean;
 }
 
 // ===== ENHANCED QUALITY METRICS =====
