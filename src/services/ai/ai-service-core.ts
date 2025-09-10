@@ -411,7 +411,14 @@ This character MUST appear EXACTLY the same in every single panel. Any deviation
           colorPalette: ['exact colors from description'],
           expressionBaseline: 'maintain character style'
         },
-        visualFingerprint: `VF_${Date.now()}_${imageUrl.substring(imageUrl.length - 10)}`,
+        visualFingerprint: {
+          face: this.extractFacialFeatures(characterDescription).join('_'),
+          body: this.extractBodyType(characterDescription),
+          clothing: this.extractClothingDetails(characterDescription).join('_'),
+          signature: this.extractUniqueFeatures(characterDescription).join('_'),
+          colorDNA: this.extractColorPalette(characterDescription).join('_'),
+          artStyleSignature: `${artStyle}_${Date.now()}`
+        },
         consistencyPrompts: {
           basePrompt: consistencyPrompt,
           artStyleIntegration: `${artStyle} style - maintain exact appearance`,
