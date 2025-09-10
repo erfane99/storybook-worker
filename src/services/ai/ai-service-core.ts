@@ -862,9 +862,9 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
       async () => {
         this.log('info', '🖼️ Generating images with WORLD-CLASS prompt architecture...');
         
-        // Extract DNA elements
+        // Extract DNA elements from environmentalContext
         const characterDNA = options.environmentalContext?.characterDNA;
-        const environmentalDNA = options.environmentalContext?.environmentalDNA;
+        const environmentalDNA = options.environmentalContext?.environmentalDNA || options.environmentalContext;
         const panelNumber = options.environmentalContext?.panelNumber || 1;
         const totalPanels = options.environmentalContext?.totalPanels || 1;
         
