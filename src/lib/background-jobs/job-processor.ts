@@ -813,8 +813,8 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       });
     }
 
-    const averageConsistency = totalScenes > 0 ? characterConsistencyScore / totalScenes : 0;
-    const averageEnvironmentalConsistency = totalScenes > 0 ? environmentalConsistencyScore / totalScenes : 0;
+    let averageConsistency = totalScenes > 0 ? characterConsistencyScore / totalScenes : 0;
+    let averageEnvironmentalConsistency = totalScenes > 0 ? environmentalConsistencyScore / totalScenes : 0;
     const storyCoherence = storyAnalysis ? 90 : 70;
 
     console.log(`✅ Processed ${updatedPages.length} pages with ${totalScenes} panels`);
@@ -840,6 +840,10 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     });
 
     await jobService.updateJobProgress(job.id, 100, `Professional comic book created successfully`);
+
+    // Calculate processing metrics
+    const batchedDuration = Date.now() - startTime;
+    const successfulPanels = updatedPages.reduce((total, page) => total + (page.scenes?.length || 0), 0);
 
     const qualityMetrics = {
       characterConsistency: Math.round(averageConsistency),
