@@ -617,6 +617,67 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
       throw result.error;
     }
   }
+}
+
+  /**
+   * FIXED: Add missing createEnvironmentalDNA method implementation
+   */
+  async createEnvironmentalDNA(storyBeats: StoryBeat[], audience: AudienceType, artStyle?: string): Promise<EnvironmentalDNA> {
+    const result = await this.withErrorHandling(
+      async () => {
+        this.log('info', '🌍 Creating environmental DNA for world consistency...');
+        
+        // Extract environmental elements from story beats
+        const environments = storyBeats.map(beat => beat.environment).filter(Boolean);
+        const uniqueEnvironments = [...new Set(environments)];
+
+        const environmentalDNA: EnvironmentalDNA = {
+          primaryLocation: {
+            name: uniqueEnvironments[0] || 'general setting',
+            type: 'mixed',
+            description: 'Story setting with consistent visual elements',
+            keyFeatures: uniqueEnvironments,
+            colorPalette: this.determineColorPalette(audience),
+            architecturalStyle: artStyle || 'storybook'
+          },
+          lightingContext: {
+            timeOfDay: 'afternoon',
+            weatherCondition: 'pleasant',
+            lightingMood: this.determineLightingMood(audience),
+            shadowDirection: 'natural',
+            consistencyRules: ['maintain_lighting_direction', 'consistent_shadow_intensity']
+          },
+          visualContinuity: {
+            backgroundElements: uniqueEnvironments,
+            recurringObjects: ['consistent_props'],
+            colorConsistency: {
+              dominantColors: this.determineColorPalette(audience),
+              accentColors: ['warm_highlights', 'cool_shadows'],
+              avoidColors: ['jarring_contrasts']
+            },
+            perspectiveGuidelines: 'consistent_viewpoint_flow'
+          },
+          metadata: {
+            createdAt: new Date().toISOString(),
+            processingTime: 0,
+            audience,
+            consistencyTarget: 'world_building',
+            fallback: false
+          }
+        };
+
+        this.log('info', '✅ Environmental DNA created for world consistency');
+        return environmentalDNA;
+      },
+      'createEnvironmentalDNA'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw result.error;
+    }
+  }
 
   // ===== UTILITY METHODS FOR NEW INTERFACE METHODS =====
 
@@ -911,7 +972,7 @@ ${options.image_prompt}
         }
         
         // 5. ENVIRONMENTAL CONSISTENCY
-        if (environmentalDNA && environmentalDNA.primaryLocation) {
+        if (environmentalDNA && 'primaryLocation' in environmentalDNA && environmentalDNA.primaryLocation) {
           worldClassPrompt += `
 ENVIRONMENT CONSISTENCY:
 Setting: ${environmentalDNA.primaryLocation.name}
