@@ -714,55 +714,6 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
     throw result.error;
   }
 }
-        const uniqueEnvironments = [...new Set(environments)];
-
-        const environmentalDNA: EnvironmentalDNA = {
-          primaryLocation: {
-            name: uniqueEnvironments[0] || 'general setting',
-            type: 'mixed',
-            description: 'Story setting with consistent visual elements',
-            keyFeatures: uniqueEnvironments,
-            colorPalette: this.determineColorPalette(audience),
-            architecturalStyle: artStyle || 'storybook'
-          },
-          lightingContext: {
-            timeOfDay: 'afternoon',
-            weatherCondition: 'pleasant',
-            lightingMood: this.determineLightingMood(audience),
-            shadowDirection: 'natural',
-            consistencyRules: ['maintain_lighting_direction', 'consistent_shadow_intensity']
-          },
-          visualContinuity: {
-            backgroundElements: uniqueEnvironments,
-            recurringObjects: ['consistent_props'],
-            colorConsistency: {
-              dominantColors: this.determineColorPalette(audience),
-              accentColors: ['warm_highlights', 'cool_shadows'],
-              avoidColors: ['jarring_contrasts']
-            },
-            perspectiveGuidelines: 'consistent_viewpoint_flow'
-          },
-          metadata: {
-            createdAt: new Date().toISOString(),
-            processingTime: 0,
-            audience,
-            consistencyTarget: 'world_building',
-            fallback: false
-          }
-        };
-
-        this.log('info', '✅ Environmental DNA created for world consistency');
-        return environmentalDNA;
-      },
-      'createEnvironmentalDNA'
-    );
-
-    if (result.success) {
-      return result.data;
-    } else {
-      throw result.error;
-    }
-  }
 
   // ===== UTILITY METHODS FOR NEW INTERFACE METHODS =====
 
