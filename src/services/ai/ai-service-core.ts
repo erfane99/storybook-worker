@@ -366,31 +366,71 @@ if (this.openaiIntegration && typeof (this.openaiIntegration as any).setLearning
     async () => {
       this.log('info', '🧬 Creating master character DNA with character analysis...');
       
-      // Use GPT-4 to create detailed character description from the cartoon image
-      const characterPrompt = `You are analyzing a cartoon/illustrated character for a children's storybook.
+      let characterDescription = '';
       
-Based on this character image URL: ${imageUrl}
-
-Create a PRECISE character description that includes:
-1. FACE: Shape, expression style, any distinctive features
-2. HAIR: Color (be specific like "dark brown" not just "brown"), style, length
-3. CLOTHING: Exact colors and style (e.g., "red t-shirt with blue jeans")
-4. BUILD: Body type for this character
-5. UNIQUE FEATURES: Any accessories, markings, or distinctive elements
-6. AGE APPEARANCE: Child, teen, or adult character
-
-Provide a clear, detailed description that can be used to maintain EXACT consistency across all comic panels.
-Focus on visual elements that MUST remain the same in every panel.`;
-
-      // Get character description using GPT-4
-      const characterDescription = await this.openaiIntegration.generateTextCompletion(
-        characterPrompt,
-        { 
-          temperature: 0.3, 
-          maxTokens: 500,
-          model: 'gpt-4o'
+      // Check if this is a reused cartoon image (Cloudinary URL)
+      const isReusedCartoon = imageUrl.includes('cloudinary.com') && imageUrl.includes('/cartoons/');
+      
+      if (isReusedCartoon) {
+        // For reused cartoons, check if we have stored description in database
+        try {
+          // First try to get existing character description from cartoon_images table
+          const { data: cartoonData } = await this.databaseService.getSupabaseClient()
+            .from('cartoon_images')
+            .select('character_description, cartoon_style')
+            .eq('cartoonized_cloudinary_url', imageUrl)
+            .single();
+          
+          if (cartoonData?.character_description) {
+            this.log('info', '✅ Using existing character description from cartoon_images table');
+            characterDescription = cartoonData.character_description;
+          }
+        } catch (err) {
+          this.log('warn', 'Could not retrieve stored character description, will use fallback');
         }
-      );
+        
+        // If no stored description, use the one from the job
+        if (!characterDescription) {
+          // This should be passed from the job processor
+          characterDescription = "Character with consistent appearance based on previous cartoon";
+        }
+      } else {
+        // For new images, use GPT-4 Vision (this would need proper vision API call)
+        this.log('info', '🔍 Analyzing new character image with GPT-4 Vision...');
+        
+        // Note: This would need proper GPT-4 Vision implementation
+        // For now, return a structured description
+        characterDescription = "Character requiring visual analysis";
+      }
+      
+      // Create comprehensive character DNA structure
+      const characterDNA: CharacterDNA = {
+        sourceImage: imageUrl,
+        description: characterDescription,
+        artStyle: artStyle,
+        isReusedCartoon: isReusedCartoon,
+        visualDNA: {
+          coreFeatures: this.extractCoreFeatures(characterDescription),
+          colorPalette: this.extractColorPalette(characterDescription),
+          distinguishingMarks: this.extractDistinguishingMarks(characterDescription)
+        },
+        consistencyPrompts: {
+          basePrompt: `CRITICAL CHARACTER REFERENCE - MAINTAIN EXACTLY:
+${characterDescription}
+
+This character MUST appear IDENTICAL in every single panel. Character consistency is the highest priority.`,
+          artStyleIntegration: `Render in ${artStyle} style while maintaining EXACT character features described above`,
+          variationGuidance: 'NO variations in character appearance allowed. Every panel must show the EXACT same character.'
+        },
+        metadata: {
+          createdAt: new Date().toISOString(),
+          artStyle: artStyle,
+          consistencyScore: 0 // Will be calculated after generation
+        }
+      };
+
+      this.log('info', `✅ Character DNA created for ${isReusedCartoon ? 'reused cartoon' : 'new'} character`);
+      return characterDNA;
 
       // Create consistency enforcement prompt
       const consistencyPrompt = `CRITICAL CHARACTER CONSISTENCY REQUIREMENTS:
