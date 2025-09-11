@@ -637,10 +637,16 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
       if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
       
       // Create environmental DNA for consistent world-building
-      environmentalDNA = await aiService.createEnvironmentalDNA(
-        storyAnalysis || { storyBeats: pages.map((p: any, i: number) => ({ description: `Page ${i + 1}`, setting: 'general' })) },
-        audience
-      );
+// FIX: Pass storyBeats array, not the full analysis object
+environmentalDNA = await aiService.createEnvironmentalDNA(
+  storyAnalysis ? storyAnalysis.storyBeats : pages.map((p: any, i: number) => ({ 
+    description: `Page ${i + 1}`, 
+    setting: 'general',
+    environment: 'general setting'
+  })),
+  audience,
+  character_art_style
+);
       
       console.log(`✅ Environmental DNA created: ${environmentalDNA.primaryLocation?.name || 'Generic Setting'}`);
       console.log(`☀️ Lighting Context: ${environmentalDNA.lightingContext?.timeOfDay || 'afternoon'} - ${environmentalDNA.lightingContext?.lightingMood || 'bright'}`);
@@ -898,6 +904,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       characterDescription: characterDNA ? characterDNA.description : characterDescriptionToUse,  // Use DNA description
       characterDNA: characterDNA,  // ADD - Store full Character DNA
       visualFingerprint: characterDNA?.visualFingerprint,  // ADD - Store fingerprint
+      character_consistency_score: Math.round(averageConsistency),  // Save the actual score
       qualityMetrics,
       characterDNAUsed: !!characterDNA,
       parallelProcessed: true,
