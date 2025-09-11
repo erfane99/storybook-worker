@@ -361,95 +361,43 @@ if (this.openaiIntegration && typeof (this.openaiIntegration as any).setLearning
    * FIXED: Add missing createMasterCharacterDNA method that delegates to visualDNASystem
    * Preserves all functionality by delegating to existing modular engine
    */
- async createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA> {
+ async createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescription?: string): Promise<CharacterDNA> {
   const result = await this.withErrorHandling(
     async () => {
       this.log('info', '🧬 Creating master character DNA with character analysis...');
       
       let characterDescription = '';
-      
-      // Check if this is a reused cartoon image (Cloudinary URL)
       const isReusedCartoon = imageUrl.includes('cloudinary.com') && imageUrl.includes('/cartoons/');
       
-      if (isReusedCartoon) {
-        // For reused cartoons, check if we have stored description in database
-        try {
-          // First try to get existing character description from cartoon_images table
-          const { data: cartoonData } = await this.databaseService.getSupabaseClient()
-            .from('cartoon_images')
-            .select('character_description, cartoon_style')
-            .eq('cartoonized_cloudinary_url', imageUrl)
-            .single();
-          
-          if (cartoonData?.character_description) {
-            this.log('info', '✅ Using existing character description from cartoon_images table');
-            characterDescription = cartoonData.character_description;
-          }
-        } catch (err) {
-          this.log('warn', 'Could not retrieve stored character description, will use fallback');
-        }
-        
-        // If no stored description, use the one from the job
-        if (!characterDescription) {
-          // This should be passed from the job processor
-          characterDescription = "Character with consistent appearance based on previous cartoon";
-        }
-      } else {
-        // For new images, use GPT-4 Vision (this would need proper vision API call)
-        this.log('info', '🔍 Analyzing new character image with GPT-4 Vision...');
-        
-        // Note: This would need proper GPT-4 Vision implementation
-        // For now, return a structured description
-        characterDescription = "Character requiring visual analysis";
+      // PRIORITY 1: Use provided existing description if available
+      if (existingDescription && existingDescription.length > 20) {
+        this.log('info', '✅ Using provided character description from job');
+        characterDescription = existingDescription;
+      } 
+      // PRIORITY 2: For reused cartoons without description, create a fallback
+      else if (isReusedCartoon) {
+        this.log('warn', '⚠️ Reused cartoon without description, using structured fallback');
+        characterDescription = "Character with consistent appearance based on previous cartoon image. Maintain exact appearance from reference.";
       }
-      
-      // Create comprehensive character DNA structure
+      // PRIORITY 3: For new images, create generic description
+      else {
+        this.log('info', '🔍 New character image detected, creating generic description');
+        characterDescription = `Character in ${artStyle} style. Maintain consistent appearance across all panels.`;
+      }
+
+      // Build comprehensive Character DNA
       const characterDNA: CharacterDNA = {
         sourceImage: imageUrl,
         description: characterDescription,
         artStyle: artStyle,
         isReusedCartoon: isReusedCartoon,
         visualDNA: {
-          coreFeatures: this.extractCoreFeatures(characterDescription),
+          facialFeatures: this.extractFacialFeatures(characterDescription),
+          bodyType: this.extractBodyType(characterDescription),
+          clothing: this.extractClothingDetails(characterDescription).join(', '),
+          distinctiveFeatures: this.extractUniqueFeatures(characterDescription),
           colorPalette: this.extractColorPalette(characterDescription),
-          distinguishingMarks: this.extractDistinguishingMarks(characterDescription)
-        },
-        consistencyPrompts: {
-          basePrompt: `CRITICAL CHARACTER REFERENCE - MAINTAIN EXACTLY:
-${characterDescription}
-
-This character MUST appear IDENTICAL in every single panel. Character consistency is the highest priority.`,
-          artStyleIntegration: `Render in ${artStyle} style while maintaining EXACT character features described above`,
-          variationGuidance: 'NO variations in character appearance allowed. Every panel must show the EXACT same character.'
-        },
-        metadata: {
-          createdAt: new Date().toISOString(),
-          artStyle: artStyle,
-          consistencyScore: 0 // Will be calculated after generation
-        }
-      };
-
-      this.log('info', `✅ Character DNA created for ${isReusedCartoon ? 'reused cartoon' : 'new'} character`);
-      return characterDNA;
-
-      // Create consistency enforcement prompt
-      const consistencyPrompt = `CRITICAL CHARACTER CONSISTENCY REQUIREMENTS:
-${characterDescription}
-
-This character MUST appear EXACTLY the same in every single panel. Any deviation is unacceptable.`;
-
-      // Build the Character DNA
-      const characterDNA: CharacterDNA = {
-        sourceImage: imageUrl,
-        description: characterDescription,
-        artStyle: artStyle,
-        visualDNA: {
-          facialFeatures: ['consistent with description'],
-          bodyType: 'as described',
-          clothing: 'exactly as described',
-          distinctiveFeatures: ['all features from description'],
-          colorPalette: ['exact colors from description'],
-          expressionBaseline: 'maintain character style'
+          expressionBaseline: 'maintain character expression style'
         },
         visualFingerprint: {
           face: this.extractFacialFeatures(characterDescription).join('_'),
@@ -460,29 +408,33 @@ This character MUST appear EXACTLY the same in every single panel. Any deviation
           artStyleSignature: `${artStyle}_${Date.now()}`
         },
         consistencyPrompts: {
-          basePrompt: consistencyPrompt,
-          artStyleIntegration: `${artStyle} style - maintain exact appearance`,
-          variationGuidance: 'NO variations allowed - exact same character'
+          basePrompt: `CRITICAL CHARACTER REFERENCE - MAINTAIN EXACTLY:
+${characterDescription}
+
+This character MUST appear IDENTICAL in every single panel. Character consistency is the highest priority.
+NO variations in facial features, hair, clothing, or proportions allowed.`,
+          artStyleIntegration: `Render in ${artStyle} style while maintaining EXACT character features`,
+          variationGuidance: 'ZERO tolerance for variations. Every panel must show the EXACT same character.'
         },
         consistencyChecklist: [
-          'Exact same face and features',
-          'Exact same hair color and style',
-          'Exact same clothing and colors',
-          'Exact same body proportions',
-          'Exact same art style'
+          'Face matches exactly',
+          'Hair color and style identical',
+          'Clothing unchanged',
+          'Body proportions consistent',
+          'All unique features visible'
         ],
         metadata: {
           createdAt: new Date().toISOString(),
           processingTime: Date.now(),
-          analysisMethod: 'gpt-4-description',
-          confidenceScore: 90,
+          analysisMethod: isReusedCartoon ? 'reused_description' : 'generated_description',
+          confidenceScore: existingDescription ? 95 : 70,
           fingerprintGenerated: true,
           artStyleOptimized: artStyle,
-          qualityScore: 90
+          qualityScore: existingDescription ? 90 : 70
         }
       };
 
-      this.log('info', `✅ Character DNA created with description: ${characterDescription.substring(0, 100)}...`);
+      this.log('info', `✅ Character DNA created for ${isReusedCartoon ? 'reused' : 'new'} character`);
       return characterDNA;
     },
     'createMasterCharacterDNA'
@@ -618,6 +570,38 @@ private extractBodyType(description: string): string {
   
   return 'medium build';
 }
+  private extractCoreFeatures(description: string): string {
+  const features = [];
+  const text = description.toLowerCase();
+  
+  // Extract core identifying features
+  if (text.includes('hair:') || text.includes('hair')) {
+    const hairDetails = this.extractHairDetails(description);
+    if (hairDetails.length > 0) features.push(hairDetails.join(' '));
+  }
+  
+  if (text.includes('face:') || text.includes('facial')) {
+    const facialFeatures = this.extractFacialFeatures(description);
+    if (facialFeatures.length > 0) features.push(facialFeatures.join(' '));
+  }
+  
+  if (text.includes('build:') || text.includes('body')) {
+    features.push(this.extractBodyType(description));
+  }
+  
+  if (text.includes('age')) {
+    if (text.includes('child')) features.push('child character');
+    else if (text.includes('teen')) features.push('teen character');
+    else if (text.includes('adult')) features.push('adult character');
+  }
+  
+  return features.length > 0 ? features.join(', ') : 'consistent character appearance';
+}
+
+private extractDistinguishingMarks(description: string): string {
+  const marks = this.extractUniqueFeatures(description);
+  return marks.length > 0 ? marks.join(', ') : 'standard features';
+}
 
 private generateVisualFingerprint(components: { facial: string; hair: string; clothing: string; colors: string }): string {
   const combined = `${components.facial}_${components.hair}_${components.clothing}_${components.colors}`;
@@ -661,7 +645,75 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
   /**
    * FIXED: Add missing createEnvironmentalDNA method implementation
    */
-  async createEnvironmentalDNA(storyBeats: StoryBeat[], audience: AudienceType, artStyle?: string): Promise<EnvironmentalDNA> {
+  async createEnvironmentalDNA(storyBeatsOrAnalysis: StoryBeat[] | any, audience: AudienceType, artStyle?: string): Promise<EnvironmentalDNA> {
+  const result = await this.withErrorHandling(
+    async () => {
+      this.log('info', '🌍 Creating environmental DNA for world consistency...');
+      
+      // Handle both array of beats and full analysis object
+      let storyBeats: StoryBeat[] = [];
+      if (Array.isArray(storyBeatsOrAnalysis)) {
+        storyBeats = storyBeatsOrAnalysis;
+      } else if (storyBeatsOrAnalysis && storyBeatsOrAnalysis.storyBeats) {
+        storyBeats = storyBeatsOrAnalysis.storyBeats;
+      } else {
+        this.log('warn', 'Invalid story beats format, using empty array');
+        storyBeats = [];
+      }
+      
+      // Extract environmental elements from story beats
+      const environments = storyBeats.map(beat => 
+        typeof beat === 'object' ? (beat.environment || beat.setting || 'general setting') : 'general setting'
+      ).filter(Boolean);
+      const uniqueEnvironments = [...new Set(environments)];
+
+      const environmentalDNA: EnvironmentalDNA = {
+        primaryLocation: {
+          name: uniqueEnvironments[0] || 'general setting',
+          type: 'mixed',
+          description: 'Story setting with consistent visual elements',
+          keyFeatures: uniqueEnvironments,
+          colorPalette: this.determineColorPalette(audience),
+          architecturalStyle: artStyle || 'storybook'
+        },
+        lightingContext: {
+          timeOfDay: 'afternoon',
+          weatherCondition: 'pleasant',
+          lightingMood: this.determineLightingMood(audience),
+          shadowDirection: 'natural',
+          consistencyRules: ['maintain_lighting_direction', 'consistent_shadow_intensity']
+        },
+        visualContinuity: {
+          backgroundElements: uniqueEnvironments,
+          recurringObjects: ['consistent_props'],
+          colorConsistency: {
+            dominantColors: this.determineColorPalette(audience),
+            accentColors: ['warm_highlights', 'cool_shadows'],
+            avoidColors: ['jarring_contrasts']
+          },
+          perspectiveGuidelines: 'consistent_viewpoint_flow'
+        },
+        metadata: {
+          createdAt: new Date().toISOString(),
+          processingTime: 0,
+          audience,
+          consistencyTarget: 'world_building',
+          fallback: storyBeats.length === 0
+        }
+      };
+
+      this.log('info', '✅ Environmental DNA created for world consistency');
+      return environmentalDNA;
+    },
+    'createEnvironmentalDNA'
+  );
+
+  if (result.success) {
+    return result.data;
+  } else {
+    throw result.error;
+  }
+}
     const result = await this.withErrorHandling(
       async () => {
         this.log('info', '🌍 Creating environmental DNA for world consistency...');
