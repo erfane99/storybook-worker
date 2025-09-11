@@ -716,7 +716,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
           environmentalContext: beat.environment,
           professionalStandards: true,
           imageGenerated: false,
-          imageGenerationError: imageError.message || 'Image generation failed'
+          imageGenerationError: imageError instanceof Error ? imageError.message : 'Image generation failed'
         };
         
         panels.push(fallbackPanel);
