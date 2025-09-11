@@ -390,7 +390,6 @@ if (this.openaiIntegration && typeof (this.openaiIntegration as any).setLearning
         sourceImage: imageUrl,
         description: characterDescription,
         artStyle: artStyle,
-        isReusedCartoon: isReusedCartoon,
         visualDNA: {
           facialFeatures: this.extractFacialFeatures(characterDescription),
           bodyType: this.extractBodyType(characterDescription),
