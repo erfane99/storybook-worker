@@ -682,10 +682,9 @@ if (character_image) {
     
     // Pass the existing description for reused cartoons
     characterDNA = await aiService.createMasterCharacterDNA(
-      character_image, 
-      character_art_style,
-      is_reused_image ? characterDescriptionToUse : undefined
-    );
+  character_image, 
+  character_art_style
+);
     
     // Only extract description if we don't already have one
     if (!is_reused_image || !characterDescriptionToUse) {
