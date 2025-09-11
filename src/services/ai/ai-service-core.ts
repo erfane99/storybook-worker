@@ -714,12 +714,6 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
     throw result.error;
   }
 }
-    const result = await this.withErrorHandling(
-      async () => {
-        this.log('info', '🌍 Creating environmental DNA for world consistency...');
-        
-        // Extract environmental elements from story beats
-        const environments = storyBeats.map(beat => beat.environment).filter(Boolean);
         const uniqueEnvironments = [...new Set(environments)];
 
         const environmentalDNA: EnvironmentalDNA = {
