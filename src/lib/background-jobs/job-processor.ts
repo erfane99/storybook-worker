@@ -657,20 +657,34 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
     }
 
     // PHASE 3: CHARACTER DNA CREATION
-    console.log('🧬 PHASE 3: Character DNA Creation for Maximum Consistency...');
-    let characterDescriptionToUse = character_description;
-    let characterDNA: any = null;
+console.log('🧬 PHASE 3: Character DNA Creation for Maximum Consistency...');
+let characterDescriptionToUse = character_description;
+let characterDNA: any = null;
 
-    if (character_image) {
-      this.updateComicGenerationProgress(job.id, { targetPanels: audience === 'children' ? 8 : audience === 'young adults' ? 15 : 24 });
-      
-      try {
-        this.trackServiceUsage(job.id, 'ai');
-        if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
-        
-        // Use enhanced AI service for character DNA creation
-        characterDNA = await aiService.createMasterCharacterDNA(character_image, character_art_style);
-        characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
+// CRITICAL FIX: Use existing description for reused images
+if (is_reused_image && character_description) {
+  characterDescriptionToUse = character_description;
+  console.log('📝 Using stored character description for reused cartoon image');
+}
+
+if (character_image) {
+  this.updateComicGenerationProgress(job.id, { targetPanels: audience === 'children' ? 8 : audience === 'young adults' ? 15 : 24 });
+  
+  try {
+    this.trackServiceUsage(job.id, 'ai');
+    if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
+    
+    // Pass the existing description for reused cartoons
+    characterDNA = await aiService.createMasterCharacterDNA(
+      character_image, 
+      character_art_style,
+      is_reused_image ? characterDescriptionToUse : undefined
+    );
+    
+    // Only extract description if we don't already have one
+    if (!is_reused_image || !characterDescriptionToUse) {
+      characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
+    }
         this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
         console.log('✅ Professional character DNA created with maximum consistency protocols');
         
