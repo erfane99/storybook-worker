@@ -617,7 +617,6 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
       throw result.error;
     }
   }
-}
 
   /**
    * FIXED: Add missing createEnvironmentalDNA method implementation
