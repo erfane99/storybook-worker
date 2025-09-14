@@ -1434,11 +1434,17 @@ Return as JSON:
       const response = await this.openaiIntegration.generateTextCompletion(
         analysisPrompt,
         {
-          temperature: 0.7,
+          temperature: 0.35,  // ✅ FIXED: Lower temperature for consistent JSON structure
           maxTokens: 4000,  // Increased for richer descriptions
-          model: 'gpt-4o'
+          model: 'gpt-4o',
+          seed: 42  // ✅ ADD: Seed for reproducible outputs
         }
       );
+      
+      // Validate response before proceeding
+      if (!response || response.length < 10) {
+        throw new Error('OpenAI returned empty or invalid response for story analysis');
+      }
 
       // Parse response
       let parsed: any;
