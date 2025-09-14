@@ -374,10 +374,11 @@ if (this.openaiIntegration && typeof (this.openaiIntegration as any).setLearning
         this.log('info', '✅ Using provided character description from job');
         characterDescription = existingDescription;
       } 
-      // PRIORITY 2: For reused cartoons without description, create a fallback
-      else if (isReusedCartoon) {
-        this.log('warn', '⚠️ Reused cartoon without description, using structured fallback');
-        characterDescription = "Character with consistent appearance based on previous cartoon image. Maintain exact appearance from reference.";
+      // PRIORITY 2: For reused cartoons without description, fail fast for quality
+      else if (isReusedCartoon && (!existingDescription || existingDescription.length < 20)) {
+        const errorMsg = `Reused cartoon image requires character description for consistency (provided: ${existingDescription?.length || 0} chars)`;
+        this.log('error', `❌ ${errorMsg}`);
+        throw new Error(errorMsg);
       }
       // PRIORITY 3: For new images, create generic description
       else {
