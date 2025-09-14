@@ -652,14 +652,11 @@ environmentalDNA = await aiService.createEnvironmentalDNA(
       console.log(`☀️ Lighting Context: ${environmentalDNA.lightingContext?.timeOfDay || 'afternoon'} - ${environmentalDNA.lightingContext?.lightingMood || 'bright'}`);
       await jobService.updateJobProgress(job.id, 25, 'Environmental DNA created - ensuring 85-90% environmental consistency');
       
-    } catch (envError) {
-      console.warn('⚠️ Environmental DNA creation failed, using fallback:', envError);
-      environmentalDNA = {
-        primaryLocation: { name: 'Generic Setting', type: 'mixed' },
-        lightingContext: { timeOfDay: 'afternoon', lightingMood: 'bright' },
-        fallback: true
-      };
-      await jobService.updateJobProgress(job.id, 25, 'Environmental context prepared (fallback mode)');
+    } catch (envError: any) {
+      const errorMsg = `Environmental DNA creation failed - quality standards not met: ${envError?.message || 'Unknown error'}`;
+      console.error(`❌ ${errorMsg}`);
+      await jobService.updateJobProgress(job.id, 0, 'Failed: Environmental context creation failed');
+      throw new Error(errorMsg);
     }
 
     // PHASE 3: CHARACTER DNA CREATION
