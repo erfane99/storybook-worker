@@ -1440,13 +1440,35 @@ Return as JSON:
       );
 
       // Parse response
-      let parsed;
+      let parsed: any;
       try {
         const jsonMatch = response.match(/\{[\s\S]*\}/);
-        parsed = JSON.parse(jsonMatch?.[0] || '{}');
-      } catch (e) {
-        this.log('error', 'Failed to parse story analysis, using fallback');
-        parsed = { storyBeats: [], totalPanels: panelCount };
+        if (!jsonMatch || !jsonMatch[0]) {
+          throw new Error('No JSON found in OpenAI response');
+        }
+        parsed = JSON.parse(jsonMatch[0]);
+        
+        // Validate the parsed response has required fields
+        if (!parsed.storyBeats || !Array.isArray(parsed.storyBeats) || parsed.storyBeats.length === 0) {
+          throw new Error('Invalid story analysis: missing or empty storyBeats array');
+        }
+        
+        // Validate each beat has minimum required fields
+        for (let i = 0; i < parsed.storyBeats.length; i++) {
+          const beat = parsed.storyBeats[i];
+          if (!beat || typeof beat !== 'object') {
+            throw new Error(`Story beat ${i + 1} is invalid or missing`);
+          }
+        }
+        
+        this.log('info', `✅ Story analysis parsed successfully with ${parsed.storyBeats.length} beats`);
+      } catch (e: any) {
+        // Log the actual error and response for debugging
+        this.log('error', `Failed to parse story analysis: ${e.message}`);
+        this.log('error', `Raw response (first 500 chars): ${response?.substring(0, 500) || 'No response'}`);
+        
+        // Fail fast - no fallback
+        throw new Error(`Story analysis failed - unable to create high-quality story structure. Error: ${e.message}`);
       }
       
       // Validate and enhance beats
