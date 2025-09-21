@@ -667,27 +667,31 @@ export class OpenAIIntegration {
   /**
    * Make OpenAI API call with all enhancements
    */
-  private async makeOpenAIAPICall<T>(
+ private async makeOpenAIAPICall<T>(
     endpoint: string,
     parameters: OpenAIParameters,
-    timeout: number,
-    operationName: string,
-    options: OpenAICallOptions = {}
+    timeout: number = 180000,
+    operationName: string = 'unknown'
   ): Promise<T> {
+    const startTime = Date.now();
+
     // Check circuit breaker
     const breaker = this.circuitBreakers.get(endpoint);
-    if (breaker?.state === 'open') {
-      if (Date.now() - breaker.lastFailure < breaker.timeout) {
-        throw new AIServiceUnavailableError('Circuit breaker is open', {
-          service: 'OpenAIIntegration',
-          operation: operationName
-        });
+    if (breaker) {
+      if (breaker.state === 'open') {
+        if (Date.now() - breaker.lastFailure < breaker.timeout) {
+          throw new AIServiceUnavailableError('Circuit breaker is open', {
+            service: 'OpenAIIntegration',
+            operation: operationName,
+            details: { endpoint }
+          });
+        }
+        // Try half-open
+        breaker.state = 'half-open';
       }
-      // Try half-open
-      breaker.state = 'half-open';
     }
 
-    // Rate limiting check
+    // Check rate limits
     if (!this.checkRateLimit()) {
       throw new AIRateLimitError('Rate limit exceeded', {
         service: 'OpenAIIntegration',
@@ -695,42 +699,132 @@ export class OpenAIIntegration {
       });
     }
 
-    const startTime = Date.now();
+    // ✅ FIX: Implement exponential backoff with intelligent retry
+    const maxRetries = 3;
+    let lastError: any = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Add delay for retries with exponential backoff
+        if (attempt > 1) {
+          const baseDelay = 1000; // 1 second base
+          const maxDelay = 30000; // 30 seconds max
+          
+          // Calculate delay with exponential backoff and jitter
+          let delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
+          
+          // Add jitter to prevent thundering herd
+          const jitter = Math.random() * 0.3 * delay; // 0-30% jitter
+          delay = Math.round(delay + jitter);
+          
+          // Special handling for rate limit errors
+          if (lastError instanceof AIRateLimitError) {
+            // Extract retry-after header if available
+            const retryAfter = lastError.details?.retryAfter;
+            if (retryAfter) {
+              delay = parseInt(retryAfter) * 1000; // Convert seconds to ms
+            } else {
+              delay = Math.min(delay * 2, 60000); // Double delay for rate limits, max 60s
+            }
+          }
+          
+          this.logger.warn(`⏳ Retry attempt ${attempt}/${maxRetries} after ${delay}ms delay for ${operationName}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
 
-    try {
-      const response = await this.executeOpenAICall<T>(
-        endpoint,
-        parameters,
-        timeout,
-        operationName
-      );
+        const result = await this.executeOpenAICall<T>(
+          endpoint,
+          parameters,
+          timeout,
+          operationName
+        );
 
-      // Success - update circuit breaker
-      if (breaker) {
-        breaker.failures = 0;
-        breaker.state = 'closed';
-        breaker.successCount++;
-      }
+        // Update circuit breaker on success
+        if (breaker) {
+          if (breaker.state === 'half-open') {
+            breaker.successCount++;
+            if (breaker.successCount >= 3) {
+              breaker.state = 'closed';
+              breaker.failures = 0;
+              breaker.successCount = 0;
+              this.logger.log(`✅ Circuit breaker closed for ${endpoint}`);
+            }
+          } else if (breaker.state === 'closed') {
+            // Reset failure count on success
+            breaker.failures = 0;
+          }
+        }
 
-      // Record metrics
-      this.recordOperationMetrics(operationName, Date.now() - startTime, true);
+        // Record metrics
+        this.recordOperationMetrics(operationName, Date.now() - startTime, true);
+        
+        // Log successful retry
+        if (attempt > 1) {
+          this.logger.log(`✅ Retry successful for ${operationName} on attempt ${attempt}`);
+        }
 
-      return response;
-    } catch (error) {
-      // Update circuit breaker on failure
-      if (breaker) {
-        breaker.failures++;
-        breaker.lastFailure = Date.now();
-        if (breaker.failures >= breaker.threshold) {
-          breaker.state = 'open';
+        return result;
+        
+      } catch (error: any) {
+        lastError = error;
+        
+        // Determine if error is retryable
+        const isRetryable = 
+          error instanceof AIRateLimitError ||
+          error instanceof AITimeoutError ||
+          (error instanceof AIServiceUnavailableError && error.details?.httpStatus !== 400);
+        
+        // Log the error with context
+        this.logger.error(`❌ Attempt ${attempt}/${maxRetries} failed for ${operationName}:`, {
+          error: error.message,
+          errorType: error.constructor.name,
+          isRetryable,
+          endpoint,
+          httpStatus: error.details?.httpStatus
+        });
+        
+        // Don't retry if it's not retryable or we've exhausted retries
+        if (!isRetryable || attempt === maxRetries) {
+          // Update circuit breaker on final failure
+          if (breaker) {
+            breaker.failures++;
+            breaker.lastFailure = Date.now();
+            if (breaker.failures >= breaker.threshold) {
+              breaker.state = 'open';
+              this.logger.error(`🚫 Circuit breaker opened for ${endpoint} after ${breaker.failures} failures`);
+            }
+          }
+
+          // Record metrics
+          this.recordOperationMetrics(operationName, Date.now() - startTime, false);
+          
+          // Enhance error with retry context
+          if (error instanceof AIServiceError && attempt > 1) {
+            error.retryContext = {
+              attempts: attempt,
+              totalDuration: Date.now() - startTime,
+              operationName,
+              errorProgression: [error.constructor.name]
+            };
+          }
+          
+          throw error;
+        }
+        
+        // Special handling for specific error types
+        if (error instanceof AIContentPolicyError) {
+          // Content policy errors shouldn't be retried
+          throw error;
         }
       }
-
-      // Record metrics
-      this.recordOperationMetrics(operationName, Date.now() - startTime, false);
-
-      throw error;
     }
+    
+    // This should never be reached, but just in case
+    throw lastError || new AIServiceUnavailableError('Failed after all retry attempts', {
+      service: 'OpenAIIntegration',
+      operation: operationName,
+      details: { endpoint, attempts: maxRetries }
+    });
   }
 
   /**
