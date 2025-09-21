@@ -205,9 +205,13 @@ NO missing fields. NO undefined values. NO empty strings.
       const response = await this.openaiIntegration.generateTextCompletion(
         analysisPrompt,
         {
-          temperature: 0.7,
+          temperature: 0.3,  // ✅ FIX: Lower temperature for consistent JSON structure
           maxTokens: 2500,
-          model: 'gpt-4o'
+          model: 'gpt-4o',
+          top_p: 0.9,  // ✅ NEW: Add top_p for focused generation
+          frequency_penalty: 0.0,  // ✅ NEW: No frequency penalty for structured output
+          presence_penalty: 0.0,  // ✅ NEW: No presence penalty for consistent format
+          seed: 42  // ✅ NEW: Seed for reproducible outputs (GPT-4 supports this)
         }
       );
 
