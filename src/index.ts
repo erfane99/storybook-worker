@@ -230,36 +230,139 @@ async function processJobs(): Promise<void> {
 
 // Initialize worker with consolidated service registry and validation
 async function initializeWorker(): Promise<void> {
+  // ✅ FIX: Track initialization state for graceful degradation
+  const initializationState = {
+    servicesRegistered: false,
+    coreServicesInitialized: false,
+    jobSystemValidated: false,
+    cronScheduled: false,
+    criticalFailures: [] as string[],
+    warnings: [] as string[]
+  };
+  
   try {
-    console.log('🔧 Initializing job worker...');
+    console.log('🔧 Initializing job worker with resilient initialization...');
     
-    // Simple service registration and initialization
+    // Step 1: Register services with error handling
     console.log('📝 Registering services...');
-    ServiceRegistry.registerServices();
-    
-    // Initialize core services needed for job processing
-    console.log('🔧 Initializing core services...');
-    await ServiceRegistry.initializeCoreServices();
-    
-    // Simple job system validation
-    console.log('🔍 Validating job processing system...');
-    const isValid = await validateJobSystem();
-    if (!isValid) {
-      console.warn('⚠️ Job processing system validation failed - continuing with limited functionality');
+    try {
+      ServiceRegistry.registerServices();
+      initializationState.servicesRegistered = true;
+      console.log('✅ Services registered successfully');
+    } catch (regError: any) {
+      console.error('❌ Service registration failed:', regError.message);
+      initializationState.criticalFailures.push(`Service registration: ${regError.message}`);
+      // Continue - some services might still work
     }
     
+    // Step 2: Initialize core services with partial success handling
+    console.log('🔧 Initializing core services...');
+    try {
+      await ServiceRegistry.initializeCoreServices();
+      initializationState.coreServicesInitialized = true;
+      console.log('✅ Core services initialized successfully');
+    } catch (coreError: any) {
+      console.error('⚠️ Core services initialization partially failed:', coreError.message);
+      initializationState.warnings.push(`Core services: ${coreError.message}`);
+      
+      // ✅ NEW: Try to initialize critical services individually
+      console.log('🔄 Attempting individual service initialization...');
+      
+      // Try database service (most critical)
+      try {
+        const { serviceContainer } = await import('./services/container/service-container.js');
+        const databaseService = await serviceContainer.resolve(SERVICE_TOKENS.DATABASE);
+        if (databaseService) {
+          console.log('✅ Database service recovered');
+        }
+      } catch (dbError: any) {
+        console.error('❌ Database service failed:', dbError.message);
+        initializationState.criticalFailures.push(`Database: ${dbError.message}`);
+      }
+      
+      // Try job service
+      try {
+        const { serviceContainer } = await import('./services/container/service-container.js');
+        const jobService = await serviceContainer.resolve(SERVICE_TOKENS.JOB);
+        if (jobService) {
+          console.log('✅ Job service recovered');
+        }
+      } catch (jobError: any) {
+        console.error('⚠️ Job service failed:', jobError.message);
+        initializationState.warnings.push(`Job service: ${jobError.message}`);
+      }
+    }
+    
+    // Step 3: Validate job system with graceful degradation
+    console.log('🔍 Validating job processing system...');
+    try {
+      const isValid = await validateJobSystem();
+      if (!isValid) {
+        console.warn('⚠️ Job processing system validation failed - continuing with limited functionality');
+        initializationState.warnings.push('Job system validation failed');
+      } else {
+        initializationState.jobSystemValidated = true;
+        console.log('✅ Job system validated');
+      }
+    } catch (validationError: any) {
+      console.error('⚠️ Job validation error:', validationError.message);
+      initializationState.warnings.push(`Validation: ${validationError.message}`);
+      // Continue anyway - validation is not critical
+    }
+    
+    // ✅ NEW: Check if we have minimum viable functionality
+    const hasDatabase = !initializationState.criticalFailures.some(f => f.includes('Database'));
+    const canProcess = initializationState.servicesRegistered || hasDatabase;
+    
+    if (!canProcess) {
+      throw new Error('Cannot proceed: No database connectivity and no services registered');
+    }
+    
+    if (initializationState.criticalFailures.length > 0) {
+      console.warn('⚠️ Worker starting with degraded functionality:');
+      initializationState.criticalFailures.forEach(f => console.warn(`   - ${f}`));
+    }
+    
+    if (initializationState.warnings.length > 0) {
+      console.warn('⚠️ Worker warnings:');
+      initializationState.warnings.forEach(w => console.warn(`   - ${w}`));
+    }
+    
+    // Step 4: Set up job processing with error recovery
     console.log('⏰ Setting up job processing schedule...');
     console.log(`📅 Scan interval: ${config.jobScanInterval}`);
     
-    // Set up continuous job processing
-    cron.schedule(config.jobScanInterval, () => {
-      processJobs().catch(error => {
-        console.error('❌ Unhandled error in job processing:', error.message);
-      });
+    // ✅ NEW: Wrap cron job with error recovery
+    let consecutiveFailures = 0;
+    const MAX_CONSECUTIVE_FAILURES = 5;
+    
+    cron.schedule(config.jobScanInterval, async () => {
+      try {
+        await processJobs();
+        consecutiveFailures = 0; // Reset on success
+      } catch (error: any) {
+        consecutiveFailures++;
+        console.error(`❌ Job processing error (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}):`, error.message);
+        
+        // ✅ NEW: Auto-recovery attempt after multiple failures
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          console.warn('🔄 Attempting service recovery after repeated failures...');
+          try {
+            await ServiceRegistry.recoverServices();
+            consecutiveFailures = 0;
+            console.log('✅ Service recovery successful');
+          } catch (recoveryError: any) {
+            console.error('❌ Service recovery failed:', recoveryError.message);
+            // Continue processing - don't stop the worker
+          }
+        }
+      }
     });
     
-    // Initial job scan after delay
-    setTimeout(() => {
+    initializationState.cronScheduled = true;
+    
+    // Initial job scan after delay with error handling
+    setTimeout(async () => {
       console.log('🎬 Running initial job scan...');
       processJobs().catch(error => {
         console.error('❌ Error in initial job scan:', error.message);
