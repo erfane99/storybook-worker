@@ -681,7 +681,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
           emotion: beat.emotion,
           imagePrompt,
           generatedImage: imageUrl,  // ADD: Actual generated image URL
-          panelType,
+          panelType: panelType as PanelType,
           characterAction: beat.characterAction,
           narrativePurpose: beat.panelPurpose,
           visualPriority: beat.visualPriority,
@@ -708,7 +708,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
           emotion: beat.emotion,
           imagePrompt,
           generatedImage: null,  // No image generated
-          panelType,
+          panelType: panelType as PanelType,
           characterAction: beat.characterAction,
           narrativePurpose: beat.panelPurpose,
           visualPriority: beat.visualPriority,
@@ -750,8 +750,11 @@ Format as structured visual DNA for consistent reproduction across comic panels.
     artStyle: string,
     panelContext: { panelNumber: number; totalPanels: number; pageNumber: number }
   ): string {
+    // Determine camera angle for this beat
+    const cameraAngle = this.determineCameraAngle(beat);
+
     // Core story moment (~300 chars)
-    const coreSection = `${beat.beat}. Character ${beat.characterAction} with ${beat.emotion} emotion. ${beat.visualPriority} visual focus.`;
+    const coreSection = `${beat.beat}. Character ${beat.characterAction} with ${beat.emotion} emotion. ${beat.visualPriority} visual focus. Camera angle: ${cameraAngle} for ${beat.emotion} emotion.`;
 
     // Character DNA section - ENFORCE CONSISTENCY WITH FULL DESCRIPTION
     const characterSection = characterDNA ?
@@ -943,19 +946,45 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
     return pages;
   }
 
-  private determinePanelType(beat: StoryBeat, beatIndex: number, totalBeats: number): PanelType {
-    // First panel is often establishing
+  private determinePanelType(beat: StoryBeat, beatIndex: number, totalBeats: number): string {
+    const position = beatIndex / totalBeats;
+
+    // First panel is always establishing shot
     if (beatIndex === 0) return 'establishing';
-    
-    // Last panel is often standard for resolution
-    if (beatIndex === totalBeats - 1) return 'standard';
-    
-    // Middle panels based on content
-    if (beat.visualPriority === 'action') return 'wide';
-    if (beat.emotion === 'surprise' || beat.emotion === 'shock') return 'closeup';
-    if (beat.characterAction.includes('look') || beat.characterAction.includes('see')) return 'tall';
-    
+
+    // Last panel is resolution
+    if (beatIndex === totalBeats - 1) return 'medium_pull_back';
+
+    // High emotion moments get close-up
+    const highEmotions = ['scared', 'angry', 'surprised', 'determined'];
+    if (highEmotions.includes(beat.emotion)) return 'closeup';
+
+    // Action moments get dynamic angles
+    if (beat.characterAction.toLowerCase().includes('run') ||
+        beat.characterAction.toLowerCase().includes('jump') ||
+        beat.characterAction.toLowerCase().includes('fight')) {
+      return 'dynamic_angle';
+    }
+
+    // Climax section (70-90% through) gets splash
+    if (position > 0.7 && position < 0.9 && beat.visualPriority === 'action') {
+      return 'splash_page';
+    }
+
+    // Development section uses medium shots
+    if (position < 0.7) return 'medium_shot';
+
     return 'standard';
+  }
+
+  private determineCameraAngle(beat: StoryBeat): string {
+    const emotion = beat.emotion.toLowerCase();
+
+    if (emotion.includes('happy') || emotion.includes('triumphant')) return 'low_angle';
+    if (emotion.includes('sad') || emotion.includes('defeated')) return 'high_angle';
+    if (emotion.includes('mysterious') || emotion.includes('confused')) return 'dutch_angle';
+
+    return 'straight_on';
   }
 
   private optimizePromptLength(prompt: string, maxLength: number): string {
