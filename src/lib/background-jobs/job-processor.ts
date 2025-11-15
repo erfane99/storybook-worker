@@ -927,6 +927,52 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       learnedPatternsApplied: true,
     });
 
+    // Store success pattern for learning system
+    try {
+      const patternType = characterDNA ? 'character_strategy' :
+                         (environmentalDNA && !environmentalDNA.fallback) ? 'environmental_context' :
+                         storyAnalysis ? 'prompt_template' : 'character_strategy';
+
+      const contextSignature = `${audience}_${character_art_style}`;
+
+      const patternData = {
+        patternType,
+        contextSignature,
+        successCriteria: {
+          minTechnicalScore: 75,
+          minUserRating: 4.0,
+          combinedThreshold: 80
+        },
+        patternData: {
+          characterTechniques: characterDNA ? ['visual_fingerprint', 'core_traits', 'appearance_details'] : [],
+          environmentalElements: environmentalDNA && !environmentalDNA.fallback ?
+            ['environmental_dna', 'scene_consistency', 'location_context'] : [],
+          visualElements: ['professional_standards', 'panel_layout', 'art_style_consistency']
+        },
+        usageContext: {
+          audience,
+          artStyle: character_art_style,
+          characterType: characterDNA ? 'custom' : 'generated',
+          environmentalSetting: environmentalDNA?.primaryLocation?.name || 'varied',
+          layoutType: layout_type
+        },
+        qualityScores: {
+          averageTechnicalScore: qualityMetrics.overallScore,
+          averageUserRating: 0,
+          consistencyRate: qualityMetrics.characterConsistency,
+          improvementRate: 0
+        },
+        effectivenessScore: qualityMetrics.overallScore,
+        usageCount: 1,
+        successRate: 100
+      } as any;
+
+      await databaseService.saveSuccessPattern(patternData);
+      console.log(`✅ Success pattern stored: ${contextSignature} (${patternType})`);
+    } catch (patternError) {
+      console.warn('⚠️ Failed to save success pattern (non-critical):', patternError instanceof Error ? patternError.message : String(patternError));
+    }
+
     console.log(`✅ ENHANCED storybook job completed: ${job.id}`);
     console.log(`🎭 Character DNA: ${characterDNA ? 'ACTIVE' : 'FALLBACK'}`);
     console.log(`🎭 Character Consistency: ${qualityMetrics.characterConsistency}%`);

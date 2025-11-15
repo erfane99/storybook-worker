@@ -557,7 +557,7 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
 
   // ===== SUCCESS PATTERN LEARNING SYSTEM IMPLEMENTATION =====
 
-  async saveSuccessPattern(pattern: SuccessPattern): Promise<boolean> {
+  async saveSuccessPattern(pattern: SuccessPattern | Omit<SuccessPattern, 'id' | 'createdAt' | 'lastUsedAt'>): Promise<boolean> {
     const result = await this.executeQuery<{ id: string }>(
       'Save success pattern',
       async (supabase) => {
@@ -582,7 +582,7 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
 
         const response = await supabase
           .from('success_patterns')
-          .upsert(patternRecord, { onConflict: 'context_signature,pattern_type' })
+          .insert(patternRecord)
           .select('id')
           .single();
         return { data: response.data, error: response.error };
