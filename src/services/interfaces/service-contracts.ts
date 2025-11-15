@@ -1018,7 +1018,48 @@ export interface IDatabaseOperations {
     }
   ): Promise<boolean>;
   getLearningMetrics(): Promise<LearningMetrics>;
-  
+
+  // Validation Result Storage
+  savePanelValidationResult(validationData: {
+    jobId: string;
+    panelNumber: number;
+    overallScore: number;
+    facialConsistency: number;
+    bodyProportionConsistency: number;
+    clothingConsistency: number;
+    colorPaletteConsistency: number;
+    artStyleConsistency: number;
+    detailedAnalysis: string;
+    failureReasons: string[];
+    passesThreshold: boolean;
+    attemptNumber: number;
+  }): Promise<boolean>;
+
+  saveEnvironmentalValidationResult(validationData: {
+    jobId: string;
+    pageNumber: number;
+    overallCoherence: number;
+    locationConsistency: number;
+    lightingConsistency: number;
+    colorPaletteConsistency: number;
+    architecturalConsistency: number;
+    crossPanelConsistency: number;
+    panelScores: Array<{
+      panelNumber: number;
+      locationConsistency: number;
+      lightingConsistency: number;
+      colorPaletteConsistency: number;
+      architecturalStyleConsistency: number;
+      atmosphericConsistency: number;
+      issues: string[];
+    }>;
+    detailedAnalysis: string;
+    failureReasons: string[];
+    passesThreshold: boolean;
+    attemptNumber: number;
+    regenerationTriggered: boolean;
+  }): Promise<boolean>;
+
   // Transaction Support
   executeTransaction<T>(operations: DatabaseOperation<T>[]): Promise<T[]>;
 }
@@ -1449,6 +1490,8 @@ export const SERVICE_TOKENS = {
   AUTH: 'IAuthService',
   SUBSCRIPTION: 'ISubscriptionService',
   CONFIG: 'IConfigService',
+  VISUAL_CONSISTENCY_VALIDATOR: 'IVisualConsistencyValidator',
+  ENVIRONMENTAL_CONSISTENCY_VALIDATOR: 'IEnvironmentalConsistencyValidator',
 } as const;
 
 export type ServiceToken = typeof SERVICE_TOKENS[keyof typeof SERVICE_TOKENS];

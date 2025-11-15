@@ -941,6 +941,120 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     };
   }
 
+  // ===== VALIDATION RESULT STORAGE =====
+
+  async savePanelValidationResult(validationData: {
+    jobId: string;
+    panelNumber: number;
+    overallScore: number;
+    facialConsistency: number;
+    bodyProportionConsistency: number;
+    clothingConsistency: number;
+    colorPaletteConsistency: number;
+    artStyleConsistency: number;
+    detailedAnalysis: string;
+    failureReasons: string[];
+    passesThreshold: boolean;
+    attemptNumber: number;
+  }): Promise<boolean> {
+    try {
+      if (!this.supabase) {
+        this.log('warn', 'Supabase client not available, skipping panel validation storage');
+        return false;
+      }
+
+      const { error } = await this.supabase
+        .from('panel_validation_results')
+        .insert({
+          job_id: validationData.jobId,
+          panel_number: validationData.panelNumber,
+          overall_score: validationData.overallScore,
+          facial_consistency: validationData.facialConsistency,
+          body_proportion_consistency: validationData.bodyProportionConsistency,
+          clothing_consistency: validationData.clothingConsistency,
+          color_palette_consistency: validationData.colorPaletteConsistency,
+          art_style_consistency: validationData.artStyleConsistency,
+          detailed_analysis: validationData.detailedAnalysis,
+          failure_reasons: validationData.failureReasons,
+          passes_threshold: validationData.passesThreshold,
+          attempt_number: validationData.attemptNumber,
+        });
+
+      if (error) {
+        this.log('error', 'Failed to store panel validation result:', error);
+        return false;
+      }
+
+      this.log('info', `Stored panel validation result: job=${validationData.jobId}, panel=${validationData.panelNumber}, score=${validationData.overallScore}`);
+      return true;
+    } catch (error: any) {
+      this.log('error', 'Error storing panel validation result:', error);
+      return false;
+    }
+  }
+
+  async saveEnvironmentalValidationResult(validationData: {
+    jobId: string;
+    pageNumber: number;
+    overallCoherence: number;
+    locationConsistency: number;
+    lightingConsistency: number;
+    colorPaletteConsistency: number;
+    architecturalConsistency: number;
+    crossPanelConsistency: number;
+    panelScores: Array<{
+      panelNumber: number;
+      locationConsistency: number;
+      lightingConsistency: number;
+      colorPaletteConsistency: number;
+      architecturalStyleConsistency: number;
+      atmosphericConsistency: number;
+      issues: string[];
+    }>;
+    detailedAnalysis: string;
+    failureReasons: string[];
+    passesThreshold: boolean;
+    attemptNumber: number;
+    regenerationTriggered: boolean;
+  }): Promise<boolean> {
+    try {
+      if (!this.supabase) {
+        this.log('warn', 'Supabase client not available, skipping environmental validation storage');
+        return false;
+      }
+
+      const { error } = await this.supabase
+        .from('environmental_validation_results')
+        .insert({
+          job_id: validationData.jobId,
+          page_number: validationData.pageNumber,
+          overall_coherence: validationData.overallCoherence,
+          location_consistency: validationData.locationConsistency,
+          lighting_consistency: validationData.lightingConsistency,
+          color_palette_consistency: validationData.colorPaletteConsistency,
+          architectural_consistency: validationData.architecturalConsistency,
+          cross_panel_consistency: validationData.crossPanelConsistency,
+          panel_scores: validationData.panelScores,
+          detailed_analysis: validationData.detailedAnalysis,
+          failure_reasons: validationData.failureReasons,
+          passes_threshold: validationData.passesThreshold,
+          attempt_number: validationData.attemptNumber,
+          regeneration_triggered: validationData.regenerationTriggered,
+        });
+
+      if (error) {
+        this.log('error', 'Failed to store environmental validation result:', error);
+        return false;
+      }
+
+      this.log('info', `Stored environmental validation result: job=${validationData.jobId}, page=${validationData.pageNumber}, coherence=${validationData.overallCoherence}`);
+      return true;
+    } catch (error: any) {
+      this.log('error', 'Error storing environmental validation result:', error);
+      return false;
+    }
+  }
+
   // ===== PRIVATE HELPER METHODS =====
 
   private async testConnection(): Promise<void> {
