@@ -40,6 +40,34 @@ export type SpeechBubbleStyle = 'standard' | 'thought' | 'shout' | 'whisper' | '
 // ===== RE-EXPORT ERROR TYPES FROM SINGLE SOURCE OF TRUTH =====
 export type { ErrorCategory, ErrorSeverity };
 
+// ===== VISUAL CONSISTENCY VALIDATION INTERFACES =====
+export interface ConsistencyScore {
+  overallScore: number;
+  facialConsistency: number;
+  bodyProportionConsistency: number;
+  clothingConsistency: number;
+  colorPaletteConsistency: number;
+  artStyleConsistency: number;
+  detailedAnalysis: string;
+  failureReasons: string[];
+  passesThreshold: boolean;
+}
+
+export interface ValidationContext {
+  jobId: string;
+  panelNumber: number;
+  attemptNumber: number;
+  generatedImageUrl: string;
+  characterDNA: CharacterDNA;
+  previousPanelUrl?: string;
+}
+
+export interface ValidationResult extends ConsistencyScore {
+  validationTimestamp: string;
+  attemptNumber: number;
+  panelNumber: number;
+}
+
 // ===== VISUAL DNA INTERFACES =====
 export interface VisualFingerprint {
   face: string;
@@ -456,6 +484,8 @@ export interface StoryBeat {
   hasSpeechBubble?: boolean;
   speechBubbleStyle?: string;
   cleanedDialogue?: string;
+  previousBeatContext?: string;
+  previousBeatSummary?: string;
   [key: string]: any;
 }
 
@@ -981,7 +1011,7 @@ export interface IAIOperations {
   
   // ✅ FIXED: Added missing enterprise methods
   analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis>;
-  createMasterCharacterDNA(imageUrl: string, artStyle: string): Promise<CharacterDNA>;
+  createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescription?: string): Promise<CharacterDNA>;
   createEnvironmentalDNA(storyBeats: StoryBeat[], audience: AudienceType, artStyle?: string): Promise<EnvironmentalDNA>;
   analyzePanelContinuity(storyBeats: any[]): Promise<any>;
   
