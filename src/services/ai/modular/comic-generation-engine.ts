@@ -636,7 +636,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
 
   /**
    * Generate individual panels for a page with professional standards
-   * ENHANCED: Actually generates images instead of just prompts
+   * ENHANCED: Parallel generation with batched concurrency control
    */
   private async generatePanelsForPage(
     pageBeats: StoryBeat[],
@@ -647,15 +647,11 @@ Format as structured visual DNA for consistent reproduction across comic panels.
     pageNumber: number,
     totalPanels: number
   ): Promise<ComicPanel[]> {
-    const panels: ComicPanel[] = [];
-    
-    console.log(`🎨 Generating ${pageBeats.length} actual images for page ${pageNumber}...`);
-    
-    for (let beatIndex = 0; beatIndex < pageBeats.length; beatIndex++) {
-      const beat = pageBeats[beatIndex];
+    console.log(`🎨 Generating ${pageBeats.length} actual images for page ${pageNumber} in parallel...`);
+
+    const panelPromises = pageBeats.map(async (beat, beatIndex) => {
       const panelNumber = (pageNumber - 1) * config.panelsPerPage + beatIndex + 1;
 
-      // Build optimized image prompt
       const imagePrompt = this.buildOptimizedImagePrompt(
         beat,
         characterDNA,
@@ -665,22 +661,19 @@ Format as structured visual DNA for consistent reproduction across comic panels.
         { panelNumber, totalPanels, pageNumber }
       );
 
-      // Determine panel type based on story beat
       const panelType = this.determinePanelType(beat, beatIndex, pageBeats.length);
 
-      console.log(`🖼️ Generating actual image for panel ${panelNumber}/${totalPanels} (${panelType})...`);
-
       try {
-        // CRITICAL CHANGE: Actually generate the image using OpenAI
+        console.log(`🖼️ Generating actual image for panel ${panelNumber}/${totalPanels} (${panelType})...`);
         const imageUrl = await this.openaiIntegration.generateCartoonImage(imagePrompt);
-        
+
         console.log(`✅ Panel ${panelNumber} image generated successfully`);
 
-        const panel: ComicPanel = {
+        return {
           description: beat.beat,
           emotion: beat.emotion,
           imagePrompt,
-          generatedImage: imageUrl,  // ADD: Actual generated image URL
+          generatedImage: imageUrl,
           panelType: panelType as PanelType,
           characterAction: beat.characterAction,
           narrativePurpose: beat.panelPurpose,
@@ -692,42 +685,25 @@ Format as structured visual DNA for consistent reproduction across comic panels.
           pageNumber,
           environmentalContext: beat.environment,
           professionalStandards: true,
-          imageGenerated: true,  // ADD: Flag showing image was generated
-          characterDNAUsed: !!characterDNA,  // ADD: Track DNA usage
-          environmentalDNAUsed: !!environmentalDNA  // ADD: Track environmental DNA usage
+          imageGenerated: true,
+          characterDNAUsed: !!characterDNA,
+          environmentalDNAUsed: !!environmentalDNA
         };
-
-        panels.push(panel);
-
-      } catch (imageError) {
-        console.error(`❌ Failed to generate image for panel ${panelNumber}:`, imageError);
-        
-        // Create panel with prompt only as fallback
-        const fallbackPanel: ComicPanel = {
-          description: beat.beat,
-          emotion: beat.emotion,
-          imagePrompt,
-          generatedImage: null,  // No image generated
-          panelType: panelType as PanelType,
-          characterAction: beat.characterAction,
-          narrativePurpose: beat.panelPurpose,
-          visualPriority: beat.visualPriority,
-          dialogue: beat.dialogue,
-          hasSpeechBubble: beat.hasSpeechBubble || false,
-          speechBubbleStyle: beat.speechBubbleStyle,
-          panelNumber,
-          pageNumber,
-          environmentalContext: beat.environment,
-          professionalStandards: true,
-          imageGenerated: false,
-          imageGenerationError: imageError instanceof Error ? imageError.message : 'Image generation failed'
-        };
-        
-        panels.push(fallbackPanel);
+      } catch (error) {
+        console.error(`❌ Failed to generate panel ${panelNumber}:`, error);
+        return null;
       }
+    });
 
-      // Add small delay between images to respect rate limits
-      if (beatIndex < pageBeats.length - 1) {
+    const batchSize = 3;
+    const panels: ComicPanel[] = [];
+
+    for (let i = 0; i < panelPromises.length; i += batchSize) {
+      const batch = panelPromises.slice(i, i + batchSize);
+      const results = await Promise.all(batch);
+      panels.push(...results.filter(p => p !== null) as ComicPanel[]);
+
+      if (i + batchSize < panelPromises.length) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
