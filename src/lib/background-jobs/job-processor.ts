@@ -712,6 +712,51 @@ if (resolvedDescription && typeof resolvedDescription === 'string') {
       }
     }
 
+    // PHASE 3.5: QUALITY PREDICTION (Catch issues before image generation)
+    console.log('🔍 PHASE 3.5: Quality Prediction - Validating Generation Context...');
+    const predictedQuality = this.predictGenerationQuality({
+      story,
+      storyAnalysis,
+      characterDNA,
+      environmentalDNA,
+      audience
+    });
+
+    if (predictedQuality.score < 70) {
+      const errorMessage = `Quality prediction too low (${predictedQuality.score}/100): ${predictedQuality.issues.join(', ')}`;
+      console.error(`❌ ${errorMessage}`);
+      await jobService.markJobFailed(
+        job.id,
+        errorMessage,
+        false
+      );
+      return {
+        success: false,
+        pages: [],
+        characterDNA: undefined,
+        environmentalDNA: undefined,
+        storyAnalysis: undefined,
+        qualityMetrics: {
+          characterConsistency: 0,
+          narrativeCoherence: 0,
+          visualQuality: 0,
+          emotionalResonance: 0,
+          technicalExecution: 0,
+          audienceAlignment: 0,
+          dialogueEffectiveness: 0,
+          environmentalCoherence: 0,
+          storyCoherence: 0,
+          panelCount: 0,
+          professionalStandards: false,
+          overallScore: predictedQuality.score,
+          recommendations: predictedQuality.issues
+        }
+      };
+    }
+
+    console.log(`✅ Quality prediction passed: ${predictedQuality.score}/100`);
+    await jobService.updateJobProgress(job.id, 30, `Quality check passed (predicted: ${predictedQuality.score}/100)`);
+
     // PHASE 4: ENHANCED CONTEXT PREPARATION
     console.log('🎯 PHASE 4: Enhanced Context Preparation...');
     let enhancedContext = await this.prepareEnhancedContext(
@@ -1120,24 +1165,68 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
   private extractCharacterDescriptionFromDNA(characterDNA: any): string {
     if (!characterDNA) return 'Character description unavailable';
-    
+
     const parts = [];
-    
+
     if (characterDNA.physicalStructure) {
       parts.push(characterDNA.physicalStructure.faceShape);
       parts.push(characterDNA.physicalStructure.eyeDetails);
       parts.push(characterDNA.physicalStructure.hairSpecifics);
     }
-    
+
     if (characterDNA.clothingSignature) {
       parts.push(characterDNA.clothingSignature.primaryOutfit);
     }
-    
+
     if (characterDNA.uniqueIdentifiers) {
       parts.push(characterDNA.uniqueIdentifiers.distinctiveFeatures);
     }
-    
+
     return parts.filter(Boolean).join(', ') || 'Detailed character with consistent appearance';
+  }
+
+  private predictGenerationQuality(context: {
+    story: string;
+    storyAnalysis: any;
+    characterDNA: any;
+    environmentalDNA: any;
+    audience: string;
+  }): { score: number; issues: string[] } {
+    let score = 50;
+    const issues: string[] = [];
+
+    if (context.characterDNA && context.characterDNA.description?.length > 200) {
+      score += 30;
+    } else {
+      issues.push('Character DNA incomplete or missing');
+    }
+
+    if (context.storyAnalysis?.storyBeats?.length >= 8) {
+      score += 20;
+    } else {
+      issues.push('Story analysis incomplete');
+    }
+
+    const wordCount = context.story.split(/\s+/).length;
+    if (wordCount >= 100 && wordCount <= 1000) {
+      score += 20;
+    } else if (wordCount < 50) {
+      issues.push('Story too short for quality generation');
+    }
+
+    if (context.environmentalDNA && !context.environmentalDNA.fallback) {
+      score += 15;
+    }
+
+    const forbiddenWords = context.audience === 'children' ? ['violence', 'death', 'scary'] : [];
+    const hasIssues = forbiddenWords.some(word => context.story.toLowerCase().includes(word));
+    if (!hasIssues) {
+      score += 15;
+    } else {
+      issues.push('Story content not appropriate for audience');
+    }
+
+    return { score: Math.min(score, 100), issues };
   }
 
   // ===== OTHER JOB TYPE PROCESSORS (SIMPLIFIED) =====
