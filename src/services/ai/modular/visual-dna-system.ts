@@ -545,12 +545,15 @@ Focus on elements that ensure perfect visual consistency across all comic panels
       const environments = storyBeats.map(beat => beat.environment).filter(Boolean);
       const uniqueEnvironments = [...new Set(environments)];
 
+      const recurringElements = this.extractRecurringElements(storyBeats);
+      const baseKeyFeatures = this.extractLocationCharacteristics(uniqueEnvironments);
+
       const environmentalDNA: EnvironmentalDNA = {
         primaryLocation: {
           name: uniqueEnvironments[0] || 'story setting',
           type: 'mixed',
           description: this.createLocationDescription(uniqueEnvironments),
-          keyFeatures: this.extractLocationCharacteristics(uniqueEnvironments),
+          keyFeatures: [...baseKeyFeatures, ...recurringElements],
           colorPalette: this.determineEnvironmentalColorPalette(uniqueEnvironments, audience),
           architecturalStyle: this.determineArchitecturalStyle(uniqueEnvironments, artStyle)
         },
@@ -563,7 +566,7 @@ Focus on elements that ensure perfect visual consistency across all comic panels
         },
         visualContinuity: {
           backgroundElements: this.extractBackgroundElements(uniqueEnvironments),
-          recurringObjects: this.identifyRecurringObjects(storyBeats),
+          recurringObjects: recurringElements,
           colorConsistency: {
             dominantColors: this.extractDominantColors(uniqueEnvironments, audience),
             accentColors: this.extractAccentColors(uniqueEnvironments),
@@ -955,23 +958,26 @@ Focus on elements that ensure perfect visual consistency across all comic panels
   }
 
   private identifyRecurringObjects(beats: StoryBeat[]): string[] {
-    // Extract objects mentioned multiple times
-    const objectCounts: Record<string, number> = {};
-    
+    return this.extractRecurringElements(beats);
+  }
+
+  private extractRecurringElements(beats: StoryBeat[]): string[] {
+    const elementCounts = new Map<string, number>();
+
     beats.forEach(beat => {
-      const words = beat.description?.toLowerCase().split(/\s+/) || [];
-      words.forEach((word: string) => {
-        if (word.length > 4 && !['the', 'and', 'that', 'this', 'with'].includes(word)) {
-          objectCounts[word] = (objectCounts[word] || 0) + 1;
+      const words = beat.environment?.toLowerCase().split(/\s+/) || [];
+      words.forEach(word => {
+        if (word.length > 4) {
+          elementCounts.set(word, (elementCounts.get(word) || 0) + 1);
         }
       });
     });
-    
-    return Object.entries(objectCounts)
-      .filter(([_, count]) => count > 1)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([word, _count]) => word);
+
+    const threshold = Math.ceil(beats.length * 0.3);
+    return Array.from(elementCounts.entries())
+      .filter(([_, count]) => count >= threshold)
+      .map(([element]) => element)
+      .slice(0, 5);
   }
 
   private extractDominantColors(environments: string[], audience: AudienceType): string[] {

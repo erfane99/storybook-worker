@@ -771,9 +771,17 @@ ${characterDNA.consistencyPrompts?.basePrompt || ''}
 ANY DEVIATION FROM THIS DESCRIPTION IS A FAILURE.` :
       'CHARACTER: Consistent with previous panels';
 
-    // Environmental DNA section (~150 chars)
+    // Environmental DNA section with recurring element enforcement
+    const recurringElementsText = environmentalDNA.visualContinuity.recurringObjects?.length
+      ? environmentalDNA.visualContinuity.recurringObjects.join(', ')
+      : 'maintain consistency';
+    const mandatoryFeatures = environmentalDNA.primaryLocation.keyFeatures.slice(0, 3).join(', ');
+
     const environmentSection = `WORLD: ${environmentalDNA.primaryLocation.name}
-ATMOSPHERE: ${environmentalDNA.lightingContext.lightingMood}`;
+ATMOSPHERE: ${environmentalDNA.lightingContext.lightingMood}
+
+RECURRING ELEMENTS: ${recurringElementsText}
+MANDATORY: These elements must appear in SAME style: ${mandatoryFeatures}`;
 
     // Art style and quality section (~200 chars)
     const styleSection = `STYLE: ${artStyle} comic book art, professional ${config.visualStyle || 'detailed'}
