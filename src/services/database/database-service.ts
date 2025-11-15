@@ -483,7 +483,19 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       }
     );
 
+    if (result?.id) {
+      try {
+        await this.updatePatternWithRating(rating.comicId, rating.ratings);
+      } catch (error: any) {
+        this.log('warn', `Failed to link rating to pattern for comic ${rating.comicId}`, error.message);
+      }
+    }
+
     return !!result?.id;
+  }
+
+  async getRatingsByComicId(comicId: string): Promise<UserRating[]> {
+    return this.getUserRatings(comicId);
   }
 
   async getUserRatings(comicId: string): Promise<UserRating[]> {
@@ -944,6 +956,169 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       }
     }
     // Add other job type result mappings as needed
+  }
+
+  private async updatePatternWithRating(
+    comicId: string,
+    ratings: {
+      characterConsistency: number;
+      storyFlowNarrative: number;
+      artQualityVisualAppeal: number;
+      sceneBackgroundConsistency: number;
+      overallComicExperience: number;
+    }
+  ): Promise<void> {
+    if (!this.supabase) {
+      this.log('warn', 'Cannot update pattern - database not available');
+      return;
+    }
+
+    try {
+      const { data: storybook, error: storybookError } = await this.supabase
+        .from('storybook_entries')
+        .select('title, audience, character_description')
+        .eq('id', comicId)
+        .maybeSingle();
+
+      if (storybookError) {
+        this.log('warn', `Error fetching storybook entry for pattern update: ${storybookError.message}`);
+        return;
+      }
+
+      if (!storybook) {
+        this.log('warn', `Storybook entry not found for comic ${comicId}`);
+        return;
+      }
+
+      const audienceType = storybook.audience || 'children';
+      const characterType = storybook.character_description?.substring(0, 50) || 'default';
+
+      const { data: signatureResult, error: signatureError } = await this.supabase.rpc(
+        'generate_context_signature',
+        {
+          audience_type: audienceType,
+          story_genre: null,
+          art_style: 'illustration',
+          environmental_setting: null,
+          character_type: characterType,
+        }
+      );
+
+      if (signatureError) {
+        this.log('warn', `Error generating context signature: ${signatureError.message}`);
+        return;
+      }
+
+      const contextSignature = signatureResult as string;
+
+      const { data: existingPattern } = await this.supabase
+        .from('success_patterns')
+        .select('id')
+        .eq('context_signature', contextSignature)
+        .maybeSingle();
+
+      let patternId: string;
+
+      if (existingPattern) {
+        patternId = existingPattern.id;
+      } else {
+        const averageRating = (
+          ratings.characterConsistency +
+          ratings.storyFlowNarrative +
+          ratings.artQualityVisualAppeal +
+          ratings.sceneBackgroundConsistency +
+          ratings.overallComicExperience
+        ) / 5.0;
+
+        const effectivenessScore = averageRating * 20;
+
+        const { data: newPattern, error: patternError } = await this.supabase
+          .from('success_patterns')
+          .insert({
+            pattern_type: 'user_validated',
+            context_signature: contextSignature,
+            success_criteria: {
+              minTechnicalScore: 70,
+              minUserRating: 3.5,
+              combinedThreshold: 75,
+            },
+            pattern_data: {},
+            usage_context: {
+              audience: audienceType,
+              characterType: characterType,
+              artStyle: 'illustration',
+            },
+            quality_scores: {},
+            effectiveness_score: effectivenessScore,
+            usage_count: 1,
+            success_rate: 100.0,
+            audience_type: audienceType,
+            character_type: characterType,
+            art_style: 'illustration',
+          })
+          .select('id')
+          .single();
+
+        if (patternError) {
+          this.log('warn', `Error creating new pattern: ${patternError.message}`);
+          return;
+        }
+
+        patternId = newPattern.id;
+      }
+
+      const averageRating = (
+        ratings.characterConsistency +
+        ratings.storyFlowNarrative +
+        ratings.artQualityVisualAppeal +
+        ratings.sceneBackgroundConsistency +
+        ratings.overallComicExperience
+      ) / 5.0;
+
+      const userSatisfactionImpact = averageRating;
+      const effectivenessRating = ratings.overallComicExperience * 20;
+
+      const { data: qualityMetrics } = await this.supabase
+        .from('comic_quality_metrics')
+        .select('overall_technical_quality')
+        .eq('comic_id', comicId)
+        .maybeSingle();
+
+      const technicalQualityImpact = qualityMetrics?.overall_technical_quality || 75;
+
+      const { error: effectivenessError } = await this.supabase
+        .from('pattern_effectiveness')
+        .insert({
+          pattern_id: patternId,
+          comic_id: comicId,
+          application_context: {
+            audience: audienceType,
+            characterType: characterType,
+          },
+          quality_improvement: {},
+          before_scores: {},
+          after_scores: {
+            userRating: averageRating,
+            characterConsistency: ratings.characterConsistency,
+            storyFlow: ratings.storyFlowNarrative,
+            artQuality: ratings.artQualityVisualAppeal,
+            sceneConsistency: ratings.sceneBackgroundConsistency,
+            overallExperience: ratings.overallComicExperience,
+          },
+          user_satisfaction_impact: userSatisfactionImpact,
+          technical_quality_impact: technicalQualityImpact,
+          effectiveness_rating: effectivenessRating,
+        });
+
+      if (effectivenessError) {
+        this.log('warn', `Error recording pattern effectiveness: ${effectivenessError.message}`);
+        return;
+      }
+
+      this.log('info', `Successfully linked rating to pattern ${patternId} for comic ${comicId}`);
+    } catch (error: any) {
+      this.log('error', `Unexpected error in updatePatternWithRating: ${error.message}`);
+    }
   }
 }
 
