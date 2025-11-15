@@ -23,6 +23,7 @@ import {
   AIServiceUnavailableError,
   AIValidationError,
   AINetworkError,
+  BaseServiceError,
   ErrorHandlingSystem,
   ErrorContext
 } from './error-handling-system.js';
@@ -131,6 +132,8 @@ Your analysis will determine the ENTIRE visual narrative flow.
 STORY: [STORY_TEXT]
 TARGET AUDIENCE: [AUDIENCE]
 TOTAL PANELS AVAILABLE: [PANEL_COUNT]
+
+CONTINUITY RULE: Beat N+1 must directly follow from Beat N. Include clear cause-effect relationships.
 
 REQUIRED ANALYSIS COMPONENTS:
 
@@ -301,7 +304,7 @@ Character mouth position: [OPEN/CLOSED] for [SPEAKING/THINKING]`,
 ✓ Character matches DNA fingerprint EXACTLY
 ✓ Emotion is instantly readable
 ✓ Composition follows rule of thirds
-✓ Age-appropriate for [AUDIENCE]
+✓ MANDATORY CONTENT RULES FOR [AUDIENCE]: [AUDIENCE_RULES]
 ✓ Consistent with previous panels
 ✓ Professional comic book standard
 ✓ Clear focal point established
@@ -573,9 +576,14 @@ export class OpenAIIntegration {
       prompt += '\n\n' + bubblePrompt;
     }
 
-    // Add quality enforcement layer
+    // Add quality enforcement layer with audience-specific content rules
+    const audienceRules = options.audience === 'children'
+      ? 'bright, friendly, safe imagery. FORBIDDEN: violence, weapons, scary elements, dark themes'
+      : 'age-appropriate imagery';
+
     prompt += '\n\n' + IMAGE_GENERATION_PROMPTS.qualityEnforcementLayer
-      .replace('[AUDIENCE]', options.audience);
+      .replace('[AUDIENCE]', options.audience)
+      .replace('[AUDIENCE_RULES]', audienceRules);
 
     // Compress if needed
     if (prompt.length > 3800) {
@@ -797,17 +805,30 @@ export class OpenAIIntegration {
 
           // Record metrics
           this.recordOperationMetrics(operationName, Date.now() - startTime, false);
-          
-          // Enhance error with retry context
-          if (error instanceof AIServiceError && attempt > 1) {
-            error.retryContext = {
-              attempts: attempt,
-              totalDuration: Date.now() - startTime,
-              operationName,
-              errorProgression: [error.constructor.name]
-            };
+
+          // Enhance error with retry context in details
+          if (error instanceof BaseServiceError && attempt > 1) {
+            const enhancedError = new (error.constructor as any)(
+              error.message,
+              {
+                service: error.service,
+                operation: error.operation,
+                details: {
+                  ...error.details,
+                  retryContext: {
+                    attempts: attempt,
+                    totalDuration: Date.now() - startTime,
+                    operationName,
+                    errorProgression: [error.constructor.name]
+                  }
+                },
+                correlationId: error.correlationId,
+                cause: error.cause
+              }
+            );
+            throw enhancedError;
           }
-          
+
           throw error;
         }
         

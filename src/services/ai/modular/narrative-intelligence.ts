@@ -305,6 +305,8 @@ ${ENHANCED_STORY_PROMPTS.storyGeneration.structure}
 
 ${ENHANCED_STORY_PROMPTS.storyGeneration.audienceSpecific[audience]}
 
+${audience === 'children' ? 'MANDATORY: NO violence, NO scary content, NO weapons, NO death themes. ONLY positive, safe, educational content.' : ''}
+
 ${ENHANCED_STORY_PROMPTS.storyGeneration.genreSpecific[genre as keyof typeof ENHANCED_STORY_PROMPTS.storyGeneration.genreSpecific] || ''}
 
 ${customPrompt ? `\nADDITIONAL REQUIREMENTS:\n${customPrompt}` : ''}
@@ -322,7 +324,7 @@ Create a story that readers will remember long after the last page.`;
       const response = await this.openaiIntegration.generateTextCompletion(
         storyPrompt,
         {
-          temperature: 0.8, // Higher for creativity
+          temperature: audience === 'children' ? 0.6 : 0.8, // Lower for children (safer), higher for others (creativity)
           maxTokens: 2500,
           model: 'gpt-4o'
         }
