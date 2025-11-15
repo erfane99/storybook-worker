@@ -989,7 +989,7 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
           worldClassPrompt += `CHARACTER CONSISTENCY CRITICAL - EXACT MATCH REQUIRED:
 ${characterDNA.description}
 ${characterDNA.visualFingerprint ? `Visual Fingerprint: ${characterDNA.visualFingerprint}` : ''}
-${characterDNA.consistencyChecklist ? 'MUST MAINTAIN: ' + characterDNA.consistencyChecklist.slice(0, 5).join(', ') : ''}
+${characterDNA.consistencyChecklist ? 'MUST MAINTAIN: ' + characterDNA.consistencyChecklist.join(', ') : ''}
 
 `;
         } else if (options.character_description) {
@@ -1100,12 +1100,12 @@ Quality Level: Highest possible detail and artistic execution
     const essential: string[] = [];
     
     // Priority 1: Character consistency (MOST IMPORTANT)
-    const characterLines = lines.filter(line => 
+    const characterLines = lines.filter(line =>
       line.includes('CHARACTER CONSISTENCY CRITICAL') ||
       line.includes('Visual Fingerprint:') ||
       line.includes('MUST MAINTAIN:') ||
       (line.length > 20 && line.toLowerCase().includes('character'))
-    ).slice(0, 4);
+    ).slice(0, 8);
     essential.push(...characterLines);
     
     // Priority 2: Scene action (CORE CONTENT)

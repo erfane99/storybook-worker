@@ -753,10 +753,10 @@ Format as structured visual DNA for consistent reproduction across comic panels.
     // Core story moment (~300 chars)
     const coreSection = `${beat.beat}. Character ${beat.characterAction} with ${beat.emotion} emotion. ${beat.visualPriority} visual focus.`;
 
-    // Character DNA section - ENFORCE CONSISTENCY
-    const characterSection = characterDNA ? 
+    // Character DNA section - ENFORCE CONSISTENCY WITH FULL DESCRIPTION
+    const characterSection = characterDNA ?
       `CHARACTER MUST MATCH EXACTLY:
-${characterDNA.description.substring(0, 300)}
+${characterDNA.description.substring(0, 800)}
 
 VISUAL FINGERPRINT: ${characterDNA.visualFingerprint}
 
@@ -765,7 +765,7 @@ ${characterDNA.consistencyChecklist ? characterDNA.consistencyChecklist.join('\n
 
 ${characterDNA.consistencyPrompts?.basePrompt || ''}
 
-ANY DEVIATION FROM THIS DESCRIPTION IS A FAILURE.` : 
+ANY DEVIATION FROM THIS DESCRIPTION IS A FAILURE.` :
       'CHARACTER: Consistent with previous panels';
 
     // Environmental DNA section (~150 chars)
