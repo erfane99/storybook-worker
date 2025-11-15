@@ -635,19 +635,35 @@ export class OpenAIIntegration {
       compressed = compressed.replace(rule.pattern, rule.replacement);
     });
 
-    // If still too long, use priority system
+    // If still too long, use priority system with dynamic space allocation
     if (compressed.length > 3800) {
       const lines = compressed.split('\n').filter(l => l.trim());
       const prioritized: string[] = [];
-      let currentLength = 0;
 
-      // Add by priority until we hit limit
+      // Dynamic space allocation: 50% for character, 30% for scene, 20% for rest
+      const p1Space = 2000; // Priority 1 (character DNA, visual, consistency)
+      const p2Space = 1200; // Priority 2 (style, quality)
+      const p3Space = 500;  // Priority 3 (lighting, background)
+
+      let p1Length = 0;
+      let p2Length = 0;
+      let p3Length = 0;
+
+      // Add by priority with space budgets
       for (const priority of [1, 2, 3, 4]) {
         for (const line of lines) {
           if (this.getLinePriority(line) === priority) {
-            if (currentLength + line.length < 3700) {
+            if (priority === 1 && p1Length + line.length < p1Space) {
               prioritized.push(line);
-              currentLength += line.length;
+              p1Length += line.length;
+            } else if (priority === 2 && p2Length + line.length < p2Space) {
+              prioritized.push(line);
+              p2Length += line.length;
+            } else if (priority === 3 && p3Length + line.length < p3Space) {
+              prioritized.push(line);
+              p3Length += line.length;
+            } else if (priority === 4 && (p1Length + p2Length + p3Length + line.length) < 3700) {
+              prioritized.push(line);
             }
           }
         }
@@ -1404,7 +1420,8 @@ export class OpenAIIntegration {
    * Get line priority for compression
    */
   private getLinePriority(line: string): number {
-    if (line.includes('CHARACTER') || line.includes('DNA')) return 1;
+    if (line.includes('CHARACTER') || line.includes('DNA') || line.includes('FINGERPRINT')) return 1;
+    if (line.includes('VISUAL') || line.includes('CONSISTENCY')) return 1;
     if (line.includes('EMOTION') || line.includes('ACTION')) return 1;
     if (line.includes('STYLE') || line.includes('PANEL')) return 2;
     if (line.includes('QUALITY') || line.includes('STANDARD')) return 2;

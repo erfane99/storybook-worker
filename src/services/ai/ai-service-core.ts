@@ -1097,15 +1097,19 @@ Quality Level: Highest possible detail and artistic execution
    */
   private compressPromptIntelligently(prompt: string): string {
     const lines = prompt.split('\n').filter(line => line.trim());
-    const essential: string[] = [];
+    let essential: string[] = [];
     
     // Priority 1: Character consistency (MOST IMPORTANT)
     const characterLines = lines.filter(line =>
       line.includes('CHARACTER CONSISTENCY CRITICAL') ||
       line.includes('Visual Fingerprint:') ||
       line.includes('MUST MAINTAIN:') ||
+      line.includes('DNA') ||
+      line.includes('FINGERPRINT') ||
+      line.includes('VISUAL') ||
+      line.includes('CONSISTENCY') ||
       (line.length > 20 && line.toLowerCase().includes('character'))
-    ).slice(0, 8);
+    ).slice(0, 10);
     essential.push(...characterLines);
     
     // Priority 2: Scene action (CORE CONTENT)
@@ -1129,20 +1133,80 @@ Quality Level: Highest possible detail and artistic execution
     
     // Build compressed prompt
     let compressed = essential.join('\n');
-    
-    // Further compress if still too long
+
+    // Verify character DNA section length
+    const charSection = compressed.match(/CHARACTER[\s\S]*?(?=\n\n|$)/);
+    if (charSection && charSection[0].length < 400) {
+      // Keep more character content if DNA section is too short
+      const moreCharLines = lines.filter(line =>
+        line.includes('CHARACTER CONSISTENCY CRITICAL') ||
+        line.includes('Visual Fingerprint:') ||
+        line.includes('MUST MAINTAIN:') ||
+        line.includes('DNA') ||
+        line.includes('FINGERPRINT') ||
+        line.includes('VISUAL') ||
+        line.includes('CONSISTENCY') ||
+        (line.length > 20 && line.toLowerCase().includes('character'))
+      ).slice(0, 15);
+
+      // Rebuild essential with more character lines
+      essential = [
+        ...moreCharLines,
+        ...sceneLines,
+        ...qualityLines,
+        ...emotionLines
+      ];
+      compressed = essential.join('\n');
+    }
+
+    // Further compress if still too long - PRESERVE CHARACTER DNA LINES
     if (compressed.length > 3800) {
-      compressed = essential.map(line => 
-        line.length > 100 ? line.substring(0, 100) : line
-      ).join('\n');
+      // Identify character lines to preserve
+      const isCharacterLine = (line: string) => {
+        return line.includes('CHARACTER') ||
+               line.includes('DNA') ||
+               line.includes('FINGERPRINT') ||
+               line.includes('Visual Fingerprint') ||
+               line.includes('MUST MAINTAIN') ||
+               line.includes('CONSISTENCY CRITICAL');
+      };
+
+      // Truncate only non-character lines
+      compressed = essential.map(line => {
+        if (isCharacterLine(line)) {
+          return line; // Keep character lines full length
+        }
+        return line.length > 100 ? line.substring(0, 100) : line;
+      }).join('\n');
     }
     
-    // Nuclear option - ultra minimal
+    // Nuclear option - ultra minimal (prioritize character DNA)
     if (compressed.length > 3800) {
-      const character = characterLines[0] || 'Consistent character';
-      const scene = sceneLines[0] || 'Comic panel scene';
-      const style = qualityLines[0] || 'Professional comic art';
-      compressed = `${character}\n${scene}\n${style}\nHigh quality illustration`;
+      // Instead of truncating further, compress OTHER sections more aggressively
+      const nonCharLines = essential.filter(line => {
+        return !line.includes('CHARACTER') &&
+               !line.includes('DNA') &&
+               !line.includes('FINGERPRINT') &&
+               !line.includes('Visual Fingerprint') &&
+               !line.includes('MUST MAINTAIN') &&
+               !line.includes('CONSISTENCY CRITICAL');
+      });
+
+      // Keep ALL character lines but only top 5 non-character lines
+      const finalCharLines = lines.filter(line =>
+        line.includes('CHARACTER CONSISTENCY CRITICAL') ||
+        line.includes('Visual Fingerprint:') ||
+        line.includes('MUST MAINTAIN:') ||
+        line.includes('DNA') ||
+        line.includes('FINGERPRINT') ||
+        line.includes('VISUAL') ||
+        line.includes('CONSISTENCY')
+      ).slice(0, 10);
+
+      compressed = [
+        ...finalCharLines,
+        ...nonCharLines.slice(0, 5)
+      ].join('\n');
     }
     
     return compressed;
@@ -1383,6 +1447,8 @@ Following the ${storyArchetype} pattern, they grew and learned valuable lessons,
 STORY TO TRANSFORM:
 "${story}"
 
+SEQUENTIAL CONTEXT REQUIREMENT: Each panel must reference and flow from the previous panel. Panel X must show consequences of panel X-1. Every beat should build upon what happened before, creating clear cause-effect relationships throughout the story.
+
 Create exactly ${panelCount} CINEMATIC comic panels that transform this story into a visually stunning narrative.
 
 For EACH of the ${panelCount} panels, provide RICH DETAIL:
@@ -1434,7 +1500,7 @@ Return as JSON:
       const response = await this.openaiIntegration.generateTextCompletion(
         analysisPrompt,
         {
-          temperature: 0.35,  // ✅ FIXED: Lower temperature for consistent JSON structure
+          temperature: 0.25,  // Lower temperature for more consistent sequential flow
           maxTokens: 4000,  // Increased for richer descriptions
           model: 'gpt-4o',
           seed: 42  // ✅ ADD: Seed for reproducible outputs
@@ -1469,6 +1535,13 @@ Return as JSON:
         }
         
         this.log('info', `✅ Story analysis parsed successfully with ${parsed.storyBeats.length} beats`);
+
+        // Add previousBeatContext to each beat for sequential flow
+        for (let i = 1; i < parsed.storyBeats.length; i++) {
+          parsed.storyBeats[i].previousBeatContext = parsed.storyBeats[i - 1].beat;
+          parsed.storyBeats[i].previousBeatSummary = parsed.storyBeats[i - 1].beat;
+        }
+        this.log('info', `✅ Added sequential context to ${parsed.storyBeats.length - 1} beats`);
       } catch (e: any) {
         // Log the actual error and response for debugging
         this.log('error', `Failed to parse story analysis: ${e.message}`);
@@ -1529,7 +1602,9 @@ private enrichStoryBeats(beats: any[], targetCount: number, audience: AudienceTy
     compositionNote: beat.compositionNote || 'rule of thirds with dynamic composition',
     hasSpeechBubble: beat.hasSpeechBubble || (index % 3 === 0),
     dialogue: beat.dialogue,
-    speechBubbleStyle: beat.speechBubbleStyle || 'standard'
+    speechBubbleStyle: beat.speechBubbleStyle || 'standard',
+    previousBeatContext: index > 0 ? beats[index - 1].beat : null,
+    previousBeatSummary: index > 0 ? beats[index - 1].beat : null
   }));
 }
 
