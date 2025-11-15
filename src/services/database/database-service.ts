@@ -567,6 +567,125 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     }));
   }
 
+  // ===== ENVIRONMENTAL VALIDATION SYSTEM IMPLEMENTATION =====
+
+  /**
+   * Store environmental validation results for a comic page
+   * Called after each page validation (successful or failed)
+   */
+  async storeEnvironmentalValidation(validationData: {
+    job_id: string;
+    page_number: number;
+    overall_coherence: number;
+    location_consistency: number;
+    lighting_consistency: number;
+    color_palette_consistency: number;
+    architectural_consistency: number;
+    cross_panel_consistency: number;
+    panel_scores: Array<{
+      panelNumber: number;
+      locationConsistency: number;
+      lightingConsistency: number;
+      colorPaletteConsistency: number;
+      architecturalStyleConsistency: number;
+      atmosphericConsistency: number;
+      issues: string[];
+    }>;
+    detailed_analysis: string;
+    passes_threshold: boolean;
+    failure_reasons: string[];
+    attempt_number: number;
+    regeneration_triggered?: boolean;
+  }): Promise<boolean> {
+    try {
+      const result = await this.executeQuery<{ id: string }>(
+        'Store environmental validation',
+        async (supabase) => {
+          const validationRecord = {
+            job_id: validationData.job_id,
+            page_number: validationData.page_number,
+            overall_coherence: validationData.overall_coherence,
+            location_consistency: validationData.location_consistency,
+            lighting_consistency: validationData.lighting_consistency,
+            color_palette_consistency: validationData.color_palette_consistency,
+            architectural_consistency: validationData.architectural_consistency,
+            cross_panel_consistency: validationData.cross_panel_consistency,
+            panel_scores: validationData.panel_scores,
+            detailed_analysis: validationData.detailed_analysis,
+            failure_reasons: validationData.failure_reasons,
+            passes_threshold: validationData.passes_threshold,
+            validation_timestamp: new Date().toISOString(),
+            attempt_number: validationData.attempt_number,
+            regeneration_triggered: validationData.regeneration_triggered || false,
+            created_at: new Date().toISOString(),
+          };
+
+          const response = await supabase
+            .from('environmental_validation_results')
+            .insert(validationRecord)
+            .select('id')
+            .single();
+
+          return { data: response.data, error: response.error };
+        }
+      );
+
+      if (result?.id) {
+        this.log('info', `✅ Stored environmental validation for job ${validationData.job_id}, page ${validationData.page_number}, attempt ${validationData.attempt_number}`);
+        return true;
+      }
+
+      return false;
+    } catch (error: any) {
+      this.log('warn', `⚠️ Failed to store environmental validation for job ${validationData.job_id}, page ${validationData.page_number}`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Get environmental validation results for a specific job
+   * Useful for debugging and analysis
+   */
+  async getEnvironmentalValidationResults(jobId: string): Promise<any[]> {
+    const result = await this.executeQuery<any[]>(
+      'Get environmental validation results',
+      async (supabase) => {
+        const response = await supabase
+          .from('environmental_validation_results')
+          .select('*')
+          .eq('job_id', jobId)
+          .order('page_number', { ascending: true })
+          .order('attempt_number', { ascending: true });
+
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    return result || [];
+  }
+
+  /**
+   * Get environmental validation results for a specific page
+   * Used to check validation history during regeneration
+   */
+  async getEnvironmentalValidationForPage(jobId: string, pageNumber: number): Promise<any[]> {
+    const result = await this.executeQuery<any[]>(
+      'Get environmental validation for page',
+      async (supabase) => {
+        const response = await supabase
+          .from('environmental_validation_results')
+          .select('*')
+          .eq('job_id', jobId)
+          .eq('page_number', pageNumber)
+          .order('attempt_number', { ascending: true });
+
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    return result || [];
+  }
+
   // ===== SUCCESS PATTERN LEARNING SYSTEM IMPLEMENTATION =====
 
   async saveSuccessPattern(pattern: SuccessPattern | Omit<SuccessPattern, 'id' | 'createdAt' | 'lastUsedAt'>): Promise<boolean> {

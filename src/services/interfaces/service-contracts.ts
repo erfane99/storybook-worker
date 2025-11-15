@@ -68,6 +68,24 @@ export interface ValidationResult extends ConsistencyScore {
   panelNumber: number;
 }
 
+// ===== ENVIRONMENTAL CONSISTENCY VALIDATION INTERFACES =====
+export interface EnvironmentalConsistencyReport {
+  overallCoherence: number;
+  panelScores: Array<{
+    panelNumber: number;
+    locationConsistency: number;
+    lightingConsistency: number;
+    colorPaletteConsistency: number;
+    architecturalStyleConsistency: number;
+    atmosphericConsistency: number;
+    issues: string[];
+  }>;
+  crossPanelConsistency: number;
+  detailedAnalysis: string;
+  passesThreshold: boolean;
+  failureReasons: string[];
+}
+
 // ===== VISUAL DNA INTERFACES =====
 export interface VisualFingerprint {
   face: string;
