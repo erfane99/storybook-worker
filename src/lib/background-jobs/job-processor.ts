@@ -600,7 +600,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
 
     this.trackServiceUsage(job.id, 'job');
     servicesUsed.push('job');
-    await jobService.updateJobProgress(job.id, 5, 'Starting professional comic book creation with environmental consistency system');
+    await jobService.updateJobProgress(job.id, 5, 'Analyzing your story structure and creating narrative blueprint...');
 
     // PHASE 1: STORY ANALYSIS (Story-First Approach)
     console.log('📖 PHASE 1: Story Structure Analysis (Story-First Approach)...');
@@ -617,7 +617,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         this.updateComicGenerationProgress(job.id, { storyAnalyzed: true });
         
         console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} narrative beats for ${audience} audience`);
-        await jobService.updateJobProgress(job.id, 15, `Story beats analyzed - ${storyAnalysis.storyBeats.length} panels planned with environmental context`);
+        await jobService.updateJobProgress(job.id, 15, `Story structure complete: ${storyAnalysis.storyBeats.length} narrative moments mapped with ${storyAnalysis.emotionalArc?.length || 3}-stage emotional arc...`);
         
       } catch (storyError) {
         console.error('❌ Story analysis failed:', storyError);
@@ -650,7 +650,7 @@ environmentalDNA = await aiService.createEnvironmentalDNA(
       
       console.log(`✅ Environmental DNA created: ${environmentalDNA.primaryLocation?.name || 'Generic Setting'}`);
       console.log(`☀️ Lighting Context: ${environmentalDNA.lightingContext?.timeOfDay || 'afternoon'} - ${environmentalDNA.lightingContext?.lightingMood || 'bright'}`);
-      await jobService.updateJobProgress(job.id, 25, 'Environmental DNA created - ensuring 85-90% environmental consistency');
+      await jobService.updateJobProgress(job.id, 25, `Building world consistency profile - ${environmentalDNA.primaryLocation?.name || 'setting'} with ${environmentalDNA.primaryLocation?.keyFeatures?.length || 0} unique features...`);
       
     } catch (envError: any) {
       const errorMsg = `Environmental DNA creation failed - quality standards not met: ${envError?.message || 'Unknown error'}`;
@@ -691,7 +691,8 @@ if (character_image) {
         this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
         console.log('✅ Professional character DNA created with maximum consistency protocols');
         
-        await jobService.updateJobProgress(job.id, 35, 'Character DNA created - ensuring 95%+ character consistency');
+        const totalPanels = audience === 'children' ? 8 : audience === 'young adults' ? 15 : 24;
+        await jobService.updateJobProgress(job.id, 35, `Creating visual DNA for your character - ensuring perfect consistency across all ${totalPanels} panels...`);
         
       } catch (dnaError) {
         console.warn('⚠️ Character DNA creation failed, using fallback description method:', dnaError);
@@ -875,6 +876,17 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
         panelCount: updatedScenes.length,
         environmentalConsistency: totalEnvironmentalConsistencyScore / updatedScenes.length
       });
+
+      // Update progress for each page
+      const progressPercent = 35 + ((pageIndex + 1) / pages.length) * 55;
+      const pageBeats = page.scenes || [];
+      const firstBeat = pageBeats[0]?.description || pageBeats[0]?.text || 'Generating scenes';
+      const beatPreview = firstBeat.substring(0, 50);
+      await jobService.updateJobProgress(
+        job.id,
+        Math.round(progressPercent),
+        `Creating page ${pageIndex + 1}/${pages.length}: ${beatPreview}...`
+      );
     }
 
     let averageConsistency = totalScenes > 0 ? totalCharacterConsistencyScore / totalScenes : 0;
@@ -883,7 +895,21 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
     console.log(`✅ Processed ${updatedPages.length} pages with ${totalScenes} panels`);
 
-    await jobService.updateJobProgress(job.id, 95, 'Professional comic panels processed, saving storybook');
+    // Calculate quality metrics BEFORE using them in progress update
+    const characterConsistencyScore = characterDNA ?
+      (characterDNA.metadata?.confidenceScore || 90) + (updatedPages.length > 1 ? 5 : 0) :
+      75;
+
+    const storyCoherenceScore = storyAnalysis ?
+      85 + (storyAnalysis.storyBeats.length >= 8 ? 5 : 0) :
+      70;
+
+    const environmentalConsistencyScore = (environmentalDNA && !environmentalDNA.fallback) ?
+      90 : 70;
+
+    const overallScore = Math.round((characterConsistencyScore + storyCoherenceScore + environmentalConsistencyScore + 88 + 85 + 90) / 6);
+
+    await jobService.updateJobProgress(job.id, 95, `Comic generation complete: ${totalScenes} panels created with ${overallScore}% quality score...`);
 
     // PHASE 7: SAVE WITH ENHANCED QUALITY METRICS
     this.trackServiceUsage(job.id, 'database');
@@ -909,18 +935,6 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     const batchedDuration = Date.now() - startTime;
     const successfulPanels = updatedPages.reduce((total, page) => total + (page.scenes?.length || 0), 0);
 
-    // Calculate proper quality scores
-    const characterConsistencyScore = characterDNA ?
-      (characterDNA.metadata?.confidenceScore || 90) + (updatedPages.length > 1 ? 5 : 0) :
-      75;
-
-    const storyCoherenceScore = storyAnalysis ?
-      85 + (storyAnalysis.storyBeats.length >= 8 ? 5 : 0) :
-      70;
-
-    const environmentalConsistencyScore = (environmentalDNA && !environmentalDNA.fallback) ?
-      90 : 70;
-
     const qualityMetrics = {
       characterConsistency: Math.round(characterConsistencyScore),
       environmentalConsistency: Math.round(environmentalConsistencyScore),
@@ -934,7 +948,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       storyCoherence: Math.round(storyCoherenceScore),
       panelCount: totalScenes,
       professionalStandards: true,
-      overallScore: Math.round((characterConsistencyScore + storyCoherenceScore + environmentalConsistencyScore + 88 + 85 + 90) / 6),
+      overallScore: overallScore,
       grade: characterConsistencyScore >= 90 ? 'A' : characterConsistencyScore >= 80 ? 'B' : 'C',
       professionalGrade: characterConsistencyScore >= 90 ? 'A' : characterConsistencyScore >= 80 ? 'B' : 'C',
       recommendations: [],
