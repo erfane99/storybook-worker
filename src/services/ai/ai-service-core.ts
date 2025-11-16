@@ -18,8 +18,9 @@
  */
 
 import { ErrorAwareBaseService } from '../base/error-aware-base-service.js';
-import { 
+import {
   IAIService,
+  IDatabaseService,
   ServiceConfig,
   CharacterDNA,
   EnvironmentalDNA,
@@ -252,9 +253,12 @@ this.log('info', '✅ OpenAI Integration initialized');
       this.qualityEngine = new QualityMetricsEngine(this.openaiIntegration, this.errorHandlerAdapter as any);
       this.log('info', '✅ Quality Metrics Engine initialized');
 
-      // 6. Pattern Learning Engine (using adapter)
-this.learningEngine = new PatternLearningEngine(this.openaiIntegration, this.errorHandlerAdapter as any);
-this.log('info', '✅ Pattern Learning Engine initialized');
+      // 6. Pattern Learning Engine (using database service from container)
+      const { serviceContainer } = await import('../container/service-container.js');
+      const { SERVICE_TOKENS } = await import('../interfaces/service-contracts.js');
+      const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+      this.learningEngine = new PatternLearningEngine(databaseService);
+      this.log('info', '✅ Pattern Learning Engine initialized');
 
 // Now set the learning engine in OpenAI Integration
 if (this.openaiIntegration && typeof (this.openaiIntegration as any).setLearningEngine === 'function') {

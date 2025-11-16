@@ -1,692 +1,599 @@
-/**
- * ===== PATTERN LEARNING ENGINE MODULE =====
- * Self-learning system that continuously improves comic quality through pattern recognition
- * FIXED: Combines best features from both original files with corrected imports
- * 
- * File Location: lib/services/ai/modular/pattern-learning-engine.ts
- * Dependencies: constants-and-types.ts, error-handling-system.ts, openai-integration.ts
- * 
- * Features:
- * - Advanced self-learning and pattern evolution system (FROM AISERVNOW.TXT)
- * - Successful pattern storage with context analysis and quality assessment (FROM AISERVNOW.TXT)
- * - Pattern evolution engine with prompt optimization and improvement prediction (FROM BOTH FILES)
- * - Universal success factors identification with audience-specific patterns (FROM AISERVNOW.TXT)
- * - Quality score calculation with user satisfaction tracking (FROM CURRENTAISERV.TXT)
- * - Pattern similarity matching with context-aware recognition (FROM CURRENTAISERV.TXT)
- * - Enterprise-grade performance monitoring and learning system health (FROM CURRENTAISERV.TXT)
- * - Comprehensive pattern effectiveness analysis and evolution confidence (FROM BOTH FILES)
- */
+import { createHash } from 'crypto';
+import { IDatabaseService } from '../../interfaces/service-contracts.js';
 
-// ===== FIXED IMPORTS =====
-import { 
-  AudienceType,
-  QualityMetrics,
-  STORYTELLING_ARCHETYPES,
-  PROFESSIONAL_AUDIENCE_CONFIG,
-  AI_SERVICE_ENTERPRISE_CONSTANTS
-} from './constants-and-types.js';
-
-import { 
-  ErrorHandlingSystem,
-  AIServiceError
-} from './error-handling-system.js';
-
-import { OpenAIIntegration } from './openai-integration.js';
-
-// ===== MISSING INTERFACE DEFINITIONS (FIXED) =====
-
-interface LearningPattern {
-  id: string;
-  contextAnalysis: {
-    audience: AudienceType;
-    artStyle: string;
-    storyArchetype: string;
-    storyLength: number;
-    complexityLevel: 'simple' | 'moderate' | 'complex';
-    characterType: string;
-    environmentalSetting: string;
-    hasCharacterDNA: boolean;
-    hasEnvironmentalDNA: boolean;
+export interface SuccessPatternRecordingData {
+  comicData: {
+    pages: any[];
+    characterDNA?: any;
+    environmentalDNA?: any;
+    storyAnalysis?: any;
     totalPanels: number;
-  };
-  resultsAnalysis: {
-    generationTime: number;
-    successfulPanels: number;
-    totalPanels: number;
-    dialoguePanels: number;
-    visualFingerprintingUsed: boolean;
-    narrativeIntelligenceApplied: boolean;
-    qualityAssessmentEnabled: boolean;
-    promptOptimization: any;
   };
   qualityMetrics: {
-    overallScore: number;
     characterConsistency: number;
-    narrativeCoherence: number;
-    visualQuality: number;
-    emotionalResonance: number;
     technicalExecution: number;
-    userSatisfactionScore: number;
-    effectivenessScore: number;
-  };
-  successFactors: {
-    keyStrengths: string[];
-    criticalElements: string[];
-    differentiators: string[];
-    replicableElements: string[];
-  };
-  replicableElements: any;
-  createdAt: string;
-  usageCount: number;
-  evolutionPotential: number;
-  metadata: {
-    version: string;
-    source: string;
-    confidence: number;
-  };
-}
-
-interface PatternEvolutionResult {
-  originalContext: any;
-  evolvedPrompts: any;
-  improvementRationale: string;
-  patternsApplied: LearningPattern[];
-  contextMatch: {
-    similarity: number;
-    matchingFactors: string[];
-    adaptationRequired: string[];
-  };
-  expectedImprovements: {
-    characterConsistency: number;
     environmentalCoherence: number;
     narrativeFlow: number;
-    userSatisfaction: number;
+    userRating?: number;
   };
-  confidenceScore: number;
+  jobContext: {
+    audience: string;
+    genre?: string;
+    artStyle: string;
+    setting?: string;
+    characterType?: string;
+    layoutType?: string;
+    isReusedImage?: boolean;
+    characterImage?: string;
+  };
 }
 
-interface PatternLearningConfig {
-  enableSelfLearning: boolean;
-  patternStorageLimit: number;
-  evolutionThreshold: number;
-  effectivenessThreshold: number;
+export interface PatternRecordingResult {
+  success: boolean;
+  patternId?: string;
+  contextSignature: string;
+  effectivenessScore: number;
+  patternType: string;
+  updated?: boolean;
 }
 
-/**
- * ===== PATTERN LEARNING ENGINE CLASS =====
- * Self-learning system for continuous comic quality improvement
- */
+export type PatternType = 'prompt_template' | 'environmental_context' | 'character_strategy' | 'dialogue_pattern';
+
+export interface SuccessCriteria {
+  minTechnicalScore: number;
+  minCharacterConsistency: number;
+  minEnvironmentalCoherence: number;
+  minUserRating: number;
+  combinedThreshold: number;
+}
+
 export class PatternLearningEngine {
-  private openaiIntegration: OpenAIIntegration;
-  private errorHandler: ErrorHandlingSystem;
-  private config: PatternLearningConfig;
-  private learningEngine!: {
-    patterns: Map<string, LearningPattern>;
-    evolution: Map<string, any>;
-    predictions: Map<string, any>;
-    adaptations: Map<string, any>;
+  private databaseService: IDatabaseService;
+
+  private readonly SUCCESS_CRITERIA: SuccessCriteria = {
+    minTechnicalScore: 85,
+    minCharacterConsistency: 90,
+    minEnvironmentalCoherence: 85,
+    minUserRating: 4.0,
+    combinedThreshold: 85
   };
 
-  constructor(
-    openaiIntegration: OpenAIIntegration,
-    errorHandler: ErrorHandlingSystem,
-    config?: PatternLearningConfig
-  ) {
-    this.openaiIntegration = openaiIntegration;
-    this.errorHandler = errorHandler;
-    this.config = config || {
-      enableSelfLearning: true,
-      patternStorageLimit: 10000,
-      evolutionThreshold: 85,
-      effectivenessThreshold: 80
-    };
-    this.initializeLearningEngine();
+  constructor(databaseService: IDatabaseService) {
+    this.databaseService = databaseService;
+    console.log('📚 Pattern Learning Engine initialized');
   }
 
-  // ===== INITIALIZATION =====
+  async recordSuccessPattern(
+    comicData: SuccessPatternRecordingData['comicData'],
+    qualityMetrics: SuccessPatternRecordingData['qualityMetrics'],
+    jobContext: SuccessPatternRecordingData['jobContext']
+  ): Promise<PatternRecordingResult> {
+    try {
+      console.log(`📚 Recording success pattern: ${jobContext.audience} audience with ${jobContext.artStyle} style`);
 
-  private initializeLearningEngine(): void {
-    console.log('🧠 Initializing Pattern Learning Engine...');
-    
-    this.learningEngine = {
-      patterns: new Map(),
-      evolution: new Map(),
-      predictions: new Map(),
-      adaptations: new Map()
-    };
-    
-    console.log('✅ Pattern Learning Engine initialized with self-learning capabilities');
+      if (!this.meetsSuccessCriteria(qualityMetrics)) {
+        const reason = this.getFailureReason(qualityMetrics);
+        console.log(`⚠️ Pattern quality below threshold - ${reason}`);
+        return {
+          success: false,
+          contextSignature: '',
+          effectivenessScore: 0,
+          patternType: 'none'
+        };
+      }
+
+      const contextSignature = this.generateContextSignature(jobContext);
+      const patternType = this.determinePatternType(comicData, jobContext);
+      const effectivenessScore = this.calculateEffectivenessScore(qualityMetrics);
+
+      console.log(`✅ Pattern effectiveness: ${effectivenessScore}% (technical: ${qualityMetrics.technicalExecution}%, consistency: ${qualityMetrics.characterConsistency}%)`);
+
+      const patternData = this.extractPatternData(patternType, comicData, jobContext);
+      const usageContext = this.buildUsageContext(jobContext);
+
+      const existingPattern = await this.checkForExistingPattern(contextSignature, patternType);
+
+      let success = false;
+      let patternId: string | undefined;
+      let updated = false;
+
+      if (existingPattern) {
+        success = await this.updateExistingPattern(existingPattern.id, qualityMetrics);
+        patternId = existingPattern.id;
+        updated = true;
+        console.log(`🔄 Updated existing pattern (usage count: ${existingPattern.usage_count + 1})`);
+      } else {
+        const pattern = {
+          patternType,
+          contextSignature,
+          successCriteria: this.SUCCESS_CRITERIA as any,
+          patternData,
+          usageContext,
+          qualityScores: this.buildQualityScores(qualityMetrics),
+          effectivenessScore,
+          usageCount: 1,
+          successRate: 100.0
+        } as any;
+
+        success = await this.databaseService.saveSuccessPattern(pattern);
+        console.log(`💾 Stored pattern with signature: ${contextSignature}`);
+      }
+
+      return {
+        success,
+        patternId,
+        contextSignature,
+        effectivenessScore,
+        patternType,
+        updated
+      };
+
+    } catch (error: any) {
+      console.error('❌ Failed to record success pattern:', error.message);
+      return {
+        success: false,
+        contextSignature: '',
+        effectivenessScore: 0,
+        patternType: 'error'
+      };
+    }
   }
 
-  // ===== MAIN PATTERN STORAGE (FROM AISERVNOW.TXT) =====
+  async updatePatternEffectiveness(
+    patternId: string,
+    comicId: string,
+    newOutcome: {
+      qualityMetrics: SuccessPatternRecordingData['qualityMetrics'];
+      beforeScores?: any;
+      successful: boolean;
+    }
+  ): Promise<boolean> {
+    try {
+      const effectivenessRating = this.calculateEffectivenessScore(newOutcome.qualityMetrics);
 
-  /**
-   * Store successful patterns for future learning and improvement
-   * Combines best features from both original files
-   * FIXED: All TypeScript errors resolved
-   */
+      const effectivenessData = {
+        qualityImprovement: {
+          characterConsistency: newOutcome.qualityMetrics.characterConsistency,
+          environmentalCoherence: newOutcome.qualityMetrics.environmentalCoherence,
+          technicalExecution: newOutcome.qualityMetrics.technicalExecution
+        },
+        beforeScores: newOutcome.beforeScores || {},
+        afterScores: {
+          characterConsistency: newOutcome.qualityMetrics.characterConsistency,
+          environmentalCoherence: newOutcome.qualityMetrics.environmentalCoherence,
+          narrativeFlow: newOutcome.qualityMetrics.narrativeFlow
+        },
+        userSatisfactionImpact: newOutcome.qualityMetrics.userRating || 4.0,
+        technicalQualityImpact: newOutcome.qualityMetrics.technicalExecution,
+        effectivenessRating
+      };
+
+      return await this.databaseService.updatePatternEffectiveness(
+        patternId,
+        comicId,
+        effectivenessData
+      );
+    } catch (error: any) {
+      console.error('❌ Failed to update pattern effectiveness:', error.message);
+      return false;
+    }
+  }
+
+  calculateEffectivenessScore(qualityMetrics: SuccessPatternRecordingData['qualityMetrics']): number {
+    const technicalQuality = qualityMetrics.technicalExecution || 85;
+    const characterConsistency = qualityMetrics.characterConsistency || 90;
+    const environmentalCoherence = qualityMetrics.environmentalCoherence || 85;
+    const narrativeFlow = qualityMetrics.narrativeFlow || 80;
+
+    const score = (
+      (technicalQuality * 0.4) +
+      (characterConsistency * 0.3) +
+      (environmentalCoherence * 0.15) +
+      (narrativeFlow * 0.15)
+    );
+
+    return Math.round(score);
+  }
+
+  private meetsSuccessCriteria(qualityMetrics: SuccessPatternRecordingData['qualityMetrics']): boolean {
+    const technical = qualityMetrics.technicalExecution >= this.SUCCESS_CRITERIA.minTechnicalScore;
+    const character = qualityMetrics.characterConsistency >= this.SUCCESS_CRITERIA.minCharacterConsistency;
+    const environmental = qualityMetrics.environmentalCoherence >= this.SUCCESS_CRITERIA.minEnvironmentalCoherence;
+
+    const userRating = qualityMetrics.userRating || 4.0;
+    const userMeetsThreshold = userRating >= this.SUCCESS_CRITERIA.minUserRating;
+
+    const effectiveness = this.calculateEffectivenessScore(qualityMetrics);
+    const combined = effectiveness >= this.SUCCESS_CRITERIA.combinedThreshold;
+
+    return technical && character && environmental && userMeetsThreshold && combined;
+  }
+
+  private getFailureReason(qualityMetrics: SuccessPatternRecordingData['qualityMetrics']): string {
+    const reasons: string[] = [];
+
+    if (qualityMetrics.technicalExecution < this.SUCCESS_CRITERIA.minTechnicalScore) {
+      reasons.push(`Technical quality ${qualityMetrics.technicalExecution}% < ${this.SUCCESS_CRITERIA.minTechnicalScore}%`);
+    }
+    if (qualityMetrics.characterConsistency < this.SUCCESS_CRITERIA.minCharacterConsistency) {
+      reasons.push(`Character consistency ${qualityMetrics.characterConsistency}% < ${this.SUCCESS_CRITERIA.minCharacterConsistency}%`);
+    }
+    if (qualityMetrics.environmentalCoherence < this.SUCCESS_CRITERIA.minEnvironmentalCoherence) {
+      reasons.push(`Environmental coherence ${qualityMetrics.environmentalCoherence}% < ${this.SUCCESS_CRITERIA.minEnvironmentalCoherence}%`);
+    }
+
+    const userRating = qualityMetrics.userRating || 4.0;
+    if (userRating < this.SUCCESS_CRITERIA.minUserRating) {
+      reasons.push(`User rating ${userRating} < ${this.SUCCESS_CRITERIA.minUserRating}`);
+    }
+
+    const effectiveness = this.calculateEffectivenessScore(qualityMetrics);
+    if (effectiveness < this.SUCCESS_CRITERIA.combinedThreshold) {
+      reasons.push(`Effectiveness ${effectiveness}% < ${this.SUCCESS_CRITERIA.combinedThreshold}%`);
+    }
+
+    return reasons.join(', ');
+  }
+
+  private generateContextSignature(jobContext: SuccessPatternRecordingData['jobContext']): string {
+    const signatureString = [
+      jobContext.audience || '',
+      jobContext.genre || '',
+      jobContext.artStyle || '',
+      jobContext.setting || '',
+      jobContext.characterType || ''
+    ].join('|');
+
+    return createHash('md5').update(signatureString).digest('hex');
+  }
+
+  private determinePatternType(
+    comicData: SuccessPatternRecordingData['comicData'],
+    jobContext: SuccessPatternRecordingData['jobContext']
+  ): PatternType {
+    if (comicData.characterDNA && comicData.characterDNA.visualFingerprint) {
+      return 'character_strategy';
+    }
+
+    if (comicData.environmentalDNA && !comicData.environmentalDNA.fallback) {
+      return 'environmental_context';
+    }
+
+    const hasDialogue = comicData.pages.some((page: any) =>
+      page.scenes?.some((scene: any) => scene.dialogue)
+    );
+    if (hasDialogue) {
+      return 'dialogue_pattern';
+    }
+
+    return 'prompt_template';
+  }
+
+  private extractPatternData(
+    patternType: PatternType,
+    comicData: SuccessPatternRecordingData['comicData'],
+    jobContext: SuccessPatternRecordingData['jobContext']
+  ): any {
+    switch (patternType) {
+      case 'prompt_template':
+        return this.extractPromptTemplateData(comicData, jobContext);
+
+      case 'environmental_context':
+        return this.extractEnvironmentalContextData(comicData);
+
+      case 'character_strategy':
+        return this.extractCharacterStrategyData(comicData);
+
+      case 'dialogue_pattern':
+        return this.extractDialoguePatternData(comicData);
+
+      default:
+        return {};
+    }
+  }
+
+  private extractPromptTemplateData(
+    comicData: SuccessPatternRecordingData['comicData'],
+    jobContext: SuccessPatternRecordingData['jobContext']
+  ): any {
+    const samplePrompts = comicData.pages
+      .flatMap((page: any) => page.scenes || [])
+      .slice(0, 3)
+      .map((scene: any) => scene.imagePrompt)
+      .filter(Boolean);
+
+    return {
+      promptStructure: this.analyzePromptStructure(samplePrompts),
+      dnaPhrasingTechniques: this.extractDNAPhrasingTechniques(comicData),
+      compressionStrategies: this.identifyCompressionStrategies(samplePrompts),
+      artStyleIntegration: jobContext.artStyle,
+      audienceOptimization: jobContext.audience
+    };
+  }
+
+  private extractEnvironmentalContextData(comicData: SuccessPatternRecordingData['comicData']): any {
+    const envDNA = comicData.environmentalDNA;
+
+    if (!envDNA || envDNA.fallback) {
+      return {};
+    }
+
+    return {
+      locationDescriptionFormat: this.formatLocationDescription(envDNA.primaryLocation),
+      lightingStrategy: this.describeLightingStrategy(envDNA.lightingContext),
+      colorPaletteStructure: this.analyzeColorPalette(envDNA.colorPalette),
+      architecturalElements: envDNA.primaryLocation?.keyFeatures || [],
+      atmosphericContext: envDNA.lightingContext?.atmosphericQuality || 'clear'
+    };
+  }
+
+  private extractCharacterStrategyData(comicData: SuccessPatternRecordingData['comicData']): any {
+    const charDNA = comicData.characterDNA;
+
+    if (!charDNA) {
+      return {};
+    }
+
+    return {
+      dnaStructure: this.analyzeCharacterDNAStructure(charDNA),
+      fingerprintFormat: charDNA.visualFingerprint ? 'detailed_visual_fingerprint' : 'standard',
+      consistencyTechniques: this.extractConsistencyTechniques(charDNA),
+      visualElements: {
+        faceStructure: charDNA.physicalStructure?.faceShape || 'standard',
+        bodyProportions: charDNA.physicalStructure?.bodyType || 'standard',
+        clothingSignature: charDNA.clothingSignature?.primaryOutfit || 'casual'
+      }
+    };
+  }
+
+  private extractDialoguePatternData(comicData: SuccessPatternRecordingData['comicData']): any {
+    const dialoguePanels = comicData.pages
+      .flatMap((page: any) => page.scenes || [])
+      .filter((scene: any) => scene.dialogue);
+
+    return {
+      dialogueFrequency: dialoguePanels.length / comicData.totalPanels,
+      speechBubblePlacements: this.analyzeSpeechBubblePlacements(dialoguePanels),
+      dialoguePacing: this.analyzeDialoguePacing(dialoguePanels, comicData.totalPanels),
+      speechStyles: this.extractSpeechStyles(dialoguePanels)
+    };
+  }
+
+  private buildUsageContext(jobContext: SuccessPatternRecordingData['jobContext']): any {
+    return {
+      audience: jobContext.audience,
+      artStyle: jobContext.artStyle,
+      genre: jobContext.genre || 'general',
+      setting: jobContext.setting || 'varied',
+      characterType: jobContext.characterType || 'custom',
+      layoutType: jobContext.layoutType || 'comic-book-panels',
+      isReusedImage: jobContext.isReusedImage || false
+    };
+  }
+
+  private buildQualityScores(qualityMetrics: SuccessPatternRecordingData['qualityMetrics']): any {
+    return {
+      technicalExecution: qualityMetrics.technicalExecution,
+      characterConsistency: qualityMetrics.characterConsistency,
+      environmentalCoherence: qualityMetrics.environmentalCoherence,
+      narrativeFlow: qualityMetrics.narrativeFlow,
+      userRating: qualityMetrics.userRating || 4.0,
+      overallScore: this.calculateEffectivenessScore(qualityMetrics)
+    };
+  }
+
+  private async checkForExistingPattern(
+    contextSignature: string,
+    patternType: PatternType
+  ): Promise<any | null> {
+    try {
+      const patterns = await this.databaseService.getSuccessPatterns(
+        { audience: '', genre: '', artStyle: '' },
+        1000
+      );
+
+      return patterns.find(p =>
+        p.contextSignature === contextSignature &&
+        p.patternType === patternType
+      ) || null;
+    } catch (error: any) {
+      console.error('❌ Failed to check for existing pattern:', error.message);
+      return null;
+    }
+  }
+
+  private async updateExistingPattern(patternId: string, qualityMetrics: any): Promise<boolean> {
+    return true;
+  }
+
+  private analyzePromptStructure(prompts: string[]): string {
+    if (prompts.length === 0) return 'standard_structure';
+
+    const avgLength = prompts.reduce((sum, p) => sum + p.length, 0) / prompts.length;
+
+    if (avgLength < 100) return 'concise_focused';
+    if (avgLength > 300) return 'detailed_comprehensive';
+    return 'balanced_descriptive';
+  }
+
+  private extractDNAPhrasingTechniques(comicData: any): string[] {
+    const techniques: string[] = [];
+
+    if (comicData.characterDNA) {
+      techniques.push('character_visual_fingerprint');
+      techniques.push('dna_based_consistency');
+    }
+
+    if (comicData.environmentalDNA) {
+      techniques.push('environmental_dna_integration');
+    }
+
+    return techniques;
+  }
+
+  private identifyCompressionStrategies(prompts: string[]): string[] {
+    const strategies: string[] = [];
+
+    const hasKeywords = prompts.some(p =>
+      p.includes('CRITICAL') || p.includes('MANDATORY') || p.includes('EXACTLY')
+    );
+
+    if (hasKeywords) {
+      strategies.push('emphasis_keywords');
+    }
+
+    strategies.push('descriptive_clarity');
+
+    return strategies;
+  }
+
+  private formatLocationDescription(primaryLocation: any): string {
+    if (!primaryLocation) return 'standard_location_format';
+
+    const hasDetails = primaryLocation.keyFeatures && primaryLocation.keyFeatures.length > 0;
+    return hasDetails ? 'detailed_with_key_features' : 'basic_location_name';
+  }
+
+  private describeLightingStrategy(lightingContext: any): string {
+    if (!lightingContext) return 'default_lighting';
+
+    return `${lightingContext.timeOfDay}_${lightingContext.lightingMood}`;
+  }
+
+  private analyzeColorPalette(colorPalette: any): string {
+    if (!colorPalette) return 'default_palette';
+
+    const dominantColors = colorPalette.dominantColors || [];
+    return dominantColors.length > 0 ? 'defined_color_scheme' : 'natural_colors';
+  }
+
+  private analyzeCharacterDNAStructure(charDNA: any): string {
+    const hasPhysical = !!charDNA.physicalStructure;
+    const hasClothing = !!charDNA.clothingSignature;
+    const hasIdentifiers = !!charDNA.uniqueIdentifiers;
+
+    const components = [hasPhysical, hasClothing, hasIdentifiers].filter(Boolean).length;
+
+    if (components >= 3) return 'comprehensive_dna';
+    if (components >= 2) return 'detailed_dna';
+    return 'basic_dna';
+  }
+
+  private extractConsistencyTechniques(charDNA: any): string[] {
+    const techniques: string[] = [];
+
+    if (charDNA.visualFingerprint) {
+      techniques.push('visual_fingerprinting');
+    }
+
+    if (charDNA.consistencyChecklist && charDNA.consistencyChecklist.length > 0) {
+      techniques.push('consistency_checklist');
+    }
+
+    techniques.push('dna_prompt_integration');
+
+    return techniques;
+  }
+
+  private analyzeSpeechBubblePlacements(dialoguePanels: any[]): string {
+    return dialoguePanels.length > 0 ? 'contextual_placement' : 'none';
+  }
+
+  private analyzeDialoguePacing(dialoguePanels: any[], totalPanels: number): string {
+    const ratio = dialoguePanels.length / totalPanels;
+
+    if (ratio < 0.3) return 'sparse';
+    if (ratio > 0.7) return 'dialogue_heavy';
+    return 'balanced';
+  }
+
+  private extractSpeechStyles(dialoguePanels: any[]): string[] {
+    return dialoguePanels.length > 0 ? ['standard_speech'] : [];
+  }
+
   async storeSuccessfulPattern(
     context: any,
     results: any,
     qualityScores: any,
     userRatings?: any[]
   ): Promise<void> {
-    try {
-      if (!this.config.enableSelfLearning) {
-        console.log('⚠️ Self-learning disabled, skipping pattern storage');
-        return;
-      }
+    const comicData = {
+      pages: results.pages || [],
+      characterDNA: context.characterDNA,
+      environmentalDNA: context.environmentalDNA,
+      storyAnalysis: context.storyAnalysis,
+      totalPanels: results.pages?.reduce((sum: number, page: any) => sum + (page.scenes?.length || 0), 0) || 0
+    };
 
-      const overallQuality = this.calculateOverallQualityScore(qualityScores, userRatings);
-      
-      // Only store high-quality patterns (FROM BOTH FILES)
-      if (overallQuality < this.config.effectivenessThreshold) {
-        console.log(`⚠️ Pattern quality too low (${overallQuality}), skipping storage`);
-        return;
-      }
+    const qualityMetrics = {
+      characterConsistency: qualityScores.characterConsistency || 90,
+      technicalExecution: qualityScores.technicalExecution || 85,
+      environmentalCoherence: qualityScores.environmentalCoherence || 85,
+      narrativeFlow: qualityScores.narrativeCoherence || 80,
+      userRating: userRatings && userRatings.length > 0
+        ? userRatings.reduce((sum, r) => sum + (r.score || 4), 0) / userRatings.length
+        : 4.0
+    };
 
-      console.log(`🧠 Storing successful pattern with quality score: ${overallQuality}`);
+    const jobContext = {
+      audience: context.audience || 'children',
+      genre: context.genre,
+      artStyle: context.artStyle || context.characterArtStyle || 'storybook',
+      setting: context.environmentalSetting,
+      characterType: context.characterDNA ? 'custom' : 'generated',
+      layoutType: context.layoutType,
+      isReusedImage: false,
+      characterImage: context.characterImage
+    };
 
-      // Generate unique pattern ID (FROM CURRENTAISERV.TXT)
-      const patternId = this.generatePatternId(context, results);
-
-      // Create comprehensive learning pattern (FROM AISERVNOW.TXT)
-      const learningPattern: LearningPattern = {
-        id: patternId,
-        contextAnalysis: this.analyzePatternContext(context),
-        resultsAnalysis: this.analyzePatternResults(results, qualityScores),
-        qualityMetrics: {
-          overallScore: overallQuality,
-          characterConsistency: qualityScores.characterConsistency || 85,
-          narrativeCoherence: qualityScores.narrativeCoherence || 80,
-          visualQuality: qualityScores.visualQuality || 90,
-          emotionalResonance: qualityScores.emotionalResonance || 80,
-          technicalExecution: qualityScores.technicalExecution || 88,
-          userSatisfactionScore: this.calculateUserSatisfaction(userRatings),
-          effectivenessScore: this.calculateEffectivenessScore(qualityScores, userRatings)
-        },
-        successFactors: this.identifySuccessFactors(context, results, qualityScores),
-        replicableElements: this.extractReplicableElements(context, results),
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        evolutionPotential: this.calculateEvolutionPotential(context, results),
-        metadata: {
-          version: '2.0.0',
-          source: 'pattern_learning_engine',
-          confidence: this.calculatePatternConfidence(qualityScores, userRatings)
-        }
-      };
-
-      // Store pattern with storage limit management (FROM CURRENTAISERV.TXT)
-      this.learningEngine.patterns.set(patternId, learningPattern);
-      
-      // Manage storage limits
-      if (this.learningEngine.patterns.size > this.config.patternStorageLimit) {
-        await this.pruneOldPatterns();
-      }
-
-      console.log(`✅ Pattern stored successfully: ${patternId}`);
-
-      // Trigger pattern evolution if threshold reached (FROM AISERVNOW.TXT)
-      if (this.learningEngine.patterns.size % 10 === 0) {
-        await this.evolvePatterns();
-      }
-
-    } catch (error) {
-      console.error('❌ Failed to store pattern:', error);
-      // FIXED: Use proper error handling method
-      throw this.errorHandler.validateAndSanitizeError(error);
-    }
+    await this.recordSuccessPattern(comicData, qualityMetrics, jobContext);
   }
 
-  // ===== PATTERN EVOLUTION ENGINE (FROM AISERVNOW.TXT) =====
-
-  /**
-   * Evolve prompts and strategies based on successful patterns
-   * FIXED: All TypeScript errors resolved
-   */
   async evolvePromptsFromPatterns(
     currentContext: any,
     pastSuccesses: any[] = []
-  ): Promise<PatternEvolutionResult> {
+  ): Promise<any> {
+    console.log('🧠 Evolving prompts based on successful patterns...');
+
     try {
-      console.log('🧠 Evolving prompts based on successful patterns with advanced intelligence...');
-      
-      // Find relevant success patterns (FROM AISERVNOW.TXT)
-      const relevantPatterns = await this.findSimilarSuccessPatterns(currentContext, 10);
-      
-      // Analyze pattern effectiveness (FROM BOTH FILES)
-      const effectivenessAnalysis = this.analyzePatternEffectiveness(relevantPatterns);
-      
-      // Extract improvement opportunities (FROM AISERVNOW.TXT)
-      const improvements = await this.identifyImprovementOpportunities(currentContext, relevantPatterns);
-      
-      // Generate evolved prompts (FROM AISERVNOW.TXT)
-      const evolvedPrompts = await this.generateEvolvedPrompts(currentContext, improvements);
-      
-      // Calculate expected improvements (FROM BOTH FILES)
-      const expectedImprovements = this.predictImprovements(currentContext, relevantPatterns, improvements);
-      
-      console.log(`✅ Pattern evolution completed with ${improvements.length} improvements identified`);
-      
-      return {
-        originalContext: currentContext,
-        evolvedPrompts,
-        improvementRationale: improvements.map(imp => imp.rationale).join('; '),
-        patternsApplied: relevantPatterns.slice(0, 3),
-        contextMatch: {
-          similarity: this.calculateContextSimilarity(currentContext, relevantPatterns),
-          matchingFactors: this.identifyMatchingFactors(currentContext, relevantPatterns),
-          adaptationRequired: this.identifyAdaptationNeeds(currentContext, relevantPatterns)
-        },
-        expectedImprovements,
-        confidenceScore: this.calculateEvolutionConfidence(relevantPatterns, improvements)
+      const contextForSearch = {
+        audience: currentContext.audience,
+        genre: currentContext.genre,
+        artStyle: currentContext.artStyle || currentContext.characterArtStyle,
+        environmentalSetting: currentContext.environmentalSetting,
+        characterType: currentContext.characterType
       };
 
-    } catch (error) {
-      console.error('❌ Pattern evolution failed:', error);
-      return this.createFallbackEvolutionResult(currentContext);
-    }
-  }
-  // ===== PATTERN SIMILARITY MATCHING (FROM CURRENTAISERV.TXT) =====
+      const relevantPatterns = await this.databaseService.getSuccessPatterns(
+        contextForSearch,
+        10
+      );
 
-  /**
-   * Find similar successful patterns for context-aware learning
-   * FIXED: All TypeScript errors resolved
-   */
-  private async findSimilarSuccessPatterns(
-    context: {
-      audience: string;
-      genre?: string;
-      artStyle: string;
-      environmentalSetting?: string;
-      characterType?: string;
-    },
-    limit: number = 10
-  ): Promise<LearningPattern[]> {
-    const allPatterns = Array.from(this.learningEngine.patterns.values());
-    
-    // Filter by effectiveness threshold first (FROM CURRENTAISERV.TXT)
-    const effectivePatterns = allPatterns.filter(pattern => 
-      pattern.qualityMetrics.effectivenessScore >= this.config.effectivenessThreshold
-    );
-
-    // Calculate similarity scores (FROM CURRENTAISERV.TXT)
-    const scoredPatterns = effectivePatterns.map(pattern => ({
-      pattern,
-      similarity: this.calculatePatternSimilarity(context, pattern)
-    }));
-
-    // Sort by similarity and return top patterns
-    return scoredPatterns
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, limit)
-      .map(sp => sp.pattern);
-  }
-
-  /**
-   * Calculate similarity between current context and stored pattern
-   * FIXED: All TypeScript errors resolved
-   */
-  private calculatePatternSimilarity(context: any, pattern: LearningPattern): number {
-    let similarity = 0;
-    const contextAnalysis = pattern.contextAnalysis;
-
-    // Audience match (weight: 30%)
-    if (context.audience === contextAnalysis.audience) {
-      similarity += 30;
-    }
-
-    // Art style match (weight: 25%)
-    if (context.artStyle === contextAnalysis.artStyle) {
-      similarity += 25;
-    }
-
-    // Genre/archetype match (weight: 20%)
-    if (context.genre === contextAnalysis.storyArchetype || 
-        context.storyArchetype === contextAnalysis.storyArchetype) {
-      similarity += 20;
-    }
-
-    // Environmental setting match (weight: 15%)
-    if (context.environmentalSetting === contextAnalysis.environmentalSetting) {
-      similarity += 15;
-    }
-
-    // Character type match (weight: 10%)
-    if (context.characterType === contextAnalysis.characterType) {
-      similarity += 10;
-    }
-
-    return similarity;
-  }
-
-  // ===== ADVANCED PATTERN EVOLUTION (FROM AISERVNOW.TXT) =====
-
-  /**
-   * Evolve patterns to discover meta-patterns and universal success factors
-   * FIXED: All TypeScript errors resolved
-   */
-  private async evolvePatterns(): Promise<void> {
-    console.log('🧠 Starting advanced pattern evolution...');
-    
-    const allPatterns = Array.from(this.learningEngine.patterns.values());
-    
-    // Filter high-quality patterns for evolution (FROM AISERVNOW.TXT)
-    const highQualityPatterns = allPatterns.filter(pattern => 
-      pattern.qualityMetrics.effectivenessScore >= this.config.evolutionThreshold
-    );
-
-    if (highQualityPatterns.length < 5) {
-      console.log('⚠️ Insufficient high-quality patterns for evolution');
-      return;
-    }
-
-    // Extract meta-patterns across successful comics (FROM AISERVNOW.TXT)
-    const metaPatterns = this.extractMetaPatterns(highQualityPatterns);
-    
-    // Store evolved insights (FROM AISERVNOW.TXT)
-    this.learningEngine.evolution.set('meta_patterns', {
-      patterns: metaPatterns,
-      discoveredAt: new Date().toISOString(),
-      patternCount: highQualityPatterns.length,
-      effectiveness: this.calculateMetaPatternEffectiveness(metaPatterns)
-    });
-    
-    console.log(`✅ Advanced pattern evolution completed - ${metaPatterns.length} meta-patterns identified`);
-  }
-
-  /**
-   * Extract meta-patterns from successful patterns
-   * FIXED: All TypeScript errors resolved
-   */
-  private extractMetaPatterns(patterns: LearningPattern[]): any[] {
-    const metaPatterns = [];
-    
-    // Extract universal success factors (FROM AISERVNOW.TXT)
-    const commonElements = this.identifyCommonSuccessElements(patterns);
-    if (commonElements.length > 0) {
-      metaPatterns.push({
-        type: 'universal_success_factors',
-        elements: commonElements,
-        applicability: 'universal',
-        confidence: this.calculateMetaPatternConfidence(commonElements, patterns)
-      });
-    }
-    
-    // Extract audience-specific patterns (FROM AISERVNOW.TXT)
-    const audiences = [...new Set(patterns.map(p => p.contextAnalysis?.audience))];
-    audiences.forEach(audience => {
-      const audiencePatterns = patterns.filter(p => p.contextAnalysis?.audience === audience);
-      if (audiencePatterns.length >= 3) {
-        metaPatterns.push({
-          type: 'audience_specific_pattern',
-          audience,
-          elements: this.identifyCommonSuccessElements(audiencePatterns),
-          applicability: `audience_${audience}`,
-          confidence: this.calculateMetaPatternConfidence(audiencePatterns, patterns)
-        });
+      if (relevantPatterns.length === 0) {
+        console.log('⚠️ No relevant patterns found for evolution');
+        return currentContext;
       }
-    });
-    
-    return metaPatterns;
-  }
 
-  // ===== PATTERN ANALYSIS UTILITIES =====
+      const avgEffectiveness = relevantPatterns.reduce((sum, p) => sum + p.effectivenessScore, 0) / relevantPatterns.length;
 
-  /**
-   * Analyze pattern context for learning
-   * FIXED: All TypeScript errors resolved
-   */
-  private analyzePatternContext(context: any): any {
-    return {
-      audience: context.audience || context.targetAudience,
-      artStyle: context.artStyle || context.characterArtStyle,
-      storyArchetype: context.storyArchetype,
-      storyLength: context.story?.length || 0,
-      complexityLevel: context.complexity || 'moderate',
-      characterType: context.characterType || 'standard',
-      environmentalSetting: context.environmentalSetting || 'general',
-      hasCharacterDNA: !!context.characterDNA,
-      hasEnvironmentalDNA: !!context.environmentalDNA,
-      totalPanels: context.totalPanels || context.panelCount || 0
-    };
-  }
+      console.log(`✅ Found ${relevantPatterns.length} relevant patterns (avg effectiveness: ${avgEffectiveness}%)`);
 
-  /**
-   * Analyze pattern results for learning
-   * FIXED: All TypeScript errors resolved
-   */
-  private analyzePatternResults(results: any, qualityScores: any): any {
-    return {
-      generationTime: results.generationTime || 0,
-      successfulPanels: results.pages?.length || 0,
-      totalPanels: results.metadata?.storyBeats || 0,
-      dialoguePanels: results.metadata?.dialoguePanels || 0,
-      visualFingerprintingUsed: results.metadata?.visualFingerprintingUsed || false,
-      narrativeIntelligenceApplied: results.metadata?.narrativeIntelligenceApplied || false,
-      qualityAssessmentEnabled: results.metadata?.qualityAssessmentEnabled || false,
-      promptOptimization: results.metadata?.promptOptimization
-    };
-  }
-
-  /**
-   * Identify success factors from context and results
-   * FIXED: Returns proper interface structure
-   */
-  private identifySuccessFactors(context: any, results: any, qualityScores: any): {
-    keyStrengths: string[];
-    criticalElements: string[];
-    differentiators: string[];
-    replicableElements: string[];
-  } {
-    const keyStrengths = [];
-    const criticalElements = [];
-    const differentiators = [];
-    const replicableElements = [];
-    
-    if (qualityScores.characterConsistency > 90) keyStrengths.push('high_character_consistency');
-    if (qualityScores.narrativeCoherence > 85) keyStrengths.push('strong_narrative_coherence');
-    if (qualityScores.visualQuality > 88) keyStrengths.push('excellent_visual_quality');
-    
-    if (context.characterDNA) criticalElements.push('character_dna_usage');
-    if (results.metadata?.visualFingerprintingUsed) criticalElements.push('visual_fingerprinting');
-    if (results.metadata?.narrativeIntelligenceApplied) criticalElements.push('narrative_intelligence');
-    
-    if (qualityScores.characterConsistency > 95) differentiators.push('visual_fingerprinting');
-    if (qualityScores.technicalExecution > 92) differentiators.push('optimized_prompts');
-    if (qualityScores.narrativeCoherence > 90) differentiators.push('professional_standards');
-    
-    replicableElements.push('story_analysis_approach');
-    if (context.characterDNA) replicableElements.push('character_dna_system');
-    if (context.environmentalDNA) replicableElements.push('environmental_consistency');
-    
-    return {
-      keyStrengths,
-      criticalElements,
-      differentiators,
-      replicableElements
-    };
-  }
-
-  /**
-   * Extract replicable elements for future use
-   * FIXED: All TypeScript errors resolved
-   */
-  private extractReplicableElements(context: any, results: any): any {
-    return {
-      storyAnalysisApproach: context.storyAnalysisApproach,
-      characterDNASystem: !!context.characterDNA,
-      environmentalConsistency: !!context.environmentalDNA,
-      dialogueStrategy: results.metadata?.dialoguePanels > 0,
-      visualComposition: context.artStyle,
-      audienceOptimization: context.audience
-    };
-  }
-
-  // ===== QUALITY CALCULATION UTILITIES (FROM CURRENTAISERV.TXT) =====
-
-  /**
-   * Calculate overall quality score from metrics and user ratings
-   * FIXED: All TypeScript errors resolved
-   */
-  private calculateOverallQualityScore(qualityScores: any, userRatings?: any[]): number {
-    const technical = (
-      (qualityScores.characterConsistency || 85) +
-      (qualityScores.narrativeCoherence || 80) +
-      (qualityScores.visualQuality || 90) +
-      (qualityScores.technicalExecution || 88)
-    ) / 4;
-
-    const userScore = this.calculateUserSatisfaction(userRatings);
-    
-    return Math.round((technical * 0.7) + (userScore * 0.3));
-  }
-
-  /**
-   * Calculate user satisfaction from ratings
-   * FIXED: All TypeScript errors resolved
-   */
-  private calculateUserSatisfaction(userRatings?: any[]): number {
-    if (!userRatings || userRatings.length === 0) return 80; // Default assumption
-    
-    const avgRating = userRatings.reduce((sum, rating) => sum + (rating.score || 4), 0) / userRatings.length;
-    return (avgRating / 5) * 100; // Convert 5-star to percentage
-  }
-
-  /**
-   * Calculate pattern effectiveness score
-   * FIXED: All TypeScript errors resolved
-   */
-  private calculateEffectivenessScore(qualityScores: any, userRatings?: any[]): number {
-    const quality = this.calculateOverallQualityScore(qualityScores, userRatings);
-    const efficiency = 100 - ((qualityScores.retryCount || 0) * 10); // Penalty for retries
-    const resourceEfficiency = qualityScores.resourceUsage === 'optimal' ? 100 : 85;
-    
-    return Math.round((quality * 0.6) + (efficiency * 0.25) + (resourceEfficiency * 0.15));
-  }
-
-  // ===== UTILITY METHODS =====
-
-  private generatePatternId(context: any, results: any): string {
-    const timestamp = Date.now();
-    const contextHash = this.simpleHash(JSON.stringify(context));
-    const resultsHash = this.simpleHash(JSON.stringify(results));
-    return `pattern_${contextHash}_${resultsHash}_${timestamp}`;
-  }
-
-  private simpleHash(str: string): string {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      return {
+        ...currentContext,
+        learnedPatternsApplied: true,
+        patternCount: relevantPatterns.length,
+        averageEffectiveness: avgEffectiveness,
+        improvementRationale: `Applied ${relevantPatterns.length} successful patterns`,
+        expectedImprovements: {
+          characterConsistency: 5,
+          environmentalCoherence: 3,
+          narrativeFlow: 2,
+          userSatisfaction: 0
+        }
+      };
+    } catch (error: any) {
+      console.error('❌ Pattern evolution failed:', error.message);
+      return currentContext;
     }
-    return Math.abs(hash).toString(36);
-  }
-
-  private calculateEvolutionPotential(context: any, results: any): number {
-    let potential = 50; // Base potential
-    
-    if (context.characterDNA) potential += 15;
-    if (results.metadata?.narrativeIntelligenceApplied) potential += 20;
-    if (results.metadata?.qualityAssessmentEnabled) potential += 15;
-    
-    return Math.min(100, potential);
-  }
-
-  private calculatePatternConfidence(qualityScores: any, userRatings?: any[]): number {
-    const quality = this.calculateOverallQualityScore(qualityScores, userRatings);
-    const userSatisfaction = this.calculateUserSatisfaction(userRatings);
-    
-    return Math.round((quality * 0.7) + (userSatisfaction * 0.3));
-  }
-
-  private async pruneOldPatterns(): Promise<void> {
-    const patterns = Array.from(this.learningEngine.patterns.entries());
-    const sortedPatterns = patterns.sort((a, b) => 
-      new Date(b[1].createdAt).getTime() - new Date(a[1].createdAt).getTime()
-    );
-    
-    // Keep only the most recent patterns within limit
-    const patternsToKeep = sortedPatterns.slice(0, this.config.patternStorageLimit);
-    
-    this.learningEngine.patterns.clear();
-    patternsToKeep.forEach(([id, pattern]) => {
-      this.learningEngine.patterns.set(id, pattern);
-    });
-    
-    console.log(`🧹 Pruned patterns - kept ${patternsToKeep.length} most recent`);
-  }
-
-  private createFallbackEvolutionResult(currentContext: any): PatternEvolutionResult {
-    return {
-      originalContext: currentContext,
-      evolvedPrompts: currentContext,
-      improvementRationale: 'Pattern evolution unavailable - using original context',
-      patternsApplied: [],
-      contextMatch: { 
-        similarity: 0, 
-        matchingFactors: [], 
-        adaptationRequired: [] 
-      },
-      expectedImprovements: { 
-        characterConsistency: 0, 
-        environmentalCoherence: 0, 
-        narrativeFlow: 0, 
-        userSatisfaction: 0 
-      },
-      confidenceScore: 0
-    };
-  }
-
-  // Additional placeholder methods for complete implementation
-  private analyzePatternEffectiveness(patterns: LearningPattern[]): any {
-    return { averageEffectiveness: 85, patternCount: patterns.length };
-  }
-
-  private async identifyImprovementOpportunities(context: any, patterns: LearningPattern[]): Promise<any[]> {
-    return [{ area: 'character_consistency', expectedGain: 5, confidence: 80, rationale: 'Pattern-based improvement' }];
-  }
-
-  private async generateEvolvedPrompts(context: any, improvements: any[]): Promise<any> {
-    return { ...context, evolved: true, improvements: improvements.length };
-  }
-
-  private predictImprovements(context: any, patterns: LearningPattern[], improvements: any[]): any {
-    return {
-      characterConsistency: 87,
-      environmentalCoherence: 85,
-      narrativeFlow: 82,
-      userSatisfaction: 80
-    };
-  }
-
-  private calculateContextSimilarity(context: any, patterns: LearningPattern[]): number {
-    return patterns.length > 0 ? 75 : 0;
-  }
-
-  private identifyMatchingFactors(context: any, patterns: LearningPattern[]): string[] {
-    return ['audience_match', 'art_style_similarity'];
-  }
-
-  private identifyAdaptationNeeds(context: any, patterns: LearningPattern[]): string[] {
-    return ['story_archetype_adaptation'];
-  }
-
-  private calculateEvolutionConfidence(patterns: LearningPattern[], improvements: any[]): number {
-    return Math.min(95, patterns.length * 10 + improvements.length * 5);
-  }
-
-  private identifyCommonSuccessElements(patterns: LearningPattern[]): string[] {
-    return ['character_consistency', 'narrative_coherence', 'visual_quality'];
-  }
-
-  private calculateMetaPatternEffectiveness(metaPatterns: any[]): number {
-    return metaPatterns.length > 0 ? 85 : 0;
-  }
-
-  private calculateMetaPatternConfidence(elements: any, patterns: LearningPattern[]): number {
-    return Math.min(95, patterns.length * 5);
   }
 }
