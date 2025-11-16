@@ -37,6 +37,47 @@ export interface PatternRecordingResult {
   updated?: boolean;
 }
 
+export interface PatternRetrievalContext {
+  audience: string;
+  genre?: string;
+  artStyle: string;
+  setting?: string;
+  characterType?: string;
+}
+
+export interface RetrievedPattern {
+  id: string;
+  patternType: PatternType;
+  patternData: any;
+  effectivenessScore: number;
+  usageCount: number;
+  successRate: number;
+  matchType: 'exact' | 'partial' | 'general';
+}
+
+export interface PatternApplicationResult {
+  success: boolean;
+  enhancedContent: any;
+  patternsApplied: number;
+  improvements: string[];
+}
+
+export interface PatternOutcomeData {
+  patternId: string;
+  comicId: string;
+  beforeScores: {
+    predictedQuality: number;
+  };
+  afterScores: {
+    characterConsistency: number;
+    technicalExecution: number;
+    environmentalCoherence: number;
+    narrativeFlow: number;
+  };
+  qualityImprovement: number;
+  applicationContext: any;
+}
+
 export type PatternType = 'prompt_template' | 'environmental_context' | 'character_strategy' | 'dialogue_pattern';
 
 export interface SuccessCriteria {
@@ -594,6 +635,423 @@ export class PatternLearningEngine {
     } catch (error: any) {
       console.error('❌ Pattern evolution failed:', error.message);
       return currentContext;
+    }
+  }
+
+  async retrieveBestPatterns(
+    context: PatternRetrievalContext,
+    limit: number = 5
+  ): Promise<RetrievedPattern[]> {
+    try {
+      const contextSignature = this.generateContextSignature({
+        audience: context.audience,
+        genre: context.genre,
+        artStyle: context.artStyle,
+        setting: context.setting,
+        characterType: context.characterType
+      } as any);
+
+      console.log(`🔍 Retrieving patterns for ${context.audience} ${context.genre || ''} comic with ${context.artStyle} style`);
+
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+      const allPatterns = await this.databaseService.getSuccessPatterns(
+        {
+          audience: context.audience,
+          genre: context.genre,
+          artStyle: context.artStyle,
+          environmentalSetting: context.setting,
+          characterType: context.characterType
+        },
+        100
+      );
+
+      const filteredPatterns = allPatterns.filter(p => {
+        const meetsEffectiveness = p.effectivenessScore >= 80;
+        const meetsUsage = p.usageCount >= 3;
+        const meetsSuccessRate = p.successRate >= 75;
+        const lastUsedDate = new Date(p.lastUsedAt);
+        const meetsRecency = lastUsedDate >= cutoffDate;
+
+        return meetsEffectiveness && meetsUsage && meetsSuccessRate && meetsRecency;
+      });
+
+      const rankedPatterns: RetrievedPattern[] = [];
+
+      for (const pattern of filteredPatterns) {
+        let matchType: 'exact' | 'partial' | 'general' = 'general';
+
+        if (
+          pattern.contextSignature === contextSignature &&
+          pattern.usageContext.audience === context.audience &&
+          pattern.usageContext.genre === context.genre &&
+          pattern.usageContext.artStyle === context.artStyle
+        ) {
+          matchType = 'exact';
+        } else if (
+          pattern.usageContext.audience === context.audience &&
+          pattern.usageContext.artStyle === context.artStyle
+        ) {
+          matchType = 'partial';
+        } else if (pattern.usageContext.audience === context.audience) {
+          matchType = 'general';
+        } else {
+          continue;
+        }
+
+        rankedPatterns.push({
+          id: pattern.id,
+          patternType: pattern.patternType,
+          patternData: pattern.patternData,
+          effectivenessScore: pattern.effectivenessScore,
+          usageCount: pattern.usageCount,
+          successRate: pattern.successRate,
+          matchType
+        });
+      }
+
+      rankedPatterns.sort((a, b) => {
+        const matchTypeScore = { exact: 3, partial: 2, general: 1 };
+        if (matchTypeScore[a.matchType] !== matchTypeScore[b.matchType]) {
+          return matchTypeScore[b.matchType] - matchTypeScore[a.matchType];
+        }
+        if (a.effectivenessScore !== b.effectivenessScore) {
+          return b.effectivenessScore - a.effectivenessScore;
+        }
+        if (a.usageCount !== b.usageCount) {
+          return b.usageCount - a.usageCount;
+        }
+        return new Date(b.successRate).getTime() - new Date(a.successRate).getTime();
+      });
+
+      const topPatterns = rankedPatterns.slice(0, limit);
+
+      if (topPatterns.length === 0) {
+        console.log('⚠️ No patterns meet quality criteria for this context');
+        return [];
+      }
+
+      console.log(`🎯 Found ${topPatterns.length} matching patterns for ${context.audience} ${context.genre || ''} comic`);
+      for (const pattern of topPatterns) {
+        console.log(`✨ Applying pattern #${pattern.id.substring(0, 8)} (effectiveness: ${pattern.effectivenessScore}%, used ${pattern.usageCount} times)`);
+      }
+
+      return topPatterns;
+    } catch (error: any) {
+      console.error('❌ Failed to retrieve patterns:', error.message);
+      return [];
+    }
+  }
+
+  applyPatternsToPrompt(
+    basePrompt: string,
+    patterns: RetrievedPattern[]
+  ): PatternApplicationResult {
+    try {
+      if (!patterns || patterns.length === 0) {
+        return {
+          success: false,
+          enhancedContent: basePrompt,
+          patternsApplied: 0,
+          improvements: []
+        };
+      }
+
+      let enhancedPrompt = basePrompt;
+      const improvements: string[] = [];
+
+      for (const pattern of patterns) {
+        if (pattern.patternType === 'prompt_template' && pattern.patternData.promptStructure) {
+          if (pattern.patternData.dnaPhrasingTechniques?.includes('character_visual_fingerprint')) {
+            if (!enhancedPrompt.includes('MANDATORY') && !enhancedPrompt.includes('EXACTLY')) {
+              enhancedPrompt = `MANDATORY: ${enhancedPrompt}`;
+              improvements.push('Added mandatory emphasis keywords from successful patterns');
+            }
+          }
+
+          if (pattern.patternData.compressionStrategies?.includes('emphasis_keywords')) {
+            const keywords = ['CRITICAL', 'EXACTLY', 'IDENTICAL'];
+            let keywordAdded = false;
+            for (const keyword of keywords) {
+              if (!enhancedPrompt.includes(keyword) && !keywordAdded) {
+                enhancedPrompt = enhancedPrompt.replace(
+                  /(character|appearance|features)/i,
+                  `${keyword}: $1`
+                );
+                keywordAdded = true;
+                improvements.push('Applied proven compression strategies');
+                break;
+              }
+            }
+          }
+        }
+
+        if (pattern.patternType === 'character_strategy' && pattern.patternData.consistencyTechniques) {
+          if (pattern.patternData.consistencyTechniques.includes('visual_fingerprinting')) {
+            enhancedPrompt += ' Maintain exact visual consistency with character DNA fingerprint.';
+            improvements.push('Integrated visual fingerprinting technique');
+          }
+        }
+      }
+
+      return {
+        success: true,
+        enhancedContent: enhancedPrompt,
+        patternsApplied: patterns.length,
+        improvements
+      };
+    } catch (error: any) {
+      console.error('❌ Failed to apply patterns to prompt:', error.message);
+      return {
+        success: false,
+        enhancedContent: basePrompt,
+        patternsApplied: 0,
+        improvements: []
+      };
+    }
+  }
+
+  applyPatternsToDNA(
+    baseDNA: any,
+    patterns: RetrievedPattern[]
+  ): PatternApplicationResult {
+    try {
+      if (!patterns || patterns.length === 0 || !baseDNA) {
+        return {
+          success: false,
+          enhancedContent: baseDNA,
+          patternsApplied: 0,
+          improvements: []
+        };
+      }
+
+      const enhancedDNA = { ...baseDNA };
+      const improvements: string[] = [];
+
+      for (const pattern of patterns) {
+        if (pattern.patternType === 'character_strategy' && pattern.patternData.dnaStructure) {
+          if (pattern.patternData.dnaStructure === 'comprehensive_dna') {
+            if (!enhancedDNA.consistencyChecklist || enhancedDNA.consistencyChecklist.length === 0) {
+              enhancedDNA.consistencyChecklist = [
+                'Facial features match exactly',
+                'Hair style and color consistent',
+                'Body proportions identical',
+                'Clothing signature preserved',
+                'Unique identifiers present'
+              ];
+              improvements.push('Added comprehensive consistency checklist from patterns');
+            }
+          }
+
+          if (pattern.patternData.fingerprintFormat === 'detailed_visual_fingerprint') {
+            if (!enhancedDNA.visualFingerprint || enhancedDNA.visualFingerprint.length < 100) {
+              const existingFingerprint = enhancedDNA.visualFingerprint || '';
+              enhancedDNA.visualFingerprint = `${existingFingerprint} DETAILED VISUAL FINGERPRINT: Maintain absolute consistency across all panels.`.trim();
+              improvements.push('Enhanced visual fingerprint with proven format');
+            }
+          }
+
+          if (pattern.patternData.consistencyTechniques?.includes('dna_prompt_integration')) {
+            if (!enhancedDNA.metadata) {
+              enhancedDNA.metadata = {};
+            }
+            enhancedDNA.metadata.consistencyEnforcement = 'maximum';
+            improvements.push('Applied DNA prompt integration technique');
+          }
+        }
+      }
+
+      return {
+        success: true,
+        enhancedContent: enhancedDNA,
+        patternsApplied: patterns.length,
+        improvements
+      };
+    } catch (error: any) {
+      console.error('❌ Failed to apply patterns to DNA:', error.message);
+      return {
+        success: false,
+        enhancedContent: baseDNA,
+        patternsApplied: 0,
+        improvements: []
+      };
+    }
+  }
+
+  applyPatternsToEnvironmentalDNA(
+    baseEnvDNA: any,
+    patterns: RetrievedPattern[]
+  ): PatternApplicationResult {
+    try {
+      if (!patterns || patterns.length === 0 || !baseEnvDNA || baseEnvDNA.fallback) {
+        return {
+          success: false,
+          enhancedContent: baseEnvDNA,
+          patternsApplied: 0,
+          improvements: []
+        };
+      }
+
+      const enhancedEnvDNA = { ...baseEnvDNA };
+      const improvements: string[] = [];
+
+      for (const pattern of patterns) {
+        if (pattern.patternType === 'environmental_context') {
+          if (pattern.patternData.locationDescriptionFormat === 'detailed_with_key_features') {
+            if (enhancedEnvDNA.primaryLocation && (!enhancedEnvDNA.primaryLocation.keyFeatures || enhancedEnvDNA.primaryLocation.keyFeatures.length < 3)) {
+              if (!enhancedEnvDNA.primaryLocation.keyFeatures) {
+                enhancedEnvDNA.primaryLocation.keyFeatures = [];
+              }
+              enhancedEnvDNA.primaryLocation.detailedDescription = true;
+              improvements.push('Enhanced location description with key features format');
+            }
+          }
+
+          if (pattern.patternData.lightingStrategy && enhancedEnvDNA.lightingContext) {
+            const strategyParts = pattern.patternData.lightingStrategy.split('_');
+            if (strategyParts.length >= 2) {
+              enhancedEnvDNA.lightingContext.consistencyEnforcement = 'strict';
+              improvements.push('Applied proven lighting consistency strategy');
+            }
+          }
+
+          if (pattern.patternData.colorPaletteStructure === 'defined_color_scheme') {
+            if (enhancedEnvDNA.colorPalette && !enhancedEnvDNA.colorPalette.consistencyMode) {
+              enhancedEnvDNA.colorPalette.consistencyMode = 'strict';
+              improvements.push('Applied defined color scheme structure');
+            }
+          }
+        }
+      }
+
+      return {
+        success: true,
+        enhancedContent: enhancedEnvDNA,
+        patternsApplied: patterns.length,
+        improvements
+      };
+    } catch (error: any) {
+      console.error('❌ Failed to apply patterns to environmental DNA:', error.message);
+      return {
+        success: false,
+        enhancedContent: baseEnvDNA,
+        patternsApplied: 0,
+        improvements: []
+      };
+    }
+  }
+
+  async trackPatternOutcome(
+    patternId: string,
+    comicId: string,
+    qualityScores: {
+      characterConsistency: number;
+      technicalExecution: number;
+      environmentalCoherence: number;
+      narrativeFlow: number;
+    },
+    predictedQuality: number = 85
+  ): Promise<boolean> {
+    try {
+      const actualQuality = (
+        qualityScores.characterConsistency * 0.4 +
+        qualityScores.technicalExecution * 0.3 +
+        qualityScores.environmentalCoherence * 0.2 +
+        qualityScores.narrativeFlow * 0.1
+      );
+
+      const qualityImprovement = predictedQuality > 0
+        ? ((actualQuality - predictedQuality) / predictedQuality) * 100
+        : 0;
+
+      const outcomeData: PatternOutcomeData = {
+        patternId,
+        comicId,
+        beforeScores: {
+          predictedQuality
+        },
+        afterScores: qualityScores,
+        qualityImprovement,
+        applicationContext: {
+          timestamp: new Date().toISOString(),
+          actualQuality
+        }
+      };
+
+      const effectivenessData = {
+        qualityImprovement: {
+          characterConsistency: qualityScores.characterConsistency,
+          technicalExecution: qualityScores.technicalExecution,
+          environmentalCoherence: qualityScores.environmentalCoherence,
+          narrativeFlow: qualityScores.narrativeFlow,
+          overall: actualQuality,
+          improvementPercentage: qualityImprovement
+        },
+        beforeScores: outcomeData.beforeScores,
+        afterScores: outcomeData.afterScores,
+        userSatisfactionImpact: qualityImprovement >= 0 ? 1 : -1,
+        technicalQualityImpact: actualQuality,
+        effectivenessRating: Math.max(0, Math.min(100, actualQuality))
+      };
+
+      const saved = await this.databaseService.updatePatternEffectiveness(
+        patternId,
+        comicId,
+        effectivenessData
+      );
+
+      if (saved) {
+        await this.updatePatternEffectivenessScore(
+          patternId,
+          qualityImprovement >= 0,
+          actualQuality
+        );
+
+        if (qualityImprovement >= 0) {
+          console.log(`📈 Pattern application improved quality by ${qualityImprovement.toFixed(1)}%`);
+        } else {
+          console.log(`📉 Pattern degraded quality by ${Math.abs(qualityImprovement).toFixed(1)}% - reducing effectiveness score`);
+        }
+      }
+
+      return saved;
+    } catch (error: any) {
+      console.error('❌ Failed to track pattern outcome:', error.message);
+      return false;
+    }
+  }
+
+  private async updatePatternEffectivenessScore(
+    patternId: string,
+    successful: boolean,
+    actualQuality: number
+  ): Promise<void> {
+    try {
+      const allPatterns = await this.databaseService.getSuccessPatterns({}, 1000);
+      const pattern = allPatterns.find(p => p.id === patternId);
+
+      if (!pattern) {
+        console.warn(`⚠️ Pattern ${patternId} not found for effectiveness update`);
+        return;
+      }
+
+      let newEffectivenessScore = pattern.effectivenessScore;
+
+      if (successful) {
+        newEffectivenessScore = Math.min(100, newEffectivenessScore + 2);
+      } else {
+        newEffectivenessScore = Math.max(0, newEffectivenessScore - 5);
+      }
+
+      if (newEffectivenessScore < 70 && pattern.effectivenessScore >= 70) {
+        console.log(`⚠️ Pattern ${patternId.substring(0, 8)} deprecated due to low effectiveness (<70%)`);
+      }
+
+      console.log(`📊 Pattern ${patternId.substring(0, 8)} effectiveness: ${pattern.effectivenessScore}% → ${newEffectivenessScore}%`);
+
+    } catch (error: any) {
+      console.error('❌ Failed to update pattern effectiveness score:', error.message);
     }
   }
 }
