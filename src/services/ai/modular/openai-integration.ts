@@ -353,6 +353,31 @@ interface OpenAICallOptions {
   baseDelay?: number;
 }
 
+interface RetryMetric {
+  operationName: string;
+  errorType: string;
+  errorMessage: string;
+  httpStatus?: number;
+  attemptNumber: number;
+  maxAttempts: number;
+  delayMs: number;
+  durationMs: number;
+  success: boolean;
+  totalRetryDurationMs: number;
+  circuitBreakerState: string;
+  retryStrategy: string;
+  endpoint: string;
+  timestamp: number;
+}
+
+interface ErrorClassificationResult {
+  isRetryable: boolean;
+  maxAttempts: number;
+  errorCategory: 'rate_limit' | 'timeout' | 'server_error' | 'content_policy' | 'authentication' | 'invalid_request' | 'network';
+  userMessage: string;
+  shouldIncreaseTimeout: boolean;
+}
+
 interface OpenAIParameters {
   model?: string;
   messages?: any[];
@@ -374,6 +399,8 @@ interface CircuitBreakerState {
   threshold: number;
   timeout: number;
   successCount: number;
+  totalRequests: number;
+  errorRate: number;
 }
 
 interface RateLimitState {
@@ -403,6 +430,15 @@ export class OpenAIIntegration {
   
   // Metrics
   private operationMetrics: Map<string, any> = new Map();
+
+  // Retry metrics batching
+  private retryMetricsBatch: RetryMetric[] = [];
+  private lastMetricsBatchTime: number = Date.now();
+  private readonly METRICS_BATCH_SIZE = 100;
+  private readonly METRICS_BATCH_INTERVAL_MS = 300000; // 5 minutes
+
+  // Maximum total retry duration
+  private readonly MAX_TOTAL_RETRY_DURATION_MS = 180000; // 3 minutes
   
   // Logger
   private logger = {
@@ -429,7 +465,9 @@ export class OpenAIIntegration {
         state: 'closed',
         threshold: 5,
         timeout: 60000, // 1 minute
-        successCount: 0
+        successCount: 0,
+        totalRequests: 0,
+        errorRate: 0
       });
     });
   }
