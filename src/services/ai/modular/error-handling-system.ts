@@ -1229,6 +1229,7 @@ export default ErrorHandlingSystem;
 // ===== EXPORT AI ERROR CLASSES FOR OTHER MODULAR FILES =====
 // These exports are needed by narrative-intelligence.ts, openai-integration.ts, visual-dna-system.ts
 export {
+  BaseServiceError,
   AIServiceUnavailableError,
   AIRateLimitError,
   AIContentPolicyError,

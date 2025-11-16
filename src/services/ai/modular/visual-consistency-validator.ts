@@ -90,6 +90,7 @@ export class ValidationError extends BaseServiceError {
   public readonly category = ErrorCategory.VALIDATION;
   public readonly retryable = true;
   public readonly severity = ErrorSeverity.HIGH;
+  public override readonly name = 'ValidationError';
 
   public consistencyScore: ConsistencyScore;
 
@@ -104,7 +105,7 @@ export class ValidationError extends BaseServiceError {
       }
     });
     this.consistencyScore = score;
-    this.name = 'ValidationError';
+    Object.setPrototypeOf(this, ValidationError.prototype);
   }
 }
 

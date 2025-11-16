@@ -344,17 +344,11 @@ async function initializeWorker(): Promise<void> {
         consecutiveFailures++;
         console.error(`❌ Job processing error (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}):`, error.message);
         
-        // ✅ NEW: Auto-recovery attempt after multiple failures
+        // Log consecutive failures
         if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-          console.warn('🔄 Attempting service recovery after repeated failures...');
-          try {
-            await ServiceRegistry.recoverServices();
-            consecutiveFailures = 0;
-            console.log('✅ Service recovery successful');
-          } catch (recoveryError: any) {
-            console.error('❌ Service recovery failed:', recoveryError.message);
-            // Continue processing - don't stop the worker
-          }
+          console.error(`⚠️ Reached ${MAX_CONSECUTIVE_FAILURES} consecutive failures. Service may need attention.`);
+          // Reset counter to continue attempting jobs
+          consecutiveFailures = 0;
         }
       }
     });

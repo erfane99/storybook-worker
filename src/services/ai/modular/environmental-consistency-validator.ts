@@ -103,6 +103,7 @@ export class EnvironmentalValidationError extends BaseServiceError {
   public readonly category = ErrorCategory.VALIDATION;
   public readonly retryable = true;  // Retryable via page regeneration
   public readonly severity = ErrorSeverity.HIGH;
+  public override readonly name = 'EnvironmentalValidationError';
 
   public coherenceScore: number;
   public failureReasons: string[];
@@ -129,7 +130,7 @@ export class EnvironmentalValidationError extends BaseServiceError {
     this.coherenceScore = coherenceScore;
     this.failureReasons = failureReasons;
     this.pageNumber = pageNumber;
-    this.name = 'EnvironmentalValidationError';
+    Object.setPrototypeOf(this, EnvironmentalValidationError.prototype);
   }
 }
 
