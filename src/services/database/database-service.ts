@@ -730,6 +730,7 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       artStyle?: string;
       environmentalSetting?: string;
       characterType?: string;
+      includeDeprecated?: boolean;
     },
     limit: number = 10
   ): Promise<SuccessPattern[]> {
@@ -742,7 +743,10 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
           .order('effectiveness_score', { ascending: false })
           .limit(limit);
 
-        // Apply context filters
+        if (!context.includeDeprecated) {
+          query = query.eq('is_deprecated', false);
+        }
+
         if (context.audience) {
           query = query.eq('audience_type', context.audience);
         }
@@ -779,6 +783,9 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       successRate: record.success_rate || 0,
       createdAt: record.created_at,
       lastUsedAt: record.last_used_at,
+      isDeprecated: record.is_deprecated || false,
+      deprecationReason: record.deprecation_reason,
+      deprecationDate: record.deprecation_date,
     }));
   }
 
@@ -861,25 +868,45 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     return !!result?.id;
   }
 
+  async deprecatePattern(patternId: string, reason: string): Promise<boolean> {
+    const result = await this.executeQuery<{ id: string }>(
+      'Deprecate pattern',
+      async (supabase) => {
+        const response = await supabase
+          .from('success_patterns')
+          .update({
+            is_deprecated: true,
+            deprecation_reason: reason,
+            deprecation_date: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', patternId)
+          .select('id')
+          .single();
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    return !!result?.id;
+  }
+
   async getLearningMetrics(): Promise<LearningMetrics> {
     const result = await this.executeQuery<any>(
       'Get learning metrics',
       async (supabase) => {
-        // Get pattern statistics
         const { data: patternStats, error: patternError } = await supabase
           .from('success_patterns')
-          .select('pattern_type, effectiveness_score, success_rate, created_at')
+          .select('pattern_type, effectiveness_score, success_rate, created_at, is_deprecated')
           .order('created_at', { ascending: false });
 
         if (patternError) {
           throw new Error(`Failed to get pattern stats: ${patternError.message}`);
         }
 
-        // Get recent effectiveness data
         const { data: recentEffectiveness, error: effectivenessError } = await supabase
           .from('pattern_effectiveness')
           .select('effectiveness_rating, created_at')
-          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Last 30 days
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
           .order('created_at', { ascending: false });
 
         if (effectivenessError) {

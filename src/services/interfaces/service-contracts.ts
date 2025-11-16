@@ -1018,6 +1018,7 @@ export interface IDatabaseOperations {
     }
   ): Promise<boolean>;
   getLearningMetrics(): Promise<LearningMetrics>;
+  deprecatePattern(patternId: string, reason: string): Promise<boolean>;
 
   // Validation Result Storage
   savePanelValidationResult(validationData: {
@@ -1283,6 +1284,9 @@ export interface SuccessPattern {
   successRate: number; // percentage
   createdAt: string;
   lastUsedAt: string;
+  isDeprecated?: boolean;
+  deprecationReason?: string;
+  deprecationDate?: string;
 }
 
 export interface LearningMetrics {
