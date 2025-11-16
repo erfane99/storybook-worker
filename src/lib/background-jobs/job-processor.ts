@@ -1578,8 +1578,237 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
   }
 
   private async processCartoonizeJobWithServices(job: CartoonizeJobData, servicesUsed: string[]): Promise<void> {
-    // Implementation for cartoonize jobs
-    throw new Error('Cartoonize job processing not implemented in this version');
+    const startTime = Date.now();
+    console.log(`🎨 Starting cartoonize job ${job.id} with quality validation`);
+
+    const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+    const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
+    const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+    const storageService = await serviceContainer.resolve(SERVICE_TOKENS.STORAGE);
+
+    this.trackServiceUsage(job.id, 'job');
+    this.trackServiceUsage(job.id, 'ai');
+    this.trackServiceUsage(job.id, 'database');
+    servicesUsed.push('job', 'ai', 'database');
+
+    const originalImageUrl = job.original_cloudinary_url || job.original_image_data;
+    const style = job.style || 'storybook';
+    const characterDescription = `A character in ${style} art style`;
+
+    if (!originalImageUrl) {
+      throw new Error('Original image URL is required for cartoonization');
+    }
+
+    await jobService.updateJobProgress(job.id, 5, 'Starting cartoonization with quality validation...');
+
+    let cartoonizationValidator: any = null;
+    try {
+      cartoonizationValidator = await serviceContainer.resolve(SERVICE_TOKENS.CARTOONIZATION_QUALITY_VALIDATOR);
+      console.log('✅ Cartoonization quality validator initialized');
+    } catch (error: any) {
+      console.warn('⚠️ Quality validator not available, proceeding without validation:', error.message);
+    }
+
+    const MAX_ATTEMPTS = 3;
+    let bestQualityScore = 0;
+    const attemptScores: number[] = [];
+    let validatedCartoonUrl: string | null = null;
+    let finalQualityReport: any = null;
+
+    for (let attemptNumber = 1; attemptNumber <= MAX_ATTEMPTS; attemptNumber++) {
+      try {
+        await jobService.updateJobProgress(
+          job.id,
+          10 + (attemptNumber - 1) * 25,
+          `Generating cartoon image (attempt ${attemptNumber}/${MAX_ATTEMPTS})...`
+        );
+
+        console.log(`🎨 Cartoonize job ${job.id}: generating with style ${style} (attempt ${attemptNumber}/${MAX_ATTEMPTS})`);
+
+        const cartoonPrompt = attemptNumber === 1
+          ? `Transform this person into a ${style} character. Maintain all distinctive facial features, hair style, and overall appearance. High quality, professional ${style} art style.`
+          : this.buildEnhancedCartoonPrompt(style, finalQualityReport?.failureReasons || [], attemptNumber);
+
+        const cartoonResult = await aiService.generateCartoonImage(cartoonPrompt);
+        const unwrappedCartoon = await cartoonResult.unwrap();
+
+        if (!unwrappedCartoon || typeof unwrappedCartoon !== 'string') {
+          throw new Error('Failed to generate cartoon image - no URL returned');
+        }
+
+        const cartoonUrl = unwrappedCartoon;
+        console.log(`✅ Cartoon generated successfully (attempt ${attemptNumber})`);
+
+        if (!cartoonizationValidator) {
+          console.log('⚠️ No validator available - saving cartoon without validation');
+          validatedCartoonUrl = cartoonUrl;
+          bestQualityScore = -1;
+          break;
+        }
+
+        await jobService.updateJobProgress(
+          job.id,
+          15 + (attemptNumber - 1) * 25,
+          `Validating cartoon quality (attempt ${attemptNumber}/${MAX_ATTEMPTS})...`
+        );
+
+        console.log(`🔍 Validating cartoon quality (attempt ${attemptNumber}/${MAX_ATTEMPTS})`);
+
+        try {
+          const qualityReport = await cartoonizationValidator.validateCartoonQuality(
+            cartoonUrl,
+            originalImageUrl,
+            style,
+            characterDescription
+          );
+
+          await databaseService.storeCartoonizationQualityMetrics(
+            job.id,
+            attemptNumber,
+            qualityReport
+          );
+
+          attemptScores.push(qualityReport.overallQuality);
+          bestQualityScore = Math.max(bestQualityScore, qualityReport.overallQuality);
+          finalQualityReport = qualityReport;
+
+          if (qualityReport.passesThreshold) {
+            console.log(`✅ Cartoon validated: ${qualityReport.overallQuality}% quality (threshold: 85%)`);
+            await jobService.updateJobProgress(
+              job.id,
+              20 + (attemptNumber - 1) * 25,
+              `✅ Quality check passed (score: ${qualityReport.overallQuality}%)`
+            );
+
+            validatedCartoonUrl = cartoonUrl;
+
+            if (attemptNumber > 1) {
+              console.log(`🔄 Quality achieved after ${attemptNumber} attempts`);
+            }
+
+            break;
+          }
+
+          console.warn(`❌ Validation failed: ${qualityReport.overallQuality}% (threshold: 85%) - Issues: ${qualityReport.failureReasons.join(', ')}`);
+
+          if (attemptNumber < MAX_ATTEMPTS) {
+            await jobService.updateJobProgress(
+              job.id,
+              20 + (attemptNumber - 1) * 25,
+              `❌ Quality check failed (score: ${qualityReport.overallQuality}%) - regenerating with enhanced prompts...`
+            );
+            console.log(`🔄 Regenerating cartoon with enhanced quality enforcement (attempt ${attemptNumber + 1}/${MAX_ATTEMPTS})...`);
+          }
+
+        } catch (validationError: any) {
+          if (validationError.message?.includes('Vision API') || validationError.message?.includes('unavailable')) {
+            console.warn(`⚠️ Vision API unavailable for attempt ${attemptNumber}, continuing without validation`);
+            validatedCartoonUrl = cartoonUrl;
+            bestQualityScore = -1;
+            break;
+          }
+          throw validationError;
+        }
+
+      } catch (error: any) {
+        console.error(`❌ Cartoonize attempt ${attemptNumber} failed:`, error);
+        if (attemptNumber === MAX_ATTEMPTS) {
+          throw error;
+        }
+
+        const delay = Math.min(2000 * Math.pow(2, attemptNumber - 1), 10000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    if (!validatedCartoonUrl) {
+      const mainIssues = finalQualityReport?.failureReasons?.slice(0, 3).join(', ') || 'Quality standards not met';
+      const errorMessage = `Could not create cartoon meeting quality standards after ${MAX_ATTEMPTS} attempts. Best quality: ${bestQualityScore}%. Required: 85%. Issues: ${mainIssues}. Please try different photo or art style.`;
+
+      console.error(`💥 ${errorMessage}`);
+      await jobService.updateJobProgress(job.id, 0, `Failed: ${errorMessage}`);
+      throw new Error(errorMessage);
+    }
+
+    await jobService.updateJobProgress(
+      job.id,
+      85,
+      'Quality validation complete - saving to permanent storage...'
+    );
+
+    console.log(`💾 Saving validated cartoon (quality: ${bestQualityScore > 0 ? bestQualityScore + '%' : 'unvalidated'})`);
+
+    this.trackServiceUsage(job.id, 'storage');
+    if (!servicesUsed.includes('storage')) servicesUsed.push('storage');
+
+    const uploadResult = await (storageService as any).uploadImage(validatedCartoonUrl, {
+      folder: 'cartoons',
+      tags: [`quality_score:${bestQualityScore}`, `style:${style}`]
+    });
+
+    if (!uploadResult || !uploadResult.url) {
+      throw new Error('Failed to upload cartoon to cloud storage');
+    }
+
+    const finalCloudinaryUrl = uploadResult.url;
+
+    await jobService.updateJobProgress(job.id, 95, 'Finalizing cartoonization...');
+
+    const completionData: any = {
+      generated_image_url: validatedCartoonUrl,
+      final_cloudinary_url: finalCloudinaryUrl,
+    };
+
+    if (bestQualityScore > 0) {
+      completionData.quality_score = bestQualityScore;
+    }
+
+    await jobService.markJobCompleted(job.id, completionData);
+
+    await jobService.updateJobProgress(
+      job.id,
+      100,
+      `Cartoon created successfully${bestQualityScore > 0 ? ` (quality: ${bestQualityScore}%)` : ''}`
+    );
+
+    const duration = Date.now() - startTime;
+    console.log(`✅ Cartoonize job ${job.id} completed in ${duration}ms`);
+    console.log(`📊 Quality: ${bestQualityScore > 0 ? bestQualityScore + '%' : 'unvalidated'}, Attempts: ${attemptScores.length}, Scores: [${attemptScores.join(', ')}]`);
+  }
+
+  private buildEnhancedCartoonPrompt(style: string, failureReasons: string[], attemptNumber: number): string {
+    let enhancedPrompt = `CRITICAL RETRY (Attempt ${attemptNumber}) - Transform this person into a ${style} character. `;
+
+    const hasCharacterIssues = failureReasons.some(r =>
+      r.toLowerCase().includes('character') ||
+      r.toLowerCase().includes('fidelity') ||
+      r.toLowerCase().includes('facial')
+    );
+    const hasStyleIssues = failureReasons.some(r =>
+      r.toLowerCase().includes('style') ||
+      r.toLowerCase().includes('accuracy')
+    );
+    const hasClarityIssues = failureReasons.some(r =>
+      r.toLowerCase().includes('clarity') ||
+      r.toLowerCase().includes('quality') ||
+      r.toLowerCase().includes('blur')
+    );
+
+    if (hasCharacterIssues) {
+      enhancedPrompt += 'MANDATORY: EXACTLY match the original person\'s facial features, hair style, skin tone, and distinctive characteristics. Preserve all unique features. ';
+    }
+
+    if (hasStyleIssues) {
+      enhancedPrompt += `MANDATORY: Follow ${style} art style PRECISELY with proper line weight, shading, and color palette typical of professional ${style} artwork. `;
+    }
+
+    if (hasClarityIssues) {
+      enhancedPrompt += 'MANDATORY: Create sharp, clear lines with high detail and professional rendering quality. No blur or artifacts. ';
+    }
+
+    enhancedPrompt += `High quality professional ${style} character illustration that exactly represents the original person.`;
+
+    return enhancedPrompt;
   }
 
   private async processImageJobWithServices(job: ImageJobData, servicesUsed: string[]): Promise<void> {

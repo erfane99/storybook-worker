@@ -1060,6 +1060,23 @@ export interface IDatabaseOperations {
     regenerationTriggered: boolean;
   }): Promise<boolean>;
 
+  storeCartoonizationQualityMetrics(
+    cartoonizeJobId: string,
+    attemptNumber: number,
+    qualityReport: {
+      overallQuality: number;
+      visualClarity: number;
+      characterFidelity: number;
+      styleAccuracy: number;
+      ageAppropriateness: number;
+      professionalStandard: number;
+      detailedAnalysis: string;
+      failureReasons: string[];
+      passesThreshold: boolean;
+      recommendations: string[];
+    }
+  ): Promise<boolean>;
+
   // Transaction Support
   executeTransaction<T>(operations: DatabaseOperation<T>[]): Promise<T[]>;
 }
@@ -1509,6 +1526,7 @@ export const SERVICE_TOKENS = {
   CONFIG: 'IConfigService',
   VISUAL_CONSISTENCY_VALIDATOR: 'IVisualConsistencyValidator',
   ENVIRONMENTAL_CONSISTENCY_VALIDATOR: 'IEnvironmentalConsistencyValidator',
+  CARTOONIZATION_QUALITY_VALIDATOR: 'ICartoonizationQualityValidator',
 } as const;
 
 export type ServiceToken = typeof SERVICE_TOKENS[keyof typeof SERVICE_TOKENS];

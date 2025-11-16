@@ -15,6 +15,7 @@ import { ServiceConfigManager } from '../config/service-config.js';
 import { SubscriptionConfigService } from '../config/subscription-config.js';
 import { VisualConsistencyValidator } from '../ai/modular/visual-consistency-validator.js';
 import { EnvironmentalConsistencyValidator } from '../ai/modular/environmental-consistency-validator.js';
+import { CartoonizationQualityValidator } from '../ai/modular/cartoonization-quality-validator.js';
 import { OpenAIIntegration } from '../ai/modular/openai-integration.js';
 
 export class ServiceRegistry {
@@ -165,6 +166,28 @@ serviceContainer.register(
           openaiIntegration,
           databaseService,
           undefined, // errorHandler
+          console // logger
+        );
+      },
+      {
+        singleton: true,
+        lazy: true,
+        dependencies: [SERVICE_TOKENS.DATABASE],
+        healthCheck: false,
+      }
+    );
+
+    // Register Cartoonization Quality Validator (depends on AI and Database)
+    serviceContainer.register(
+      SERVICE_TOKENS.CARTOONIZATION_QUALITY_VALIDATOR,
+      async (container) => {
+        const databaseService = await container.resolve(SERVICE_TOKENS.DATABASE);
+        const { ErrorHandlingSystem } = await import('../ai/modular/error-handling-system.js');
+        const errorHandler = new ErrorHandlingSystem();
+        const openaiIntegration = new OpenAIIntegration(process.env.OPENAI_API_KEY || '', errorHandler);
+        return new CartoonizationQualityValidator(
+          openaiIntegration,
+          databaseService,
           console // logger
         );
       },
