@@ -1481,6 +1481,23 @@ export interface RetryConfig {
   maxDelay: number;
 }
 
+// ===== INTELLIGENT PROMPT COMPRESSION INTERFACES =====
+export interface CompressionReport {
+  originalTokenCount: number;
+  compressedTokenCount: number;
+  compressionRatio: number;
+  dnaProtectionVerified: boolean;
+  sectionsCompressed: string[];
+  warnings?: string[];
+}
+
+export interface CompressionOptions {
+  characterDNA?: CharacterDNA;
+  environmentalDNA?: EnvironmentalDNA;
+  maxTokens: number;
+  preserveStructure?: boolean;
+}
+
 // Service Token Constants
 export const SERVICE_TOKENS = {
   DATABASE: 'IDatabaseService',
