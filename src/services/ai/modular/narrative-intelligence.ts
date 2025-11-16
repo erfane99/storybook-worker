@@ -324,8 +324,9 @@ Create a story that readers will remember long after the last page.`;
       const response = await this.openaiIntegration.generateTextCompletion(
         storyPrompt,
         {
-          temperature: audience === 'children' ? 0.6 : 0.8, // Lower for children (safer), higher for others (creativity)
+          temperature: audience === 'children' ? 0.6 : 0.8,
           maxTokens: 2500,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
@@ -424,8 +425,9 @@ Format as structured data for comic generation.`;
       const response = await this.openaiIntegration.generateTextCompletion(
         analysisPrompt,
         {
-          temperature: 0.3, // Lower for consistency
+          temperature: 0.3,
           maxTokens: 1500,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
@@ -546,6 +548,7 @@ Identify the PRIMARY archetype that best fits this story. Return ONLY the archet
         {
           temperature: 0.3,
           maxTokens: 50,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
@@ -774,8 +777,9 @@ Return themes as a comma-separated list (max 6 themes).`;
     const response = await this.openaiIntegration.generateTextCompletion(
       prompt,
       {
-        temperature: 0.4,
+        temperature: 0.3,
         maxTokens: 100,
+        top_p: 0.9,
         model: 'gpt-4o'
       }
     );
@@ -887,6 +891,7 @@ List emotions in order of appearance.`;
         {
           temperature: 0.4,
           maxTokens: 300,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
@@ -915,6 +920,7 @@ Format: "From [state] to [state]" or descriptive phrases.`;
         {
           temperature: 0.4,
           maxTokens: 300,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );

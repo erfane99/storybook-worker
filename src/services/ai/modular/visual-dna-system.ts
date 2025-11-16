@@ -325,8 +325,9 @@ Format: Dense paragraph with maximum specificity, using measurable terms and exa
       const response = await this.openaiIntegration.generateTextCompletion(
         forensicPrompt,
         {
-          temperature: 0.05, // Extremely low for maximum precision
+          temperature: 0.1,
           maxTokens: 1500,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
@@ -375,8 +376,9 @@ Format: Create a single, comprehensive paragraph that captures EVERY visual deta
       const response = await this.openaiIntegration.generateTextCompletion(
         analysisPrompt,
         {
-          temperature: 0.1, // Very low for maximum consistency
+          temperature: 0.1,
           maxTokens: 1000,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
@@ -433,6 +435,7 @@ Include exact colors, measurable proportions, and specific material/texture deta
         {
           temperature: 0.1,
           maxTokens: 400,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
@@ -465,6 +468,7 @@ Create a CRITICAL consistency fingerprint that captures the ABSOLUTE ESSENCE of 
         {
           temperature: 0.1,
           maxTokens: 300,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
@@ -500,6 +504,7 @@ Extract the MOST DISTINCTIVE visual elements only. Focus on:
         {
           temperature: 0.2,
           maxTokens: 300,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
@@ -613,8 +618,9 @@ Return ULTRA-SPECIFIC JSON with measurable details:
       const response = await this.openaiIntegration.generateTextCompletion(
         extractionPrompt,
         {
-          temperature: 0.05,
+          temperature: 0.1,
           maxTokens: 1200,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
@@ -684,6 +690,7 @@ Return a detailed JSON structure with ALL visual elements needed for 100% consis
         {
           temperature: 0.1,
           maxTokens: 800,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
@@ -723,6 +730,7 @@ Focus on elements that ensure perfect visual consistency across all comic panels
         {
           temperature: 0.3,
           maxTokens: 300,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );

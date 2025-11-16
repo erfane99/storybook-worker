@@ -1320,8 +1320,9 @@ Quality Level: Highest possible detail and artistic execution
         const result = await this.openaiIntegration.generateTextCompletion(
           options.messages[0]?.content || '',
           {
-            temperature: options.temperature || 0.7,
+            temperature: options.temperature !== undefined ? options.temperature : 0.7,
             maxTokens: options.maxTokens || 1000,
+            top_p: 0.9,
             model: options.model || this.defaultModel
           }
         );
@@ -1504,10 +1505,10 @@ Return as JSON:
       const response = await this.openaiIntegration.generateTextCompletion(
         analysisPrompt,
         {
-          temperature: 0.25,  // Lower temperature for more consistent sequential flow
-          maxTokens: 4000,  // Increased for richer descriptions
-          model: 'gpt-4o',
-          seed: 42  // ✅ ADD: Seed for reproducible outputs
+          temperature: 0.3,
+          maxTokens: 2500,
+          top_p: 0.9,
+          model: 'gpt-4o'
         }
       );
       

@@ -460,8 +460,9 @@ export class OpenAIIntegration {
 
     try {
       const response = await this.generateTextCompletion(prompt, {
-        temperature: 0.3, // Low temperature for consistency
-        max_tokens: 1000,
+        temperature: 0.3,
+        max_tokens: 1500,
+        top_p: 0.9,
         model: 'gpt-4o'
       });
 
@@ -492,7 +493,8 @@ export class OpenAIIntegration {
 
     const response = await this.generateTextCompletion(compressionPrompt, {
       temperature: 0.1,
-      max_tokens: 200
+      max_tokens: 200,
+      top_p: 0.9
     });
 
     return response.trim();
@@ -515,8 +517,9 @@ export class OpenAIIntegration {
 
     try {
       const response = await this.generateTextCompletion(prompt, {
-        temperature: 0.4,
-        max_tokens: 2000,
+        temperature: 0.3,
+        max_tokens: 2500,
+        top_p: 0.9,
         model: 'gpt-4o'
       });
 
@@ -616,7 +619,8 @@ export class OpenAIIntegration {
 
     const response = await this.generateTextCompletion(prompt, {
       temperature: 0.3,
-      max_tokens: 500
+      max_tokens: 1200,
+      top_p: 0.9
     });
 
     return this.parseEnvironmentalDNA(response);
@@ -928,7 +932,8 @@ export class OpenAIIntegration {
         }
       ],
       max_tokens: options.max_tokens || 2000,
-      temperature: options.temperature || 0.7,
+      temperature: options.temperature !== undefined ? options.temperature : 0.7,
+      top_p: options.top_p || 0.9,
       ...options
     };
 
@@ -1444,7 +1449,8 @@ export class OpenAIIntegration {
       // Test basic API connectivity
       await this.generateTextCompletion('Test', {
         max_tokens: 10,
-        temperature: 0
+        temperature: 0.1,
+        top_p: 0.9
       });
 
       // Check circuit breakers

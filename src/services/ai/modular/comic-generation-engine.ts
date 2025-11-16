@@ -205,13 +205,10 @@ NO missing fields. NO undefined values. NO empty strings.
       const response = await this.openaiIntegration.generateTextCompletion(
         analysisPrompt,
         {
-          temperature: 0.3,  // ✅ FIX: Lower temperature for consistent JSON structure
+          temperature: 0.3,
           maxTokens: 2500,
           model: 'gpt-4o',
-          top_p: 0.9,  // ✅ NEW: Add top_p for focused generation
-          frequency_penalty: 0.0,  // ✅ NEW: No frequency penalty for structured output
-          presence_penalty: 0.0,  // ✅ NEW: No presence penalty for consistent format
-          seed: 42  // ✅ NEW: Seed for reproducible outputs (GPT-4 supports this)
+          top_p: 0.9
         }
       );
 
@@ -446,7 +443,8 @@ Format as structured visual DNA for consistent reproduction across comic panels.
         visionAnalysisPrompt,
         {
           temperature: 0.3,
-          maxTokens: 800,
+          maxTokens: 1500,
+          top_p: 0.9,
           model: 'gpt-4o'
         }
       );
