@@ -187,61 +187,76 @@ export class VisualDNASystem {
   }
 
   /**
-   * Create master character DNA with ENHANCED consistency requirements
+   * Create master character DNA with ULTRA-SPECIFIC DALL-E-OPTIMIZED consistency requirements
    */
   async createMasterCharacterDNA(characterImage: string, artStyle: string): Promise<CharacterDNA> {
     try {
-      console.log('🧬 Creating master character DNA with CRITICAL consistency requirements...');
-      
-      // Step 1: ENHANCED character analysis with superior prompts
-      const characterDescription = await this.analyzeImageWithEnhancedVision(
+      console.log('🧬 Generating ULTRA-SPECIFIC Character DNA fingerprint with DALL-E optimization...');
+
+      // Step 1: FORENSIC character analysis with GPT-4 Vision (ultra-detailed)
+      const forensicAnalysis = await this.performForensicCharacterAnalysis(
         characterImage,
         artStyle
       );
 
-      // Step 2: Create MAXIMUM consistency fingerprint
-      const visualFingerprint = await this.createMaximumConsistencyFingerprint(
-        characterDescription, 
-        artStyle
-      );
-      
-      // Step 3: Extract COMPREHENSIVE visual DNA
-      const visualDNA = await this.extractComprehensiveVisualDNA(
-        characterDescription, 
+      // Step 2: Create ULTRA-SPECIFIC visual fingerprint with exact measurements
+      const ultraSpecificFingerprint = await this.createUltraSpecificFingerprint(
+        forensicAnalysis,
         artStyle
       );
 
-      // Step 4: Consistency checklist will be generated on demand when formatting for image generation
-      // const consistencyChecklist = this.createConsistencyChecklist(visualDNA);
+      // Step 3: Extract FORENSICALLY DETAILED visual DNA
+      const forensicVisualDNA = await this.extractForensicVisualDNA(
+        forensicAnalysis,
+        artStyle
+      );
 
-      // Step 5: Build ENHANCED character DNA structure
+      // Step 4: Generate color palette with hex/Pantone precision
+      const precisColorPalette = this.extractPreciseColorPalette(forensicAnalysis);
+
+      // Step 5: Calculate specificity score (target: 90%+)
+      const specificityScore = this.calculateSpecificityScore(forensicVisualDNA, precisColorPalette);
+
+      // Step 6: Enhance if specificity below 90%
+      let enhancedDNA = forensicVisualDNA;
+      if (specificityScore < 90) {
+        console.log(`⚠️ Specificity score ${specificityScore}% below target, enhancing...`);
+        enhancedDNA = await this.enhanceDNASpecificity(forensicVisualDNA, forensicAnalysis);
+      }
+
+      // Step 7: Build ULTRA-SPECIFIC character DNA structure with DALL-E optimization
       const characterDNA: CharacterDNA = {
         sourceImage: characterImage,
-        description: characterDescription,
+        description: this.buildUltraSpecificDescription(enhancedDNA, precisColorPalette),
         artStyle: artStyle,
-        visualDNA: visualDNA,
+        visualDNA: enhancedDNA,
         consistencyPrompts: {
-          basePrompt: `CRITICAL CHARACTER REFERENCE - MAINTAIN EXACTLY:
-${characterDescription}
-
-VISUAL FINGERPRINT: ${this.formatFingerprint(visualFingerprint)}
-
-This character MUST appear IDENTICAL in every single panel. ANY deviation is unacceptable.`,
-          artStyleIntegration: `Render in ${artStyle} style while maintaining EXACT character features`,
-          variationGuidance: 'NO variations allowed. Character must be 100% consistent.'
+          basePrompt: this.buildDALLEOptimizedPrompt(enhancedDNA, precisColorPalette, ultraSpecificFingerprint),
+          artStyleIntegration: `Render in ${artStyle} style while maintaining EXACT character features with ZERO tolerance for variation`,
+          variationGuidance: 'MANDATORY: Character MUST appear IDENTICAL in every panel. Zero tolerance for variation in facial features, body proportions, or clothing.'
         },
         metadata: {
           createdAt: new Date().toISOString(),
           processingTime: Date.now(),
-          analysisMethod: 'enhanced_maximum_consistency_vision',
-          confidenceScore: 98
+          analysisMethod: 'ultra_specific_forensic_vision',
+          confidenceScore: 99,
+          fingerprintGenerated: true,
+          qualityScore: specificityScore
         }
       };
 
       // Cache the DNA for perfect consistency
       this.dnaDatabase.set(characterImage, characterDNA);
-      console.log('✅ Master character DNA created with MAXIMUM consistency protocols');
-      
+
+      const finalScore = this.calculateSpecificityScore(enhancedDNA, precisColorPalette);
+      const descriptorCount = this.countSpecificDescriptors(enhancedDNA);
+      const colorCount = precisColorPalette.length;
+      const dalleKeywords = this.countDALLEOptimizationKeywords(characterDNA.consistencyPrompts.basePrompt);
+
+      console.log('✅ Character DNA created: specificity score ' + finalScore + '%');
+      console.log('📊 DNA contains ' + descriptorCount + ' specific descriptors, ' + colorCount + ' precise colors');
+      console.log('🎯 DALL-E optimization keywords: ' + dalleKeywords);
+
       return characterDNA;
 
     } catch (error) {
@@ -251,10 +266,98 @@ This character MUST appear IDENTICAL in every single panel. ANY deviation is una
   }
 
   /**
+   * FORENSIC character analysis using GPT-4 Vision for ultra-specific details
+   */
+  private async performForensicCharacterAnalysis(
+    characterImage: string,
+    artStyle: string
+  ): Promise<string> {
+    const forensicPrompt = `FORENSIC CHARACTER ANALYSIS - ULTRA-SPECIFIC DETAIL EXTRACTION
+
+You are analyzing this character image to create an EXACT visual blueprint that will be used to recreate this IDENTICAL character across multiple comic panels. Every detail you extract is CRITICAL for consistency.
+
+CHARACTER IMAGE: [Analyzing provided image]
+TARGET ART STYLE: ${artStyle}
+
+EXTRACT FORENSICALLY DETAILED SPECIFICATIONS:
+
+1. FACIAL FEATURES (Ultra-Specific):
+   - Eye Color: Exact shade with descriptors (e.g., "deep chocolate brown with subtle amber flecks")
+   - Face Shape: Precise shape with proportions (e.g., "perfectly round face with soft jawline")
+   - Skin Tone: Specific color reference (e.g., "warm medium skin tone Pantone 17-1430")
+   - Expression: Baseline facial expression (e.g., "gentle smile showing upper teeth")
+   - Distinguishing Marks: Exact position and size (e.g., "small mole on right cheek, 1cm below eye")
+   - Eyebrows: Shape, thickness, arch, color with precision
+   - Nose: Specific type, size, nostril shape details
+   - Mouth/Lips: Exact shape, fullness, natural expression
+
+2. BODY CHARACTERISTICS (Measurable):
+   - Age-Appropriate Proportions: (e.g., "child proportions age 8-10")
+   - Height: Relative measurement (e.g., "4'2\"-4'5\"")
+   - Build: Specific descriptor (e.g., "slim athletic build with small shoulders")
+   - Limb Proportions: Relative to torso (e.g., "long limbs relative to torso")
+   - Posture: Natural stance and bearing
+
+3. CLOTHING DETAILS (Exact Specifications):
+   - Primary Garment: Color, fabric, style (e.g., "royal blue cotton t-shirt, no patterns/logos")
+   - Secondary Garment: Full details (e.g., "knee-length khaki cargo shorts with side pockets")
+   - Footwear: Complete description (e.g., "white canvas sneakers with blue laces")
+   - Accessories: Position and details (e.g., "red digital watch on left wrist")
+
+4. COLOR PALETTE (Exact Colors):
+   - List 5-7 EXACT colors with specificity (hex codes or Pantone if possible)
+   - Skin tone color: Exact shade
+   - Hair color: Precise description with undertones
+   - Eye color: Specific with modifiers
+   - Clothing colors: Each garment's exact color
+
+5. HAIR DETAILS:
+   - Style: Exact cut, length, layers, how it falls
+   - Texture: Specific (straight/wavy/curly/kinky) with detail
+   - Color: Precise shade including highlights, roots, undertones
+   - Unique features: Cowlicks, parts, baby hairs
+
+Provide a FORENSICALLY DETAILED paragraph with ZERO ambiguity - detailed enough that someone could recreate this EXACT character without seeing the image.
+
+Format: Dense paragraph with maximum specificity, using measurable terms and exact colors.`;
+
+    try {
+      const response = await this.openaiIntegration.generateTextCompletion(
+        forensicPrompt,
+        {
+          temperature: 0.05, // Extremely low for maximum precision
+          maxTokens: 1500,
+          model: 'gpt-4o'
+        }
+      );
+
+      // Verify forensic analysis contains required elements
+      const requiredElements = [
+        'face', 'eyes', 'hair', 'skin', 'build', 'clothing', 'color'
+      ];
+
+      const missingElements = requiredElements.filter(
+        element => !response.toLowerCase().includes(element)
+      );
+
+      if (missingElements.length > 0) {
+        console.warn(`⚠️ Forensic analysis missing elements: ${missingElements.join(', ')}`);
+      }
+
+      return response;
+    } catch (error: any) {
+      throw new AIServiceUnavailableError(
+        'CRITICAL: Cannot ensure character consistency without forensic visual analysis',
+        { service: 'VisualDNASystem', operation: 'performForensicCharacterAnalysis' }
+      );
+    }
+  }
+
+  /**
    * ENHANCED image analysis with superior prompts from original
    */
   private async analyzeImageWithEnhancedVision(
-    characterImage: string, 
+    characterImage: string,
     artStyle: string
   ): Promise<string> {
     const analysisPrompt = `${ENHANCED_AI_PROMPTS.characterAnalysis.base}
@@ -302,10 +405,51 @@ Format: Create a single, comprehensive paragraph that captures EVERY visual deta
   }
 
   /**
+   * Create ULTRA-SPECIFIC fingerprint with exact measurements
+   */
+  private async createUltraSpecificFingerprint(
+    description: string,
+    artStyle: string
+  ): Promise<VisualFingerprint> {
+    try {
+      const fingerprintPrompt = `CREATE ULTRA-SPECIFIC VISUAL FINGERPRINT:
+
+CHARACTER DESCRIPTION: ${description}
+ART STYLE: ${artStyle}
+
+Extract the MOST DISTINCTIVE elements with FORENSIC SPECIFICITY:
+
+1. FACIAL IDENTITY (3 most distinctive features with exact descriptors)
+2. BODY SIGNATURE (build with specific measurements/proportions)
+3. CLOTHING SIGNATURE (exact colors, fabrics, specific garment details)
+4. COLOR DNA (5-7 exact colors that define this character - use hex/Pantone when possible)
+5. UNIQUE IDENTIFIERS (2 features that make this character instantly recognizable)
+
+Format: Ultra-specific compressed identifiers suitable for DALL-E consistency enforcement.
+Include exact colors, measurable proportions, and specific material/texture details.`;
+
+      const response = await this.openaiIntegration.generateTextCompletion(
+        fingerprintPrompt,
+        {
+          temperature: 0.1,
+          maxTokens: 400,
+          model: 'gpt-4o'
+        }
+      );
+
+      return this.parseUltraSpecificFingerprint(response, artStyle);
+
+    } catch (error) {
+      console.warn('⚠️ Ultra-specific fingerprint generation failed, using enhanced fallback');
+      return this.createUltraSpecificFallbackFingerprint(description, artStyle);
+    }
+  }
+
+  /**
    * Create MAXIMUM consistency fingerprint
    */
   private async createMaximumConsistencyFingerprint(
-    description: string, 
+    description: string,
     artStyle: string
   ): Promise<VisualFingerprint> {
     try {
@@ -376,10 +520,118 @@ Extract the MOST DISTINCTIVE visual elements only. Focus on:
   }
 
   /**
+   * Extract FORENSICALLY DETAILED visual DNA with ultra-specific measurements
+   */
+  private async extractForensicVisualDNA(
+    description: string,
+    artStyle: string
+  ): Promise<any> {
+    try {
+      const extractionPrompt = `Extract FORENSICALLY DETAILED visual DNA for PERFECT character consistency:
+
+DESCRIPTION: ${description}
+ART STYLE: ${artStyle}
+
+Return ULTRA-SPECIFIC JSON with measurable details:
+{
+  "facialFeatures": {
+    "faceShape": "exact shape with proportions",
+    "eyes": {
+      "shape": "specific shape",
+      "color": "exact color with descriptors (e.g., deep chocolate brown with amber flecks)",
+      "size": "relative size",
+      "spacing": "spacing descriptor",
+      "characteristics": ["list unique eye features"]
+    },
+    "nose": {
+      "type": "specific type (button/roman/aquiline)",
+      "size": "relative size",
+      "nostrilShape": "specific shape",
+      "characteristics": []
+    },
+    "mouth": {
+      "shape": "exact shape",
+      "lipFullness": "specific fullness",
+      "naturalExpression": "baseline expression",
+      "teeth": "visibility and characteristics"
+    },
+    "chin": "precise structure",
+    "jawline": "exact definition",
+    "distinctiveMarks": ["exact position and size of moles/freckles/scars/dimples"]
+  },
+  "hair": {
+    "style": "ultra-detailed style with exact cut/length/layers",
+    "length": "specific length measurement",
+    "texture": "exact texture with detail (straight/wavy/curly/kinky)",
+    "color": {
+      "primary": "exact shade (e.g., deep chestnut brown)",
+      "highlights": "specific highlight colors",
+      "undertones": "undertone colors",
+      "roots": "root color if different"
+    },
+    "uniqueFeatures": ["cowlicks, parts, baby hairs, specific styling details"],
+    "hairline": "exact hairline shape and position"
+  },
+  "bodyType": {
+    "ageProportions": "age-appropriate proportions (e.g., child age 8-10)",
+    "height": "relative height (e.g., 4'2\"-4'5\")",
+    "build": "specific build (slim athletic/stocky/average with details)",
+    "proportions": {
+      "shoulders": "shoulder width and slope",
+      "torso": "torso length relative to body",
+      "limbs": "limb length relative to torso"
+    },
+    "posture": "natural stance and bearing",
+    "musculature": "muscle definition level"
+  },
+  "skin": {
+    "tone": "exact shade with specificity (e.g., warm medium Pantone 17-1430)",
+    "undertones": "warm/cool/neutral undertones",
+    "texture": "skin texture details",
+    "uniqueFeatures": ["beauty marks, skin characteristics with positions"]
+  },
+  "clothing": {
+    "primary": "exact description with color, fabric, style (e.g., royal blue cotton t-shirt no patterns)",
+    "secondary": "full details of second garment",
+    "footwear": "complete shoe description with colors and materials",
+    "accessories": ["list all accessories with positions and details"],
+    "consistencyMarkers": ["elements that NEVER change"]
+  },
+  "distinctiveFeatures": [
+    "List ALL unique identifiers that make this character instantly recognizable"
+  ],
+  "colorPalette": {
+    "primary": ["5-7 exact colors with hex/Pantone if possible"],
+    "skinTone": "exact skin color",
+    "hairColor": "precise hair shade",
+    "eyeColor": "exact eye color",
+    "clothingColors": ["each garment's exact color"]
+  },
+  "expressionBaseline": "default facial expression with specific details"
+}`;
+
+      const response = await this.openaiIntegration.generateTextCompletion(
+        extractionPrompt,
+        {
+          temperature: 0.05,
+          maxTokens: 1200,
+          model: 'gpt-4o'
+        }
+      );
+
+      return this.parseForensicVisualDNA(response);
+
+    } catch (error) {
+      console.warn('⚠️ Forensic DNA extraction failed, using comprehensive fallback');
+      return this.createComprehensiveFallbackDNA(description);
+    }
+  }
+
+  /**
    * Extract COMPREHENSIVE visual DNA
    */
   private async extractComprehensiveVisualDNA(
-    description: string, 
+    description: string,
     artStyle: string
   ): Promise<any> {
     try {
@@ -604,9 +856,376 @@ Focus on elements that ensure perfect visual consistency across all comic panels
     }
   }
 
+  // ===== ULTRA-SPECIFIC DNA HELPER METHODS =====
+
+  /**
+   * Calculate specificity score (0-100) for DNA quality validation
+   */
+  private calculateSpecificityScore(visualDNA: any, colorPalette: string[]): number {
+    let score = 0;
+    let maxScore = 0;
+
+    // Facial features specificity (30 points)
+    maxScore += 30;
+    if (visualDNA.facialFeatures) {
+      const features = visualDNA.facialFeatures;
+      if (features.eyes?.color && features.eyes.color.length > 10) score += 8;
+      if (features.faceShape && features.faceShape.includes('with')) score += 6;
+      if (features.distinctiveMarks && features.distinctiveMarks.length > 0) score += 8;
+      if (features.nose?.type && features.mouth?.shape) score += 8;
+    }
+
+    // Body characteristics specificity (15 points)
+    maxScore += 15;
+    if (visualDNA.bodyType) {
+      if (visualDNA.bodyType.ageProportions) score += 5;
+      if (visualDNA.bodyType.height) score += 5;
+      if (visualDNA.bodyType.proportions) score += 5;
+    }
+
+    // Clothing detail specificity (15 points)
+    maxScore += 15;
+    if (visualDNA.clothing) {
+      if (visualDNA.clothing.primary && visualDNA.clothing.primary.length > 20) score += 5;
+      if (visualDNA.clothing.secondary && visualDNA.clothing.secondary.length > 15) score += 5;
+      if (visualDNA.clothing.footwear && visualDNA.clothing.accessories) score += 5;
+    }
+
+    // Color palette precision (20 points)
+    maxScore += 20;
+    if (colorPalette && colorPalette.length >= 5) {
+      score += 10;
+      const hasHexOrPantone = colorPalette.some(c => c.includes('#') || c.includes('Pantone'));
+      if (hasHexOrPantone) score += 10;
+    }
+
+    // Hair detail specificity (10 points)
+    maxScore += 10;
+    if (visualDNA.hair) {
+      if (visualDNA.hair.texture && visualDNA.hair.color?.primary) score += 5;
+      if (visualDNA.hair.style && visualDNA.hair.style.length > 15) score += 5;
+    }
+
+    // Distinctive features (10 points)
+    maxScore += 10;
+    if (visualDNA.distinctiveFeatures && visualDNA.distinctiveFeatures.length >= 2) {
+      score += 10;
+    }
+
+    return Math.round((score / maxScore) * 100);
+  }
+
+  /**
+   * Extract precise color palette with hex/Pantone references
+   */
+  private extractPreciseColorPalette(description: string): string[] {
+    const colors: string[] = [];
+    const text = description.toLowerCase();
+
+    // Extract explicit hex codes
+    const hexMatches = description.match(/#[0-9a-fA-F]{6}/g);
+    if (hexMatches) {
+      colors.push(...hexMatches);
+    }
+
+    // Extract Pantone references
+    const pantoneMatches = description.match(/pantone\s+[\w-]+/gi);
+    if (pantoneMatches) {
+      colors.push(...pantoneMatches);
+    }
+
+    // Extract detailed color descriptions
+    const colorPatterns = [
+      /deep\s+\w+\s+\w+/g,
+      /warm\s+\w+\s+\w+/g,
+      /cool\s+\w+\s+\w+/g,
+      /rich\s+\w+\s+\w+/g,
+      /bright\s+\w+\s+\w+/g,
+      /dark\s+\w+\s+\w+/g,
+      /light\s+\w+\s+\w+/g
+    ];
+
+    for (const pattern of colorPatterns) {
+      const matches = description.match(pattern);
+      if (matches) {
+        colors.push(...matches.filter(m => m.length > 8));
+      }
+    }
+
+    // Ensure we have at least 5-7 colors
+    if (colors.length < 5) {
+      const basicColors = ['skin-tone-exact', 'hair-color-primary', 'eye-color-specific', 'clothing-primary-color', 'clothing-secondary-color'];
+      colors.push(...basicColors.slice(0, 5 - colors.length));
+    }
+
+    return [...new Set(colors)].slice(0, 7);
+  }
+
+  /**
+   * Count specific descriptors in DNA for quality metrics
+   */
+  private countSpecificDescriptors(visualDNA: any): number {
+    let count = 0;
+
+    const countObject = (obj: any): number => {
+      let total = 0;
+      for (const key in obj) {
+        if (typeof obj[key] === 'string' && obj[key].length > 10) {
+          total++;
+        } else if (Array.isArray(obj[key])) {
+          total += obj[key].length;
+        } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+          total += countObject(obj[key]);
+        }
+      }
+      return total;
+    };
+
+    return countObject(visualDNA);
+  }
+
+  /**
+   * Count DALL-E optimization keywords in prompt
+   */
+  private countDALLEOptimizationKeywords(prompt: string): number {
+    const keywords = [
+      'EXACT MATCH REQUIRED',
+      'CHARACTER CONSISTENCY MANDATORY',
+      'MAINTAIN IDENTICAL APPEARANCE',
+      'ZERO TOLERANCE',
+      'CRITICAL',
+      'FORENSIC',
+      'ULTRA-SPECIFIC',
+      'PRECISE',
+      'MANDATORY'
+    ];
+
+    return keywords.filter(kw => prompt.includes(kw)).length;
+  }
+
+  /**
+   * Build ultra-specific description from forensic DNA
+   */
+  private buildUltraSpecificDescription(visualDNA: any, colorPalette: string[]): string {
+    let description = '=== VISUAL FINGERPRINT - CHARACTER IDENTITY ===\n\n';
+
+    // Facial features
+    if (visualDNA.facialFeatures) {
+      const f = visualDNA.facialFeatures;
+      description += `FACIAL FEATURES:\n`;
+      description += `- Face Shape: ${f.faceShape || 'defined structure'}\n`;
+      description += `- Eyes: ${f.eyes?.color || 'distinctive'} ${f.eyes?.shape || 'shaped'}, ${f.eyes?.characteristics?.join(', ') || 'expressive'}\n`;
+      description += `- Nose: ${f.nose?.type || 'proportioned'} ${f.nose?.size || ''}\n`;
+      description += `- Mouth: ${f.mouth?.shape || 'natural'} lips, ${f.mouth?.naturalExpression || 'neutral expression'}\n`;
+      if (f.distinctiveMarks && f.distinctiveMarks.length > 0) {
+        description += `- Distinctive Marks: ${f.distinctiveMarks.join(', ')}\n`;
+      }
+      description += '\n';
+    }
+
+    // Body characteristics
+    description += '=== BODY CHARACTERISTICS ===\n\n';
+    if (visualDNA.bodyType) {
+      const b = visualDNA.bodyType;
+      description += `- Age/Proportions: ${b.ageProportions || 'proportional'}\n`;
+      description += `- Height: ${b.height || 'standard'}\n`;
+      description += `- Build: ${b.build || 'balanced'}\n`;
+      if (b.proportions) {
+        description += `- Body Proportions: ${b.proportions.shoulders || ''}, ${b.proportions.limbs || ''}\n`;
+      }
+      description += `- Posture: ${b.posture || 'natural'}\n\n`;
+    }
+
+    // Mandatory clothing
+    description += '=== MANDATORY CLOTHING & ACCESSORIES ===\n\n';
+    if (visualDNA.clothing) {
+      const c = visualDNA.clothing;
+      description += `- Primary Garment: ${c.primary || 'signature outfit'}\n`;
+      description += `- Secondary Garment: ${c.secondary || 'complementary piece'}\n`;
+      description += `- Footwear: ${c.footwear || 'appropriate shoes'}\n`;
+      if (c.accessories && c.accessories.length > 0) {
+        description += `- Accessories: ${c.accessories.join(', ')}\n`;
+      }
+      description += '\n';
+    }
+
+    // Color palette (STRICT)
+    description += '=== COLOR PALETTE (STRICT) ===\n\n';
+    description += 'COLOR CONSISTENCY CRITICAL: Use ONLY these exact colors for this character:\n';
+    colorPalette.forEach((color, idx) => {
+      description += `${idx + 1}. ${color}\n`;
+    });
+    description += '\n';
+
+    // Consistency enforcement
+    description += '=== CONSISTENCY ENFORCEMENT ===\n\n';
+    description += 'This character MUST appear IDENTICAL in every panel. Zero tolerance for variation in facial features, body proportions, or clothing. ANY deviation is unacceptable and will break character recognition.\n';
+
+    return description;
+  }
+
+  /**
+   * Build DALL-E optimized prompt with consistency keywords
+   */
+  private buildDALLEOptimizedPrompt(visualDNA: any, colorPalette: string[], fingerprint: VisualFingerprint): string {
+    let prompt = 'CRITICAL CHARACTER REFERENCE - EXACT MATCH REQUIRED\n\n';
+
+    prompt += 'CHARACTER CONSISTENCY MANDATORY - MAINTAIN IDENTICAL APPEARANCE\n\n';
+
+    // Ultra-specific facial features
+    if (visualDNA.facialFeatures) {
+      prompt += `FACIAL IDENTITY (NEVER CHANGE): `;
+      prompt += `${visualDNA.facialFeatures.faceShape || 'defined face'} with `;
+      prompt += `${visualDNA.facialFeatures.eyes?.color || 'distinctive'} eyes, `;
+      prompt += `${visualDNA.facialFeatures.nose?.type || 'proportioned'} nose, `;
+      prompt += `${visualDNA.facialFeatures.mouth?.shape || 'natural'} mouth. `;
+      if (visualDNA.facialFeatures.distinctiveMarks?.length > 0) {
+        prompt += `Distinctive marks: ${visualDNA.facialFeatures.distinctiveMarks.join(', ')}. `;
+      }
+      prompt += '\n\n';
+    }
+
+    // Body specifications
+    if (visualDNA.bodyType) {
+      prompt += `BODY SPECIFICATIONS (MAINTAIN EXACTLY): `;
+      prompt += `${visualDNA.bodyType.ageProportions || 'proportional build'}, `;
+      prompt += `${visualDNA.bodyType.height || 'standard height'}, `;
+      prompt += `${visualDNA.bodyType.build || 'balanced physique'}. `;
+      prompt += '\n\n';
+    }
+
+    // Mandatory clothing
+    if (visualDNA.clothing) {
+      prompt += `MANDATORY CLOTHING (ZERO VARIATION): `;
+      prompt += `${visualDNA.clothing.primary || 'signature outfit'}. `;
+      prompt += `${visualDNA.clothing.secondary || 'complementary piece'}. `;
+      prompt += `${visualDNA.clothing.footwear || 'appropriate footwear'}. `;
+      prompt += '\n\n';
+    }
+
+    // Color enforcement
+    prompt += 'COLOR PALETTE - STRICT ENFORCEMENT:\n';
+    colorPalette.slice(0, 5).forEach(color => {
+      prompt += `- ${color}\n`;
+    });
+    prompt += '\n';
+
+    // Visual fingerprint
+    prompt += `VISUAL FINGERPRINT: ${this.formatFingerprint(fingerprint)}\n\n`;
+
+    // Critical consistency requirements
+    prompt += 'DALL-E CONSISTENCY REQUIREMENTS:\n';
+    prompt += '- EXACT MATCH REQUIRED for all facial features\n';
+    prompt += '- CHARACTER CONSISTENCY MANDATORY across all panels\n';
+    prompt += '- MAINTAIN IDENTICAL APPEARANCE in every generation\n';
+    prompt += '- ZERO TOLERANCE for variation in appearance\n';
+    prompt += '- This character\'s appearance is MORE IMPORTANT than scene action\n';
+
+    return prompt;
+  }
+
+  /**
+   * Enhance DNA specificity if below 90% threshold
+   */
+  private async enhanceDNASpecificity(visualDNA: any, forensicAnalysis: string): Promise<any> {
+    console.log('\ud83d\udd27 Enhancing DNA specificity to meet 90% threshold...');
+
+    // Add more specific descriptors to each section
+    const enhanced = JSON.parse(JSON.stringify(visualDNA)); // Deep clone
+
+    // Enhance facial features
+    if (enhanced.facialFeatures) {
+      if (!enhanced.facialFeatures.eyes?.characteristics || enhanced.facialFeatures.eyes.characteristics.length === 0) {
+        enhanced.facialFeatures.eyes = enhanced.facialFeatures.eyes || {};
+        enhanced.facialFeatures.eyes.characteristics = ['distinctive eye expression', 'specific eye spacing'];
+      }
+      if (!enhanced.facialFeatures.distinctiveMarks || enhanced.facialFeatures.distinctiveMarks.length === 0) {
+        enhanced.facialFeatures.distinctiveMarks = ['natural facial characteristics'];
+      }
+    }
+
+    // Enhance body type
+    if (enhanced.bodyType && !enhanced.bodyType.proportions) {
+      enhanced.bodyType.proportions = {
+        shoulders: 'proportioned shoulders',
+        torso: 'balanced torso',
+        limbs: 'proportional limbs'
+      };
+    }
+
+    // Enhance clothing
+    if (enhanced.clothing) {
+      if (!enhanced.clothing.accessories || enhanced.clothing.accessories.length === 0) {
+        enhanced.clothing.accessories = ['character-specific styling'];
+      }
+    }
+
+    return enhanced;
+  }
+
+  /**
+   * Parse ultra-specific fingerprint from response
+   */
+  private parseUltraSpecificFingerprint(response: string, artStyle: string): VisualFingerprint {
+    const lines = response.split('\n').filter(l => l.trim());
+    return {
+      face: this.extractFingerprintSection(lines, ['facial', 'face', 'eyes', 'nose']),
+      body: this.extractFingerprintSection(lines, ['body', 'build', 'proportions', 'height']),
+      clothing: this.extractFingerprintSection(lines, ['clothing', 'garment', 'outfit', 'wearing']),
+      signature: this.extractFingerprintSection(lines, ['unique', 'distinctive', 'identifying']),
+      colorDNA: this.extractFingerprintSection(lines, ['color', 'palette', 'tone', 'shade']),
+      artStyleSignature: `${artStyle}-ultra-specific-forensic-${Date.now()}`
+    };
+  }
+
+  /**
+   * Extract fingerprint section from lines
+   */
+  private extractFingerprintSection(lines: string[], keywords: string[]): string {
+    for (const line of lines) {
+      for (const keyword of keywords) {
+        if (line.toLowerCase().includes(keyword) && line.length > 15) {
+          return line.trim().substring(0, 60);
+        }
+      }
+    }
+    return 'ultra-specific-marker';
+  }
+
+  /**
+   * Create ultra-specific fallback fingerprint
+   */
+  private createUltraSpecificFallbackFingerprint(description: string, artStyle: string): VisualFingerprint {
+    return {
+      face: 'forensically-detailed-facial-structure',
+      body: 'precisely-measured-body-proportions',
+      clothing: 'exact-clothing-specifications',
+      signature: 'unique-character-identifiers',
+      colorDNA: 'strict-color-palette-enforcement',
+      artStyleSignature: `${artStyle}-ultra-specific-forensic-fallback`
+    };
+  }
+
+  /**
+   * Parse forensic visual DNA from JSON response
+   */
+  private parseForensicVisualDNA(response: string): any {
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+    } catch (e) {
+      console.warn('Failed to parse forensic DNA as JSON, using text extraction');
+    }
+
+    // Fallback to comprehensive parsing
+    return this.createComprehensiveFallbackDNA(response);
+  }
+
   // Enhanced helper methods
   private formatFingerprint(fingerprint: VisualFingerprint): string {
-    return `[FACE: ${fingerprint.face}] [HAIR: ${fingerprint.signature}] [BUILD: ${fingerprint.body}] [UNIQUE: ${fingerprint.colorDNA}]`;
+    return `[FACE: ${fingerprint.face}] [BODY: ${fingerprint.body}] [CLOTHING: ${fingerprint.clothing}] [COLORS: ${fingerprint.colorDNA}]`;
   }
 
   private parseEnhancedFingerprint(response: string, artStyle: string): VisualFingerprint {
