@@ -1055,6 +1055,119 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     }
   }
 
+  // ===== CARTOONIZATION QUALITY VALIDATION SYSTEM =====
+
+  /**
+   * Store cartoonization quality validation results
+   * Called after each cartoon quality validation attempt
+   */
+  async storeCartoonizationQualityMetrics(
+    cartoonizeJobId: string,
+    attemptNumber: number,
+    qualityReport: {
+      overallQuality: number;
+      visualClarity: number;
+      characterFidelity: number;
+      styleAccuracy: number;
+      ageAppropriateness: number;
+      professionalStandard: number;
+      detailedAnalysis: string;
+      failureReasons: string[];
+      passesThreshold: boolean;
+      recommendations: string[];
+    }
+  ): Promise<boolean> {
+    try {
+      const result = await this.executeQuery<{ id: string }>(
+        'Store cartoonization quality metrics',
+        async (supabase) => {
+          const metricsRecord = {
+            cartoonize_job_id: cartoonizeJobId,
+            overall_quality_score: qualityReport.overallQuality,
+            visual_clarity_score: qualityReport.visualClarity,
+            character_fidelity_score: qualityReport.characterFidelity,
+            style_accuracy_score: qualityReport.styleAccuracy,
+            age_appropriateness_score: qualityReport.ageAppropriateness,
+            professional_standard_score: qualityReport.professionalStandard,
+            validation_details: {
+              detailedAnalysis: qualityReport.detailedAnalysis,
+              failureReasons: qualityReport.failureReasons,
+              recommendations: qualityReport.recommendations
+            },
+            attempt_number: attemptNumber,
+            passes_threshold: qualityReport.passesThreshold,
+            validation_timestamp: new Date().toISOString(),
+            created_at: new Date().toISOString()
+          };
+
+          const response = await supabase
+            .from('cartoonization_quality_metrics')
+            .insert(metricsRecord)
+            .select('id')
+            .single();
+
+          return { data: response.data, error: response.error };
+        }
+      );
+
+      if (result?.id) {
+        this.log('info', `✅ Stored cartoonization quality metrics: job=${cartoonizeJobId}, attempt=${attemptNumber}, score=${qualityReport.overallQuality}%`);
+        return true;
+      }
+
+      return false;
+    } catch (error: any) {
+      this.log('warn', `⚠️ Failed to store cartoonization quality metrics: job=${cartoonizeJobId}, attempt=${attemptNumber}`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Get cartoonization quality validation results for a specific job
+   * Useful for debugging and analysis
+   */
+  async getCartoonizationQualityMetrics(cartoonizeJobId: string): Promise<any[]> {
+    const result = await this.executeQuery<any[]>(
+      'Get cartoonization quality metrics',
+      async (supabase) => {
+        const response = await supabase
+          .from('cartoonization_quality_metrics')
+          .select('*')
+          .eq('cartoonize_job_id', cartoonizeJobId)
+          .order('attempt_number', { ascending: true });
+
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    return result || [];
+  }
+
+  /**
+   * Get cartoonization quality metrics for a specific attempt
+   * Used to check validation history during processing
+   */
+  async getCartoonizationQualityMetricsForAttempt(
+    cartoonizeJobId: string,
+    attemptNumber: number
+  ): Promise<any | null> {
+    const result = await this.executeQuery<any>(
+      'Get cartoonization quality metrics for attempt',
+      async (supabase) => {
+        const response = await supabase
+          .from('cartoonization_quality_metrics')
+          .select('*')
+          .eq('cartoonize_job_id', cartoonizeJobId)
+          .eq('attempt_number', attemptNumber)
+          .single();
+
+        return { data: response.data, error: response.error };
+      }
+    );
+
+    return result;
+  }
+
   // ===== PRIVATE HELPER METHODS =====
 
   private async testConnection(): Promise<void> {
