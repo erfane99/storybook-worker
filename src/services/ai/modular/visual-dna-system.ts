@@ -777,7 +777,96 @@ Focus on elements that ensure perfect visual consistency across all comic panels
 
     return `${consistencyPrompt}\n\n${scenePrompt}`;
   }
+/**
+ * Use GPT-4 to perform deep environmental analysis
+ * Extracts ultra-specific environmental characteristics
+ */
+private async analyzeEnvironmentWithGPT4(
+  story: string,
+  storyBeats: StoryBeat[],
+  audience: AudienceType,
+  artStyle: string
+): Promise<any> {
+  try {
+    console.log('🌍 Performing GPT-4 deep environmental analysis...');
 
+    const storyBeatsText = storyBeats
+      .map((beat, i) => `Beat ${i + 1}: ${beat.description || beat.text}`)
+      .join('\n');
+
+    const prompt = `You are a professional comic book world-building expert.
+
+Analyze this story and create COMPREHENSIVE environmental DNA for consistent visual world-building.
+
+STORY: ${story}
+
+STORY BEATS:
+${storyBeatsText}
+
+AUDIENCE: ${audience}
+ART STYLE: ${artStyle}
+
+Create detailed environmental specification with these EXACT fields:
+
+1. PRIMARY LOCATION:
+   - name: Exact location name/type
+   - type: "indoor" | "outdoor" | "mixed"
+   - description: MINIMUM 100 words describing the environment in vivid detail
+   - keyFeatures: Array of 5+ SPECIFIC visual elements (not generic)
+   - colorPalette: Array of 5-7 SPECIFIC colors (e.g., "deep forest green", "warm honey yellow")
+   - architecturalStyle: Specific style matching art style
+
+2. LIGHTING CONTEXT:
+   - timeOfDay: "morning" | "afternoon" | "evening" | "night"
+   - weatherCondition: Specific weather
+   - lightingMood: Detailed lighting description
+   - primaryLightDirection: Where light comes from
+   - shadowCharacteristics: How shadows appear
+   - specialEffects: Any special lighting (sunbeams, etc.)
+
+3. RECURRING VISUAL ELEMENTS:
+   - List 5-10 SPECIFIC objects/elements that appear throughout
+
+4. COLOR CONSISTENCY:
+   - dominantColors: 3-5 main colors
+   - accentColors: 2-3 accent colors
+   - avoidColors: Colors to NOT use
+   - colorTemperature: "warm" | "cool" | "neutral"
+
+5. ATMOSPHERIC ELEMENTS:
+   - ambientEffects: Fog, mist, dust, etc.
+   - particleEffects: Floating particles, sparkles, etc.
+   - environmentalMood: Overall feeling
+   - seasonalContext: Season if applicable
+
+6. SPATIAL RELATIONSHIPS:
+   - How different areas relate spatially
+   - Camera perspective guidance
+   - Movement flow through space
+
+CRITICAL: Be EXTREMELY specific. Vague descriptions like "nice" or "beautiful" are NOT acceptable.
+Use precise descriptive language. Include measurements, textures, specific shades.
+
+Return as valid JSON matching this structure exactly.`;
+
+    const response = await this.openaiIntegration.generateTextCompletion({
+      prompt,
+      max_tokens: 1500,
+      temperature: 0.2,
+      response_format: { type: "json_object" }
+    });
+
+    // Parse and validate response
+    const parsed = JSON.parse(response);
+    
+    console.log('✅ GPT-4 environmental analysis complete');
+    return parsed;
+
+  } catch (error: any) {
+    console.error('❌ GPT-4 environmental analysis failed:', error.message);
+    return null;
+  }
+}
   /**
    * Verify character consistency score
    */
@@ -796,19 +885,135 @@ Focus on elements that ensure perfect visual consistency across all comic panels
    * Create environmental DNA for world consistency
    */
   async createEnvironmentalDNA(
-    storyBeats: StoryBeat[], 
-    audience: AudienceType, 
-    artStyle: string
-  ): Promise<EnvironmentalDNA> {
-    try {
-      // Extract environmental elements from story beats
+  storyBeats: StoryBeat[], 
+  audience: AudienceType, 
+  artStyle: string,
+  story?: string  // NEW PARAMETER
+): Promise<EnvironmentalDNA> {
+  try {
+    console.log('🌍 Creating ENHANCED Environmental DNA with GPT-4 analysis...');
+
+    // STEP 1: Try GPT-4 deep analysis first (if story provided)
+    let gpt4Analysis: any = null;
+    if (story && story.length > 50) {
+      gpt4Analysis = await this.analyzeEnvironmentWithGPT4(
+        story,
+        storyBeats,
+        audience,
+        artStyle
+      );
+    }
+
+    // STEP 2: Use GPT-4 results if available, otherwise fall back to keyword extraction
+    let primaryLocation: any;
+    let lightingContext: any;
+    let visualContinuity: any;
+    let atmosphericElements: any;
+    let panelTransitions: any;
+
+    if (gpt4Analysis && gpt4Analysis.primaryLocation) {
+      // Use GPT-4 analysis results
+      console.log('✅ Using GPT-4 environmental analysis');
+      
+      primaryLocation = {
+        name: gpt4Analysis.primaryLocation.name || 'story setting',
+        type: gpt4Analysis.primaryLocation.type || 'mixed',
+        description: gpt4Analysis.primaryLocation.description || '',
+        keyFeatures: gpt4Analysis.primaryLocation.keyFeatures || [],
+        colorPalette: gpt4Analysis.primaryLocation.colorPalette || [],
+        architecturalStyle: gpt4Analysis.primaryLocation.architecturalStyle || artStyle
+      };
+
+      lightingContext = {
+        timeOfDay: gpt4Analysis.lightingContext?.timeOfDay || this.determineTimeOfDay(storyBeats),
+        weatherCondition: gpt4Analysis.lightingContext?.weatherCondition || 'pleasant',
+        lightingMood: gpt4Analysis.lightingContext?.lightingMood || this.determineLightingMood(storyBeats, audience),
+        shadowDirection: gpt4Analysis.lightingContext?.primaryLightDirection || 'consistent',
+        consistencyRules: ['maintain_lighting_continuity', 'preserve_shadow_direction']
+      };
+
+      visualContinuity = {
+        backgroundElements: this.extractBackgroundElements(gpt4Analysis.recurringVisualElements || []),
+        recurringObjects: gpt4Analysis.recurringVisualElements || [],
+        colorConsistency: {
+          dominantColors: gpt4Analysis.colorConsistency?.dominantColors || [],
+          accentColors: gpt4Analysis.colorConsistency?.accentColors || [],
+          avoidColors: gpt4Analysis.colorConsistency?.avoidColors || []
+        },
+        perspectiveGuidelines: this.createPerspectiveGuidelines(storyBeats)
+      };
+
+      atmosphericElements = {
+        ambientEffects: gpt4Analysis.atmosphericElements?.ambientEffects || [],
+        particleEffects: gpt4Analysis.atmosphericElements?.particleEffects || [],
+        environmentalMood: gpt4Analysis.atmosphericElements?.environmentalMood || this.determineEnvironmentalMood(storyBeats, audience),
+        seasonalContext: gpt4Analysis.atmosphericElements?.seasonalContext || this.determineSeasonalContext(storyBeats)
+      };
+
+      panelTransitions = {
+        movementFlow: gpt4Analysis.spatialRelationships?.movementFlow || this.createMovementFlow(storyBeats),
+        cameraMovement: gpt4Analysis.spatialRelationships?.cameraPerspective || this.determineCameraMovement(storyBeats),
+        spatialRelationships: gpt4Analysis.spatialRelationships?.description || 'consistent_spatial_layout'
+      };
+
+    } else {
+      // Fall back to keyword extraction (EXISTING CODE)
+      console.log('⚠️ GPT-4 analysis unavailable, using keyword extraction fallback');
+      
       const environments = storyBeats.map(beat => beat.environment).filter(Boolean);
       const uniqueEnvironments = [...new Set(environments)];
-
       const recurringElements = this.extractRecurringElements(storyBeats);
       const baseKeyFeatures = this.extractLocationCharacteristics(uniqueEnvironments);
 
-      const environmentalDNA: EnvironmentalDNA = {
+      primaryLocation = {
+        name: uniqueEnvironments[0] || 'story setting',
+        type: 'mixed',
+        description: this.createLocationDescription(uniqueEnvironments),
+        keyFeatures: [...baseKeyFeatures, ...recurringElements],
+        colorPalette: this.determineEnvironmentalColorPalette(uniqueEnvironments, audience),
+        architecturalStyle: this.determineArchitecturalStyle(uniqueEnvironments, artStyle)
+      };
+
+      lightingContext = {
+        timeOfDay: this.determineTimeOfDay(storyBeats),
+        weatherCondition: this.determineWeatherCondition(storyBeats),
+        lightingMood: this.determineLightingMood(storyBeats, audience),
+        shadowDirection: 'consistent',
+        consistencyRules: ['maintain_lighting_continuity', 'preserve_shadow_direction']
+      };
+
+      visualContinuity = {
+        backgroundElements: this.extractBackgroundElements(uniqueEnvironments),
+        recurringObjects: recurringElements,
+        colorConsistency: {
+          dominantColors: this.extractDominantColors(uniqueEnvironments, audience),
+          accentColors: this.extractAccentColors(uniqueEnvironments),
+          avoidColors: this.identifyConflictingColors(artStyle)
+        },
+        perspectiveGuidelines: this.createPerspectiveGuidelines(storyBeats)
+      };
+
+      atmosphericElements = {
+        ambientEffects: this.determineAtmosphericEffects(storyBeats),
+        particleEffects: this.determineParticleEffects(storyBeats),
+        environmentalMood: this.determineEnvironmentalMood(storyBeats, audience),
+        seasonalContext: this.determineSeasonalContext(storyBeats)
+      };
+
+      panelTransitions = {
+        movementFlow: this.createMovementFlow(storyBeats),
+        cameraMovement: this.determineCameraMovement(storyBeats),
+        spatialRelationships: this.createSpatialRelationships(uniqueEnvironments)
+      };
+    }
+
+    // STEP 3: Build final environmental DNA structure
+    const environmentalDNA: EnvironmentalDNA = {
+      primaryLocation,
+      lightingContext,
+      visualContinuity,
+      atmosphericElements,
+      panelTransitions,
         primaryLocation: {
           name: uniqueEnvironments[0] || 'story setting',
           type: 'mixed',
@@ -846,17 +1051,33 @@ Focus on elements that ensure perfect visual consistency across all comic panels
           spatialRelationships: this.createSpatialRelationships(uniqueEnvironments)
         },
         metadata: {
-          createdAt: new Date().toISOString(),
-          processingTime: Date.now(),
-          audience,
-          consistencyTarget: artStyle,
-          fallback: false
-        }
-      };
+        createdAt: new Date().toISOString(),
+        processingTime: Date.now(),
+        audience,
+        consistencyTarget: artStyle,
+        fallback: !gpt4Analysis
+      }
+    };
 
-      console.log('🌍 Environmental DNA created for world consistency');
-      
-      return environmentalDNA;
+    // STEP 4: Calculate and log specificity score
+    const specificityScore = this.calculateEnvironmentalSpecificity(environmentalDNA);
+    console.log(`📊 Environmental DNA Specificity: ${specificityScore}%`);
+    
+    if (specificityScore < 70) {
+      console.warn(`⚠️ Low specificity score (${specificityScore}%). Environmental DNA may lack detail.`);
+    } else if (specificityScore >= 90) {
+      console.log(`✨ Excellent specificity (${specificityScore}%)! High-quality environmental DNA created.`);
+    } else {
+      console.log(`✅ Good specificity (${specificityScore}%). Environmental DNA created successfully.`);
+    }
+
+    console.log(`🌍 Environmental DNA created: ${environmentalDNA.primaryLocation.name}`);
+    console.log(`   📍 Location: ${environmentalDNA.primaryLocation.type}`);
+    console.log(`   🎨 Features: ${environmentalDNA.primaryLocation.keyFeatures.length} key elements`);
+    console.log(`   🌈 Colors: ${environmentalDNA.primaryLocation.colorPalette?.length || 0} defined`);
+    console.log(`   💡 Lighting: ${environmentalDNA.lightingContext.timeOfDay} - ${environmentalDNA.lightingContext.lightingMood}`);
+    
+    return environmentalDNA;
 
     } catch (error) {
       console.error('❌ Environmental DNA creation failed:', error);
@@ -1687,6 +1908,65 @@ Focus on elements that ensure perfect visual consistency across all comic panels
     }
     
     return 'neutral_season';
+  }
+
+  /**
+   * Calculate environmental DNA specificity score (0-100)
+   * Validates quality and detail level of environmental DNA
+   */
+  private calculateEnvironmentalSpecificity(environmentalDNA: EnvironmentalDNA): number {
+    let score = 0;
+
+    // 1. Description length (20 points)
+    const description = environmentalDNA.primaryLocation.description || '';
+    if (description.length >= 100) {
+      score += 20;
+    } else if (description.length >= 50) {
+      score += 10;
+    } else if (description.length >= 20) {
+      score += 5;
+    }
+
+    // 2. Key features count (20 points)
+    const keyFeatures = environmentalDNA.primaryLocation.keyFeatures || [];
+    if (keyFeatures.length >= 5) {
+      score += 20;
+    } else if (keyFeatures.length >= 3) {
+      score += 10;
+    } else if (keyFeatures.length >= 1) {
+      score += 5;
+    }
+
+    // 3. Recurring elements count (20 points)
+    const recurringObjects = environmentalDNA.visualContinuity.recurringObjects || [];
+    if (recurringObjects.length >= 5) {
+      score += 20;
+    } else if (recurringObjects.length >= 3) {
+      score += 10;
+    } else if (recurringObjects.length >= 1) {
+      score += 5;
+    }
+
+    // 4. Color palette completeness (20 points)
+    const colorPalette = environmentalDNA.primaryLocation.colorPalette || [];
+    if (colorPalette.length >= 5) {
+      score += 20;
+    } else if (colorPalette.length >= 3) {
+      score += 10;
+    } else if (colorPalette.length >= 1) {
+      score += 5;
+    }
+
+    // 5. All required fields filled (20 points)
+    let fieldsScore = 0;
+    if (environmentalDNA.primaryLocation.name) fieldsScore += 4;
+    if (environmentalDNA.primaryLocation.type) fieldsScore += 4;
+    if (environmentalDNA.lightingContext.timeOfDay) fieldsScore += 4;
+    if (environmentalDNA.lightingContext.lightingMood) fieldsScore += 4;
+    if (environmentalDNA.atmosphericElements) fieldsScore += 4;
+    score += fieldsScore;
+
+    return Math.min(score, 100);
   }
 
   private createMovementFlow(beats: StoryBeat[]): string {
