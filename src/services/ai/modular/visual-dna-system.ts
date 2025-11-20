@@ -1014,42 +1014,6 @@ Return as valid JSON matching this structure exactly.`;
       visualContinuity,
       atmosphericElements,
       panelTransitions,
-        primaryLocation: {
-          name: uniqueEnvironments[0] || 'story setting',
-          type: 'mixed',
-          description: this.createLocationDescription(uniqueEnvironments),
-          keyFeatures: [...baseKeyFeatures, ...recurringElements],
-          colorPalette: this.determineEnvironmentalColorPalette(uniqueEnvironments, audience),
-          architecturalStyle: this.determineArchitecturalStyle(uniqueEnvironments, artStyle)
-        },
-        lightingContext: {
-          timeOfDay: this.determineTimeOfDay(storyBeats),
-          weatherCondition: this.determineWeatherCondition(storyBeats),
-          lightingMood: this.determineLightingMood(storyBeats, audience),
-          shadowDirection: 'consistent',
-          consistencyRules: ['maintain_lighting_continuity', 'preserve_shadow_direction']
-        },
-        visualContinuity: {
-          backgroundElements: this.extractBackgroundElements(uniqueEnvironments),
-          recurringObjects: recurringElements,
-          colorConsistency: {
-            dominantColors: this.extractDominantColors(uniqueEnvironments, audience),
-            accentColors: this.extractAccentColors(uniqueEnvironments),
-            avoidColors: this.identifyConflictingColors(artStyle)
-          },
-          perspectiveGuidelines: this.createPerspectiveGuidelines(storyBeats)
-        },
-        atmosphericElements: {
-          ambientEffects: this.determineAtmosphericEffects(storyBeats),
-          particleEffects: this.determineParticleEffects(storyBeats),
-          environmentalMood: this.determineEnvironmentalMood(storyBeats, audience),
-          seasonalContext: this.determineSeasonalContext(storyBeats)
-        },
-        panelTransitions: {
-          movementFlow: this.createMovementFlow(storyBeats),
-          cameraMovement: this.determineCameraMovement(storyBeats),
-          spatialRelationships: this.createSpatialRelationships(uniqueEnvironments)
-        },
         metadata: {
         createdAt: new Date().toISOString(),
         processingTime: Date.now(),
