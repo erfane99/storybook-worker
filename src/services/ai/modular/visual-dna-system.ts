@@ -849,12 +849,15 @@ Use precise descriptive language. Include measurements, textures, specific shade
 
 Return as valid JSON matching this structure exactly.`;
 
-    const response = await this.openaiIntegration.generateTextCompletion({
-      prompt,
-      max_tokens: 1500,
-      temperature: 0.2,
-      response_format: { type: "json_object" }
-    });
+    const response = await this.openaiIntegration.generateTextCompletion(
+  prompt,
+  {
+    temperature: 0.2,
+    maxTokens: 1500,
+    top_p: 0.9,
+    model: 'gpt-4o'
+  }
+);
 
     // Parse and validate response
     const parsed = JSON.parse(response);
