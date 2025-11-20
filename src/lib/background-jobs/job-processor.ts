@@ -1039,7 +1039,6 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
               panelUrls,
               environmentalDNA,
               pageIndex + 1,
-              pageAttempt
             );
 
             // Store environmental validation result
