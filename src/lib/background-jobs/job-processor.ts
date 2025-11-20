@@ -645,7 +645,8 @@ environmentalDNA = await aiService.createEnvironmentalDNA(
     environment: 'general setting'
   })),
   audience,
-  character_art_style
+  character_art_style,
+  story
 );
       
       console.log(`✅ Environmental DNA created: ${environmentalDNA.primaryLocation?.name || 'Generic Setting'}`);
