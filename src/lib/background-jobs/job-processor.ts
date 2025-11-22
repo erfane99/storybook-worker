@@ -16,6 +16,7 @@ import {
   QualityMetrics,
 } from '../../services/interfaces/service-contracts.js';
 
+import { EnvironmentalConsistencyValidator } from '../../services/ai/modular/environmental-consistency-validator.js';
 import {
   Result,
   ErrorFactory,
@@ -849,7 +850,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
     // Resolve validators
     let characterValidator: any = null;
-    let environmentalValidator: any = null;
+    let environmentalValidator: EnvironmentalConsistencyValidator | null = null;
 
     try {
       if (characterDNA) {
