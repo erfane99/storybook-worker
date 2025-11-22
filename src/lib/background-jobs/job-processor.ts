@@ -560,6 +560,9 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         case 'image-generation':
           await this.processImageJobWithServices(job as ImageJobData, servicesUsed);
           break;
+        case 'character-description':
+          await this.processCharacterDescriptionJob(job, servicesUsed);
+          break;
         default:
           throw new Error(`Unknown job type: ${(job as JobData).type}`);
       }
@@ -1821,6 +1824,47 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
   private async processImageJobWithServices(job: ImageJobData, servicesUsed: string[]): Promise<void> {
     // Implementation for image jobs
     throw new Error('Image job processing not implemented in this version');
+  }
+  private async processCharacterDescriptionJob(job: any, servicesUsed: string[]): Promise<void> {
+    console.log(`👤 Starting character description job ${job.id}`);
+
+    const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+    const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
+    const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+
+    this.trackServiceUsage(job.id, 'job');
+    this.trackServiceUsage(job.id, 'ai');
+    this.trackServiceUsage(job.id, 'database');
+    servicesUsed.push('job', 'ai', 'database');
+
+    const imageUrl = job.image_url;
+
+    if (!imageUrl) {
+      throw new Error('Image URL is required for character description');
+    }
+
+    await jobService.updateJobProgress(job.id, 10, 'Analyzing character image...');
+
+    // Use AI service to create character description
+    const descriptionResult = await aiService.createCharacterDescription({
+      imageUrl: imageUrl,
+      style: job.analysis_type || 'comprehensive'
+    });
+
+    const unwrappedDescription = await descriptionResult.unwrap();
+
+    if (!unwrappedDescription || !unwrappedDescription.description) {
+      throw new Error('Failed to generate character description');
+    }
+
+    await jobService.updateJobProgress(job.id, 90, 'Character description complete');
+
+    // Mark job as completed with the character description
+    await jobService.markJobCompleted(job.id, {
+      character_description: unwrappedDescription.description
+    });
+
+    console.log(`✅ Character description job ${job.id} completed successfully`);
   }
 }
 
