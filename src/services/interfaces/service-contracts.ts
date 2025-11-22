@@ -1089,7 +1089,7 @@ export interface IAIOperations {
   // ✅ FIXED: Added missing enterprise methods
   analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis>;
   createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescription?: string): Promise<CharacterDNA>;
-  createEnvironmentalDNA(storyBeats: StoryBeat[], audience: AudienceType, artStyle?: string): Promise<EnvironmentalDNA>;
+  createEnvironmentalDNA(storyBeats: StoryBeat[], audience: AudienceType, artStyle?: string, story?: string): Promise<EnvironmentalDNA>;
   analyzePanelContinuity(storyBeats: any[]): Promise<any>;
   
   // Enhanced Scene Generation with Audience Support
