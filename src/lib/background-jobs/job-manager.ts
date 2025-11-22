@@ -20,7 +20,8 @@ const JOB_TABLE_MAP: Record<JobType, string> = {
   'auto-story': 'auto_story_jobs',
   'scenes': 'scene_generation_jobs',
   'cartoonize': 'cartoonize_jobs',
-  'image-generation': 'image_generation_jobs'
+  'image-generation': 'image_generation_jobs',
+  'character-description': 'character_description_jobs'
 };
 
 class BackgroundJobManager {
@@ -188,7 +189,7 @@ class BackgroundJobManager {
     limit: number = 50
   ): Promise<JobData[]> {
     const allPendingJobs: JobData[] = [];
-    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
+    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes', 'character-description'];
     
     for (const jobType of jobTypes) {
       const tableName = this.getTableName(jobType);
@@ -234,7 +235,7 @@ class BackgroundJobManager {
     }
 
     // Search through all job tables since we don't know the type
-    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
+    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes', 'character-description'];
     
     console.log(`🔍 Searching for job ${jobId} across ${jobTypes.length} tables...`);
     
