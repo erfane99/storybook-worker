@@ -1334,8 +1334,12 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       if (resultData?.pages) {
         updateData.processed_pages = resultData.pages;
       }
+    } else if (jobType === 'character-description') {
+      if (resultData?.character_description) {
+        updateData.character_description = resultData.character_description;
+      }
     }
-    // Add other job type result mappings as needed
+    // Add other job type mappings as needed
   }
 
   private async updatePatternWithRating(
