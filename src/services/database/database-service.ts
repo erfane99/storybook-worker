@@ -132,8 +132,7 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
   // ===== DATABASE OPERATIONS IMPLEMENTATION =====
 
   async getPendingJobs(filter: JobFilter = {}, limit: number = 50): Promise<JobData[]> {
-    const allPendingJobs: JobData[] = [];
-    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
+    const allPendingJobs: JobData[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes', 'character-description'];
     
     for (const jobType of jobTypes) {
       const tableName = this.getTableName(jobType);
@@ -172,7 +171,7 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       throw new Error('Database service not available');
     }
 
-    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes'];
+    const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes', 'character-description'];
     
     for (const jobType of jobTypes) {
       const tableName = this.getTableName(jobType);
@@ -1261,7 +1260,8 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       'auto-story': 'auto_story_jobs',
       'scenes': 'scene_generation_jobs',
       'cartoonize': 'cartoonize_jobs',
-      'image-generation': 'image_generation_jobs'
+      'image-generation': 'image_generation_jobs',
+      'character-description': 'character_description_jobs'
     };
     return tableMap[jobType];
   }
