@@ -95,7 +95,17 @@ export interface ImageJobData extends BaseJobData {
   final_prompt_used?: string;       // matches database column (result field)
 }
 
-export type JobData = StorybookJobData | AutoStoryJobData | SceneJobData | CartoonizeJobData | ImageJobData;
+export interface CharacterDescriptionJobData extends BaseJobData {
+  type: 'character-description';
+  image_url: string;
+  analysis_type?: string;
+  include_personality?: boolean;
+  include_clothing?: boolean;
+  include_background?: boolean;
+  character_description?: string;
+}
+
+export type JobData = StorybookJobData | AutoStoryJobData | SceneJobData | CartoonizeJobData | ImageJobData | CharacterDescriptionJobData;
 
 export interface JobFilter {
   user_id?: string;
