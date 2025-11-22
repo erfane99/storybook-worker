@@ -665,6 +665,13 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
         storyBeats = [];
       }
       
+      // Use full story context if provided for enhanced environmental analysis
+      let enhancedEnvironmentalContext = '';
+      if (story && story.length > 0) {
+        enhancedEnvironmentalContext = `\n\nFull Story Context: ${story.substring(0, 500)}`;
+        this.log('info', '📖 Using full story context to enhance environmental DNA quality');
+      }
+      
       // Extract environmental elements from story beats
       const environments = storyBeats.map(beat => 
         typeof beat === 'object' ? (beat.environment || beat.setting || 'general setting') : 'general setting'
