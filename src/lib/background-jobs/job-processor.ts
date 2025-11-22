@@ -1846,9 +1846,13 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     await jobService.updateJobProgress(job.id, 10, 'Analyzing character image...');
 
     // Use AI service to create character description
-    const descriptionResult = await aiService.createCharacterDescription({
+    const descriptionResult = await aiService.describeCharacter({
       imageUrl: imageUrl,
-      style: job.analysis_type || 'comprehensive'
+      includeVisualDNA: false,
+      includePersonality: job.include_personality || false,
+      includeClothing: job.include_clothing || true,
+      includeBackground: job.include_background || false,
+      generateFingerprint: false
     });
 
     const unwrappedDescription = await descriptionResult.unwrap();
