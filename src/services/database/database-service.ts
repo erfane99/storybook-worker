@@ -132,7 +132,7 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
   // ===== DATABASE OPERATIONS IMPLEMENTATION =====
 
   async getPendingJobs(filter: JobFilter = {}, limit: number = 50): Promise<JobData[]> {
-    const allPendingJobs: JobData[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes', 'character-description'];
+    const allPendingJobs: JobData[] = [];     const jobTypes: JobType[] = ['cartoonize', 'auto-story', 'image-generation', 'storybook', 'scenes', 'character-description'];
     
     for (const jobType of jobTypes) {
       const tableName = this.getTableName(jobType);
