@@ -649,7 +649,7 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
   /**
    * FIXED: Add missing createEnvironmentalDNA method implementation
    */
-  async createEnvironmentalDNA(storyBeatsOrAnalysis: StoryBeat[] | any, audience: AudienceType, artStyle?: string): Promise<EnvironmentalDNA> {
+  async createEnvironmentalDNA(storyBeatsOrAnalysis: StoryBeat[] | any, audience: AudienceType, artStyle?: string, story?: string): Promise<EnvironmentalDNA> {
   const result = await this.withErrorHandling(
     async () => {
       this.log('info', '🌍 Creating environmental DNA for world consistency...');
@@ -672,10 +672,10 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
       const uniqueEnvironments = [...new Set(environments)];
 
       const environmentalDNA: EnvironmentalDNA = {
-        primaryLocation: {
-          name: uniqueEnvironments[0] || 'general setting',
-          type: 'mixed',
-          description: 'Story setting with consistent visual elements',
+  primaryLocation: {
+    name: uniqueEnvironments[0] || 'general setting',
+    type: 'mixed',
+    description: `Story setting with consistent visual elements${enhancedEnvironmentalContext}`,
           keyFeatures: uniqueEnvironments,
           colorPalette: this.determineColorPalette(audience),
           architecturalStyle: artStyle || 'storybook'
