@@ -1856,7 +1856,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
     const unwrappedDescription = await descriptionResult.unwrap();
 
-    if (!unwrappedDescription || !unwrappedDescription.characterDescription) {
+    if (!unwrappedDescription || !unwrappedDescription.description) {
       throw new Error('Failed to generate character description');
     }
 
@@ -1864,7 +1864,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
     // Mark job as completed with the character description
     await jobService.markJobCompleted(job.id, {
-      character_description: unwrappedDescription.characterDescription
+      character_description: unwrappedDescription.description
     });
 
     console.log(`✅ Character description job ${job.id} completed successfully`);
