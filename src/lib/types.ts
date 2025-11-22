@@ -1,7 +1,7 @@
 // Shared type definitions for the worker service - DATABASE-FIRST APPROACH
 // Types now match actual database schema exactly for ALL job types
 
-export type JobType = 'storybook' | 'auto-story' | 'scenes' | 'cartoonize' | 'image-generation';
+export type JobType = 'storybook' | 'auto-story' | 'scenes' | 'cartoonize' | 'image-generation' | 'character-description';
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 export type AudienceType = 'children' | 'young adults' | 'adults';
 export type CharacterArtStyle = 'storybook' | 'comic-book' | 'anime' | 'semi-realistic' | 'cartoon';
