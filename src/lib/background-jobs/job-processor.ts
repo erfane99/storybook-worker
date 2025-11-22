@@ -1848,7 +1848,6 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     // Use AI service to create character description
     const descriptionResult = await aiService.describeCharacter({
       imageUrl: imageUrl,
-      includeVisualDNA: false,
       includePersonality: job.include_personality || false,
       includeClothing: job.include_clothing || true,
       includeBackground: job.include_background || false,
@@ -1857,7 +1856,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
     const unwrappedDescription = await descriptionResult.unwrap();
 
-    if (!unwrappedDescription || !unwrappedDescription.description) {
+    if (!unwrappedDescription || !unwrappedDescription.characterDescription) {
       throw new Error('Failed to generate character description');
     }
 
@@ -1865,7 +1864,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
     // Mark job as completed with the character description
     await jobService.markJobCompleted(job.id, {
-      character_description: unwrappedDescription.description
+      character_description: unwrappedDescription.characterDescription
     });
 
     console.log(`✅ Character description job ${job.id} completed successfully`);
