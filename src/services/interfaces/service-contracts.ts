@@ -335,6 +335,10 @@ export interface ComprehensiveMetrics {
 export interface CharacterDescriptionOptions {
   imageUrl: string;
   style?: string;
+  includePersonality?: boolean;
+  includeClothing?: boolean;
+  includeBackground?: boolean;
+  generateFingerprint?: boolean;
 }
 
 export interface CharacterDescriptionResult {
