@@ -1308,6 +1308,13 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       baseJob.layout_type = tableData.layout_type;
       baseJob.processed_pages = tableData.processed_pages;
       baseJob.storybook_entry_id = tableData.storybook_entry_id;
+    } else if (jobType === 'character-description') {
+      baseJob.image_url = tableData.image_url;
+      baseJob.analysis_type = tableData.analysis_type;
+      baseJob.include_personality = tableData.include_personality;
+      baseJob.include_clothing = tableData.include_clothing;
+      baseJob.include_background = tableData.include_background;
+      baseJob.character_description = tableData.character_description;
     }
     // Add other job type mappings as needed
   }
