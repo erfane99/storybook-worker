@@ -1344,6 +1344,7 @@ export class OpenAIIntegration {
     delete (transformed as any).topP;
     delete (transformed as any).frequencyPenalty;
     delete (transformed as any).presencePenalty;
+    delete (transformed as any).useJsonMode;  // Internal flag, not an OpenAI parameter
     
     return transformed;
   }

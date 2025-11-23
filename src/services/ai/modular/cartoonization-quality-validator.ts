@@ -433,6 +433,15 @@ export class CartoonizationQualityValidator {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), VISION_API_TIMEOUT);
 
+        // Prepend system message for reliable JSON output
+        const messagesWithSystem = [
+          {
+            role: 'system',
+            content: 'You are a professional image quality analyst. You MUST respond with valid JSON only. No explanations, no markdown code blocks, no text before or after the JSON. Just the raw JSON object.'
+          },
+          ...messages
+        ];
+
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -441,9 +450,10 @@ export class CartoonizationQualityValidator {
           },
           body: JSON.stringify({
             model: 'gpt-4o',
-            messages: messages,
+            messages: messagesWithSystem,
             max_tokens: 1500,
-            temperature: 0.3
+            temperature: 0.3,
+            response_format: { type: "json_object" }
           }),
           signal: controller.signal
         });
