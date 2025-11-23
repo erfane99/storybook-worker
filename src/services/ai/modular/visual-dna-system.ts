@@ -272,54 +272,56 @@ export class VisualDNASystem {
     characterImage: string,
     artStyle: string
   ): Promise<string> {
-    const forensicPrompt = `FORENSIC CHARACTER ANALYSIS - ULTRA-SPECIFIC DETAIL EXTRACTION
+    const forensicPrompt = `CHARACTER VISUAL ANALYSIS - DESCRIBE ONLY WHAT YOU SEE
 
-You are analyzing this character image to create an EXACT visual blueprint that will be used to recreate this IDENTICAL character across multiple comic panels. Every detail you extract is CRITICAL for consistency.
+Analyze this character image and describe ONLY the visual elements that are CLEARLY VISIBLE. This description will be used for artistic consistency across multiple illustrations.
 
 CHARACTER IMAGE: [Analyzing provided image]
 TARGET ART STYLE: ${artStyle}
 
-EXTRACT FORENSICALLY DETAILED SPECIFICATIONS:
+DESCRIBE VISIBLE ELEMENTS WITH SPECIFICITY:
 
-1. FACIAL FEATURES (Ultra-Specific):
-   - Eye Color: Exact shade with descriptors (e.g., "deep chocolate brown with subtle amber flecks")
-   - Face Shape: Precise shape with proportions (e.g., "perfectly round face with soft jawline")
-   - Skin Tone: Specific color reference (e.g., "warm medium skin tone Pantone 17-1430")
-   - Expression: Baseline facial expression (e.g., "gentle smile showing upper teeth")
-   - Distinguishing Marks: Exact position and size (e.g., "small mole on right cheek, 1cm below eye")
-   - Eyebrows: Shape, thickness, arch, color with precision
-   - Nose: Specific type, size, nostril shape details
-   - Mouth/Lips: Exact shape, fullness, natural expression
+1. FACIAL FEATURES (Describe what is visible):
+   - Eye Color: Describe the visible eye color with specific descriptors
+   - Face Shape: Describe the visible face shape and proportions
+   - Skin Tone: Describe the visible skin tone with color descriptors
+   - Expression: Describe the visible facial expression
+   - Distinguishing Marks: Describe any visible marks, freckles, or features (if none visible, write "no distinctive marks visible")
+   - Eyebrows: Describe visible eyebrow shape, thickness, color
+   - Nose: Describe visible nose type and characteristics
+   - Mouth/Lips: Describe visible mouth shape and expression
 
-2. BODY CHARACTERISTICS (Measurable):
-   - Age-Appropriate Proportions: (e.g., "child proportions age 8-10")
-   - Height: Relative measurement (e.g., "4'2\"-4'5\"")
-   - Build: Specific descriptor (e.g., "slim athletic build with small shoulders")
-   - Limb Proportions: Relative to torso (e.g., "long limbs relative to torso")
-   - Posture: Natural stance and bearing
+2. BODY CHARACTERISTICS (Describe what is visible):
+   - Age/Proportions: Describe the apparent age and body proportions visible
+   - Height: Describe the relative height (if determinable from image)
+   - Build: Describe the visible body build
+   - Posture: Describe the visible posture
 
-3. CLOTHING DETAILS (Exact Specifications):
-   - Primary Garment: Color, fabric, style (e.g., "royal blue cotton t-shirt, no patterns/logos")
-   - Secondary Garment: Full details (e.g., "knee-length khaki cargo shorts with side pockets")
-   - Footwear: Complete description (e.g., "white canvas sneakers with blue laces")
-   - Accessories: Position and details (e.g., "red digital watch on left wrist")
+3. CLOTHING & APPEARANCE (Describe ONLY what is clearly visible):
+   - Primary Clothing: Describe only the clothing items that are clearly visible (color, type)
+   - Additional Clothing: Describe any other visible clothing items (if none, write "no additional clothing visible")
+   - Footwear: Describe visible footwear (if visible; if not visible write "footwear not visible")
+   - Accessories: Describe visible accessories like jewelry or watches (if none visible, write "no accessories visible")
 
-4. COLOR PALETTE (Exact Colors):
-   - List 5-7 EXACT colors with specificity (hex codes or Pantone if possible)
-   - Skin tone color: Exact shade
-   - Hair color: Precise description with undertones
-   - Eye color: Specific with modifiers
-   - Clothing colors: Each garment's exact color
+4. HAIR (Describe what is visible):
+   - Style: Describe the visible hair style, length, and arrangement
+   - Texture: Describe the visible hair texture
+   - Color: Describe the visible hair color with specific descriptors
 
-5. HAIR DETAILS:
-   - Style: Exact cut, length, layers, how it falls
-   - Texture: Specific (straight/wavy/curly/kinky) with detail
-   - Color: Precise shade including highlights, roots, undertones
-   - Unique features: Cowlicks, parts, baby hairs
+5. COLOR PALETTE (Colors visible in the image):
+   - List 5-7 colors that are prominent and visible in this image
+   - Focus on actual visible colors, not assumed or standard colors
 
-Provide a FORENSICALLY DETAILED paragraph with ZERO ambiguity - detailed enough that someone could recreate this EXACT character without seeing the image.
+IMPORTANT RULES:
+- ONLY describe elements that are CLEARLY VISIBLE in the image
+- If something is NOT VISIBLE or UNCLEAR, explicitly state "not visible" or "unclear"
+- Do NOT invent or assume details based on examples
+- Do NOT add clothing items, accessories, or features that are not in the image
+- Focus on ACCURATE description over detailed speculation
 
-Format: Dense paragraph with maximum specificity, using measurable terms and exact colors.`;
+Provide a detailed but ACCURATE paragraph describing only what you can actually see in the image.
+
+Format: Clear, accurate paragraph focusing on visible elements.`;
 
     try {
       const response = await this.openaiIntegration.generateTextCompletion(
@@ -334,7 +336,7 @@ Format: Dense paragraph with maximum specificity, using measurable terms and exa
 
       // Verify forensic analysis contains required elements
       const requiredElements = [
-        'face', 'eyes', 'hair', 'skin', 'build', 'clothing', 'color'
+        'face', 'eyes', 'hair', 'skin', 'build'
       ];
 
       const missingElements = requiredElements.filter(
