@@ -992,68 +992,48 @@ private generateVisualFingerprint(components: { facial: string; hair: string; cl
         // Build WORLD-CLASS prompt with all elements
         let worldClassPrompt = '';
         
-        // 1. PANEL TYPE & COMPOSITION
-        worldClassPrompt += `${panelSpec}\n\n`;
-        
-        // 2. CHARACTER DNA ENFORCEMENT (highest priority)
+        // 1. CHARACTER DNA ENFORCEMENT (FIRST - highest priority for DALL-E)
         if (characterDNA && characterDNA.description) {
-          worldClassPrompt += `CHARACTER CONSISTENCY CRITICAL - EXACT MATCH REQUIRED:
+          worldClassPrompt += `CHARACTER (MATCH EXACTLY):
 ${characterDNA.description}
-${characterDNA.visualFingerprint ? `Visual Fingerprint: ${characterDNA.visualFingerprint}` : ''}
-${characterDNA.consistencyChecklist ? 'MUST MAINTAIN: ' + characterDNA.consistencyChecklist.join(', ') : ''}
+${characterDNA.visualFingerprint ? `Fingerprint: ${characterDNA.visualFingerprint}` : ''}
+${characterDNA.consistencyChecklist ? 'Must maintain: ' + characterDNA.consistencyChecklist.slice(0, 5).join(', ') : ''}
 
 `;
         } else if (options.character_description) {
           worldClassPrompt += `CHARACTER: ${options.character_description}\n\n`;
         }
         
-        // 3. SCENE DESCRIPTION (the actual action)
-        worldClassPrompt += `SCENE ACTION:
-${options.image_prompt}
-
-`;
+        // 2. SCENE ACTION
+        worldClassPrompt += `SCENE: ${options.image_prompt}\n\n`;
         
-        // 4. EMOTIONAL CONTEXT & EXPRESSION
-        if (options.emotion) {
-          worldClassPrompt += `EMOTION: ${options.emotion} - character displays clear ${options.emotion} expression and body language\n`;
-        }
+        // 3. PANEL TYPE & COMPOSITION
+        worldClassPrompt += `PANEL: ${panelSpec}\n`;
         
-        // 5. ENVIRONMENTAL CONSISTENCY
+        // 4. ENVIRONMENTAL CONSISTENCY
         if (environmentalDNA && 'primaryLocation' in environmentalDNA && environmentalDNA.primaryLocation) {
           worldClassPrompt += `
-ENVIRONMENT CONSISTENCY:
-Setting: ${environmentalDNA.primaryLocation.name}
-Atmosphere: ${environmentalDNA.lightingContext?.lightingMood || 'bright and inviting'}
-Key Elements: ${environmentalDNA.primaryLocation.keyFeatures?.slice(0, 3).join(', ') || 'consistent background'}
-Color Palette: ${environmentalDNA.primaryLocation.colorPalette?.slice(0, 3).join(', ') || 'vibrant colors'}
-Time of Day: ${environmentalDNA.lightingContext?.timeOfDay || 'afternoon'}
+ENVIRONMENT: ${environmentalDNA.primaryLocation.name}, ${environmentalDNA.lightingContext?.timeOfDay || 'afternoon'} ${environmentalDNA.lightingContext?.lightingMood || 'bright'} lighting
+Elements: ${environmentalDNA.primaryLocation.keyFeatures?.slice(0, 3).join(', ') || 'consistent background'}
+Colors: ${environmentalDNA.primaryLocation.colorPalette?.slice(0, 3).join(', ') || 'vibrant palette'}
 
 `;
         }
         
-        // 6. PROFESSIONAL QUALITY SPECIFICATIONS
+        // 5. EMOTIONAL CONTEXT
+        if (options.emotion) {
+          worldClassPrompt += `EMOTION: ${options.emotion} expression clearly shown\n`;
+        }
+        
+        // 6. QUALITY SPECIFICATIONS (condensed)
         const audienceSpecs = {
-          'children': 'bright, colorful, friendly, safe, whimsical imagery',
-          'young adults': 'dynamic, engaging, detailed, sophisticated, cinematic',
-          'adults': 'nuanced, complex, cinematic, professional, publication-ready'
+          'children': 'bright, colorful, friendly, safe',
+          'young adults': 'dynamic, engaging, sophisticated',
+          'adults': 'nuanced, complex, cinematic'
         };
         
-        worldClassPrompt += `QUALITY SPECIFICATIONS:
-Style: ${options.characterArtStyle || 'storybook'} professional comic art
-Audience: ${audienceSpecs[options.audience] || audienceSpecs.children}
-Panel ${panelNumber}/${totalPanels}
-TARGET: Publication-ready, high-quality comic illustration
-Composition: Clear focal point, professional layout, visual storytelling excellence
-Quality Level: Highest possible detail and artistic execution
-
-`;
-        
-        // 7. CRITICAL CONSISTENCY REQUIREMENTS
-        worldClassPrompt += `CRITICAL REQUIREMENTS:
-- Character MUST look EXACTLY identical to all previous panels
-- Maintain absolute style consistency throughout
-- Professional comic book quality standards required
-- Any deviation from character appearance is unacceptable`;
+        worldClassPrompt += `
+REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art for ${options.audience}, ${audienceSpecs[options.audience] || audienceSpecs.children}, panel ${panelNumber}/${totalPanels}, publication-ready quality`;
         
         // INTELLIGENT COMPRESSION if needed
         if (worldClassPrompt.length > 3800) {
@@ -1062,7 +1042,7 @@ Quality Level: Highest possible detail and artistic execution
           this.log('info', `Compressed to ${worldClassPrompt.length} chars while preserving critical elements`);
         }
         
-        this.log('info', `📝 World-class prompt created (${worldClassPrompt.length} chars) with DNA: ${!!characterDNA}, Env: ${!!environmentalDNA}`);
+        this.log('info', `World-class prompt created (${worldClassPrompt.length} chars) with DNA: ${!!characterDNA}, Env: ${!!environmentalDNA}`);
         
         // Generate the image with world-class prompt
         const result = await this.openaiIntegration.generateCartoonImage(worldClassPrompt);

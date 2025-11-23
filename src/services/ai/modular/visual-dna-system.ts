@@ -176,14 +176,14 @@ export class VisualDNASystem {
   }
 
   private initializeVisualDNASystem(): void {
-    console.log('🧬 Initializing Enhanced Visual DNA System...');
+    console.log('Initializing Enhanced Visual DNA System...');
     
     this.visualDNACache = new Map();
     this.dnaDatabase = new Map();
     this.compressionCache = new Map();
     this.consistencyScores = new Map();
     
-    console.log('✅ Visual DNA System initialized with MAXIMUM consistency protocols');
+    console.log('Visual DNA System initialized with MAXIMUM consistency protocols');
   }
 
   /**
@@ -191,7 +191,7 @@ export class VisualDNASystem {
    */
   async createMasterCharacterDNA(characterImage: string, artStyle: string): Promise<CharacterDNA> {
     try {
-      console.log('🧬 Generating ULTRA-SPECIFIC Character DNA fingerprint with DALL-E optimization...');
+      console.log('Generating ULTRA-SPECIFIC Character DNA fingerprint with DALL-E optimization...');
 
       // Step 1: FORENSIC character analysis with GPT-4 Vision (ultra-detailed)
       const forensicAnalysis = await this.performForensicCharacterAnalysis(
@@ -253,8 +253,8 @@ export class VisualDNASystem {
       const colorCount = precisColorPalette.length;
       const dalleKeywords = this.countDALLEOptimizationKeywords(characterDNA.consistencyPrompts.basePrompt);
 
-      console.log('✅ Character DNA created: specificity score ' + finalScore + '%');
-      console.log('📊 DNA contains ' + descriptorCount + ' specific descriptors, ' + colorCount + ' precise colors');
+      console.log('Character DNA created: specificity score ' + finalScore + '%');
+      console.log('DNA contains ' + descriptorCount + ' specific descriptors, ' + colorCount + ' precise colors');
       console.log('🎯 DALL-E optimization keywords: ' + dalleKeywords);
 
       return characterDNA;
@@ -750,13 +750,13 @@ Focus on elements that ensure perfect visual consistency across all comic panels
    */
   private createConsistencyChecklist(visualDNA: any): string[] {
     return [
-      `✓ Face shape: ${visualDNA.facialFeatures?.faceShape || 'defined'}`,
-      `✓ Eye details: ${visualDNA.facialFeatures?.eyes?.color || 'specified'} ${visualDNA.facialFeatures?.eyes?.shape || 'eyes'}`,
-      `✓ Hair: ${visualDNA.hair?.style || 'styled'} ${visualDNA.hair?.color?.primary || 'colored'}`,
-      `✓ Skin tone: ${visualDNA.skin?.tone || 'consistent'}`,
-      `✓ Build: ${visualDNA.bodyType?.build || 'proportioned'}`,
-      `✓ Unique features: ${visualDNA.distinctiveFeatures?.join(', ') || 'preserved'}`,
-      `✓ Expression: ${visualDNA.expressionBaseline || 'natural'}`
+      `Face: ${visualDNA.facialFeatures?.faceShape || 'defined'}`,
+      `Eyes: ${visualDNA.facialFeatures?.eyes?.color || 'specified'} ${visualDNA.facialFeatures?.eyes?.shape || ''}`,
+      `Hair: ${visualDNA.hair?.style || 'styled'} ${visualDNA.hair?.color?.primary || ''}`,
+      `Skin: ${visualDNA.skin?.tone || 'consistent'}`,
+      `Build: ${visualDNA.bodyType?.build || 'proportioned'}`,
+      `Features: ${visualDNA.distinctiveFeatures?.join(', ') || 'preserved'}`,
+      `Expression: ${visualDNA.expressionBaseline || 'natural'}`
     ];
   }
 
@@ -790,7 +790,7 @@ private async analyzeEnvironmentWithGPT4(
   artStyle: string
 ): Promise<any> {
   try {
-    console.log('🌍 Performing GPT-4 deep environmental analysis...');
+    console.log('Performing GPT-4 deep environmental analysis...');
 
     const storyBeatsText = storyBeats
       .map((beat, i) => `Beat ${i + 1}: ${beat.description || beat.text}`)
@@ -864,7 +864,7 @@ Return as valid JSON matching this structure exactly.`;
     // Parse and validate response
     const parsed = JSON.parse(response);
     
-    console.log('✅ GPT-4 environmental analysis complete');
+    console.log('GPT-4 environmental analysis complete');
     return parsed;
 
   } catch (error: any) {
@@ -896,7 +896,7 @@ Return as valid JSON matching this structure exactly.`;
   story?: string  // NEW PARAMETER
 ): Promise<EnvironmentalDNA> {
   try {
-    console.log('🌍 Creating ENHANCED Environmental DNA with GPT-4 analysis...');
+    console.log('Creating ENHANCED Environmental DNA with GPT-4 analysis...');
 
     // STEP 1: Try GPT-4 deep analysis first (if story provided)
     let gpt4Analysis: any = null;
@@ -918,7 +918,7 @@ Return as valid JSON matching this structure exactly.`;
 
     if (gpt4Analysis && gpt4Analysis.primaryLocation) {
       // Use GPT-4 analysis results
-      console.log('✅ Using GPT-4 environmental analysis');
+      console.log('Using GPT-4 environmental analysis');
       
       primaryLocation = {
         name: gpt4Analysis.primaryLocation.name || 'story setting',
@@ -1030,21 +1030,21 @@ Return as valid JSON matching this structure exactly.`;
 
     // STEP 4: Calculate and log specificity score
     const specificityScore = this.calculateEnvironmentalSpecificity(environmentalDNA);
-    console.log(`📊 Environmental DNA Specificity: ${specificityScore}%`);
+    console.log(`Environmental DNA Specificity: ${specificityScore}%`);
     
     if (specificityScore < 70) {
       console.warn(`⚠️ Low specificity score (${specificityScore}%). Environmental DNA may lack detail.`);
     } else if (specificityScore >= 90) {
       console.log(`✨ Excellent specificity (${specificityScore}%)! High-quality environmental DNA created.`);
     } else {
-      console.log(`✅ Good specificity (${specificityScore}%). Environmental DNA created successfully.`);
+      console.log(`Good specificity (${specificityScore}%). Environmental DNA created successfully.`);
     }
 
-    console.log(`🌍 Environmental DNA created: ${environmentalDNA.primaryLocation.name}`);
-    console.log(`   📍 Location: ${environmentalDNA.primaryLocation.type}`);
-    console.log(`   🎨 Features: ${environmentalDNA.primaryLocation.keyFeatures.length} key elements`);
-    console.log(`   🌈 Colors: ${environmentalDNA.primaryLocation.colorPalette?.length || 0} defined`);
-    console.log(`   💡 Lighting: ${environmentalDNA.lightingContext.timeOfDay} - ${environmentalDNA.lightingContext.lightingMood}`);
+    console.log(`Environmental DNA created: ${environmentalDNA.primaryLocation.name}`);
+    console.log(`   Location: ${environmentalDNA.primaryLocation.type}`);
+    console.log(`   Features: ${environmentalDNA.primaryLocation.keyFeatures.length} key elements`);
+    console.log(`   Colors: ${environmentalDNA.primaryLocation.colorPalette?.length || 0} defined`);
+    console.log(`   Lighting: ${environmentalDNA.lightingContext.timeOfDay} - ${environmentalDNA.lightingContext.lightingMood}`);
     
     return environmentalDNA;
 

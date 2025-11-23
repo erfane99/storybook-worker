@@ -83,7 +83,7 @@ export class ComicGenerationEngine {
         throw new Error('Story must be at least 50 characters long.');
       }
 
-      console.log(`🎨 Generating professional comic book layout for ${audience} audience...`);
+      console.log(`Generating professional comic book layout for ${audience} audience...`);
 
       // Step 1: Advanced story analysis with narrative intelligence (FROM AISERVNOW.TXT)
       const storyAnalysis = await this.analyzeStoryStructure(story, audience);
@@ -107,7 +107,7 @@ export class ComicGenerationEngine {
         characterArtStyle
       );
 
-      console.log(`✅ Professional comic book layout generated: ${pages.length} pages with ${config.totalPanels} total panels`);
+      console.log(`Professional comic book layout generated: ${pages.length} pages with ${config.totalPanels} total panels`);
 
       return {
         pages,
@@ -173,7 +173,7 @@ STORY TO ANALYZE:
 
 ${AI_PROMPTS.storyAnalysis[audience as keyof typeof AI_PROMPTS.storyAnalysis]}
 
-🎯 CRITICAL JSON SCHEMA COMPLIANCE:
+CRITICAL JSON SCHEMA COMPLIANCE:
 You MUST return EXACTLY this structure with ALL fields completed for EVERY beat.
 NO missing fields. NO undefined values. NO empty strings.
 
@@ -270,7 +270,7 @@ NO missing fields. NO undefined values. NO empty strings.
    * FIXED: All TypeScript errors resolved
    */
   private buildAdvancedSystemPrompt(audience: AudienceType, config: any, narrativeIntel: any): string {
-    return `🎭 NARRATIVE INTELLIGENCE SYSTEM ACTIVATED:
+    return `NARRATIVE INTELLIGENCE SYSTEM:
 Story Archetype: ${narrativeIntel.storyArchetype.toUpperCase()}
 Emotional Progression: ${narrativeIntel.emotionalArc.join(' → ')}
 Thematic Elements: ${narrativeIntel.thematicElements.join(', ')}
@@ -293,7 +293,7 @@ STORY BEAT ANALYSIS WITH NARRATIVE INTELLIGENCE:
 5. Ensure each panel has clear purpose in ${narrativeIntel.storyArchetype} progression
 6. Integrate thematic elements: ${narrativeIntel.thematicElements.join(', ')}
 
-✅ ENHANCED DIALOGUE ANALYSIS WITH SPEECH INTELLIGENCE:
+ENHANCED DIALOGUE ANALYSIS WITH SPEECH INTELLIGENCE:
 7. Extract existing dialogue from story text using quotation marks and speech patterns
 8. Identify emotional moments that would benefit from character speech
 9. Assign dialogue to approximately ${(config.speechBubbleRatio * 100)}% of panels strategically
@@ -582,7 +582,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
         const pageBeats = pageGroups[pageIndex];
         const pageNumber = pageIndex + 1;
 
-        console.log(`🎨 Generating page ${pageNumber}/${pageGroups.length} with ${pageBeats.length} panels...`);
+        console.log(`Generating page ${pageNumber}/${pageGroups.length} with ${pageBeats.length} panels...`);
 
         // Generate panels for this page (FROM BOTH FILES)
         const panels = await this.generatePanelsForPage(
@@ -620,7 +620,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
         pages.push(pagePanel);
       }
 
-      console.log(`✅ Generated ${pages.length} pages with professional quality standards`);
+      console.log(`Generated ${pages.length} pages with professional quality standards`);
       
       return pages;
 
@@ -645,7 +645,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
     pageNumber: number,
     totalPanels: number
   ): Promise<ComicPanel[]> {
-    console.log(`🎨 Generating ${pageBeats.length} actual images for page ${pageNumber} in parallel...`);
+    console.log(`Generating ${pageBeats.length} actual images for page ${pageNumber} in parallel...`);
 
     const panelPromises = pageBeats.map(async (beat, beatIndex) => {
       const panelNumber = (pageNumber - 1) * config.panelsPerPage + beatIndex + 1;
@@ -662,10 +662,10 @@ Format as structured visual DNA for consistent reproduction across comic panels.
       const panelType = this.determinePanelType(beat, beatIndex, pageBeats.length);
 
       try {
-        console.log(`🖼️ Generating actual image for panel ${panelNumber}/${totalPanels} (${panelType})...`);
+        console.log(`Generating actual image for panel ${panelNumber}/${totalPanels} (${panelType})...`);
         const imageUrl = await this.openaiIntegration.generateCartoonImage(imagePrompt);
 
-        console.log(`✅ Panel ${panelNumber} image generated successfully`);
+        console.log(`Panel ${panelNumber} image generated successfully`);
 
         return {
           description: beat.beat,
@@ -706,7 +706,7 @@ Format as structured visual DNA for consistent reproduction across comic panels.
       }
     }
 
-    console.log(`✅ Generated ${panels.length} panels for page ${pageNumber}`);
+    console.log(`Generated ${panels.length} panels for page ${pageNumber}`);
     return panels;
   }
 
@@ -732,17 +732,12 @@ Format as structured visual DNA for consistent reproduction across comic panels.
 
     // Character DNA section - ENFORCE CONSISTENCY WITH FULL DESCRIPTION
     const characterSection = characterDNA ?
-      `CHARACTER MUST MATCH EXACTLY:
-${characterDNA.description.substring(0, 800)}
+      `CHARACTER (MATCH EXACTLY):
+${characterDNA.description.substring(0, 600)}
 
-VISUAL FINGERPRINT: ${characterDNA.visualFingerprint}
+Fingerprint: ${characterDNA.visualFingerprint || 'maintain consistency'}
 
-CRITICAL - THESE FEATURES MUST BE IDENTICAL:
-${characterDNA.consistencyChecklist ? characterDNA.consistencyChecklist.join('\n') : 'Maintain exact appearance'}
-
-${characterDNA.consistencyPrompts?.basePrompt || ''}
-
-ANY DEVIATION FROM THIS DESCRIPTION IS A FAILURE.` :
+Features: ${characterDNA.consistencyChecklist ? characterDNA.consistencyChecklist.slice(0, 5).join(', ') : 'exact match required'}` :
       'CHARACTER: Consistent with previous panels';
 
     // Environmental DNA section with recurring element enforcement
@@ -768,8 +763,8 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
     const speechSection = beat.hasSpeechBubble ? 
       `DIALOGUE: "${beat.dialogue}" in ${beat.speechBubbleStyle} bubble` : '';
 
-    // Combine all sections with newlines
-    const sections = [coreSection, characterSection, environmentSection, styleSection, contextSection];
+    // Combine all sections with newlines (CHARACTER FIRST for DALL-E priority)
+    const sections = [characterSection, coreSection, environmentSection, styleSection, contextSection];
     if (speechSection) sections.push(speechSection);
 
     const fullPrompt = sections.join('\n\n');
@@ -796,7 +791,7 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
       artStyle: string;
     }
   ): Promise<any> {
-    console.log('📊 Calculating advanced quality metrics...');
+    console.log('Calculating advanced quality metrics...');
 
     const metrics: any = {
       characterConsistency: await this.measureAdvancedCharacterConsistency(
@@ -826,7 +821,7 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
     metrics.overallScore = this.calculateWeightedQualityScore(metrics);
     metrics.professionalGrade = this.assignProfessionalGrade(metrics.overallScore);
 
-    console.log(`✅ Quality analysis complete: ${metrics.overallScore}/100 (Grade: ${metrics.professionalGrade})`);
+    console.log(`Quality analysis complete: ${metrics.overallScore}/100 (Grade: ${metrics.professionalGrade})`);
     
     return {
       ...metrics,

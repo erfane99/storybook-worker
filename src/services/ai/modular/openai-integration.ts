@@ -40,7 +40,7 @@ import {
  * These prompts ensure 95%+ character consistency across all panels
  */
 const CHARACTER_DNA_PROMPTS = {
-  visionAnalysis: `🎨 MASTER CHARACTER DNA EXTRACTION - PROFESSIONAL COMIC STANDARD
+  visionAnalysis: `CHARACTER DNA EXTRACTION - Create visual blueprint for comic consistency.
 
 Analyze this character for PERFECT visual consistency across a professional comic book.
 You are creating a CHARACTER DNA BLUEPRINT that will be the SINGLE SOURCE OF TRUTH.
@@ -84,7 +84,7 @@ CRITICAL VISUAL DNA COMPONENTS (Be EXTREMELY specific):
 
 Return a COMPREHENSIVE character blueprint that ensures ZERO deviation across panels.`,
 
-  compressionAlgorithm: `🔬 VISUAL FINGERPRINT COMPRESSION
+  compressionAlgorithm: `VISUAL FINGERPRINT COMPRESSION
 
 Create an ULTRA-EFFICIENT character fingerprint for consistent DALL-E generation.
 Compress the character essence into KEY VISUAL MARKERS only.
@@ -103,7 +103,7 @@ PRIORITY 2 (IF SPACE):
 FORMAT: Short, punchy descriptors that DALL-E will interpret correctly.
 Maximum 150 characters for the entire fingerprint.`,
 
-  consistencyCheck: `🎯 CHARACTER CONSISTENCY VALIDATION
+  consistencyCheck: `CHARACTER CONSISTENCY VALIDATION
 
 Compare these two character descriptions:
 ORIGINAL: [character1]
@@ -222,7 +222,7 @@ EXAMPLE OUTPUT:
  * These create professional comic book pacing and emotional flow
  */
 const STORY_ANALYSIS_PROMPTS = {
-  narrativeIntelligence: `📚 PROFESSIONAL COMIC BOOK STORY ANALYSIS - NARRATIVE INTELLIGENCE ENGINE
+  narrativeIntelligence: `PROFESSIONAL COMIC BOOK STORY ANALYSIS - NARRATIVE INTELLIGENCE ENGINE
 
 You are a master comic book editor analyzing a story for adaptation.
 Your analysis will determine the ENTIRE visual narrative flow.
@@ -290,7 +290,7 @@ Panel Count: [PANEL_COUNT]
 
 Respond with ONLY valid JSON matching the exact structure shown in the example above. No markdown, no explanation, just the JSON object.`,
 
-  beatGeneration: `🎬 COMIC PANEL BEAT GENERATION
+  beatGeneration: `COMIC PANEL BEAT GENERATION
 
 Create [PANEL_COUNT] comic book panels that tell this story PERFECTLY.
 
@@ -324,7 +324,7 @@ PACING RULES:
 - Place dialogue for maximum impact
 - Ensure visual flow between panels`,
 
-  emergencyFallback: `🚨 QUICK STORY STRUCTURE
+  emergencyFallback: `QUICK STORY STRUCTURE
 
 Rapidly analyze: [STORY_TEXT]
 
@@ -346,41 +346,29 @@ Keep it simple but complete.`
  * These create publication-quality comic book art
  */
 const IMAGE_GENERATION_PROMPTS = {
-  masterPanelPrompt: `🎨 PROFESSIONAL COMIC BOOK PANEL - [PANEL_TYPE] COMPOSITION
-
-[SCENE_DESCRIPTION]
-
-CHARACTER DNA ENFORCEMENT:
+  masterPanelPrompt: `CHARACTER (MUST MATCH EXACTLY):
 [CHARACTER_FINGERPRINT]
 
-TECHNICAL SPECIFICATIONS:
-- Art Style: [ART_STYLE] illustration for [AUDIENCE] audience
-- Panel Type: [PANEL_TYPE] with [CAMERA_ANGLE] angle
-- Emotion: Character expressing [EMOTION] clearly
-- Lighting: [LIGHTING_MOOD] atmosphere
-- Background: [BACKGROUND_COMPLEXITY] environment detail
+SCENE: [SCENE_DESCRIPTION]
 
-QUALITY STANDARDS:
-- Publication-ready professional comic art
-- Crystal clear character emotion
-- Perfect visual consistency with character DNA
-- Age-appropriate content for [AUDIENCE]
-- Clean, readable composition
-- Professional color palette
+PANEL: [PANEL_TYPE], [CAMERA_ANGLE] angle, [ART_STYLE] style for [AUDIENCE]
 
-COMPOSITION RULES:
-- Rule of thirds for character placement
-- Clear focal point on main action
-- Appropriate negative space
-- Dynamic but readable layout
-- Professional panel boundaries respected`,
+EMOTION: [EMOTION] expression clearly shown
 
-  characterConsistencyBoost: `CRITICAL CHARACTER MATCH:
-This character MUST match EXACTLY:
+ATMOSPHERE: [LIGHTING_MOOD] lighting, [BACKGROUND_COMPLEXITY] background
+
+REQUIREMENTS:
+- Professional [ART_STYLE] comic art, publication-ready
+- Character identical to DNA description above
+- Rule of thirds composition, clear focal point
+- Age-appropriate for [AUDIENCE]`,
+
+  characterConsistencyBoost: `CHARACTER MATCH REQUIRED:
 [CHARACTER_DNA_COMPRESSED]
-ZERO deviation accepted. Same character, same outfit, same colors.`,
 
-  environmentalDNA: `🌍 WORLD CONSISTENCY DNA
+Maintain exact appearance - zero deviation.`,
+
+  environmentalDNA: `WORLD CONSISTENCY DNA
 
 Create environmental consistency across panels:
 
@@ -395,10 +383,10 @@ TEXTURE LIBRARY: [SURFACE_DETAILS]
 
 Ensure EVERY panel exists in the SAME world.`,
 
-  speechBubbleIntelligence: `💬 SPEECH BUBBLE COMPOSITION
+  speechBubbleIntelligence: `SPEECH BUBBLE COMPOSITION
 
 [IF_DIALOGUE_EXISTS]
-CRITICAL: Leave exact space for speech bubble placement:
+Leave exact space for speech bubble placement:
 - Position: [BUBBLE_POSITION] of panel
 - Size: [WORD_COUNT * 0.5] inches estimated
 - Style: [BUBBLE_STYLE] shape required
@@ -407,17 +395,17 @@ CRITICAL: Leave exact space for speech bubble placement:
 
 Character mouth position: [OPEN/CLOSED] for [SPEAKING/THINKING]`,
 
-  qualityEnforcementLayer: `⭐ QUALITY CONTROL CHECKLIST
-✓ Character matches DNA fingerprint EXACTLY
-✓ Emotion is instantly readable
-✓ Composition follows rule of thirds
-✓ MANDATORY CONTENT RULES FOR [AUDIENCE]: [AUDIENCE_RULES]
-✓ Consistent with previous panels
-✓ Professional comic book standard
-✓ Clear focal point established
-✓ Appropriate detail level
-✓ Correct lighting mood
-✓ Panel type specifications met`
+  qualityEnforcementLayer: `QUALITY CONTROL:
+- Character matches DNA fingerprint EXACTLY
+- Emotion is instantly readable
+- Composition follows rule of thirds
+- MANDATORY CONTENT RULES FOR [AUDIENCE]: [AUDIENCE_RULES]
+- Consistent with previous panels
+- Professional comic book standard
+- Clear focal point established
+- Appropriate detail level
+- Correct lighting mood
+- Panel type specifications met`
 };
 
 /**
