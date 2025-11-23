@@ -1823,12 +1823,6 @@ OUTPUT: Single character portrait, centered composition, clean background, profe
 
     await jobService.markJobCompleted(job.id, completionData);
 
-    await jobService.updateJobProgress(
-      job.id,
-      100,
-      `Cartoon created successfully${bestQualityScore > 0 ? ` (quality: ${bestQualityScore}%)` : ''}`
-    );
-
     const duration = Date.now() - startTime;
     console.log(`✅ Cartoonize job ${job.id} completed in ${duration}ms`);
     console.log(`📊 Quality: ${bestQualityScore > 0 ? bestQualityScore + '%' : 'unvalidated'}, Attempts: ${attemptScores.length}, Scores: [${attemptScores.join(', ')}]`);
