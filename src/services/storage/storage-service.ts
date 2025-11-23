@@ -15,6 +15,7 @@ import {
   StorageConfigurationError,
   ErrorFactory
 } from '../errors/index.js';
+import { v2 as cloudinary } from 'cloudinary';
 
 export interface StorageConfig extends ServiceConfig {
   cloudName: string;
@@ -67,6 +68,13 @@ export class StorageService extends EnhancedBaseService implements IStorageServi
     if (!this.cloudName || !this.apiKey || !this.apiSecret) {
       throw new Error('Cloudinary not configured - storage service will be unavailable');
     }
+
+    // Configure Cloudinary
+    cloudinary.config({
+      cloud_name: this.cloudName,
+      api_key: this.apiKey,
+      api_secret: this.apiSecret,
+    });
   }
 
   protected async disposeService(): Promise<void> {
@@ -89,22 +97,56 @@ export class StorageService extends EnhancedBaseService implements IStorageServi
 
     return this.withRetry(
       async () => {
-        // Implementation would use Cloudinary SDK or direct API calls
-        // For now, return a mock result
         this.log('info', 'Uploading image to Cloudinary');
-        
-        // Mock implementation - replace with actual Cloudinary upload
-        const mockResult: UploadResult = {
-          url: 'https://res.cloudinary.com/mock/image/upload/v1/mock.jpg',
-          secureUrl: 'https://res.cloudinary.com/mock/image/upload/v1/mock.jpg',
-          publicId: 'mock',
+
+        const uploadOptions: any = {
+          resource_type: 'image',
+          folder: options.folder || 'storybook/worker-uploads',
+          quality: 'auto:good',
           format: 'jpg',
-          width: 1024,
-          height: 1024,
-          bytes: 102400,
         };
 
-        return mockResult;
+        if (options.tags && Array.isArray(options.tags)) {
+          uploadOptions.tags = options.tags;
+        }
+
+        let uploadResult: any;
+
+        if (Buffer.isBuffer(imageData)) {
+          // Upload from Buffer
+          uploadResult = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              uploadOptions,
+              (error: any, result: any) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            );
+            uploadStream.end(imageData);
+          });
+        } else if (typeof imageData === 'string') {
+          // Upload from URL
+          uploadResult = await cloudinary.uploader.upload(imageData, uploadOptions);
+        } else {
+          throw new Error('Invalid imageData: must be Buffer or URL string');
+        }
+
+        if (!uploadResult || !uploadResult.secure_url) {
+          throw new Error('Cloudinary upload failed - no URL returned');
+        }
+
+        const result: UploadResult = {
+          url: uploadResult.url,
+          secureUrl: uploadResult.secure_url,
+          publicId: uploadResult.public_id,
+          format: uploadResult.format || 'jpg',
+          width: uploadResult.width || 0,
+          height: uploadResult.height || 0,
+          bytes: uploadResult.bytes || 0,
+        };
+
+        this.log('info', `Successfully uploaded to Cloudinary: ${result.publicId}`);
+        return result;
       },
       this.uploadRetryConfig,
       'uploadImage'
@@ -129,8 +171,14 @@ export class StorageService extends EnhancedBaseService implements IStorageServi
       async () => {
         this.log('info', `Deleting image: ${publicId}`);
         
-        // Mock implementation - replace with actual Cloudinary delete
-        return true;
+        const result = await cloudinary.uploader.destroy(publicId);
+        
+        if (result.result === 'ok' || result.result === 'not found') {
+          this.log('info', `Successfully deleted: ${publicId}`);
+          return true;
+        }
+        
+        throw new Error(`Failed to delete image: ${result.result}`);
       },
       this.uploadRetryConfig,
       'deleteImage'

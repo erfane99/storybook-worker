@@ -1437,6 +1437,7 @@ export interface UploadOptions {
   publicId?: string;
   transformation?: any;
   resourceType?: 'image' | 'video' | 'raw' | 'auto';
+  tags?: string[];
 }
 
 export interface UploadResult {
