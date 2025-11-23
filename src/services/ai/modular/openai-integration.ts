@@ -120,6 +120,104 @@ Flag ANY deviations that would break reader immersion.`
 };
 
 /**
+ * Few-shot examples for story beat generation
+ * These examples train the AI to produce consistent JSON output
+ */
+const STORY_BEAT_FEW_SHOT_EXAMPLES = {
+  // Example for children's adventure story
+  childrenExample: `
+
+EXAMPLE INPUT:
+Story: "Luna the brave little rabbit decided to explore the dark forest. She met a friendly owl who warned her about the river. Luna carefully crossed the stepping stones and found a magical garden full of glowing flowers. She picked one flower to bring home to her mother."
+Audience: children
+Panel Count: 8
+
+EXAMPLE OUTPUT:
+{
+  "storyArchetype": "adventure",
+  "emotionalArc": ["curious", "cautious", "determined", "amazed", "happy"],
+  "storyBeats": [
+    {
+      "beatNumber": 1,
+      "panelCount": 1,
+      "description": "Luna the rabbit stands at the edge of the dark forest, ears perked up with curiosity, looking at the shadowy trees ahead",
+      "emotion": "curious",
+      "dialogue": "",
+      "narrativePurpose": "setup",
+      "visualPriority": "environment"
+    },
+    {
+      "beatNumber": 2,
+      "panelCount": 1,
+      "description": "Luna hops into the forest, surrounded by tall dark trees with small patches of light filtering through",
+      "emotion": "determined",
+      "dialogue": "I can do this!",
+      "narrativePurpose": "development",
+      "visualPriority": "character"
+    },
+    {
+      "beatNumber": 3,
+      "panelCount": 1,
+      "description": "A wise owl with big round eyes perches on a branch above Luna, pointing a wing toward a rushing river",
+      "emotion": "cautious",
+      "dialogue": "Be careful of the river, little one.",
+      "narrativePurpose": "development",
+      "visualPriority": "character"
+    },
+    {
+      "beatNumber": 4,
+      "panelCount": 1,
+      "description": "Luna approaches the rushing river, seeing a line of mossy stepping stones across the water",
+      "emotion": "scared",
+      "dialogue": "",
+      "narrativePurpose": "development",
+      "visualPriority": "environment"
+    },
+    {
+      "beatNumber": 5,
+      "panelCount": 1,
+      "description": "Luna carefully balances on a stepping stone mid-river, arms outstretched, water splashing below",
+      "emotion": "determined",
+      "dialogue": "",
+      "narrativePurpose": "climax",
+      "visualPriority": "action"
+    },
+    {
+      "beatNumber": 6,
+      "panelCount": 1,
+      "description": "Luna lands safely on the far riverbank and gasps at the sight before her",
+      "emotion": "surprised",
+      "dialogue": "Wow!",
+      "narrativePurpose": "development",
+      "visualPriority": "character"
+    },
+    {
+      "beatNumber": 7,
+      "panelCount": 1,
+      "description": "Wide shot of a magical garden filled with flowers that glow in soft blues, pinks, and purples",
+      "emotion": "amazed",
+      "dialogue": "",
+      "narrativePurpose": "development",
+      "visualPriority": "environment"
+    },
+    {
+      "beatNumber": 8,
+      "panelCount": 1,
+      "description": "Luna holds a single glowing flower, smiling warmly, ready to bring it home to her mother",
+      "emotion": "happy",
+      "dialogue": "Mom will love this!",
+      "narrativePurpose": "resolution",
+      "visualPriority": "character"
+    }
+  ],
+  "totalPanels": 8,
+  "dialoguePanels": 4
+}
+
+`
+};
+
+/**
  * Advanced story analysis prompts with narrative intelligence
  * These create professional comic book pacing and emotional flow
  */
@@ -181,7 +279,16 @@ REQUIRED ANALYSIS COMPONENTS:
    - Reader engagement curve
 
 CRITICAL: Return COMPLETE JSON with EVERY beat fully specified.
-NO missing fields. This drives the ENTIRE visual generation pipeline.`,
+NO missing fields. This drives the ENTIRE visual generation pipeline.
+
+${STORY_BEAT_FEW_SHOT_EXAMPLES.childrenExample}
+
+NOW ANALYZE THIS STORY:
+Story: [STORY_TEXT]
+Audience: [AUDIENCE]  
+Panel Count: [PANEL_COUNT]
+
+Respond with ONLY valid JSON matching the exact structure shown in the example above. No markdown, no explanation, just the JSON object.`,
 
   beatGeneration: `🎬 COMIC PANEL BEAT GENERATION
 
