@@ -75,6 +75,36 @@ interface ProcessorHealthStatus {
   lastCheck: string;
 }
 
+// ===== STYLE-SPECIFIC CARTOONIZATION PROMPTS =====
+
+const STYLE_SPECIFIC_CARTOONIZATION_PROMPTS: Record<string, { base: string; negatives: string; characteristics: string }> = {
+  'storybook': {
+    base: 'Soft, whimsical children\'s book illustration style with gentle watercolor-like colors, rounded features, and warm inviting appearance',
+    negatives: 'NOT photorealistic, NOT harsh lines, NOT dark shadows, NOT scary',
+    characteristics: 'Soft edges, pastel color palette, gentle shading, warm lighting, friendly expression, slightly larger eyes for appeal'
+  },
+  'semi-realistic': {
+    base: 'Semi-realistic digital portrait with smooth skin rendering, accurate proportions, and polished professional finish',
+    negatives: 'NOT fully photorealistic, NOT cartoonish, NOT flat colors',
+    characteristics: 'Smooth gradients, realistic lighting, subtle stylization, professional portrait quality, natural skin tones with slight idealization'
+  },
+  'comic-book': {
+    base: 'Bold comic book art style with strong ink outlines, cel-shading, and dynamic contrast typical of Marvel/DC comics',
+    negatives: 'NOT soft edges, NOT watercolor, NOT anime style',
+    characteristics: 'Bold black outlines, flat color areas with halftone shading, high contrast, dramatic lighting, heroic proportions'
+  },
+  'flat-illustration': {
+    base: 'Modern flat vector illustration style with clean geometric shapes, minimal shading, and contemporary design aesthetic',
+    negatives: 'NOT realistic, NOT detailed texturing, NOT complex gradients',
+    characteristics: 'Clean vector lines, solid flat colors, minimal shadows, geometric simplification, modern minimalist aesthetic'
+  },
+  'anime': {
+    base: 'Japanese anime/manga art style with characteristic large expressive eyes, simplified nose, and dynamic hair styling',
+    negatives: 'NOT Western cartoon, NOT realistic proportions, NOT photorealistic',
+    characteristics: 'Large shiny eyes with highlights, small nose and mouth, pointed chin, colorful dynamic hair, smooth cel-shaded skin'
+  }
+};
+
 // ===== ENHANCED PRODUCTION JOB PROCESSOR =====
 
 export class ProductionJobProcessor implements IServiceHealth, IServiceMetrics {
@@ -1635,8 +1665,26 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
         console.log(`🎨 Cartoonize job ${job.id}: generating with style ${style} (attempt ${attemptNumber}/${MAX_ATTEMPTS})`);
 
+        const styleConfig = STYLE_SPECIFIC_CARTOONIZATION_PROMPTS[style] || STYLE_SPECIFIC_CARTOONIZATION_PROMPTS['semi-realistic'];
+
         const cartoonPrompt = attemptNumber === 1
-          ? `Transform this person into a ${style} character. Maintain all distinctive facial features, hair style, and overall appearance. High quality, professional ${style} art style.`
+          ? `Create a ${styleConfig.base} portrait of this exact person.
+
+CRITICAL - PRESERVE EXACTLY:
+- Exact facial structure (face shape, jawline, cheekbones)
+- Eye shape, color, and spacing
+- Nose shape and size
+- Mouth shape and lip thickness  
+- Skin tone and complexion
+- Hair color, style, length, and texture
+- Any distinctive features (moles, freckles, scars, glasses, facial hair)
+
+STYLE REQUIREMENTS:
+${styleConfig.characteristics}
+
+MUST AVOID: ${styleConfig.negatives}
+
+OUTPUT: Single character portrait, centered composition, clean background, professional quality.`
           : this.buildEnhancedCartoonPrompt(style, finalQualityReport?.failureReasons || [], attemptNumber);
 
         const cartoonResult = await aiService.generateCartoonImage(cartoonPrompt);
@@ -1787,12 +1835,19 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
   }
 
   private buildEnhancedCartoonPrompt(style: string, failureReasons: string[], attemptNumber: number): string {
-    let enhancedPrompt = `CRITICAL RETRY (Attempt ${attemptNumber}) - Transform this person into a ${style} character. `;
+    const styleConfig = STYLE_SPECIFIC_CARTOONIZATION_PROMPTS[style] || STYLE_SPECIFIC_CARTOONIZATION_PROMPTS['semi-realistic'];
+    
+    let enhancedPrompt = `RETRY ATTEMPT ${attemptNumber} - Create a ${styleConfig.base} portrait.
+
+PREVIOUS ISSUES TO FIX: ${failureReasons.length > 0 ? failureReasons.join('; ') : 'General quality improvement needed'}
+
+`;
 
     const hasCharacterIssues = failureReasons.some(r =>
       r.toLowerCase().includes('character') ||
       r.toLowerCase().includes('fidelity') ||
-      r.toLowerCase().includes('facial')
+      r.toLowerCase().includes('facial') ||
+      r.toLowerCase().includes('match')
     );
     const hasStyleIssues = failureReasons.some(r =>
       r.toLowerCase().includes('style') ||
@@ -1801,22 +1856,42 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     const hasClarityIssues = failureReasons.some(r =>
       r.toLowerCase().includes('clarity') ||
       r.toLowerCase().includes('quality') ||
-      r.toLowerCase().includes('blur')
+      r.toLowerCase().includes('blur') ||
+      r.toLowerCase().includes('artifact')
     );
 
     if (hasCharacterIssues) {
-      enhancedPrompt += 'MANDATORY: EXACTLY match the original person\'s facial features, hair style, skin tone, and distinctive characteristics. Preserve all unique features. ';
+      enhancedPrompt += `CRITICAL CHARACTER FIDELITY:
+- Match EXACT facial bone structure from reference
+- Preserve precise eye shape, color, and position
+- Keep exact nose profile and mouth shape
+- Maintain skin tone accuracy
+- Copy hair color and style precisely
+- Include ALL distinctive marks (moles, freckles, scars)
+
+`;
     }
 
     if (hasStyleIssues) {
-      enhancedPrompt += `MANDATORY: Follow ${style} art style PRECISELY with proper line weight, shading, and color palette typical of professional ${style} artwork. `;
+      enhancedPrompt += `STRICT STYLE ENFORCEMENT:
+${styleConfig.characteristics}
+AVOID: ${styleConfig.negatives}
+
+`;
     }
 
     if (hasClarityIssues) {
-      enhancedPrompt += 'MANDATORY: Create sharp, clear lines with high detail and professional rendering quality. No blur or artifacts. ';
+      enhancedPrompt += `QUALITY REQUIREMENTS:
+- Sharp, clean lines with no blur
+- High detail in facial features
+- No artifacts or distortions
+- Professional rendering quality
+- Proper anatomy with no deformities
+
+`;
     }
 
-    enhancedPrompt += `High quality professional ${style} character illustration that exactly represents the original person.`;
+    enhancedPrompt += `OUTPUT: Single centered portrait, clean background, ${style} art style, professional illustration quality.`;
 
     return enhancedPrompt;
   }
