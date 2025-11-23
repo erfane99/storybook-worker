@@ -349,6 +349,8 @@ const IMAGE_GENERATION_PROMPTS = {
   masterPanelPrompt: `CHARACTER (MUST MATCH EXACTLY):
 [CHARACTER_FINGERPRINT]
 
+STYLE: [STYLE_CALIBRATION]
+
 SCENE: [SCENE_DESCRIPTION]
 
 PANEL: [PANEL_TYPE], [CAMERA_ANGLE] angle, [ART_STYLE] style for [AUDIENCE]
@@ -406,6 +408,28 @@ Character mouth position: [OPEN/CLOSED] for [SPEAKING/THINKING]`,
 - Appropriate detail level
 - Correct lighting mood
 - Panel type specifications met`
+};
+
+/**
+ * Style-specific visual calibration for DALL-E panel generation
+ * Concise visual language optimized for each art style
+ */
+export const STYLE_SPECIFIC_PANEL_CALIBRATION: Record<string, { stylePrompt: string }> = {
+  'storybook': {
+    stylePrompt: 'soft watercolor edges, warm pastels, rounded features, gentle lighting'
+  },
+  'semi-realistic': {
+    stylePrompt: 'smooth gradients, natural proportions, polished rendering, subtle shadows'
+  },
+  'comic-book': {
+    stylePrompt: 'bold ink outlines, cel-shading, high contrast, dynamic poses'
+  },
+  'flat-illustration': {
+    stylePrompt: 'clean vector lines, solid flat colors, minimal shadows, geometric shapes'
+  },
+  'anime': {
+    stylePrompt: 'cel-shaded, large expressive eyes, vibrant colors, dynamic hair'
+  }
 };
 
 /**
@@ -681,10 +705,13 @@ export class OpenAIIntegration {
     hasDialogue?: boolean;
     speechBubbleStyle?: string;
   }): Promise<string> {
-    // Build the master prompt
+    // Build the master prompt with style calibration
+    const styleCalibration = STYLE_SPECIFIC_PANEL_CALIBRATION[options.artStyle] || STYLE_SPECIFIC_PANEL_CALIBRATION['semi-realistic'];
+    
     let prompt = IMAGE_GENERATION_PROMPTS.masterPanelPrompt
       .replace('[SCENE_DESCRIPTION]', options.sceneDescription)
       .replace('[CHARACTER_FINGERPRINT]', options.characterFingerprint || 'No specific character')
+      .replace('[STYLE_CALIBRATION]', styleCalibration.stylePrompt)
       .replace(/\[PANEL_TYPE\]/g, options.panelType)
       .replace(/\[ART_STYLE\]/g, options.artStyle)
       .replace(/\[AUDIENCE\]/g, options.audience)

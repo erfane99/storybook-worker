@@ -69,7 +69,7 @@ import {
   DEFAULT_RETRY_CONFIG
 } from './modular/constants-and-types.js';
 
-import { OpenAIIntegration } from './modular/openai-integration.js';
+import { OpenAIIntegration, STYLE_SPECIFIC_PANEL_CALIBRATION } from './modular/openai-integration.js';
 import { ComicGenerationEngine } from './modular/comic-generation-engine.js';
 import { NarrativeIntelligenceEngine } from './modular/narrative-intelligence.js';
 import { VisualDNASystem } from './modular/visual-dna-system.js';
@@ -1025,15 +1025,17 @@ Colors: ${environmentalDNA.primaryLocation.colorPalette?.slice(0, 3).join(', ') 
           worldClassPrompt += `EMOTION: ${options.emotion} expression clearly shown\n`;
         }
         
-        // 6. QUALITY SPECIFICATIONS (condensed)
+        // 6. QUALITY SPECIFICATIONS (condensed) with style calibration
         const audienceSpecs = {
           'children': 'bright, colorful, friendly, safe',
           'young adults': 'dynamic, engaging, sophisticated',
           'adults': 'nuanced, complex, cinematic'
         };
         
+        const styleCalibration = STYLE_SPECIFIC_PANEL_CALIBRATION[options.characterArtStyle || 'storybook'] || STYLE_SPECIFIC_PANEL_CALIBRATION['semi-realistic'];
+        
         worldClassPrompt += `
-REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art for ${options.audience}, ${audienceSpecs[options.audience] || audienceSpecs.children}, panel ${panelNumber}/${totalPanels}, publication-ready quality`;
+REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art (${styleCalibration.stylePrompt}) for ${options.audience}, ${audienceSpecs[options.audience] || audienceSpecs.children}, panel ${panelNumber}/${totalPanels}, publication-ready quality`;
         
         // INTELLIGENT COMPRESSION if needed
         if (worldClassPrompt.length > 3800) {

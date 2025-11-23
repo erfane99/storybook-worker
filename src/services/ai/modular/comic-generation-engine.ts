@@ -43,7 +43,7 @@ import {
   AIContentPolicyError 
 } from './error-handling-system.js';
 
-import { OpenAIIntegration } from './openai-integration.js';
+import { OpenAIIntegration, STYLE_SPECIFIC_PANEL_CALIBRATION } from './openai-integration.js';
 
 /**
  * ===== COMIC GENERATION ENGINE CLASS =====
@@ -752,8 +752,9 @@ ATMOSPHERE: ${environmentalDNA.lightingContext.lightingMood}
 RECURRING ELEMENTS: ${recurringElementsText}
 MANDATORY: These elements must appear in SAME style: ${mandatoryFeatures}`;
 
-    // Art style and quality section (~200 chars)
-    const styleSection = `STYLE: ${artStyle} comic book art, professional ${config.visualStyle || 'detailed'}
+    // Art style and quality section with style calibration (~200 chars)
+    const styleCalibration = STYLE_SPECIFIC_PANEL_CALIBRATION[artStyle] || STYLE_SPECIFIC_PANEL_CALIBRATION['semi-realistic'];
+    const styleSection = `STYLE: ${artStyle} - ${styleCalibration.stylePrompt}, professional ${config.visualStyle || 'detailed'}
 QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
 
     // Panel context (~100 chars)
