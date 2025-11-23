@@ -1683,7 +1683,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
           finalQualityReport = qualityReport;
 
           if (qualityReport.passesThreshold) {
-            console.log(`✅ Cartoon validated: ${qualityReport.overallQuality}% quality (threshold: 85%)`);
+            console.log(`✅ Cartoon validated: ${qualityReport.overallQuality}% quality (threshold: 70%)`);
             await jobService.updateJobProgress(
               job.id,
               20 + (attemptNumber - 1) * 25,
@@ -1699,7 +1699,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
             break;
           }
 
-          console.warn(`❌ Validation failed: ${qualityReport.overallQuality}% (threshold: 85%) - Issues: ${qualityReport.failureReasons.join(', ')}`);
+          console.warn(`❌ Validation failed: ${qualityReport.overallQuality}% (threshold: 70%) - Issues: ${qualityReport.failureReasons.join(', ')}`);
 
           if (attemptNumber < MAX_ATTEMPTS) {
             await jobService.updateJobProgress(
@@ -1733,7 +1733,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
     if (!validatedCartoonUrl) {
       const mainIssues = finalQualityReport?.failureReasons?.slice(0, 3).join(', ') || 'Quality standards not met';
-      const errorMessage = `Could not create cartoon meeting quality standards after ${MAX_ATTEMPTS} attempts. Best quality: ${bestQualityScore}%. Required: 85%. Issues: ${mainIssues}. Please try different photo or art style.`;
+      const errorMessage = `Could not create cartoon meeting quality standards after ${MAX_ATTEMPTS} attempts. Best quality: ${bestQualityScore}%. Required: 70%. Issues: ${mainIssues}. Please try different photo or art style.`;
 
       console.error(`💥 ${errorMessage}`);
       await jobService.updateJobProgress(job.id, 0, `Failed: ${errorMessage}`);

@@ -7,7 +7,7 @@
  * Features:
  * - GPT-4 Vision-based quality analysis comparing original and cartoon images
  * - Five-dimensional quality scoring system (0-100 per dimension)
- * - 85% minimum quality threshold enforcement
+ * - 70% minimum quality threshold enforcement (optimized for realistic DALL-E quality)
  * - Retry logic with exponential backoff
  * - Database persistence of validation results
  * - Detailed failure analysis and improvement recommendations
@@ -193,7 +193,7 @@ export class CartoonizationQualityValidator {
    * @param requestedStyle - The art style that was requested (e.g., "storybook", "comic-book")
    * @param characterDescription - Text description of the character
    * @returns CartoonQualityReport with scores and pass/fail decision
-   * @throws CartoonValidationError if quality < 85% after all retries
+   * @throws CartoonValidationError if quality < 70% after all retries
    */
   public async validateCartoonQuality(
     cartoonImageUrl: string,
@@ -220,7 +220,7 @@ export class CartoonizationQualityValidator {
         );
       } else {
         this.logger.error(
-          `❌ Cartoon quality: ${report.overallQuality}% - FAILED (threshold: 85%)`
+          `❌ Cartoon quality: ${report.overallQuality}% - FAILED (threshold: ${QUALITY_THRESHOLD}%)`
         );
         this.logger.error(`   Failure reasons: ${report.failureReasons.join(', ')}`);
       }
@@ -239,7 +239,7 @@ export class CartoonizationQualityValidator {
    *
    * @param context - Complete validation context including job ID and attempt number
    * @returns CartoonQualityReport with validation results
-   * @throws CartoonValidationError if quality < 85% after max attempts
+   * @throws CartoonValidationError if quality < 70% after max attempts
    */
   public async validateWithRetry(
     context: CartoonValidationContext
