@@ -4,7 +4,7 @@
   "description": "Dedicated job processing service for StoryCanvas",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "npx tsc",
     "start": "node dist/index.js",
     "dev": "npm run build && npm start",
     "dev:watch": "npm run build -- --watch",
