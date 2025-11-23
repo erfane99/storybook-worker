@@ -508,6 +508,8 @@ interface OpenAIParameters {
   presence_penalty?: number;
   stop?: string | string[];
   stream?: boolean;
+  useJsonMode?: boolean;
+  response_format?: { type: string } | string;
   [key: string]: any;
 }
 
@@ -677,7 +679,8 @@ export class OpenAIIntegration {
         temperature: 0.3,
         max_tokens: 2500,
         top_p: 0.9,
-        model: 'gpt-4o'
+        model: 'gpt-4o',
+        useJsonMode: true
       });
 
       return this.parseStoryAnalysis(response, panelCount);
@@ -1094,6 +1097,7 @@ export class OpenAIIntegration {
       max_tokens: options.max_tokens || 2000,
       temperature: options.temperature !== undefined ? options.temperature : 0.7,
       top_p: options.top_p || 0.9,
+      ...(options.useJsonMode && { response_format: { type: "json_object" } }),
       ...options
     };
 

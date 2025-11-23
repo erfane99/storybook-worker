@@ -1497,7 +1497,8 @@ Return as JSON:
           temperature: 0.3,
           maxTokens: 2500,
           top_p: 0.9,
-          model: 'gpt-4o'
+          model: 'gpt-4o',
+          useJsonMode: true
         }
       );
       

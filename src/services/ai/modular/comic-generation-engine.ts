@@ -208,7 +208,8 @@ NO missing fields. NO undefined values. NO empty strings.
           temperature: 0.3,
           maxTokens: 2500,
           model: 'gpt-4o',
-          top_p: 0.9
+          top_p: 0.9,
+          useJsonMode: true
         }
       );
 
