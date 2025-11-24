@@ -1482,7 +1482,7 @@ PANEL PROGRESSION GUIDANCE:
 - Panels ${Math.floor(panelCount * 0.7) + 1}-${panelCount - 1}: Climax and resolution buildup  
 - Panel ${panelCount}: Satisfying conclusion with emotional payoff
 
-Return as JSON:
+Return your response as a json object with the following properties:
 {
   "storyBeats": [array of ${panelCount} richly detailed panel objects],
   "totalPanels": ${panelCount},

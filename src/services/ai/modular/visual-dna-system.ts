@@ -297,11 +297,18 @@ DESCRIBE VISIBLE ELEMENTS WITH SPECIFICITY:
    - Build: Describe the visible body build
    - Posture: Describe the visible posture
 
-3. CLOTHING & APPEARANCE (Describe ONLY what is clearly visible):
-   - Primary Clothing: Describe only the clothing items that are clearly visible (color, type)
-   - Additional Clothing: Describe any other visible clothing items (if none, write "no additional clothing visible")
-   - Footwear: Describe visible footwear (if visible; if not visible write "footwear not visible")
-   - Accessories: Describe visible accessories like jewelry or watches (if none visible, write "no accessories visible")
+3. CLOTHING & APPEARANCE (STRICT - Describe ONLY what is clearly visible):
+   - Primary Clothing: If clearly visible, describe the clothing items (color, type). If partially visible or unclear, state "partially visible [item type]". If not visible, state "clothing not clearly visible"
+   - Additional Layers: Only describe if clearly visible. If not visible, state "no additional layers visible"
+   - Footwear: Only describe if clearly visible in the image. If not visible, state "footwear not visible in image"
+   - Accessories: Only describe if clearly visible (jewelry, watches, glasses, etc.). If none visible, state "no accessories visible in image"
+
+CRITICAL ANTI-HALLUCINATION RULES:
+- If you cannot clearly see an item in the image, you MUST state "not visible in image"
+- Do NOT invent or assume clothing items based on typical examples
+- Do NOT describe items that are cut off or outside the frame
+- Do NOT fill in missing information with generic descriptions
+- If something is unclear or ambiguous, state "unclear" or "not determinable"
 
 4. HAIR (Describe what is visible):
    - Style: Describe the visible hair style, length, and arrangement

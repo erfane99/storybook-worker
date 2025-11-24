@@ -115,13 +115,20 @@ Evaluate the AI-generated cartoon (IMAGE 2) across FIVE professional dimensions,
    - Professional artistic rendering quality
    - Appropriate level of detail for the style
 
-2. CHARACTER MATCH QUALITY (0-100)
-   - How well the generated cartoon matches the reference illustration
-   - Facial structure similarity (eyes, nose, mouth, face shape, hair)
-   - Body proportions alignment
-   - Skin tone and coloring accuracy
-   - Distinctive visual features preserved
-   - Overall visual similarity
+2. CHARACTER FIDELITY (0-100)
+   - How accurately the cartoon represents the person's actual features from the reference
+   - Facial features match: eyes (shape, color), nose, mouth, face shape, jawline
+   - Hair accuracy: style, color, length, texture must match reference
+   - Skin tone: must accurately reflect the reference person's complexion
+   - Distinctive features: glasses, facial hair, accessories must match if present in reference
+   - Body proportions: must align with reference person's build
+   - CRITICAL: The cartoon should be recognizable as the same person from the reference
+   
+   Scoring guide:
+   - 90-100: Cartoon is clearly recognizable as the reference person
+   - 70-89: Generally matches but has some noticeable differences
+   - 50-69: Partially matches but significant features are different
+   - Below 50: Does not match the reference person
 
 3. STYLE CONSISTENCY (0-100)
    - Matches the "{requestedStyle}" art style specifications
@@ -545,6 +552,11 @@ export class CartoonizationQualityValidator {
    */
   private parseValidationResponse(response: string): CartoonQualityReport {
     try {
+      // CRITICAL: Handle null/undefined responses from Vision API
+      if (!response || typeof response !== 'string' || response.trim().length === 0) {
+        throw new Error('Vision API returned empty or null response');
+      }
+
       // Remove markdown code blocks if present
       let jsonStr = response.trim();
       jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();

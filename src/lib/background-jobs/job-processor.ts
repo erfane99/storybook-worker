@@ -1655,6 +1655,39 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     let validatedCartoonUrl: string | null = null;
     let finalQualityReport: any = null;
 
+    // CRITICAL FIX: Extract character DNA from original image BEFORE generating cartoons
+    await jobService.updateJobProgress(job.id, 5, 'Analyzing your photo to extract character details...');
+    console.log(`🔍 Analyzing original image to create character DNA for job ${job.id}`);
+
+    let extractedCharacterDNA: string = characterDescription; // Default fallback
+
+    try {
+      // Access visual DNA system through AI service
+      const visualDNASystem = (aiService as any).visualDNASystem;
+      
+      if (visualDNASystem && typeof visualDNASystem.performForensicCharacterAnalysis === 'function') {
+        console.log('📸 Performing forensic character analysis on uploaded image...');
+        const forensicAnalysis = await visualDNASystem.performForensicCharacterAnalysis(
+          originalImageUrl,
+          style
+        );
+        
+        if (forensicAnalysis && forensicAnalysis.length > 50) {
+          extractedCharacterDNA = forensicAnalysis;
+          console.log(`✅ Character DNA extracted (${extractedCharacterDNA.length} chars)`);
+          console.log(`📋 DNA preview: ${extractedCharacterDNA.substring(0, 200)}...`);
+        } else {
+          console.warn('⚠️ Forensic analysis returned insufficient detail, using fallback');
+        }
+      } else {
+        console.warn('⚠️ Visual DNA system not available, using provided character description');
+      }
+    } catch (error: any) {
+      console.error('⚠️ Character analysis failed, using fallback description:', error.message);
+    }
+
+    await jobService.updateJobProgress(job.id, 8, 'Character analysis complete - generating cartoon...');
+
     for (let attemptNumber = 1; attemptNumber <= MAX_ATTEMPTS; attemptNumber++) {
       try {
         await jobService.updateJobProgress(
@@ -1668,23 +1701,25 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
         const styleConfig = STYLE_SPECIFIC_CARTOONIZATION_PROMPTS[style] || STYLE_SPECIFIC_CARTOONIZATION_PROMPTS['semi-realistic'];
 
         const cartoonPrompt = attemptNumber === 1
-          ? `Create a ${styleConfig.base} portrait of this exact person.
+          ? `Create a ${styleConfig.base} portrait with EXACT character accuracy.
 
-CRITICAL - PRESERVE EXACTLY:
-- Exact facial structure (face shape, jawline, cheekbones)
-- Eye shape, color, and spacing
-- Nose shape and size
-- Mouth shape and lip thickness  
-- Skin tone and complexion
-- Hair color, style, length, and texture
-- Any distinctive features (moles, freckles, scars, glasses, facial hair)
+CHARACTER SPECIFICATIONS (MUST MATCH EXACTLY):
+${extractedCharacterDNA}
+
+CRITICAL CONSISTENCY REQUIREMENTS:
+- Match the character specifications PRECISELY
+- Every facial feature must align with the specifications above
+- Hair style, color, and texture must be exact
+- Skin tone must match perfectly
+- Include all distinctive features mentioned
+- Body proportions must be accurate
 
 STYLE REQUIREMENTS:
 ${styleConfig.characteristics}
 
 MUST AVOID: ${styleConfig.negatives}
 
-OUTPUT: Single character portrait, centered composition, clean background, professional quality.`
+OUTPUT: Single character portrait, centered composition, clean background, professional quality matching character specifications.`
           : this.buildEnhancedCartoonPrompt(style, finalQualityReport?.failureReasons || [], attemptNumber);
 
         const cartoonResult = await aiService.generateCartoonImage(cartoonPrompt);
