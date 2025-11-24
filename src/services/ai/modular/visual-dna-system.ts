@@ -748,7 +748,7 @@ Return a detailed JSON structure with ALL visual elements needed for 100% consis
 DESCRIPTION: ${description.substring(0, 600)}
 ART STYLE: ${artStyle}
 
-Return structured JSON with compressed but complete visual elements:
+Return your response as a JSON object with compressed but complete visual elements:
 {
   "facialFeatures": ["2-3 key facial elements"],
   "bodyType": "concise body description (max 8 words)",
@@ -758,7 +758,9 @@ Return structured JSON with compressed but complete visual elements:
   "expressionBaseline": "default character expression"
 }
 
-Focus on elements that ensure perfect visual consistency across all comic panels.`;
+Focus on elements that ensure perfect visual consistency across all comic panels.
+
+Return your response as a JSON object with these exact fields.`;
 
       const response = await this.openaiIntegration.generateTextCompletion(
         extractionPrompt,
@@ -882,7 +884,9 @@ Create detailed environmental specification with these EXACT fields:
 CRITICAL: Be EXTREMELY specific. Vague descriptions like "nice" or "beautiful" are NOT acceptable.
 Use precise descriptive language. Include measurements, textures, specific shades.
 
-Return as valid JSON matching this structure exactly.`;
+Return as valid JSON matching this structure exactly.
+
+Respond with valid JSON only - no markdown, no explanations, just the JSON object.`;
 
     const response = await this.openaiIntegration.generateTextCompletion(
   prompt,
