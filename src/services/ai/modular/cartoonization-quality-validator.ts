@@ -94,15 +94,16 @@ const VISION_API_TIMEOUT = 180000; // 180 seconds
  * Comprehensive validation prompt for GPT-4 Vision
  * OPTIMIZED: Avoids content policy triggers while maintaining quality standards
  */
-const VALIDATION_PROMPT_TEMPLATE = `You are a professional comic book and storybook quality control expert comparing two cartoon-style illustrations.
+const VALIDATION_PROMPT_TEMPLATE = `You are a professional quality control expert comparing an ORIGINAL PHOTO with an AI-GENERATED CARTOON.
 
-IMAGE 1 (Reference): The first image is the reference illustration.
-IMAGE 2 (Generated): The second image is an AI-generated cartoon version.
-
-TARGET CHARACTER SPECIFICATIONS:
-{characterDescription}
+IMAGE 1 (Original Photo): The first image is the user's original uploaded photo showing a real person.
+IMAGE 2 (Generated Cartoon): The second image is the AI-generated cartoon version created from Image 1.
 
 TARGET ART STYLE: {requestedStyle}
+
+CRITICAL VALIDATION APPROACH:
+Compare the CARTOON (Image 2) directly against the ORIGINAL PHOTO (Image 1) by visually examining both images.
+Look at what you actually SEE in Image 1 (the original photo) and compare it to what you SEE in Image 2 (the cartoon).
 
 QUALITY EVALUATION TASK:
 
@@ -115,20 +116,27 @@ Evaluate the AI-generated cartoon (IMAGE 2) across FIVE professional dimensions,
    - Professional artistic rendering quality
    - Appropriate level of detail for the style
 
-2. CHARACTER FIDELITY (0-100)
-   - How accurately the cartoon represents the person's actual features from the reference
-   - Facial features match: eyes (shape, color), nose, mouth, face shape, jawline
-   - Hair accuracy: style, color, length, texture must match reference
-   - Skin tone: must accurately reflect the reference person's complexion
-   - Distinctive features: glasses, facial hair, accessories must match if present in reference
-   - Body proportions: must align with reference person's build
-   - CRITICAL: The cartoon should be recognizable as the same person from the reference
+2. CHARACTER FIDELITY (0-100) - CRITICAL DIMENSION
+   **VISUAL COMPARISON INSTRUCTIONS:**
+   - Look at Image 1 (original photo): What do you SEE? What color are the eyes? What style is the hair? What is the person wearing?
+   - Look at Image 2 (cartoon): Do these visual elements MATCH what you saw in Image 1?
    
-   Scoring guide:
-   - 90-100: Cartoon is clearly recognizable as the reference person
+   **EVALUATE THESE SPECIFIC MATCHES:**
+   - Facial features: Do eyes (shape, color), nose, mouth, face shape match between Image 1 and Image 2?
+   - Hair: Does color, style, and length match between both images?
+   - Skin tone: Does the skin color in Image 2 match Image 1?
+   - Distinctive features: If Image 1 shows glasses, does Image 2 have glasses? If Image 1 has facial hair, does Image 2?
+   - Body proportions: Does the build match between images?
+   - Clothing/Accessories: **CRITICAL CHECK**
+     * If Image 1 shows specific clothing, does Image 2 show the SAME clothing?
+     * If Image 1 shows NO jewelry, Image 2 should have NO jewelry
+     * If Image 1 is head-only (no clothing visible), Image 2 should NOT invent a full outfit
+   
+   **SCORING GUIDE:**
+   - 90-100: Cartoon is clearly recognizable as the same person from the original photo
    - 70-89: Generally matches but has some noticeable differences
-   - 50-69: Partially matches but significant features are different
-   - Below 50: Does not match the reference person
+   - 50-69: Partially matches but significant features are different  
+   - Below 50: Does not match the person in the original photo
 
 3. STYLE CONSISTENCY (0-100)
    - Matches the "{requestedStyle}" art style specifications
@@ -152,9 +160,10 @@ Evaluate the AI-generated cartoon (IMAGE 2) across FIVE professional dimensions,
    - Meets professional standards for children's books
 
 SCORING GUIDELINES:
-- Score each dimension independently based on visual quality
+- Score each dimension independently based on ACTUAL VISUAL COMPARISON between the two images
 - Be fair but thorough in evaluation
-- Focus on actual visual quality, not theoretical perfection
+- Focus on what you SEE in both images, not what a text description says
+- Character Fidelity is the MOST IMPORTANT dimension - this determines if the cartoon actually matches the person
 - Scores of 70+ indicate good professional quality
 - Scores below 70 indicate significant quality issues
 
@@ -166,7 +175,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
   "styleAccuracy": number,
   "ageAppropriateness": number,
   "professionalStandard": number,
-  "detailedAnalysis": "detailed text analysis explaining your scores",
+  "detailedAnalysis": "detailed text analysis explaining your scores with specific reference to what you saw in both images",
   "failureReasons": ["specific issue 1", "specific issue 2"],
   "recommendations": ["improvement suggestion 1", "improvement suggestion 2"]
 }}`;

@@ -272,93 +272,119 @@ export class VisualDNASystem {
     characterImage: string,
     artStyle: string
   ): Promise<string> {
-    const forensicPrompt = `CHARACTER VISUAL ANALYSIS - DESCRIBE ONLY WHAT YOU SEE
-
-Analyze this character image and describe ONLY the visual elements that are CLEARLY VISIBLE. This description will be used for artistic consistency across multiple illustrations.
-
-CHARACTER IMAGE: [Analyzing provided image]
-TARGET ART STYLE: ${artStyle}
-
-DESCRIBE VISIBLE ELEMENTS WITH SPECIFICITY:
-
-1. FACIAL FEATURES (Describe what is visible):
-   - Eye Color: Describe the visible eye color with specific descriptors
-   - Face Shape: Describe the visible face shape and proportions
-   - Skin Tone: Describe the visible skin tone with color descriptors
-   - Expression: Describe the visible facial expression
-   - Distinguishing Marks: Describe any visible marks, freckles, or features (if none visible, write "no distinctive marks visible")
-   - Eyebrows: Describe visible eyebrow shape, thickness, color
-   - Nose: Describe visible nose type and characteristics
-   - Mouth/Lips: Describe visible mouth shape and expression
-
-2. BODY CHARACTERISTICS (Describe what is visible):
-   - Age/Proportions: Describe the apparent age and body proportions visible
-   - Height: Describe the relative height (if determinable from image)
-   - Build: Describe the visible body build
-   - Posture: Describe the visible posture
-
-3. CLOTHING & APPEARANCE (STRICT - Describe ONLY what is clearly visible):
-   - Primary Clothing: If clearly visible, describe the clothing items (color, type). If partially visible or unclear, state "partially visible [item type]". If not visible, state "clothing not clearly visible"
-   - Additional Layers: Only describe if clearly visible. If not visible, state "no additional layers visible"
-   - Footwear: Only describe if clearly visible in the image. If not visible, state "footwear not visible in image"
-   - Accessories: Only describe if clearly visible (jewelry, watches, glasses, etc.). If none visible, state "no accessories visible in image"
-
-CRITICAL ANTI-HALLUCINATION RULES:
-- If you cannot clearly see an item in the image, you MUST state "not visible in image"
-- Do NOT invent or assume clothing items based on typical examples
-- Do NOT describe items that are cut off or outside the frame
-- Do NOT fill in missing information with generic descriptions
-- If something is unclear or ambiguous, state "unclear" or "not determinable"
-
-4. HAIR (Describe what is visible):
-   - Style: Describe the visible hair style, length, and arrangement
-   - Texture: Describe the visible hair texture
-   - Color: Describe the visible hair color with specific descriptors
-
-5. COLOR PALETTE (Colors visible in the image):
-   - List 5-7 colors that are prominent and visible in this image
-   - Focus on actual visible colors, not assumed or standard colors
-
-IMPORTANT RULES:
-- ONLY describe elements that are CLEARLY VISIBLE in the image
-- If something is NOT VISIBLE or UNCLEAR, explicitly state "not visible" or "unclear"
-- Do NOT invent or assume details based on examples
-- Do NOT add clothing items, accessories, or features that are not in the image
-- Focus on ACCURATE description over detailed speculation
-
-Provide a detailed but ACCURATE paragraph describing only what you can actually see in the image.
-
-Format: Clear, accurate paragraph focusing on visible elements.`;
-
+    const visualDescriptionPrompt = `You are a professional character artist creating a detailed visual reference for illustration consistency.
+  
+  TASK: Carefully examine this image and create a comprehensive visual description of the character shown. Focus ONLY on describing what is actually visible in the image - do not invent or assume details not present.
+  
+  TARGET ART STYLE: ${artStyle}
+  
+  Please describe the following visible elements in specific detail:
+  
+  **PHYSICAL APPEARANCE** (describe what you see):
+  - Hair: Describe the exact color, style, length, and texture visible in the image
+  - Facial structure: Describe the face shape and proportions you can see
+  - Eyes: Describe the eye color, shape, and size if clearly visible
+  - Skin tone: Describe the skin color you observe
+  - Nose: Describe the nose type and characteristics visible
+  - Mouth: Describe the mouth shape and any visible expression
+  - Any visible distinctive features: Describe glasses, facial hair, marks, or unique characteristics (if none visible, state "no distinctive marks visible")
+  
+  **BODY CHARACTERISTICS** (describe what is visible in the frame):
+  - What parts of the person are visible: head only, head and shoulders, upper body, full body
+  - Body build: Describe the build or proportions you can observe
+  - Posture: Describe the visible posture or positioning
+  
+  **CLOTHING & ACCESSORIES** (CRITICAL - describe ONLY what is actually worn in THIS specific image):
+  - What clothing items are visible in the frame
+  - Colors of visible clothing
+  - Any visible accessories (jewelry, glasses, hats, etc.)
+  - Style and fit of visible clothing
+  
+  **IMPORTANT GUIDELINES**:
+  - Only describe what is ACTUALLY PRESENT in this specific image
+  - If clothing is not visible (head-only photo), state "clothing not visible in frame"
+  - Do not invent accessories or clothing items
+  - Do not describe emotions or personality traits
+  - Focus on concrete visual details that an artist could use to recreate this exact appearance
+  
+  Create a detailed paragraph that captures all visible visual details for perfect artistic consistency across multiple illustrations.`;
+  
     try {
       const response = await this.openaiIntegration.generateTextCompletion(
-        forensicPrompt,
+        visualDescriptionPrompt,
         {
           temperature: 0.1,
-          maxTokens: 1500,
+          maxTokens: 1000,
           top_p: 0.9,
           model: 'gpt-4o'
         }
       );
-
-      // Verify forensic analysis contains required elements
-      const requiredElements = [
-        'face', 'eyes', 'hair', 'skin', 'build'
+  
+      // ✅ CRITICAL: Detect OpenAI rejection responses
+      const errorPhrases = [
+        "i'm sorry",
+        "i can't",
+        "i cannot",
+        "not able to",
+        "unable to",
+        "don't have access",
+        "cannot analyze",
+        "cannot describe",
+        "can't help"
       ];
-
-      const missingElements = requiredElements.filter(
-        element => !response.toLowerCase().includes(element)
-      );
-
-      if (missingElements.length > 0) {
-        console.warn(`⚠️ Forensic analysis missing elements: ${missingElements.join(', ')}`);
+  
+      const lowerResponse = response.toLowerCase();
+      const isRejection = errorPhrases.some(phrase => lowerResponse.includes(phrase));
+  
+      if (isRejection || response.length < 100) {
+        console.error('❌ GPT-4 Vision rejected the request:', response.substring(0, 300));
+        throw new AIServiceUnavailableError(
+          'Image analysis was rejected. Please try a different image with a clear view of the character.',
+          {
+            service: 'VisualDNASystem',
+            operation: 'performForensicCharacterAnalysis',
+            details: { rejectionMessage: response.substring(0, 200) }
+          }
+        );
       }
-
+  
+      // Verify description contains actual visual elements
+      const requiredElements = ['hair', 'face', 'eye', 'skin'];
+      const hasVisualContent = requiredElements.some(element =>
+        lowerResponse.includes(element)
+      );
+  
+      if (!hasVisualContent) {
+        console.error('❌ Description lacks visual details:', response.substring(0, 300));
+        throw new AIServiceUnavailableError(
+          'Unable to extract character details from image. Please ensure the image clearly shows a character with visible features.',
+          {
+            service: 'VisualDNASystem',
+            operation: 'performForensicCharacterAnalysis',
+            details: { insufficientDescription: response.substring(0, 200) }
+          }
+        );
+      }
+  
+      console.log(`✅ Character description extracted (${response.length} chars)`);
+      console.log(`📋 Preview: ${response.substring(0, 200)}...`);
+  
       return response;
+  
     } catch (error: any) {
+      // If it's already our custom error, rethrow it
+      if (error instanceof AIServiceUnavailableError) {
+        throw error;
+      }
+  
+      // Wrap other errors
       throw new AIServiceUnavailableError(
-        'CRITICAL: Cannot ensure character consistency without forensic visual analysis',
-        { service: 'VisualDNASystem', operation: 'performForensicCharacterAnalysis' }
+        'CRITICAL: Cannot ensure character consistency without proper visual analysis',
+        {
+          service: 'VisualDNASystem',
+          operation: 'performForensicCharacterAnalysis',
+          details: { originalError: error.message }
+        }
       );
     }
   }

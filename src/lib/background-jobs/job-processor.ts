@@ -1701,7 +1701,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
         const styleConfig = STYLE_SPECIFIC_CARTOONIZATION_PROMPTS[style] || STYLE_SPECIFIC_CARTOONIZATION_PROMPTS['semi-realistic'];
 
         const cartoonPrompt = attemptNumber === 1
-          ? `Create a ${styleConfig.base} portrait with EXACT character accuracy.
+  ? `Create a ${styleConfig.base} portrait with EXACT character accuracy.
 
 CHARACTER SPECIFICATIONS (MUST MATCH EXACTLY):
 ${extractedCharacterDNA}
@@ -1719,8 +1719,24 @@ ${styleConfig.characteristics}
 
 MUST AVOID: ${styleConfig.negatives}
 
+CRITICAL OUTPUT FORMAT REQUIREMENTS:
+- Generate ONLY ONE clean character portrait
+- NO comparison views, NO before/after images
+- NO arrows, guides, or instructional elements
+- NO multiple versions or variations shown side-by-side
+- NO reference sheets or character design layouts
+- NO step-by-step demonstrations
+- Single centered character on simple background
+- Focus on creating ONE finished illustration only
+
+COMPOSITION:
+- Character should fill majority of frame
+- Simple, non-distracting background
+- Clean ${style} art style
+- Professional single portrait composition
+
 OUTPUT: Single character portrait, centered composition, clean background, professional quality matching character specifications.`
-          : this.buildEnhancedCartoonPrompt(style, finalQualityReport?.failureReasons || [], attemptNumber);
+  : this.buildEnhancedCartoonPrompt(style, finalQualityReport?.failureReasons || [], attemptNumber);
 
         const cartoonResult = await aiService.generateCartoonImage(cartoonPrompt);
         const unwrappedCartoon = await cartoonResult.unwrap();
