@@ -1150,6 +1150,70 @@ export class OpenAIIntegration {
     return result.data[0].url;
   }
 
+  /**
+   * Generate vision completion with image analysis
+   * Supports GPT-4 Vision API for analyzing images
+   */
+  public async generateVisionCompletion(
+    prompt: string,
+    imageUrls: string | string[],
+    options: Partial<OpenAIParameters> = {}
+  ): Promise<string> {
+    // Normalize to array
+    const images = Array.isArray(imageUrls) ? imageUrls : [imageUrls];
+    
+    // Validate images provided
+    if (images.length === 0) {
+      throw new AIContentPolicyError('No images provided for vision analysis', {
+        service: 'OpenAIIntegration',
+        operation: 'generateVisionCompletion'
+      });
+    }
+
+    // Build content array with text prompt + image URLs
+    const content: any[] = [
+      { type: 'text', text: this.optimizePrompt(prompt) }
+    ];
+
+    // Add each image to content array
+    for (const imageUrl of images) {
+      content.push({
+        type: 'image_url',
+        image_url: { url: imageUrl }
+      });
+    }
+
+    const parameters: OpenAIParameters = {
+      model: options.model || 'gpt-4o', // Vision requires gpt-4o
+      messages: [
+        {
+          role: 'user',
+          content: content // Array with text + images
+        }
+      ],
+      max_tokens: options.max_tokens || 1500,
+      temperature: options.temperature !== undefined ? 
+        options.temperature : 0.3,
+      top_p: options.top_p || 0.9,
+      ...options
+    };
+
+    const result = await this.makeOpenAIAPICall<any>(
+      '/chat/completions',
+      parameters,
+      180000,
+      'generateVisionCompletion'
+    );
+
+    if (!result?.choices?.[0]?.message?.content) {
+      throw new AIServiceUnavailableError('Invalid response from Vision API', {
+        service: 'OpenAIIntegration',
+        operation: 'generateVisionCompletion'
+      });
+    }
+
+    return result.choices[0].message.content;
+  }
   // ===== HELPER METHODS =====
 
   /**

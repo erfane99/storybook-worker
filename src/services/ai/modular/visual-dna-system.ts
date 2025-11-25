@@ -309,16 +309,17 @@ export class VisualDNASystem {
   
   Create a detailed paragraph that captures all visible visual details for perfect artistic consistency across multiple illustrations.`;
   
-    try {
-      const response = await this.openaiIntegration.generateTextCompletion(
-        visualDescriptionPrompt,
-        {
-          temperature: 0.1,
-          maxTokens: 1000,
-          top_p: 0.9,
-          model: 'gpt-4o'
-        }
-      );
+  try {
+    const response = await this.openaiIntegration.generateVisionCompletion(
+      visualDescriptionPrompt,
+      characterImage, // ← Now actually sends the image!
+      {
+        temperature: 0.1,
+        max_tokens: 1000,
+        top_p: 0.9,
+        model: 'gpt-4o'
+      }
+    );
   
       // ✅ CRITICAL: Detect OpenAI rejection responses
       const errorPhrases = [
