@@ -6,6 +6,7 @@ export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'can
 export type AudienceType = 'children' | 'young adults' | 'adults';
 export type CharacterArtStyle = 'storybook' | 'comic-book' | 'anime' | 'semi-realistic' | 'cartoon';
 export type LayoutType = 'comic-book-panels' | 'individual-scenes';
+export type GenreType = 'adventure' | 'siblings' | 'bedtime' | 'fantasy' | 'history';
 
 // ✅ DATABASE-FIRST: Base job structure matches actual database columns
 export interface BaseJobData {
@@ -47,7 +48,7 @@ export interface StorybookJobData extends BaseJobData {
 export interface AutoStoryJobData extends BaseJobData {
   type: 'auto-story';
   // Individual database columns from auto_story_jobs table
-  genre: string;                    // matches database column (NOT NULL)
+  genre: GenreType;                 // matches database column (NOT NULL) - FIXED: typed as GenreType
   character_description: string;    // matches database column (NOT NULL)
   cartoon_image_url: string;        // matches database column (NOT NULL)
   audience?: AudienceType;          // matches database column

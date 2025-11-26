@@ -1482,8 +1482,14 @@ REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art
     
     const resultPromise = this.withErrorHandling(
       async () => {
+        // FIX 1: Validate genre is provided
+        if (!options.genre) {
+          throw new Error('Genre is required for story generation');
+        }
+        
         const audience = options.audience || 'children';
-        const genre = options.genre;
+        const genre = options.genre; // Now guaranteed to be defined
+        const characterDescription = options.characterDescription || 'a character'; // FIX: Provide default
         
         const genreConfig = WORLD_CLASS_STORY_PROMPTS.genrePrompts[genre as keyof typeof WORLD_CLASS_STORY_PROMPTS.genrePrompts];
         if (!genreConfig) {
@@ -1505,20 +1511,21 @@ THEMES: ${genreConfig.themes}
 
 AUDIENCE: ${audience.toUpperCase()}
 VOCABULARY: ${audienceConfig.vocabulary}
-${audience === 'children' ? `SAFETY RULES (MANDATORY): ${audienceConfig.safetyRules.join('; ')}` : ''}
+${audience === 'children' && 'safetyRules' in audienceConfig ? `SAFETY RULES (MANDATORY): ${audienceConfig.safetyRules.join('; ')}` : ''}
 TARGET: ${audienceConfig.wordTarget}, ${audienceConfig.panelCount}
 
-${WORLD_CLASS_STORY_PROMPTS.characterIntegration(options.characterDescription)}
+${WORLD_CLASS_STORY_PROMPTS.characterIntegration(characterDescription)}
 ${WORLD_CLASS_STORY_PROMPTS.dialogueRequirements(audience)}
 
-Create a ${genre} story featuring: "${options.characterDescription}"
+Create a ${genre} story featuring: "${characterDescription}"
 
 ${WORLD_CLASS_STORY_PROMPTS.outputFormat}`;
 
         // Call Gemini
+        // FIX 2: Use 'young adults' (with space) not 'young_adults'
         const response = await this.geminiIntegration.generateTextCompletion(storyPrompt, {
           temperature: 0.8,
-          max_output_tokens: audience === 'children' ? 2000 : audience === 'young_adults' ? 3000 : 4000
+          max_output_tokens: audience === 'children' ? 2000 : audience === 'young adults' ? 3000 : 4000
         });
 
         // Extract title and story
@@ -1531,18 +1538,11 @@ ${WORLD_CLASS_STORY_PROMPTS.outputFormat}`;
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateStoryWithOptions', duration, true);
 
+        // FIX 3: Return only properties defined in StoryGenerationResult interface
         return {
           story: story,
           title: title,
-          genre: genre,
-          audience: audience,
-          storyArchetype: genre,
-          emotionalArc: genreConfig.emotionalBeats,
-          metadata: {
-            generationTime: duration,
-            wordCount: story.split(/\s+/).length,
-            characterCount: story.length
-          }
+          wordCount: story.split(/\s+/).length // Required by interface
         };
       },
       'generateStoryWithOptions'
