@@ -37,8 +37,6 @@ import {
 // ===== TYPE DEFINITIONS =====
 
 interface GeminiGenerationConfig {
-  image_size?: '1K' | '2K' | '4K';
-  thinking_mode?: boolean;
   temperature?: number;
   top_p?: number;
   top_k?: number;
@@ -118,8 +116,6 @@ interface CharacterAnalysis {
 
 interface PanelOptions {
   artStyle: string;
-  resolution?: '1K' | '2K' | '4K';
-  thinkingMode?: boolean;
   cameraAngle?: string;
   lighting?: string;
   panelType?: string;
@@ -226,7 +222,6 @@ export class GeminiIntegration {
         }],
         generationConfig: {
           temperature: 0.3,
-          thinking_mode: true,
           max_output_tokens: 2000
         }
       }, 'analyzeCharacterImage');
@@ -280,9 +275,8 @@ export class GeminiIntegration {
           ]
         }],
         generationConfig: {
-          image_size: '1K',
-          thinking_mode: true,
-          temperature: 0.7
+          temperature: 0.7,
+          max_output_tokens: 2000
         }
       }, 'generateCartoonFromPhoto');
       
@@ -340,9 +334,8 @@ export class GeminiIntegration {
           ]
         }],
         generationConfig: {
-          image_size: options.resolution || '2K',
-          thinking_mode: options.thinkingMode !== false,
-          temperature: options.temperature || 0.7
+          temperature: options.temperature || 0.7,
+          max_output_tokens: 2000
         }
       }, 'generatePanelWithCharacter');
       
@@ -428,8 +421,7 @@ export class GeminiIntegration {
         }],
         generationConfig: {
           temperature: options.temperature || 0.7,
-          max_output_tokens: options.max_output_tokens || 2000,
-          thinking_mode: true
+          max_output_tokens: options.max_output_tokens || 2000
         }
       }, 'generateVisionCompletion');
       

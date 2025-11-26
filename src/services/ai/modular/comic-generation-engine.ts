@@ -681,8 +681,6 @@ Format as structured visual DNA for consistent reproduction across comic panels.
             beat.emotion,
             {
               artStyle,
-              resolution: '2K',
-              thinkingMode: true,
               cameraAngle: 'eye level',
               lighting: 'natural',
               panelType,
