@@ -365,9 +365,11 @@ export interface StoryGenerationResult {
 // ===== ENHANCED CHARACTER DNA =====
 export interface CharacterDNA {
   sourceImage: string;
+  cartoonImage?: string;  // NEW: Generated cartoon URL for image-based panel generation (Gemini)
   description: string;
   artStyle: string;
   visualDNA: {
+    imageBasedReference?: string;  // NEW: Cartoon image URL for image-based consistency (Gemini)
     facialFeatures: string[];
     bodyType: string;
     clothing: string;
