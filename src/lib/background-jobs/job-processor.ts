@@ -1607,9 +1607,60 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
   // ===== OTHER JOB TYPE PROCESSORS (SIMPLIFIED) =====
 
-  private async processAutoStoryJobWithServices(job: AutoStoryJobData, servicesUsed: string[]): Promise<ComicGenerationResult> {
-    // Implementation for auto-story jobs
-    throw new Error('Auto-story job processing not implemented in this version');
+  private async processAutoStoryJobWithServices(
+    job: AutoStoryJobData, 
+    servicesUsed: string[]
+  ): Promise<ComicGenerationResult> {
+    const startTime = Date.now();
+    console.log(`🎨 AUTO-STORY: Genre=${job.genre}, Audience=${job.audience}`);
+
+    const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+    const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
+
+    this.trackServiceUsage(job.id, 'job');
+    this.trackServiceUsage(job.id, 'ai');
+    servicesUsed.push('job', 'ai');
+
+    try {
+      // PHASE 1: Generate story using Gemini
+      await jobService.updateJobProgress(job.id, 10, `Creating ${job.genre} story...`);
+      
+      const storyResult = await aiService.generateStoryWithOptions({
+        genre: job.genre,
+        characterDescription: job.character_description,
+        audience: job.audience
+      });
+
+      const resolvedStory = await storyResult.unwrap();
+      console.log(`✅ Story: "${resolvedStory.title}" (${resolvedStory.story.split(' ').length} words)`);
+      await jobService.updateJobProgress(job.id, 30, `Story created: "${resolvedStory.title}"`);
+
+      // PHASE 2: Process as regular storybook (flows through ALL quality systems)
+      console.log('📊 Converting to comic book with full quality verification...');
+      
+      return await this.processStorybookJobWithServices({
+        ...job,
+        type: 'storybook',
+        title: resolvedStory.title || `${job.genre.charAt(0).toUpperCase() + job.genre.slice(1)} Adventure`,
+        story: resolvedStory.story,
+        character_image: job.cartoon_image_url,
+        pages: [], // System generates panels from story
+        audience: job.audience,
+        is_reused_image: true,
+        character_description: job.character_description,
+        character_art_style: job.character_art_style,
+        layout_type: job.layout_type
+      } as StorybookJobData, servicesUsed);
+
+    } catch (error) {
+      console.error('❌ Auto-story failed:', error);
+      await jobService.markJobFailed(
+        job.id,
+        `Failed to generate ${job.genre} story: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        false
+      );
+      throw error;
+    }
   }
 
   private async processSceneJobWithServices(job: SceneJobData, servicesUsed: string[]): Promise<void> {

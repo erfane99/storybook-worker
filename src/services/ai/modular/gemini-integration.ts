@@ -280,7 +280,7 @@ export class GeminiIntegration {
           ]
         }],
         generationConfig: {
-          image_size: '2K',
+          image_size: '1K',
           thinking_mode: true,
           temperature: 0.7
         }

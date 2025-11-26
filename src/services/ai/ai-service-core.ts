@@ -55,6 +55,116 @@ import {
 // FIXED: Import ErrorCategory from the correct path (error-types.ts) to resolve enum conflicts
 import { ErrorCategory } from '../errors/error-types.js';
 
+// ===== WORLD-CLASS STORY PROMPTS =====
+const WORLD_CLASS_STORY_PROMPTS = {
+  systemPrompt: (audience: string, genre: string) => 
+    `You are an EMMY-AWARD WINNING comic book writer specializing in ${audience} content. 
+    Your ${genre} stories have perfect pacing, emotional depth, and visual richness.
+    Every sentence must suggest a panel image.`,
+
+  genrePrompts: {
+    adventure: {
+      structure: `ACT 1 (Panels 1-3): Character's ordinary world, inciting incident, decision to act
+ACT 2 (Panels 4-18): Rising challenges, inner strength discovered, moment of despair, crucial help arrives
+ACT 3 (Panels 19-24): Climactic challenge using lessons learned, victory through courage + cleverness, return changed`,
+      emotionalBeats: ['excitement', 'determination', 'fear', 'courage', 'triumph', 'pride'],
+      visualElements: ['Dynamic action poses', 'Expansive locations', 'Close-ups during emotions', 'Dramatic lighting'],
+      dialogueStyle: 'Short punchy exclamations in action. Reflective during calm. Character catchphrase early.',
+      themes: 'Courage isn\'t absence of fear. True strength from within. Help others.'
+    },
+    
+    siblings: {
+      structure: `ACT 1 (Panels 1-4): Siblings arguing, each thinks they're right, forced together, resistance
+ACT 2 (Panels 5-18): Challenge requires teamwork, each strength crucial, small victories build trust, vulnerable sharing, bonding
+ACT 3 (Panels 19-24): United they solve problem, acknowledge each other's value, new dynamic, happy together`,
+      emotionalBeats: ['frustration', 'annoyance', 'surprise', 'empathy', 'appreciation', 'love'],
+      visualElements: ['Side-by-side comparisons', 'Growing physical proximity', 'Shared expressions', 'Warm settings', 'Unity metaphors'],
+      dialogueStyle: 'Realistic sibling banter. Teasing with love. "I\'m sorry" moments. "I never knew..." realizations.',
+      themes: 'Family worth fighting for. Differences make stronger. Love transcends competition.'
+    },
+    
+    bedtime: {
+      structure: `ACT 1 (Panels 1-3): Day to evening transition, preparing for rest, gentle concern, magical element
+ACT 2 (Panels 4-20): Enter dreamlike space, wise guide, peaceful places, solve gentle puzzle, learn lesson, progressive calm
+ACT 3 (Panels 21-24): Gentle resolution, return peaceful, settling to sleep, final: sleeping peacefully`,
+      emotionalBeats: ['tiredness', 'gentle_curiosity', 'wonder', 'peace', 'contentment', 'sleepiness'],
+      visualElements: ['Soft dreamy lighting', 'Pastel palettes', 'Flowing compositions', 'Minimal sharp angles', 'Stars/moons', 'Kind eyes'],
+      dialogueStyle: 'Soft soothing words. Short simple sentences. Repetitive rhythmic. Whispered tones.',
+      themes: 'Nighttime safe and magical. Rest important. Tomorrow wonderful. You are loved.'
+    },
+    
+    fantasy: {
+      structure: `ACT 1 (Panels 1-4): Discover magical element, "can't be real", mentor appears, rules established, stakes
+ACT 2 (Panels 5-19): Enter fantastical world, magic has costs, meet allies/foes, learn power, misuse causes problems, wisdom over power
+ACT 3 (Panels 20-24): Use magic wisely not just powerfully, balance restored, keep/return choice, growth shown, magic subtle part of life`,
+      emotionalBeats: ['wonder', 'awe', 'confusion', 'power', 'humility', 'wisdom'],
+      visualElements: ['Spectacular magical effects', 'Mundane vs magical contrast', 'Impossible architecture', 'Mythical creatures', 'Symbolic imagery'],
+      dialogueStyle: 'Mix modern and archaic. Incantations. Wise pronouncements. "The old ways say..." Prophetic warnings.',
+      themes: 'Power requires responsibility. Wisdom trumps strength. Magic is believing. True magic is compassion.'
+    },
+    
+    history: {
+      structure: `ACT 1 (Panels 1-4): Clear historical context, period-appropriate concerns, historical event enters, personal+historical stakes
+ACT 2 (Panels 5-19): Navigate period authentically, real details woven naturally, period challenges, accuracy+emotional truth, "What would YOU do", consequences shown
+ACT 3 (Panels 20-24): Event concludes, character changed, connection to present, "why this matters", legacy continues`,
+      emotionalBeats: ['curiosity', 'challenge', 'perseverance', 'understanding', 'respect', 'inspiration'],
+      visualElements: ['Period-accurate costumes/settings', 'Historical artifacts detailed', 'Then vs now comparisons', 'Maps/dates clear', 'Authentic architecture'],
+      dialogueStyle: 'Period-appropriate but understandable. Historical figures authentic. Modern character asks modern questions. Educational not preachy.',
+      themes: 'History made by real people. Past connects present. Learn from before. Every era had heroes.'
+    }
+  },
+
+  audienceRequirements: {
+    children: {
+      vocabulary: 'Grade 2-5 reading level. Simple adjectives. Explain complex words.',
+      safetyRules: ['NO violence/weapons', 'NO scary monsters', 'NO death/injury', 'NO adult themes', 'Challenges exciting NOT terrifying', 'Clear positive solutions', 'Trustworthy authority figures'],
+      panelCount: '8-12 panels',
+      wordTarget: '800-1200 words'
+    },
+    young_adults: {
+      vocabulary: 'Grade 6-9 reading level. Contemporary language. Literary devices ok.',
+      maturityLevel: 'Can handle: conflict, failure, disappointment, complex relationships, moral ambiguity (with resolution)',
+      panelCount: '15-18 panels',
+      wordTarget: '1200-1600 words'
+    },
+    adults: {
+      vocabulary: 'Full range. Literary language. Sophisticated metaphors.',
+      maturityLevel: 'Complex psychology, moral complexity, realistic consequences, nuanced relationships, bittersweet endings ok',
+      panelCount: '20-24 panels',
+      wordTarget: '1600-2000 words'
+    }
+  },
+
+  characterIntegration: (characterDescription: string) => `
+CHARACTER: "${characterDescription}"
+CRITICAL: Character MUST appear in 80%+ of panels. Consistent appearance, personality, voice.
+CHARACTER ARC: Start → Challenge → Growth → Resolution
+Show emotions through actions/expressions (visual medium).`,
+
+  dialogueRequirements: (audience: string) => `
+DIALOGUE: ${audience === 'children' ? '40-50%' : audience === 'young_adults' ? '50-60%' : '60-70%'} of panels have dialogue
+Natural speech for age/time. Every line advances plot OR character. Distinct voices. Visual suggestions.
+Include: character thoughts (italics), conversations, exclamations, questions, declarations.
+AVOID: info dumps, stating the obvious, unrealistic formal speech.`,
+
+  outputFormat: `
+OUTPUT FORMAT:
+TITLE: [3-6 word compelling title]
+
+STORY:
+[Write complete narrative prose. Structure paragraphs to suggest panel breaks:
+- New paragraph = new panel
+- Scene transitions = panel breaks  
+- Action beats = panels
+- Dialogue exchanges = panel breaks
+- Emotional shifts = panels
+
+Write VIVID VISUAL LANGUAGE. Every sentence suggests image. Active voice. Show emotions through actions.
+Include dialogue naturally with quotation marks.]
+
+END OF STORY`
+};
+
 // Import all our modular components - FIXED: Corrected import paths
 import {
   AIServiceConfig,
@@ -1368,22 +1478,71 @@ REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art
    * FIXED: Correct method signature to match interface and replace non-existent method call
    */
   async generateStoryWithOptions(options: StoryGenerationOptions): Promise<AsyncResult<StoryGenerationResult, AIServiceUnavailableError>> {
+    const startTime = Date.now();
+    
     const resultPromise = this.withErrorHandling(
       async () => {
-        // FIXED: Replace generateStoryFromGenre with createNarrativeIntelligence 
-        // Use the narrative engine's existing method instead of non-existent generateStoryFromGenre
-        const narrativeIntel = await this.narrativeEngine.createNarrativeIntelligence(
-          `Generate a ${options.genre || 'adventure'} story with character: ${options.characterDescription || 'main character'}`,
-          options.audience || 'children'
-        );
+        const audience = options.audience || 'children';
+        const genre = options.genre;
         
-        // Create a story from the narrative intelligence
-        const story = this.generateStoryFromNarrativeIntelligence(narrativeIntel, options);
+        const genreConfig = WORLD_CLASS_STORY_PROMPTS.genrePrompts[genre as keyof typeof WORLD_CLASS_STORY_PROMPTS.genrePrompts];
+        if (!genreConfig) {
+          throw new Error(`Unsupported genre: ${genre}`);
+        }
+
+        const audienceConfig = WORLD_CLASS_STORY_PROMPTS.audienceRequirements[audience as keyof typeof WORLD_CLASS_STORY_PROMPTS.audienceRequirements];
+
+        // Build comprehensive prompt
+        const storyPrompt = `${WORLD_CLASS_STORY_PROMPTS.systemPrompt(audience, genre)}
+
+GENRE: ${genre.toUpperCase()}
+${genreConfig.structure}
+
+EMOTIONAL JOURNEY: ${genreConfig.emotionalBeats.join(' → ')}
+VISUAL ELEMENTS: ${genreConfig.visualElements.join(', ')}
+DIALOGUE STYLE: ${genreConfig.dialogueStyle}
+THEMES: ${genreConfig.themes}
+
+AUDIENCE: ${audience.toUpperCase()}
+VOCABULARY: ${audienceConfig.vocabulary}
+${audience === 'children' ? `SAFETY RULES (MANDATORY): ${audienceConfig.safetyRules.join('; ')}` : ''}
+TARGET: ${audienceConfig.wordTarget}, ${audienceConfig.panelCount}
+
+${WORLD_CLASS_STORY_PROMPTS.characterIntegration(options.characterDescription)}
+${WORLD_CLASS_STORY_PROMPTS.dialogueRequirements(audience)}
+
+Create a ${genre} story featuring: "${options.characterDescription}"
+
+${WORLD_CLASS_STORY_PROMPTS.outputFormat}`;
+
+        // Call Gemini
+        const response = await this.geminiIntegration.generateTextCompletion(storyPrompt, {
+          temperature: 0.8,
+          max_output_tokens: audience === 'children' ? 2000 : audience === 'young_adults' ? 3000 : 4000
+        });
+
+        // Extract title and story
+        const titleMatch = response.match(/TITLE:\s*(.+)/);
+        const title = titleMatch ? titleMatch[1].trim() : `${genre.charAt(0).toUpperCase() + genre.slice(1)} Adventure`;
         
+        const storyMatch = response.match(/STORY:\s*([\s\S]+?)(?:END OF STORY|$)/);
+        const story = storyMatch ? storyMatch[1].trim() : response;
+
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generateStoryWithOptions', duration, true);
+
         return {
           story: story,
-          title: `${options.genre || 'Adventure'} Story`,
-          wordCount: story.length
+          title: title,
+          genre: genre,
+          audience: audience,
+          storyArchetype: genre,
+          emotionalArc: genreConfig.emotionalBeats,
+          metadata: {
+            generationTime: duration,
+            wordCount: story.split(/\s+/).length,
+            characterCount: story.length
+          }
         };
       },
       'generateStoryWithOptions'
@@ -1402,22 +1561,6 @@ REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art
     }));
   }
 
-  /**
-   * FIXED: Helper method to generate story from narrative intelligence
-   * Uses existing narrative intelligence data to create a story
-   */
-  private generateStoryFromNarrativeIntelligence(narrativeIntel: any, options: StoryGenerationOptions): string {
-    const { storyArchetype, thematicElements, emotionalArc } = narrativeIntel;
-    
-    // Create a basic story template based on archetype and options
-    const storyTemplate = `Once upon a time, there was a ${options.characterDescription || 'brave character'} who embarked on a ${options.genre || 'adventure'}. 
-    
-Through their journey, they experienced ${emotionalArc.join(', ')}, discovering important themes of ${thematicElements.join(', ')}. 
-
-Following the ${storyArchetype} pattern, they grew and learned valuable lessons, ultimately finding success and happiness.`;
-    
-    return storyTemplate;
-  }
 
   /**
    * Process cartoonize - interface compatibility method  
