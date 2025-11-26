@@ -286,8 +286,8 @@ export class GeminiIntegration {
         }
       }, 'generateCartoonFromPhoto');
       
-      // Extract generated image URL
-      const imageUrl = this.extractImageUrlFromResponse(response);
+      // Extract generated image URL (now uploads to Cloudinary)
+      const imageUrl = await this.extractImageUrlFromResponse(response);
       
       this.logger.log('✅ Cartoon generated successfully', { imageUrl });
       
@@ -346,8 +346,8 @@ export class GeminiIntegration {
         }
       }, 'generatePanelWithCharacter');
       
-      // Extract generated panel URL
-      const panelUrl = this.extractImageUrlFromResponse(response);
+      // Extract generated panel URL (now uploads to Cloudinary)
+      const panelUrl = await this.extractImageUrlFromResponse(response);
       
       this.logger.log('✅ Panel generated successfully', { panelUrl });
       
@@ -615,6 +615,77 @@ Focus on maintaining PERFECT character consistency while creating an engaging pa
   }
 
   /**
+   * Upload base64 image data to Cloudinary
+   * Converts Gemini's base64 responses to permanent Cloudinary URLs
+   * 
+   * @param base64Data - Base64 encoded image data (without data URL prefix)
+   * @param folder - Cloudinary folder path
+   * @returns Permanent Cloudinary URL
+   */
+  private async uploadToCloudinary(
+    base64Data: string, 
+    folder: string = 'storybook-panels'
+  ): Promise<string> {
+    try {
+      this.logger.log('☁️ Uploading image to Cloudinary...');
+      
+      // Import cloudinary (should already be available in worker)
+      const cloudinary = require('cloudinary').v2;
+      
+      // Cloudinary is already configured via environment variables in the worker
+      // No need to call cloudinary.config() here - it's done at startup
+      
+      // Convert base64 to buffer
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Upload to Cloudinary using upload_stream
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          { 
+            resource_type: 'image',
+            folder: folder,
+            quality: 'auto:good',
+            format: 'jpg',
+            transformation: [
+              { quality: 'auto:good' }
+            ]
+          },
+          (error: any, result: any) => {
+            if (error) {
+              this.logger.error('❌ Cloudinary upload error:', error);
+              reject(error);
+            } else {
+              resolve(result);
+            }
+          }
+        ).end(buffer);
+      });
+      
+      if (!uploadResult || !uploadResult.secure_url) {
+        throw new Error('Cloudinary upload failed - no URL returned');
+      }
+      
+      this.logger.log('✅ Image uploaded to Cloudinary', { 
+        url: uploadResult.secure_url.substring(0, 60) + '...',
+        publicId: uploadResult.public_id
+      });
+      
+      return uploadResult.secure_url;
+      
+    } catch (error) {
+      this.logger.error('❌ Cloudinary upload failed:', error);
+      throw new AIServiceUnavailableError(
+        `Failed to upload image to Cloudinary: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          service: 'GeminiIntegration',
+          operation: 'uploadToCloudinary',
+          details: { error }
+        }
+      );
+    }
+  }
+
+  /**
    * Extract text from Gemini response
    */
   private extractTextFromResponse(response: GeminiResponse): string {
@@ -638,7 +709,7 @@ Focus on maintaining PERFECT character consistency while creating an engaging pa
   /**
    * Extract image URL from Gemini response
    */
-  private extractImageUrlFromResponse(response: GeminiResponse): string {
+  private async extractImageUrlFromResponse(response: GeminiResponse): Promise<string> {
     if (response.error) {
       throw new Error(`Gemini API error: ${response.error.message}`);
     }
@@ -656,12 +727,13 @@ Focus on maintaining PERFECT character consistency while creating an engaging pa
       });
     }
     
-    // Convert base64 to data URL (will be uploaded to Cloudinary later)
-    const mimeType = imagePart.inline_data.mime_type || 'image/jpeg';
     const base64Data = imagePart.inline_data.data;
-    const dataUrl = `data:${mimeType};base64,${base64Data}`;
     
-    return dataUrl;
+    // Upload to Cloudinary and return permanent URL
+    this.logger.log('📤 Converting Gemini base64 to Cloudinary URL...');
+    const cloudinaryUrl = await this.uploadToCloudinary(base64Data, 'storybook-panels');
+    
+    return cloudinaryUrl;  // Now returns permanent Cloudinary URL
   }
 
   /**
