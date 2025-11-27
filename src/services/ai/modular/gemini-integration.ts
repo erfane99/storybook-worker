@@ -41,6 +41,11 @@ interface GeminiGenerationConfig {
   top_p?: number;
   top_k?: number;
   max_output_tokens?: number;
+  response_modalities?: string[];  // ✅ ADDED: ['TEXT'] or ['IMAGE'] or ['TEXT', 'IMAGE']
+  image_config?: {                 // ✅ ADDED: Image generation settings
+    aspect_ratio?: string;         // Options: '1:1', '16:9', '9:16', '4:3', '3:4'
+    image_size?: string;           // Options: '1K', '2K', '4K'
+  };
 }
 
 interface GeminiImagePart {
@@ -129,7 +134,8 @@ export class GeminiIntegration {
   private apiKey: string;
   private errorHandler: ErrorHandlingSystem;
   private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
-  private defaultModel = 'gemini-3-pro-image-preview';
+  private defaultModel = 'gemini-3-pro-preview';  // ✅ CHANGED: For text/vision tasks
+  private imageModel = 'gemini-3-pro-image-preview';  // ✅ NEW: For image generation
   
   // Circuit breaker states
   private circuitBreakers: Map<string, CircuitBreakerState> = new Map();
@@ -208,23 +214,24 @@ export class GeminiIntegration {
       const analysisPrompt = this.buildCharacterAnalysisPrompt(artStyle);
       
       // Call Gemini with image + prompt
-      const response = await this.generateWithRetry<GeminiResponse>({
-        contents: [{
-          parts: [
-            { text: analysisPrompt },
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64Image
-              }
-            }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          max_output_tokens: 2000
+const response = await this.generateWithRetry<GeminiResponse>({
+  contents: [{
+    parts: [
+      { text: analysisPrompt },
+      {
+        inline_data: {
+          mime_type: 'image/jpeg',
+          data: base64Image
         }
-      }, 'analyzeCharacterImage');
+      }
+    ]
+  }],
+  generationConfig: {
+    temperature: 0.3,
+    max_output_tokens: 2000,
+    response_modalities: ['TEXT']  // ✅ ADDED: Explicitly request text-only
+  }
+}, 'analyzeCharacterImage');
       
       // Parse response
       const analysisText = this.extractTextFromResponse(response);
@@ -262,23 +269,28 @@ export class GeminiIntegration {
       const cartoonPrompt = this.buildCartoonizationPrompt(artStyle, analysis);
       
       // Call Gemini with photo + prompt
-      const response = await this.generateWithRetry<GeminiResponse>({
-        contents: [{
-          parts: [
-            { text: cartoonPrompt },
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64Photo
-              }
-            }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          max_output_tokens: 2000
+const response = await this.generateWithRetry<GeminiResponse>({
+  contents: [{
+    parts: [
+      { text: cartoonPrompt },
+      {
+        inline_data: {
+          mime_type: 'image/jpeg',
+          data: base64Photo
         }
-      }, 'generateCartoonFromPhoto');
+      }
+    ]
+  }],
+  generationConfig: {
+    temperature: 0.7,
+    max_output_tokens: 2000,
+    response_modalities: ['IMAGE'],  // ✅ ADDED: Request image output
+    image_config: {                   // ✅ ADDED: Image generation config
+      aspect_ratio: '1:1',
+      image_size: '2K'                // 2K resolution for quality ($0.134/image)
+    }
+  }
+}, 'generateCartoonFromPhoto');
       
       // Extract generated image URL (now uploads to Cloudinary)
       const imageUrl = await this.extractImageUrlFromResponse(response);
@@ -321,23 +333,28 @@ export class GeminiIntegration {
       );
       
       // Call Gemini with cartoon image + scene description
-      const response = await this.generateWithRetry<GeminiResponse>({
-        contents: [{
-          parts: [
-            { text: panelPrompt },
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64Cartoon
-              }
-            }
-          ]
-        }],
-        generationConfig: {
-          temperature: options.temperature || 0.7,
-          max_output_tokens: 2000
+const response = await this.generateWithRetry<GeminiResponse>({
+  contents: [{
+    parts: [
+      { text: panelPrompt },
+      {
+        inline_data: {
+          mime_type: 'image/jpeg',
+          data: base64Cartoon
         }
-      }, 'generatePanelWithCharacter');
+      }
+    ]
+  }],
+  generationConfig: {
+    temperature: options.temperature || 0.7,
+    max_output_tokens: 2000,
+    response_modalities: ['IMAGE'],  // ✅ ADDED: Request image output
+    image_config: {                   // ✅ ADDED: Image generation config
+      aspect_ratio: '16:9',           // Comic panel aspect ratio
+      image_size: '2K'                // 2K resolution for quality ($0.134/image)
+    }
+  }
+}, 'generatePanelWithCharacter');
       
       // Extract generated panel URL (now uploads to Cloudinary)
       const panelUrl = await this.extractImageUrlFromResponse(response);
@@ -370,7 +387,8 @@ export class GeminiIntegration {
           temperature: options.temperature || 0.7,
           max_output_tokens: options.max_output_tokens || 2000,
           top_p: options.top_p,
-          top_k: options.top_k
+          top_k: options.top_k,
+          response_modalities: ['TEXT']  // ✅ ADDED: Explicitly request text-only
         }
       }, 'generateTextCompletion');
       
@@ -421,7 +439,8 @@ export class GeminiIntegration {
         }],
         generationConfig: {
           temperature: options.temperature || 0.7,
-          max_output_tokens: options.max_output_tokens || 2000
+          max_output_tokens: options.max_output_tokens || 2000,
+          response_modalities: ['TEXT']  // ✅ ADDED: Vision completion returns text
         }
       }, 'generateVisionCompletion');
       
@@ -911,7 +930,10 @@ Focus on maintaining PERFECT character consistency while creating an engaging pa
     request: GeminiRequest,
     operationName: string
   ): Promise<T> {
-    const endpoint = `${this.baseUrl}/${this.defaultModel}:generateContent`;
+    // ✅ ADDED: Determine model based on response_modalities
+    const isImageGeneration = request.generationConfig?.response_modalities?.includes('IMAGE');
+    const model = isImageGeneration ? this.imageModel : this.defaultModel;
+    const endpoint = `${this.baseUrl}/${model}:generateContent`;
     
     // ✅ ADD: AbortController for 120-second timeout
     const controller = new AbortController();
