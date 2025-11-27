@@ -41,10 +41,10 @@ interface GeminiGenerationConfig {
   top_p?: number;
   top_k?: number;
   max_output_tokens?: number;
-  response_modalities?: string[];  // ✅ ADDED: ['TEXT'] or ['IMAGE'] or ['TEXT', 'IMAGE']
-  image_config?: {                 // ✅ ADDED: Image generation settings
-    aspect_ratio?: string;         // Options: '1:1', '16:9', '9:16', '4:3', '3:4'
-    image_size?: string;           // Options: '1K', '2K', '4K'
+  responseModalities?: string[];   // ✅ FIXED: Correct camelCase naming
+  imageConfig?: {                  // ✅ FIXED: Correct camelCase naming
+    aspectRatio?: string;          // ✅ FIXED: Options: '1:1', '16:9', '9:16', '4:3', '3:4'
+    imageSize?: string;            // ✅ FIXED: Options: '1K', '2K', '4K'
   };
 }
 
@@ -229,7 +229,7 @@ const response = await this.generateWithRetry<GeminiResponse>({
   generationConfig: {
     temperature: 0.3,
     max_output_tokens: 2000,
-    response_modalities: ['TEXT']  // ✅ ADDED: Explicitly request text-only
+    responseModalities: ['TEXT']  // ✅ FIXED: Correct camelCase naming
   }
 }, 'analyzeCharacterImage');
       
@@ -269,28 +269,28 @@ const response = await this.generateWithRetry<GeminiResponse>({
       const cartoonPrompt = this.buildCartoonizationPrompt(artStyle, analysis);
       
       // Call Gemini with photo + prompt
-const response = await this.generateWithRetry<GeminiResponse>({
-  contents: [{
-    parts: [
-      { text: cartoonPrompt },
-      {
-        inline_data: {
-          mime_type: 'image/jpeg',
-          data: base64Photo
+      const response = await this.generateWithRetry<GeminiResponse>({
+        contents: [{
+          parts: [
+            { text: cartoonPrompt },
+            {
+              inline_data: {
+                mime_type: 'image/jpeg',
+                data: base64Photo
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          max_output_tokens: 2000,
+          responseModalities: ['TEXT', 'IMAGE'],  // ✅ FIXED: Must include both TEXT and IMAGE
+          imageConfig: {                          // ✅ FIXED: Correct camelCase naming
+            aspectRatio: '1:1',                   // ✅ FIXED: Correct camelCase naming
+            imageSize: '2K'                       // 2K resolution for quality ($0.134/image)
+          }
         }
-      }
-    ]
-  }],
-  generationConfig: {
-    temperature: 0.7,
-    max_output_tokens: 2000,
-    response_modalities: ['IMAGE'],  // ✅ ADDED: Request image output
-    image_config: {                   // ✅ ADDED: Image generation config
-      aspect_ratio: '1:1',
-      image_size: '2K'                // 2K resolution for quality ($0.134/image)
-    }
-  }
-}, 'generateCartoonFromPhoto');
+      }, 'generateCartoonFromPhoto');
       
       // Extract generated image URL (now uploads to Cloudinary)
       const imageUrl = await this.extractImageUrlFromResponse(response);
@@ -333,28 +333,28 @@ const response = await this.generateWithRetry<GeminiResponse>({
       );
       
       // Call Gemini with cartoon image + scene description
-const response = await this.generateWithRetry<GeminiResponse>({
-  contents: [{
-    parts: [
-      { text: panelPrompt },
-      {
-        inline_data: {
-          mime_type: 'image/jpeg',
-          data: base64Cartoon
+      const response = await this.generateWithRetry<GeminiResponse>({
+        contents: [{
+          parts: [
+            { text: panelPrompt },
+            {
+              inline_data: {
+                mime_type: 'image/jpeg',
+                data: base64Cartoon
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: options.temperature || 0.7,
+          max_output_tokens: 2000,
+          responseModalities: ['TEXT', 'IMAGE'],  // ✅ FIXED: Must include both TEXT and IMAGE
+          imageConfig: {                          // ✅ FIXED: Correct camelCase naming
+            aspectRatio: '16:9',                  // ✅ FIXED: Correct camelCase naming - Comic panel aspect ratio
+            imageSize: '2K'                       // ✅ FIXED: Correct camelCase naming - 2K resolution for quality ($0.134/image)
+          }
         }
-      }
-    ]
-  }],
-  generationConfig: {
-    temperature: options.temperature || 0.7,
-    max_output_tokens: 2000,
-    response_modalities: ['IMAGE'],  // ✅ ADDED: Request image output
-    image_config: {                   // ✅ ADDED: Image generation config
-      aspect_ratio: '16:9',           // Comic panel aspect ratio
-      image_size: '2K'                // 2K resolution for quality ($0.134/image)
-    }
-  }
-}, 'generatePanelWithCharacter');
+      }, 'generatePanelWithCharacter');
       
       // Extract generated panel URL (now uploads to Cloudinary)
       const panelUrl = await this.extractImageUrlFromResponse(response);
@@ -388,7 +388,7 @@ const response = await this.generateWithRetry<GeminiResponse>({
           max_output_tokens: options.max_output_tokens || 2000,
           top_p: options.top_p,
           top_k: options.top_k,
-          response_modalities: ['TEXT']  // ✅ ADDED: Explicitly request text-only
+          responseModalities: ['TEXT']  // ✅ FIXED: Correct camelCase naming
         }
       }, 'generateTextCompletion');
       
@@ -440,7 +440,7 @@ const response = await this.generateWithRetry<GeminiResponse>({
         generationConfig: {
           temperature: options.temperature || 0.7,
           max_output_tokens: options.max_output_tokens || 2000,
-          response_modalities: ['TEXT']  // ✅ ADDED: Vision completion returns text
+          responseModalities: ['TEXT']  // ✅ FIXED: Correct camelCase naming
         }
       }, 'generateVisionCompletion');
       
@@ -930,8 +930,8 @@ Focus on maintaining PERFECT character consistency while creating an engaging pa
     request: GeminiRequest,
     operationName: string
   ): Promise<T> {
-    // ✅ ADDED: Determine model based on response_modalities
-    const isImageGeneration = request.generationConfig?.response_modalities?.includes('IMAGE');
+    // ✅ FIXED: Determine model based on responseModalities (correct camelCase)
+const isImageGeneration = request.generationConfig?.responseModalities?.includes('IMAGE');
     const model = isImageGeneration ? this.imageModel : this.defaultModel;
     const endpoint = `${this.baseUrl}/${model}:generateContent`;
     
