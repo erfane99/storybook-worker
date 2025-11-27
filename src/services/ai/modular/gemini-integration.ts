@@ -913,6 +913,10 @@ Focus on maintaining PERFECT character consistency while creating an engaging pa
   ): Promise<T> {
     const endpoint = `${this.baseUrl}/${this.defaultModel}:generateContent`;
     
+    // ✅ ADD: AbortController for 120-second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes
+    
     try {
       this.logger.log('🔄 Calling Gemini API...', { operation: operationName });
       
@@ -922,8 +926,11 @@ Focus on maintaining PERFECT character consistency while creating an engaging pa
           'x-goog-api-key': this.apiKey,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(request)
+        body: JSON.stringify(request),
+        signal: controller.signal // ✅ ADD: Timeout signal
       });
+      
+      clearTimeout(timeoutId); // ✅ ADD: Clear timeout on success
       
       const data = await response.json();
       
@@ -934,6 +941,19 @@ Focus on maintaining PERFECT character consistency while creating an engaging pa
       return data as T;
       
     } catch (error) {
+      clearTimeout(timeoutId); // ✅ ADD THIS LINE
+      
+      // ✅ ADD THIS ENTIRE BLOCK
+      if (error instanceof Error && error.name === 'AbortError') {
+        this.logger.error('❌ Gemini API call timed out after 120s');
+        throw new AITimeoutError('Gemini API request timed out', {
+          service: 'GeminiIntegration',
+          operation: operationName,
+          details: { timeout: 120000 }
+        });
+      }
+      // ✅ END OF NEW BLOCK
+      
       if (error instanceof BaseServiceError) {
         throw error;
       }
