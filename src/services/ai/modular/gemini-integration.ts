@@ -718,34 +718,110 @@ Focus on maintaining PERFECT character consistency while creating an engaging pa
   }
 
   /**
-   * Extract image URL from Gemini response
-   */
-  private async extractImageUrlFromResponse(response: GeminiResponse): Promise<string> {
-    if (response.error) {
-      throw new Error(`Gemini API error: ${response.error.message}`);
-    }
-    
-    // Gemini returns generated images as base64 in inline_data
-    const imagePart = response.candidates?.[0]?.content?.parts?.find(
-      part => part.inline_data
-    );
-    
-    if (!imagePart?.inline_data?.data) {
-      throw new AIValidationError('No image in Gemini response', {
-        service: 'GeminiIntegration',
-        operation: 'extractImageUrlFromResponse',
-        details: { response }
-      });
-    }
-    
-    const base64Data = imagePart.inline_data.data;
-    
-    // Upload to Cloudinary and return permanent URL
-    this.logger.log('📤 Converting Gemini base64 to Cloudinary URL...');
-    const cloudinaryUrl = await this.uploadToCloudinary(base64Data, 'storybook-panels');
-    
-    return cloudinaryUrl;  // Now returns permanent Cloudinary URL
+ * Extract image URL from Gemini response
+ * CRITICAL: When using responseModalities: ['TEXT', 'IMAGE'], Gemini returns BOTH text and image
+ * in the parts array. We must search through ALL parts to find the image.
+ */
+private async extractImageUrlFromResponse(response: GeminiResponse): Promise<string> {
+  if (response.error) {
+    throw new Error(`Gemini API error: ${response.error.message}`);
   }
+  
+  // Get all parts from response
+  const parts = response.candidates?.[0]?.content?.parts;
+  
+  if (!parts || parts.length === 0) {
+    throw new AIValidationError('No parts in Gemini response', {
+      service: 'GeminiIntegration',
+      operation: 'extractImageUrlFromResponse',
+      details: { response }
+    });
+  }
+  
+  // DEBUG: Log what we received to understand response structure
+  this.logger.log('🔍 Examining Gemini response parts:', {
+    partsCount: parts.length,
+    partsTypes: parts.map(p => {
+      if (p.text) return 'text';
+      if (p.inline_data) return 'inline_data';
+      return 'unknown';
+    })
+  });
+  
+ // CRITICAL FIX: Search for image data using BOTH naming conventions
+// Gemini API may return inline_data (snake_case) OR inlineData (camelCase)
+let imagePart: any = null;
+let base64Data: string | null = null;
+let mimeType: string | null = null;
+
+for (const part of parts) {
+  const partAny = part as any;
+  
+  // Try snake_case (inline_data) - matches our TypeScript interface
+  if (partAny.inline_data?.data) {
+    imagePart = part;
+    base64Data = partAny.inline_data.data;
+    mimeType = partAny.inline_data.mime_type;
+    this.logger.log('✅ Found image using snake_case (inline_data)');
+    break;
+  }
+  
+  // Try camelCase (inlineData) - some Gemini SDKs use this
+  if (partAny.inlineData?.data) {
+    imagePart = part;
+    base64Data = partAny.inlineData.data;
+    mimeType = partAny.inlineData.mimeType;
+    this.logger.log('✅ Found image using camelCase (inlineData)');
+    break;
+  }
+}
+
+if (!imagePart || !base64Data) {
+  // Enhanced error logging to diagnose the issue
+  this.logger.error('❌ No image found in any response part (checked both naming conventions):', {
+    totalParts: parts.length,
+    responseId: (response as any).responseId,
+    modelVersion: (response as any).modelVersion,
+    finishReason: response.candidates?.[0]?.finishReason,
+    partsDetail: parts.map((p, idx) => {
+      const partAny = p as any;
+      return {
+        index: idx,
+        allKeys: Object.keys(partAny),
+        hasText: !!partAny.text,
+        textLength: partAny.text ? partAny.text.length : 0,
+        hasInlineData_snake: !!partAny.inline_data,
+        hasInlineData_camel: !!partAny.inlineData,
+        inlineDataKeys_snake: partAny.inline_data ? Object.keys(partAny.inline_data) : [],
+        inlineDataKeys_camel: partAny.inlineData ? Object.keys(partAny.inlineData) : [],
+        hasDataField_snake: !!partAny.inline_data?.data,
+        hasDataField_camel: !!partAny.inlineData?.data
+      };
+    })
+  });
+  
+  throw new AIContentPolicyError('No image in Gemini response - searched both inline_data and inlineData', {
+    service: 'GeminiIntegration',
+    operation: 'extractImageUrlFromResponse',
+    details: { 
+      response,
+      partsCount: parts.length,
+      searchedFormats: ['inline_data.data', 'inlineData.data']
+    }
+  });
+}
+
+this.logger.log('✅ Found image in response part', {
+  base64Length: base64Data.length,
+  mimeType: mimeType || 'unknown'
+});
+  
+  // Upload to Cloudinary and return permanent URL
+  this.logger.log('📤 Converting Gemini base64 to Cloudinary URL...');
+  const cloudinaryUrl = await this.uploadToCloudinary(base64Data, 'storybook-panels');
+  
+  return cloudinaryUrl;
+}
 
   /**
    * Parse character analysis from Gemini text response
