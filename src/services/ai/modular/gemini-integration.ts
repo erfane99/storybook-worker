@@ -613,6 +613,7 @@ const response = await this.generateWithRetry<GeminiResponse>({
   }
 
   /**
+   /**
    * Upload base64 image data to Cloudinary
    * Converts Gemini's base64 responses to permanent Cloudinary URLs
    * 
@@ -627,8 +628,8 @@ const response = await this.generateWithRetry<GeminiResponse>({
     try {
       this.logger.log('☁️ Uploading image to Cloudinary...');
       
-      // Import cloudinary (should already be available in worker)
-      const cloudinary = require('cloudinary').v2;
+      // Import cloudinary using ES module syntax
+      const { v2: cloudinary } = await import('cloudinary');
       
       // Cloudinary is already configured via environment variables in the worker
       // No need to call cloudinary.config() here - it's done at startup
