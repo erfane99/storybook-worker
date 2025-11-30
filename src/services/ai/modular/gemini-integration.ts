@@ -629,10 +629,14 @@ const response = await this.generateWithRetry<GeminiResponse>({
       this.logger.log('☁️ Uploading image to Cloudinary...');
       
       // Import cloudinary using ES module syntax
-      const { v2: cloudinary } = await import('cloudinary');
-      
-      // Cloudinary is already configured via environment variables in the worker
-      // No need to call cloudinary.config() here - it's done at startup
+const { v2: cloudinary } = await import('cloudinary');
+
+// Configure Cloudinary (required when using dynamic imports)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
       
       // Convert base64 to buffer
       const buffer = Buffer.from(base64Data, 'base64');
