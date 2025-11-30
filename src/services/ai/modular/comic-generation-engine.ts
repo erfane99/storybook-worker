@@ -210,7 +210,7 @@ NO missing fields. NO undefined values. NO empty strings.
         analysisPrompt,
         {
           temperature: 0.3,
-          max_output_tokens: 2500,
+          max_output_tokens: 16000,
           // model: // Gemini doesn't use model parameter 'gpt-4o',
           top_p: 0.9
           // useJsonMode: true  // Gemini doesn't have JSON mode flag

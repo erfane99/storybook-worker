@@ -1658,7 +1658,7 @@ Return your response as a json object with the following properties:
         analysisPrompt,
         {
           temperature: 0.3,
-          max_output_tokens: 2500,
+          max_output_tokens: 16000,
           top_p: 0.9
           // model: 'gpt-4o',  // Gemini doesn't use model parameter
           // useJsonMode: true  // Gemini doesn't have JSON mode flag
