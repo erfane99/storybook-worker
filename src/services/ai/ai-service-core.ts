@@ -1673,9 +1673,13 @@ Return your response as a json object with the following properties:
       // Parse response
       let parsed: any;
       try {
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        // Strip markdown code blocks before parsing (Gemini returns ```json wrapping)
+        let cleanedResponse = response.trim();
+        cleanedResponse = cleanedResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        
+        const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
         if (!jsonMatch || !jsonMatch[0]) {
-          throw new Error('No JSON found in OpenAI response');
+          throw new Error('No JSON found in Gemini response');
         }
         parsed = JSON.parse(jsonMatch[0]);
         

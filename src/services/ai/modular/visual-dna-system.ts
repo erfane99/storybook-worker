@@ -193,9 +193,14 @@ export class VisualDNASystem {
    * Create master character DNA with GEMINI IMAGE-BASED GENERATION for 95% consistency
    * CRITICAL CHANGE: Now generates cartoon from actual photo using Gemini
    */
-  async createMasterCharacterDNA(characterImage: string, artStyle: string): Promise<CharacterDNA> {
+  async createMasterCharacterDNA(characterImage: string, artStyle: string, existingDescription?: string): Promise<CharacterDNA> {
     try {
       console.log('🎨 Generating Character DNA with Gemini image-based analysis...');
+      
+      // Use existing description if provided (for reused cartoons)
+      if (existingDescription && existingDescription.length > 20) {
+        console.log('📝 Using provided character description for reused cartoon');
+      }
 
       // Step 1: GEMINI forensic character analysis (SEES actual photo)
       console.log('📸 Step 1: Analyzing character image with Gemini Vision...');

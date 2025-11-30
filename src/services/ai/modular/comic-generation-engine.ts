@@ -386,8 +386,12 @@ COMIC BOOK PROFESSIONAL STANDARDS:
    */
   private parseStoryAnalysisResponse(response: string, config: any, narrativeIntel: any): StoryAnalysis {
     try {
+      // Strip markdown code blocks before parsing (Gemini returns ```json wrapping)
+      let cleanedResponse = response.trim();
+      cleanedResponse = cleanedResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      
       // Extract JSON from response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('No valid JSON found in response');
       }
