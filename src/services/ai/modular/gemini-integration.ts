@@ -459,93 +459,81 @@ const response = await this.generateWithRetry<GeminiResponse>({
   // ===== PROMPT BUILDERS =====
 
   private buildCharacterAnalysisPrompt(artStyle: string): string {
-    return `CRITICAL CHARACTER DNA EXTRACTION - FORENSIC ANALYSIS FOR ${artStyle.toUpperCase()} COMIC GENERATION
-
-You are analyzing this character photo to create a COMPREHENSIVE visual blueprint for a professional comic book.
-This analysis will be the SINGLE SOURCE OF TRUTH for maintaining 100% character consistency across 24 panels.
-
-Extract EVERY visual detail with EXTREME precision:
-
-1. FACIAL ARCHITECTURE (NEVER changes):
-   - Face shape: EXACT geometric description (oval/round/square/heart/diamond)
-   - Eyes: Precise shape, size, color with hex/name, spacing between eyes, distinctive features
-   - Eyebrows: Exact thickness, arch shape, color, natural position
-   - Nose: Specific type (button/roman/aquiline/straight), bridge width, nostril shape
-   - Mouth/Lips: Exact size, fullness, natural resting expression, teeth visibility
-   - Ears: Size, shape, angle, any distinctive features
-   - Chin/Jawline: Precise structure, definition level
-   - Distinctive marks: ANY moles, freckles, scars, dimples with EXACT placement
-
-2. HAIR SPECIFICATIONS (Maintain PERFECTLY):
-   - Style: Exact cut name, length measurements, layering, how it falls
-   - Texture: Specific type (straight/wavy/curly/kinky) with curl pattern if applicable
-   - Color: PRECISE shade with highlights, undertones, roots if visible
-   - Unique features: Cowlicks, parts (side/center/none), baby hairs, hairline shape
-   - Volume and density
-
-3. BODY CHARACTERISTICS (Keep CONSISTENT):
-   - Build: Specific body type (ectomorph/mesomorph/endomorph) with proportions
-   - Height indicators: Relative to standard reference points
-   - Shoulder width and slope
-   - Posture: Natural stance, spine curve, head carriage
-   - Visible age indicators
-
-4. SKIN & COMPLEXION:
-   - Skin tone: EXACT shade description with undertones (warm/cool/neutral)
-   - Texture: Smooth/freckled/textured
-   - Unique features: Beauty marks, skin characteristics, tone variations
-
-5. DISTINCTIVE IDENTIFIERS (ALWAYS include):
-   - Accessories: Glasses (exact style and color), jewelry (describe each piece)
-   - Signature clothing elements
-   - Unique features that make them instantly recognizable
-
-6. COLOR PALETTE DNA:
-   - Primary colors: Main 3-4 colors that define this character
-   - Skin tone: Specific color with undertones
-   - Hair color: Exact shade name
-   - Eye color: Precise color description
-   - Clothing colors: Dominant palette
-
-7. EXPRESSION BASELINE:
-   - Natural resting expression
-   - Typical emotional register
-   - Smile characteristics
-
-Return a DETAILED, STRUCTURED analysis. Every detail matters for visual consistency.`;
+    return `Analyze this reference image to create a character design guide for a ${artStyle} comic book series.
+  
+  DESIGN ANALYSIS FRAMEWORK:
+  
+  1. VISUAL STYLE & FORM:
+     - Overall character silhouette and body proportions
+     - Key shapes and geometric design elements
+     - Visual weight distribution and balance
+     - General build and stature
+  
+  2. COLOR & TONE PALETTE:
+     - Primary colors (3-5 dominant hues)
+     - Secondary accent colors
+     - Overall color temperature (warm/cool/neutral)
+     - Saturation and brightness levels
+     - Skin tone category and undertones
+     - Hair color and any highlights or variations
+  
+  3. DISTINCTIVE DESIGN ELEMENTS:
+     - Hair: style, length, texture, color, how it frames the design
+     - Clothing: style, colors, patterns, layering
+     - Accessories: glasses, jewelry, bags, distinctive items
+     - Unique visual markers that define this character design
+  
+  4. FACIAL DESIGN CHARACTERISTICS:
+     - Overall face shape and proportions
+     - Eye design: shape, color, expression style
+     - Nose design: style and prominence
+     - Mouth design: shape and expression tendency
+     - Distinctive facial elements that create character recognition
+  
+  5. ART STYLE CHARACTERISTICS:
+     - Line quality and detail level appropriate for ${artStyle}
+     - Level of stylization versus realism
+     - Texture and rendering approach
+     - Expression range and personality indicators
+     - Age representation in the design
+  
+  6. CONSISTENCY MARKERS FOR SEQUENTIAL ART:
+     - Key recognizable elements for panel-to-panel consistency
+     - Signature visual traits that define this character
+     - Design elements that make this character instantly identifiable
+     - Visual hierarchy of most important consistent features
+  
+  Create a comprehensive character design document optimized for maintaining visual consistency across 24 comic book panels in ${artStyle} style.`;
   }
 
   private buildCartoonizationPrompt(artStyle: string, analysis: CharacterAnalysis): string {
-    return `Create a professional ${artStyle} cartoon character from this photo for a comic book series.
-
-CRITICAL REQUIREMENTS:
-- Maintain EXACT facial features, proportions, and distinctive characteristics from the photo
-- Transform into ${artStyle} art style while preserving identity
-- Keep all unique identifiers (facial features, hair, expression)
-- Suitable for professional comic book publication
-- Clear, bold features perfect for panel-to-panel consistency
-- Professional quality, publication-ready artwork
-
-CHARACTER SPECIFICATIONS TO PRESERVE:
-${analysis.description}
-
-DISTINCTIVE FEATURES (MUST maintain):
-${analysis.distinctiveFeatures.join(', ')}
-
-ART STYLE REQUIREMENTS:
-- Style: ${artStyle}
-- Quality: Professional comic book grade
-- Line work: Clean, bold, consistent
-- Colors: Vibrant, publication-ready
-- Expression: ${analysis.expressionBaseline}
-
-OUTPUT REQUIREMENTS:
-- High resolution for printing
-- Neutral background (white or simple)
-- Character centered, full visibility
-- Perfect for reference in subsequent panels
-
-Create the cartoon that will serve as the MASTER REFERENCE for all 24 comic panels.`;
+    return `Create a ${artStyle} style cartoon character inspired by the reference image for a professional comic book series.
+  
+  STYLE TRANSFORMATION:
+  Transform the reference into a stylized ${artStyle} cartoon character while maintaining visual recognition and character appeal.
+  
+  CHARACTER DESIGN SPECIFICATIONS:
+  ${analysis.description}
+  
+  KEY DESIGN ELEMENTS TO INCORPORATE:
+  ${analysis.distinctiveFeatures.length > 0 ? analysis.distinctiveFeatures.join(', ') : 'Maintain the overall visual style and character design elements'}
+  
+  ${artStyle.toUpperCase()} STYLE REQUIREMENTS:
+  - Art style: Professional ${artStyle} comic book quality
+  - Line work: Clean, bold, expressive lines
+  - Colors: Vibrant and publication-ready
+  - Detail level: Optimized for sequential storytelling
+  - Expression: ${analysis.expressionBaseline || 'friendly and approachable'}
+  - Rendering: High-quality illustration suitable for print
+  
+  COMPOSITION GUIDELINES:
+  - Character centered in frame with clear silhouette
+  - Simple, clean background (white or minimal neutral tone)
+  - Full visibility of character design elements
+  - 2K resolution for professional print quality
+  - Suitable as master reference for consistent 24-panel comic series
+  
+  OUTPUT: A professional ${artStyle} cartoon character design that captures the essence of the reference while serving as the foundation for consistent sequential art across all comic panels.`;
   }
 
   private buildPanelGenerationPrompt(
@@ -553,42 +541,41 @@ Create the cartoon that will serve as the MASTER REFERENCE for all 24 comic pane
     emotion: string,
     options: PanelOptions
   ): string {
-    return `Create a ${options.artStyle} comic book panel with EXACT character consistency.
-
-CRITICAL: The character in the reference image MUST look IDENTICAL in this panel.
-Do NOT change facial features, hair, body type, or distinctive characteristics.
-
-SCENE DESCRIPTION:
-${sceneDescription}
-
-CHARACTER REQUIREMENTS:
-- Use the EXACT character appearance from the reference image
-- Maintain ALL distinctive features perfectly
-- Emotion: ${emotion}
-- Expression should show ${emotion} while keeping facial structure identical
-
-COMPOSITION REQUIREMENTS:
-- Panel Type: ${options.panelType || 'medium shot'}
-- Camera Angle: ${options.cameraAngle || 'eye level'}
-- Lighting: ${options.lighting || 'natural'}
-- Background: ${options.backgroundComplexity || 'moderate detail'}
-
-ART STYLE REQUIREMENTS:
-- Style: ${options.artStyle}
-- Professional comic book quality
-- Clean line work
-- Consistent with master character design
-- Publication-ready artwork
-
-CRITICAL CONSISTENCY RULES:
-1. Character MUST look exactly like reference image
-2. Facial features MUST be identical
-3. Hair style and color MUST match exactly
-4. Body proportions MUST be consistent
-5. Clothing should match unless scene specifies otherwise
-6. Art style MUST be consistent with reference
-
-Focus on maintaining PERFECT character consistency while creating an engaging panel.`;
+    return `Create a ${options.artStyle} comic book panel using the character design from the reference image.
+  
+  SCENE CONTEXT:
+  ${sceneDescription}
+  
+  CHARACTER DESIGN CONSISTENCY:
+  - Use the character design shown in the reference image as your visual guide
+  - Maintain the established art style and visual design elements
+  - Character expression: ${emotion}
+  - Keep consistent line work, colors, and proportions from the reference
+  - Express the emotion through pose, expression, and body language
+  
+  PANEL COMPOSITION:
+  - Shot type: ${options.panelType || 'medium shot'}
+  - Camera angle: ${options.cameraAngle || 'eye level'}
+  - Lighting: ${options.lighting || 'natural, evenly distributed'}
+  - Background detail: ${options.backgroundComplexity || 'moderate detail that supports but doesn\'t overwhelm the character'}
+  - Visual focus: Character as the primary focal point
+  
+  ${options.artStyle.toUpperCase()} QUALITY STANDARDS:
+  - Professional comic book illustration
+  - Clean, expressive line work
+  - Vibrant, publication-ready colors
+  - 2K resolution for print quality
+  - Visual consistency with established character design
+  - Engaging composition that advances the narrative
+  - Sequential art best practices
+  
+  DESIGN CONTINUITY GUIDELINES:
+  - Character design elements should match the reference
+  - Hair style, clothing, and accessories should be consistent
+  - Overall silhouette and proportions should be recognizable
+  - Art style and rendering approach should match the reference
+  
+  Create a compelling comic panel that maintains design consistency while bringing the scene to life in ${options.artStyle} style with appropriate emotional expression and dynamic composition.`;
   }
 
   // ===== HELPER METHODS =====
