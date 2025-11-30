@@ -479,80 +479,23 @@ class AIService extends ErrorAwareBaseService implements IAIService {
    * FIXED: Add missing createMasterCharacterDNA method that delegates to visualDNASystem
    * Preserves all functionality by delegating to existing modular engine
    */
- async createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescription?: string): Promise<CharacterDNA> {
+ /**
+ * Create master character DNA - DELEGATES to VisualDNASystem
+ * This is the correct entry point that job processor calls
+ */
+async createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescription?: string): Promise<CharacterDNA> {
   const result = await this.withErrorHandling(
     async () => {
-      this.log('info', '🧬 Creating master character DNA with character analysis...');
+      this.log('info', '🧬 Creating Character DNA (delegating to VisualDNASystem)...');
       
-      let characterDescription = '';
-      const isReusedCartoon = imageUrl.includes('cloudinary.com') && imageUrl.includes('/cartoons/');
+      // FIXED: Delegate to the correct modular engine
+      const characterDNA = await this.visualDNASystem.createMasterCharacterDNA(
+        imageUrl, 
+        artStyle,
+        existingDescription
+      );
       
-      // PRIORITY 1: Use provided existing description if available
-      if (existingDescription && existingDescription.length > 20) {
-        this.log('info', '✅ Using provided character description from job');
-        characterDescription = existingDescription;
-      } 
-      // PRIORITY 2: For reused cartoons without description, fail fast for quality
-      else if (isReusedCartoon && (!existingDescription || existingDescription.length < 20)) {
-        const errorMsg = `Reused cartoon image requires character description for consistency (provided: ${existingDescription?.length || 0} chars)`;
-        this.log('error', `❌ ${errorMsg}`);
-        throw new Error(errorMsg);
-      }
-      // PRIORITY 3: For new images, create generic description
-      else {
-        this.log('info', '🔍 New character image detected, creating generic description');
-        characterDescription = `Character in ${artStyle} style. Maintain consistent appearance across all panels.`;
-      }
-
-      // Build comprehensive Character DNA
-      const characterDNA: CharacterDNA = {
-        sourceImage: imageUrl,
-        description: characterDescription,
-        artStyle: artStyle,
-        visualDNA: {
-          facialFeatures: this.extractFacialFeatures(characterDescription),
-          bodyType: this.extractBodyType(characterDescription),
-          clothing: this.extractClothingDetails(characterDescription).join(', '),
-          distinctiveFeatures: this.extractUniqueFeatures(characterDescription),
-          colorPalette: this.extractColorPalette(characterDescription),
-          expressionBaseline: 'maintain character expression style'
-        },
-        visualFingerprint: {
-          face: this.extractFacialFeatures(characterDescription).join('_'),
-          body: this.extractBodyType(characterDescription),
-          clothing: this.extractClothingDetails(characterDescription).join('_'),
-          signature: this.extractUniqueFeatures(characterDescription).join('_'),
-          colorDNA: this.extractColorPalette(characterDescription).join('_'),
-          artStyleSignature: `${artStyle}_${Date.now()}`
-        },
-        consistencyPrompts: {
-          basePrompt: `CRITICAL CHARACTER REFERENCE - MAINTAIN EXACTLY:
-${characterDescription}
-
-This character MUST appear IDENTICAL in every single panel. Character consistency is the highest priority.
-NO variations in facial features, hair, clothing, or proportions allowed.`,
-          artStyleIntegration: `Render in ${artStyle} style while maintaining EXACT character features`,
-          variationGuidance: 'ZERO tolerance for variations. Every panel must show the EXACT same character.'
-        },
-        consistencyChecklist: [
-          'Face matches exactly',
-          'Hair color and style identical',
-          'Clothing unchanged',
-          'Body proportions consistent',
-          'All unique features visible'
-        ],
-        metadata: {
-          createdAt: new Date().toISOString(),
-          processingTime: Date.now(),
-          analysisMethod: isReusedCartoon ? 'reused_description' : 'generated_description',
-          confidenceScore: existingDescription ? 95 : 70,
-          fingerprintGenerated: true,
-          artStyleOptimized: artStyle,
-          qualityScore: existingDescription ? 90 : 70
-        }
-      };
-
-      this.log('info', `✅ Character DNA created for ${isReusedCartoon ? 'reused' : 'new'} character`);
+      this.log('info', '✅ Character DNA created successfully');
       return characterDNA;
     },
     'createMasterCharacterDNA'
@@ -563,168 +506,6 @@ NO variations in facial features, hair, clothing, or proportions allowed.`,
   } else {
     throw result.error;
   }
-}
-
-// Add these helper methods right after the createMasterCharacterDNA method:
-
-private extractFacialFeatures(description: string): string[] {
-  const features: string[] = [];
-  const text = description.toLowerCase();
-  
-  // Extract face shape
-  const faceShapes = ['round', 'oval', 'square', 'heart', 'long', 'rectangular'];
-  for (const shape of faceShapes) {
-    if (text.includes(shape + ' face') || text.includes('face is ' + shape)) {
-      features.push(shape + ' face');
-      break;
-    }
-  }
-  
-  // Extract eye details
-  const eyeColors = ['blue', 'brown', 'green', 'hazel', 'gray', 'black'];
-  for (const color of eyeColors) {
-    if (text.includes(color + ' eye') || text.includes(color + '-eye')) {
-      features.push(color + ' eyes');
-      break;
-    }
-  }
-  
-  // Extract other facial features mentioned
-  if (text.includes('freckles')) features.push('freckles');
-  if (text.includes('glasses')) features.push('glasses');
-  if (text.includes('beard')) features.push('beard');
-  if (text.includes('mustache')) features.push('mustache');
-  
-  return features.length > 0 ? features : ['consistent facial features'];
-}
-
-private extractHairDetails(description: string): string[] {
-  const details: string[] = [];
-  const text = description.toLowerCase();
-  
-  // Hair colors
-  const hairColors = ['blonde', 'brown', 'black', 'red', 'gray', 'white', 'dark', 'light'];
-  for (const color of hairColors) {
-    if (text.includes(color + ' hair')) {
-      details.push(color + ' hair');
-      break;
-    }
-  }
-  
-  // Hair styles
-  if (text.includes('long hair')) details.push('long');
-  else if (text.includes('short hair')) details.push('short');
-  else if (text.includes('medium hair')) details.push('medium length');
-  
-  if (text.includes('curly')) details.push('curly');
-  if (text.includes('straight')) details.push('straight');
-  if (text.includes('wavy')) details.push('wavy');
-  if (text.includes('ponytail')) details.push('ponytail');
-  if (text.includes('braid')) details.push('braided');
-  
-  return details.length > 0 ? details : ['consistent hairstyle'];
-}
-
-private extractClothingDetails(description: string): string[] {
-  const details: string[] = [];
-  const text = description.toLowerCase();
-  
-  // Clothing items
-  const items = ['shirt', 'dress', 'jacket', 'coat', 'sweater', 'hoodie', 'suit', 'uniform'];
-  for (const item of items) {
-    if (text.includes(item)) {
-      // Try to get color + item
-      const colors = ['red', 'blue', 'green', 'yellow', 'black', 'white', 'gray', 'brown', 'pink', 'purple'];
-      for (const color of colors) {
-        if (text.includes(color + ' ' + item)) {
-          details.push(color + ' ' + item);
-          break;
-        }
-      }
-      if (!details.some(d => d.includes(item))) {
-        details.push(item);
-      }
-    }
-  }
-  
-  return details.length > 0 ? details : ['consistent outfit'];
-}
-
-private extractColorPalette(description: string): string[] {
-  const colors: string[] = [];
-  const text = description.toLowerCase();
-  const allColors = ['red', 'blue', 'green', 'yellow', 'black', 'white', 'brown', 'gray', 'pink', 'purple', 'orange', 'beige', 'navy', 'teal'];
-  
-  for (const color of allColors) {
-    if (text.includes(color)) {
-      colors.push(color);
-    }
-  }
-  
-  return colors.length > 0 ? colors : ['neutral', 'brown', 'black'];
-}
-
-private extractUniqueFeatures(description: string): string[] {
-  const features: string[] = [];
-  const text = description.toLowerCase();
-  
-  if (text.includes('scar')) features.push('scar');
-  if (text.includes('tattoo')) features.push('tattoo');
-  if (text.includes('birthmark')) features.push('birthmark');
-  if (text.includes('piercing')) features.push('piercing');
-  if (text.includes('mole')) features.push('mole');
-  if (text.includes('dimple')) features.push('dimples');
-  
-  return features.length > 0 ? features : ['no distinctive marks'];
-}
-
-private extractBodyType(description: string): string {
-  const text = description.toLowerCase();
-  
-  if (text.includes('slim') || text.includes('thin') || text.includes('slender')) return 'slim build';
-  if (text.includes('athletic') || text.includes('fit') || text.includes('muscular')) return 'athletic build';
-  if (text.includes('stocky') || text.includes('broad') || text.includes('heavy')) return 'stocky build';
-  if (text.includes('average') || text.includes('medium')) return 'average build';
-  
-  return 'medium build';
-}
-  private extractCoreFeatures(description: string): string {
-  const features = [];
-  const text = description.toLowerCase();
-  
-  // Extract core identifying features
-  if (text.includes('hair:') || text.includes('hair')) {
-    const hairDetails = this.extractHairDetails(description);
-    if (hairDetails.length > 0) features.push(hairDetails.join(' '));
-  }
-  
-  if (text.includes('face:') || text.includes('facial')) {
-    const facialFeatures = this.extractFacialFeatures(description);
-    if (facialFeatures.length > 0) features.push(facialFeatures.join(' '));
-  }
-  
-  if (text.includes('build:') || text.includes('body')) {
-    features.push(this.extractBodyType(description));
-  }
-  
-  if (text.includes('age')) {
-    if (text.includes('child')) features.push('child character');
-    else if (text.includes('teen')) features.push('teen character');
-    else if (text.includes('adult')) features.push('adult character');
-  }
-  
-  return features.length > 0 ? features.join(', ') : 'consistent character appearance';
-}
-
-private extractDistinguishingMarks(description: string): string {
-  const marks = this.extractUniqueFeatures(description);
-  return marks.length > 0 ? marks.join(', ') : 'standard features';
-}
-
-private generateVisualFingerprint(components: { facial: string; hair: string; clothing: string; colors: string }): string {
-  const combined = `${components.facial}_${components.hair}_${components.clothing}_${components.colors}`;
-  const hash = combined.replace(/[^a-zA-Z0-9]/g, '').substring(0, 30);
-  return `VF_${hash}_${Date.now().toString(36)}`;
 }
 
   /**
