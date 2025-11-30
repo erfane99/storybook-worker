@@ -1706,38 +1706,12 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     let validatedCartoonUrl: string | null = null;
     let finalQualityReport: any = null;
 
-    // CRITICAL FIX: Extract character DNA from original image BEFORE generating cartoons
-    await jobService.updateJobProgress(job.id, 5, 'Analyzing your photo to extract character details...');
-    console.log(`🔍 Analyzing original image to create character DNA for job ${job.id}`);
+   // Simplified: No text analysis needed - Gemini sees the photo directly
+await jobService.updateJobProgress(job.id, 5, 'Preparing to generate cartoon from your photo...');
+console.log(`🎨 Cartoonize job ${job.id}: Using image-based generation (no text analysis needed)`);
 
-    let extractedCharacterDNA: string = characterDescription; // Default fallback
-
-    try {
-      // Access visual DNA system through AI service
-      const visualDNASystem = (aiService as any).visualDNASystem;
-      
-      if (visualDNASystem && typeof visualDNASystem.performForensicCharacterAnalysis === 'function') {
-        console.log('📸 Performing forensic character analysis on uploaded image...');
-        const forensicAnalysis = await visualDNASystem.performForensicCharacterAnalysis(
-          originalImageUrl,
-          style
-        );
-        
-        if (forensicAnalysis && forensicAnalysis.length > 50) {
-          extractedCharacterDNA = forensicAnalysis;
-          console.log(`✅ Character DNA extracted (${extractedCharacterDNA.length} chars)`);
-          console.log(`📋 DNA preview: ${extractedCharacterDNA.substring(0, 200)}...`);
-        } else {
-          console.warn('⚠️ Forensic analysis returned insufficient detail, using fallback');
-        }
-      } else {
-        console.warn('⚠️ Visual DNA system not available, using provided character description');
-      }
-    } catch (error: any) {
-      console.error('⚠️ Character analysis failed, using fallback description:', error.message);
-    }
-
-    await jobService.updateJobProgress(job.id, 8, 'Character analysis complete - generating cartoon...');
+// Use generic description for validator only
+const extractedCharacterDNA = `Character in ${style} art style based on uploaded photo`;
 
     for (let attemptNumber = 1; attemptNumber <= MAX_ATTEMPTS; attemptNumber++) {
       try {
@@ -1789,14 +1763,17 @@ COMPOSITION:
 OUTPUT: Single character portrait, centered composition, clean background, professional quality matching character specifications.`
   : this.buildEnhancedCartoonPrompt(style, finalQualityReport?.failureReasons || [], attemptNumber);
 
-        const cartoonResult = await aiService.generateCartoonImage(cartoonPrompt);
-        const unwrappedCartoon = await cartoonResult.unwrap();
+        // FIXED: Use Gemini's direct image generation (same as Character Description job)
+const geminiIntegration = (aiService as any).geminiIntegration;
+const cartoonUrl = await geminiIntegration.generateCartoonFromPhoto(
+  originalImageUrl,
+  style,
+  { description: extractedCharacterDNA }
+);
 
-        if (!unwrappedCartoon || typeof unwrappedCartoon !== 'string') {
-          throw new Error('Failed to generate cartoon image - no URL returned');
-        }
-
-        const cartoonUrl = unwrappedCartoon;
+if (!cartoonUrl || typeof cartoonUrl !== 'string') {
+  throw new Error('Failed to generate cartoon image - no URL returned');
+}
         console.log(`✅ Cartoon generated successfully (attempt ${attemptNumber})`);
 
         if (!cartoonizationValidator) {
