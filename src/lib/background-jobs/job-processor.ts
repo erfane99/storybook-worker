@@ -1768,7 +1768,17 @@ const geminiIntegration = (aiService as any).geminiIntegration;
 const cartoonUrl = await geminiIntegration.generateCartoonFromPhoto(
   originalImageUrl,
   style,
-  { description: extractedCharacterDNA }
+  { 
+    description: extractedCharacterDNA,
+    distinctiveFeatures: [],  // ✅ Required field
+    expressionBaseline: 'neutral',  // ✅ Required field
+    facialFeatures: {},
+    bodyType: {},
+    clothing: {},
+    colorPalette: {},
+    skinTone: '',
+    hairDetails: {}
+  }
 );
 
 if (!cartoonUrl || typeof cartoonUrl !== 'string') {
