@@ -688,8 +688,12 @@ COMIC BOOK PROFESSIONAL STANDARDS:
 
         console.log(`✅ Panel ${panelNumber} image generated successfully`);
 
+        // Generate rich narration text (20-40 words) from beat
+        const narration = this.generatePanelNarration(beat, panelNumber, totalPanels);
+
         return {
-          description: beat.beat,
+          description: beat.beat,  // Keep short summary for internal use
+          narration,  // ✅ NEW: Rich 20-40 word narrative text
           emotion: beat.emotion,
           imagePrompt,
           generatedImage: imageUrl,
@@ -729,6 +733,61 @@ COMIC BOOK PROFESSIONAL STANDARDS:
 
     console.log(`Generated ${panels.length} panels for page ${pageNumber}`);
     return panels;
+  }
+
+  /**
+   * Generate rich narration text for panel (20-40 words)
+   * Transforms beat summary into engaging narrative prose
+   */
+  private generatePanelNarration(
+    beat: StoryBeat,
+    panelNumber: number,
+    totalPanels: number
+  ): string {
+    const { beat: summary, characterAction, emotion, environment, dialogue } = beat;
+    
+    // Build narration components
+    const actionText = characterAction && characterAction !== 'standing' 
+      ? ` ${characterAction}` 
+      : '';
+    
+    const emotionText = emotion && emotion !== 'neutral'
+      ? ` with ${emotion} ${emotion === 'happy' ? 'joy' : emotion === 'scared' ? 'fear' : 'emotion'}`
+      : '';
+    
+    const environmentText = environment && environment !== 'general setting' && environment !== 'story setting'
+      ? ` in the ${environment}`
+      : '';
+    
+    // Create narrative sentence structure
+    let narration = `${summary}${actionText}${emotionText}${environmentText}.`;
+    
+    // Add contextual richness based on panel position
+    if (panelNumber === 1) {
+      // Opening panel - set the scene
+      narration = `Our story begins as ${summary.toLowerCase()}${actionText}${environmentText}${emotionText}.`;
+    } else if (panelNumber === totalPanels) {
+      // Final panel - provide closure
+      narration = `And so, ${summary.toLowerCase()}${actionText}${emotionText}, bringing our tale to its end.`;
+    } else if (beat.narrativeFunction === 'climax' || beat.panelPurpose === 'climax') {
+      // Climax moment - add drama
+      narration = `In this crucial moment, ${summary.toLowerCase()}${actionText}${emotionText}${environmentText}!`;
+    }
+    
+    // Ensure length is appropriate (20-50 words)
+    const wordCount = narration.split(/\s+/).length;
+    
+    if (wordCount < 15) {
+      // Too short - add descriptive detail
+      const detail = beat.visualPriority === 'environment' 
+        ? ' The scene unfolds with vivid detail.'
+        : beat.visualPriority === 'character'
+        ? ' Every emotion is clear on the character\'s face.'
+        : ' The moment is captured perfectly.';
+      narration += detail;
+    }
+    
+    return narration;
   }
 
   // ===== OPTIMIZED IMAGE PROMPT BUILDING (FROM BOTH FILES) =====

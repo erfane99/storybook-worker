@@ -124,6 +124,7 @@ export interface ComicPage {
 
 export interface ComicPanel {
   description: string;
+  narration?: string;
   emotion: string;
   imagePrompt: string;
   panelType: PanelType;
