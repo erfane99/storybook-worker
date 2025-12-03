@@ -29,6 +29,7 @@ import { OpenAIIntegration } from './openai-integration.js';
 
 export interface CharacterDNA {
   sourceImage: string;
+  cartoonImage?: string;
   description: string;
   artStyle: string;
   visualDNA: {
@@ -258,14 +259,64 @@ export class VisualConsistencyValidator {
     characterDNA: CharacterDNA,
     previousPanelUrl?: string
   ): Promise<ConsistencyScore> {
-    // Build validation prompt
-    const prompt = this.buildValidationPrompt(characterDNA, !!previousPanelUrl);
+    // ✅ PRIORITY 2 FIX: Use cartoon image as visual reference instead of text description
+    const characterReferenceImage = characterDNA.cartoonImage || characterDNA.sourceImage;
+    
+    // Validate that we have a valid reference image URL
+    if (!characterReferenceImage || !characterReferenceImage.startsWith('http')) {
+      console.warn('⚠️ No valid character reference image available, using text-only validation');
+      // Fallback to text-based validation
+      const prompt = this.buildValidationPrompt(characterDNA, !!previousPanelUrl);
+      const response = await this.callGPT4Vision(
+        prompt,
+        [generatedImageUrl, previousPanelUrl].filter(Boolean) as string[]
+      );
+      return this.parseValidationResponse(response);
+    }
+    
+    // Build validation prompt (simplified since we have image reference)
+    const prompt = `You are a professional comic book quality control expert. 
 
-    // Call GPT-4 Vision
-    const response = await this.callGPT4Vision(
-      prompt,
-      [generatedImageUrl, previousPanelUrl].filter(Boolean) as string[]
-    );
+TASK: Compare the generated panel image against the character reference image to verify consistency.
+
+IMAGE 1: Character Reference (the cartoon character that should appear in all panels)
+IMAGE 2: Generated Panel (the panel being validated)
+${previousPanelUrl ? 'IMAGE 3: Previous Panel (for sequential consistency check)' : ''}
+
+CRITICAL ANALYSIS:
+1. Does the character in IMAGE 2 match IMAGE 1 exactly?
+   - Face: Same facial features, eyes, hair, skin tone?
+   - Body: Same proportions and build?
+   - Clothing: Identical clothing and accessories?
+   - Colors: Same color palette?
+   - Art Style: Same rendering style?
+
+${previousPanelUrl ? `2. Does IMAGE 2 maintain consistency with IMAGE 3?
+   - Character looks identical between panels?
+   - Only pose/expression should change?` : ''}
+
+Rate each aspect 0-100. BE STRICT: Even minor deviations should reduce score significantly.
+
+Return ONLY valid JSON (no markdown, no code blocks):
+{
+  "overallScore": number,
+  "facialConsistency": number,
+  "bodyProportionConsistency": number,
+  "clothingConsistency": number,
+  "colorPaletteConsistency": number,
+  "artStyleConsistency": number,
+  "detailedAnalysis": "detailed analysis",
+  "failureReasons": ["reason1", "reason2"]
+}`;
+
+    // ✅ Send CHARACTER REFERENCE IMAGE + GENERATED PANEL(S) to Vision API
+    const imageUrls = [
+      characterReferenceImage,  // FIRST: Character reference
+      generatedImageUrl,        // SECOND: Generated panel
+      previousPanelUrl          // THIRD (optional): Previous panel
+    ].filter(Boolean) as string[];
+
+    const response = await this.callGPT4Vision(prompt, imageUrls);
 
     // Parse response
     const score = this.parseValidationResponse(response);
