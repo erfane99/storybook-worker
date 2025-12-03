@@ -1546,8 +1546,8 @@ private enrichStoryBeats(beats: any[], targetCount: number, audience: AudienceTy
     hasSpeechBubble: beat.hasSpeechBubble || (index % 3 === 0),
     dialogue: beat.dialogue,
     speechBubbleStyle: beat.speechBubbleStyle || 'standard',
-    previousBeatContext: index > 0 ? beats[index - 1].beat : null,
-    previousBeatSummary: index > 0 ? beats[index - 1].beat : null
+    previousBeatContext: beat.previousBeatContext || (index > 0 ? beats[index - 1].beat : null),
+    previousBeatSummary: beat.previousBeatSummary || (index > 0 ? beats[index - 1].beat : null)
   }));
 }
 
