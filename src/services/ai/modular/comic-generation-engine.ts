@@ -655,83 +655,81 @@ COMIC BOOK PROFESSIONAL STANDARDS:
 
       const panelType = this.determinePanelType(beat, beatIndex, pageBeats.length);
 
-      try {
-        console.log(`🎬 Generating panel ${panelNumber}/${totalPanels} (${panelType}) with ${characterDNA ? 'CHARACTER IMAGE REFERENCE' : 'text only'}...`);
-        
-        // GEMINI MIGRATION: Use image-based generation if character DNA has cartoon image
-        let imageUrl: string;
-        
-        if (characterDNA?.cartoonImage) {
-          // IMAGE-BASED GENERATION: Gemini sees actual cartoon for 95% consistency
-          console.log(`   📸 Using cartoon image reference for perfect consistency`);
-          imageUrl = await this.geminiIntegration.generatePanelWithCharacter(
-            characterDNA.cartoonImage,
-            beat.beat,  // Scene description
-            beat.emotion,
-            {
-              artStyle,
-              cameraAngle: 'eye level',
-              lighting: 'natural',
-              panelType,
-              backgroundComplexity: 'moderate',
-              temperature: 0.7
-            }
-          );
-        } else {
-          // Fallback: Text-only generation (no character)
-          console.log(`   📝 Using text-based generation (no character image)`);
-          imageUrl = await this.geminiIntegration.generateTextCompletion(imagePrompt, {
-            temperature: 0.7,
-            max_output_tokens: 1000
-          }) as any; // This will need Cloudinary upload in real implementation
-        }
-
-        console.log(`✅ Panel ${panelNumber} image generated successfully`);
-
-        // Generate rich narration text (20-40 words) from beat
-        const narration = this.generatePanelNarration(beat, panelNumber, totalPanels);
-
-        return {
-          description: beat.beat,  // Keep short summary for internal use
-          narration,  // ✅ NEW: Rich 20-40 word narrative text
-          emotion: beat.emotion,
-          imagePrompt,
-          generatedImage: imageUrl,
-          panelType: panelType as PanelType,
-          characterAction: beat.characterAction,
-          narrativePurpose: beat.panelPurpose,
-          visualPriority: beat.visualPriority,
-          dialogue: beat.dialogue,
-          hasSpeechBubble: beat.hasSpeechBubble || false,
-          speechBubbleStyle: beat.speechBubbleStyle,
-          panelNumber,
-          pageNumber,
-          environmentalContext: beat.environment,
-          professionalStandards: true,
-          imageGenerated: true,
-          characterDNAUsed: !!characterDNA,
-          environmentalDNAUsed: !!environmentalDNA
-        };
-      } catch (error) {
-        console.error(`❌ Failed to generate panel ${panelNumber}:`, error);
-        return null;
+      // ✅ REMOVED TRY-CATCH: Let errors bubble up immediately for fail-fast behavior
+      console.log(`🎬 Generating panel ${panelNumber}/${totalPanels} (${panelType}) with ${characterDNA ? 'CHARACTER IMAGE REFERENCE' : 'text only'}...`);
+      
+      // GEMINI MIGRATION: Use image-based generation if character DNA has cartoon image
+      let imageUrl: string;
+      
+      if (characterDNA?.cartoonImage) {
+        // IMAGE-BASED GENERATION: Gemini sees actual cartoon for 95% consistency
+        console.log(`   📸 Using cartoon image reference for perfect consistency`);
+        imageUrl = await this.geminiIntegration.generatePanelWithCharacter(
+          characterDNA.cartoonImage,
+          beat.beat,  // Scene description
+          beat.emotion,
+          {
+            artStyle,
+            cameraAngle: 'eye level',
+            lighting: 'natural',
+            panelType,
+            backgroundComplexity: 'moderate',
+            temperature: 0.7
+          }
+        );
+      } else {
+        // Fallback: Text-only generation (no character)
+        console.log(`   📝 Using text-based generation (no character image)`);
+        imageUrl = await this.geminiIntegration.generateTextCompletion(imagePrompt, {
+          temperature: 0.7,
+          max_output_tokens: 1000
+        }) as any; // This will need Cloudinary upload in real implementation
       }
+
+      console.log(`✅ Panel ${panelNumber} image generated successfully`);
+
+      // Generate rich narration text (20-40 words) from beat
+      const narration = this.generatePanelNarration(beat, panelNumber, totalPanels);
+
+      return {
+        description: beat.beat,  // Keep short summary for internal use
+        narration,  // ✅ NEW: Rich 20-40 word narrative text
+        emotion: beat.emotion,
+        imagePrompt,
+        generatedImage: imageUrl,
+        panelType: panelType as PanelType,
+        characterAction: beat.characterAction,
+        narrativePurpose: beat.panelPurpose,
+        visualPriority: beat.visualPriority,
+        dialogue: beat.dialogue,
+        hasSpeechBubble: beat.hasSpeechBubble || false,
+        speechBubbleStyle: beat.speechBubbleStyle,
+        panelNumber,
+        pageNumber,
+        environmentalContext: beat.environment,
+        professionalStandards: true,
+        imageGenerated: true,
+        characterDNAUsed: !!characterDNA,
+        environmentalDNAUsed: !!environmentalDNA
+      };
     });
 
-    const batchSize = 3;
+    // ✅ SIMPLIFIED BATCHING: Process batches, but let errors propagate
+    const batchSize = 4;  // ✅ Increased from 3 to 4 for slightly better throughput
     const panels: ComicPanel[] = [];
 
     for (let i = 0; i < panelPromises.length; i += batchSize) {
       const batch = panelPromises.slice(i, i + batchSize);
-      const results = await Promise.all(batch);
-      panels.push(...results.filter(p => p !== null) as ComicPanel[]);
+      const batchResults = await Promise.all(batch);  // ✅ If any panel fails, entire batch fails
+      panels.push(...batchResults);
 
+      // ✅ Reduced delay: Only wait between batches if needed
       if (i + batchSize < panelPromises.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));  // ✅ Reduced from 1000ms to 500ms
       }
     }
 
-    console.log(`Generated ${panels.length} panels for page ${pageNumber}`);
+    console.log(`✅ Generated ${panels.length} panels for page ${pageNumber}`);
     return panels;
   }
 

@@ -2027,6 +2027,65 @@ AVOID: ${styleConfig.negatives}
 
     console.log(`✅ Character description job ${job.id} completed successfully`);
   }
+  /**
+   * Handle critical errors with fail-fast behavior
+   * Immediately marks job as failed and throws to stop all processing
+   * 
+   * @param jobId - Job ID to fail
+   * @param error - Error that occurred
+   * @param phase - Which phase failed (e.g., "PHASE 1: Story Analysis")
+   * @param shouldRetry - Whether job should be retried later
+   */
+  private async handleCriticalError(
+    jobId: string,
+    error: any,
+    phase: string,
+    shouldRetry: boolean = false
+  ): Promise<never> {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    console.error(`🚨 CRITICAL ERROR in ${phase} - FAILING FAST`);
+    console.error(`   Job ID: ${jobId}`);
+    console.error(`   Error: ${errorMessage}`);
+    console.error(`   Will retry: ${shouldRetry}`);
+    
+    // Determine user-friendly error message based on error type
+    let userMessage = errorMessage;
+    
+    if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+      userMessage = 'Image generation took too long. This usually means the request was too complex. Please try with a simpler story or contact support.';
+    } else if (errorMessage.includes('Circuit breaker')) {
+      userMessage = 'Our AI service encountered multiple errors and stopped to prevent further issues. Please try again in a few minutes.';
+    } else if (errorMessage.includes('Environmental consistency') || errorMessage.includes('validation')) {
+      userMessage = 'The generated images didn\'t meet our quality standards. Our team is working to improve this. Please try again.';
+    } else if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+      userMessage = 'Our AI service is currently busy. Please try again in a few minutes.';
+    } else if (errorMessage.includes('content policy') || errorMessage.includes('safety')) {
+      userMessage = 'The content was flagged by our AI safety system. Please adjust your story and try again.';
+    }
+    
+    try {
+      // Mark job as failed immediately
+      const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
+      await jobService.markJobFailed(
+        jobId,
+        `CRITICAL FAILURE in ${phase}: ${userMessage}`,
+        shouldRetry
+      );
+      
+      console.log(`✅ Job ${jobId} marked as failed (retry: ${shouldRetry})`);
+    } catch (markFailedError) {
+      console.error(`❌ Failed to mark job as failed:`, markFailedError);
+    }
+    
+    // Throw error to stop all processing immediately
+    const criticalError = new Error(`CRITICAL_FAILURE: ${userMessage}`);
+    (criticalError as any).phase = phase;
+    (criticalError as any).shouldRetry = shouldRetry;
+    (criticalError as any).originalError = error;
+    
+    throw criticalError;
+  }
 }
 
 // Export singleton instance

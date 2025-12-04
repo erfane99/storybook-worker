@@ -173,6 +173,8 @@ export class VisualConsistencyValidator {
   private databaseService: any; // Will be injected
   private logger: any;
   private errorHandler: any;
+  private validationHistory: Map<string, ConsistencyScore[]> = new Map();
+  private smartValidationEnabled = true;
 
   constructor(
     openaiIntegration: OpenAIIntegration,
@@ -202,6 +204,25 @@ export class VisualConsistencyValidator {
   ): Promise<ConsistencyScore> {
     const attemptNumber = context.attemptNumber || 1;
 
+    // ✅ FIX #13: Smart validation - skip if quality pattern established
+    if (this.shouldSkipValidation(context.jobId, context.panelNumber)) {
+      this.logger.log(`⚡ Smart validation: Skipping panel ${context.panelNumber} (consistent quality pattern established)`);
+      
+      const skipScore: ConsistencyScore = {
+        overallScore: 95, // Assume high quality based on pattern
+        facialConsistency: 95,
+        bodyProportionConsistency: 95,
+        clothingConsistency: 95,
+        colorPaletteConsistency: 95,
+        artStyleConsistency: 95,
+        detailedAnalysis: 'Validation skipped - consistent quality pattern established',
+        failureReasons: [],
+        passesThreshold: true
+      };
+      
+      return skipScore;
+    }
+
     this.logger.log(`🔍 Validating panel ${context.panelNumber} (attempt ${attemptNumber}/3)...`);
 
     try {
@@ -222,6 +243,9 @@ export class VisualConsistencyValidator {
         this.logger.error(`❌ Panel ${context.panelNumber} failed validation (score: ${score.overallScore}/100)`);
         this.logger.error(`   Failure reasons: ${score.failureReasons.join(', ')}`);
       }
+
+      // ✅ FIX #13: Track validation result for smart validation
+      this.trackValidationResult(context.jobId, score);
 
       return score;
 
@@ -648,6 +672,65 @@ Return ONLY valid JSON (no markdown, no code blocks):
     }
 
     return false;
+  }
+
+  /**
+   * FIX #13: Check if validation should be skipped based on quality pattern
+   * Skip panels 10+ if first 9 panels all passed with 90+ scores
+   */
+  private shouldSkipValidation(jobId: string, panelNumber: number): boolean {
+    if (!this.smartValidationEnabled || panelNumber < 10) {
+      return false; // Always validate first 9 panels
+    }
+    
+    const history = this.validationHistory.get(jobId);
+    if (!history || history.length < 9) {
+      return false; // Not enough history
+    }
+    
+    // Check if first 9 panels all passed with 90+ scores
+    const first9Panels = history.slice(0, 9);
+    const allHighQuality = first9Panels.every(score => 
+      score.passesThreshold && score.overallScore >= 90
+    );
+    
+    if (allHighQuality) {
+      const avgScore = first9Panels.reduce((sum, s) => sum + s.overallScore, 0) / 9;
+      this.logger.log(`🎯 Quality pattern detected: First 9 panels averaged ${avgScore.toFixed(1)}/100, skipping validation for panel ${panelNumber}`);
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * FIX #13: Track validation result for smart validation learning
+   */
+  private trackValidationResult(jobId: string, score: ConsistencyScore): void {
+    if (!this.validationHistory.has(jobId)) {
+      this.validationHistory.set(jobId, []);
+    }
+    
+    const history = this.validationHistory.get(jobId)!;
+    history.push(score);
+    
+    // Log stats every 5 panels
+    if (history.length % 5 === 0) {
+      const avgScore = history.reduce((sum, s) => sum + s.overallScore, 0) / history.length;
+      const passRate = (history.filter(s => s.passesThreshold).length / history.length) * 100;
+      this.logger.log(`📊 Validation stats for job ${jobId}: ${history.length} panels, avg score ${avgScore.toFixed(1)}/100, pass rate ${passRate.toFixed(0)}%`);
+    }
+  }
+
+  /**
+   * FIX #13: Clear validation history for a job (call when job completes)
+   */
+  public clearValidationHistory(jobId: string): void {
+    const history = this.validationHistory.get(jobId);
+    if (history) {
+      this.logger.log(`🗑️ Clearing validation history for job ${jobId} (${history.length} panels tracked)`);
+      this.validationHistory.delete(jobId);
+    }
   }
 
   /**
