@@ -189,6 +189,24 @@ export class VisualConsistencyValidator {
   }
 
   /**
+   * Validate that a URL is a valid Cloudinary image URL
+   * Prevents "Failed to download image" errors from invalid URLs
+   */
+  private isValidImageUrl(url: string): boolean {
+    if (!url || typeof url !== 'string') {
+      return false;
+    }
+    
+    // Must be from Cloudinary and be an actual image file
+    const validPatterns = [
+      /^https:\/\/res\.cloudinary\.com\/.+\.(jpg|jpeg|png|webp)/i,
+      /^https:\/\/res\.cloudinary\.com\/.+\/image\/upload\//i
+    ];
+    
+    return validPatterns.some(pattern => pattern.test(url));
+  }
+
+  /**
    * Validate character consistency for a single panel
    * This is the main entry point for validation
    */
@@ -203,6 +221,25 @@ export class VisualConsistencyValidator {
     }
   ): Promise<ConsistencyScore> {
     const attemptNumber = context.attemptNumber || 1;
+
+    // ✅ PRE-CHECK: Validate URL before Vision API call
+    if (!this.isValidImageUrl(generatedImageUrl)) {
+      this.logger.error(`❌ Invalid image URL for panel ${context.panelNumber}: ${generatedImageUrl?.substring(0, 100)}...`);
+      throw new ValidationError(
+        `Invalid image URL provided to validator. Expected Cloudinary URL, got: ${generatedImageUrl?.substring(0, 100)}...`,
+        {
+          overallScore: 0,
+          facialConsistency: 0,
+          bodyProportionConsistency: 0,
+          clothingConsistency: 0,
+          colorPaletteConsistency: 0,
+          artStyleConsistency: 0,
+          detailedAnalysis: 'URL validation failed - not a valid Cloudinary image URL',
+          failureReasons: ['Invalid URL format - expected Cloudinary image URL'],
+          passesThreshold: false
+        }
+      );
+    }
 
     // ✅ FIX #13: Smart validation - skip if quality pattern established
     if (this.shouldSkipValidation(context.jobId, context.panelNumber)) {

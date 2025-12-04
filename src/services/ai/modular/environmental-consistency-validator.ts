@@ -241,6 +241,24 @@ export class EnvironmentalConsistencyValidator {
   }
 
   /**
+   * Validate that a URL is a valid Cloudinary image URL
+   * Prevents "Failed to download image" errors from invalid URLs
+   */
+  private isValidImageUrl(url: string): boolean {
+    if (!url || typeof url !== 'string') {
+      return false;
+    }
+    
+    // Must be from Cloudinary and be an actual image file
+    const validPatterns = [
+      /^https:\/\/res\.cloudinary\.com\/.+\.(jpg|jpeg|png|webp)/i,
+      /^https:\/\/res\.cloudinary\.com\/.+\/image\/upload\//i
+    ];
+    
+    return validPatterns.some(pattern => pattern.test(url));
+  }
+
+  /**
    * Validate environmental consistency for a page
    *
    * This is the main entry point for validation
@@ -259,6 +277,18 @@ export class EnvironmentalConsistencyValidator {
     pageNumber: number,
     attemptNumber: number = 1
   ): Promise<EnvironmentalConsistencyReport> {
+    // ✅ PRE-CHECK: Validate all URLs before Vision API call
+    const invalidUrls = panelImageUrls.filter(url => !this.isValidImageUrl(url));
+    if (invalidUrls.length > 0) {
+      this.logger.error(`❌ Invalid image URLs for page ${pageNumber}:`, invalidUrls.map(u => u?.substring(0, 100)));
+      throw new EnvironmentalValidationError(
+        `Invalid image URLs provided to environmental validator on page ${pageNumber}. Expected Cloudinary URLs, got: ${invalidUrls[0]?.substring(0, 100)}...`,
+        0,
+        ['Invalid URL format - expected Cloudinary image URLs'],
+        pageNumber
+      );
+    }
+
     this.logger.log(`🌍 Validating environmental consistency: Page ${pageNumber} (${panelImageUrls.length} panels, attempt ${attemptNumber}/2)`);
 
     try {

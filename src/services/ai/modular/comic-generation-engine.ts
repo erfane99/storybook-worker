@@ -99,7 +99,8 @@ export class ComicGenerationEngine {
       }
 
       // Step 3: Create environmental DNA for world consistency (FROM CURRENTAISERV.TXT)
-      const environmentalDNA = await this.createEnvironmentalDNA(storyAnalysis.storyBeats, audience, characterArtStyle);
+      // ✅ FIXED: Now passes full story for Gemini analysis
+      const environmentalDNA = await this.createEnvironmentalDNA(story, storyAnalysis.storyBeats, audience, characterArtStyle);
 
       // Step 4: Generate professional comic book pages with optimized prompts (FROM BOTH FILES)
       const config = PROFESSIONAL_AUDIENCE_CONFIG[audience as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
@@ -483,40 +484,79 @@ COMIC BOOK PROFESSIONAL STANDARDS:
 
   /**
    * Create environmental DNA for world consistency
-   * FIXED: All TypeScript errors resolved
+   * ✅ FIXED: Now uses Gemini to analyze FULL story context for accurate location extraction
    */
   private async createEnvironmentalDNA(
+    story: string,              // ✅ NEW: Story as FIRST parameter for Gemini analysis
     storyBeats: StoryBeat[], 
     audience: AudienceType, 
     artStyle: string
   ): Promise<EnvironmentalDNA> {
     try {
-      // Extract environmental elements from story beats
-      const environments = storyBeats.map(beat => beat.environment).filter(Boolean);
-      const uniqueEnvironments = [...new Set(environments)];
+      console.log('🌍 Creating environmental DNA from FULL story context...');
+      
+      // ✅ NEW: Ask Gemini to analyze the story for environmental details
+      const environmentalAnalysisPrompt = `Analyze this story and extract the PRIMARY VISUAL SETTING that should be consistent across most comic panels.
 
+STORY:
+${story}
+
+CRITICAL INSTRUCTIONS:
+- Identify the MAIN location where most of the story takes place
+- If the story has multiple locations, choose the most prominent one
+- Extract specific visual elements that should appear consistently
+- Be very specific about the setting (not generic like "backyard")
+
+Extract and return ONLY valid JSON (no markdown, no code blocks):
+{
+  "primaryLocation": "specific detailed location description",
+  "locationType": "indoor" OR "outdoor" OR "mixed",
+  "timeOfDay": "morning" OR "afternoon" OR "evening" OR "night",
+  "keyVisualElements": ["specific element 1", "specific element 2", "element 3", "element 4", "element 5"],
+  "atmosphericMood": "mood description",
+  "dominantColors": ["color1", "color2", "color3"],
+  "architecturalStyle": "style description if applicable"
+}`;
+
+      const analysisResult = await this.geminiIntegration.generateTextCompletion(
+        environmentalAnalysisPrompt,
+        { temperature: 0.3, max_output_tokens: 1000 }
+      );
+      
+      // Parse Gemini's analysis
+      let analysis;
+      try {
+        const cleanJson = analysisResult.replace(/```json\n?|\n?```/g, '').trim();
+        analysis = JSON.parse(cleanJson);
+      } catch (parseError) {
+        console.error('❌ Failed to parse environmental analysis:', parseError);
+        console.error('Raw response:', analysisResult.substring(0, 500));
+        return this.createFallbackEnvironmentalDNA(storyBeats, audience, artStyle);
+      }
+      
+      // Build comprehensive environmental DNA
       const environmentalDNA: EnvironmentalDNA = {
         primaryLocation: {
-          name: uniqueEnvironments[0] || 'general setting',
-          type: 'mixed',
-          description: 'Story setting with consistent visual elements',
-          keyFeatures: this.extractLocationCharacteristics(uniqueEnvironments),
-          colorPalette: this.determineEnvironmentalColorPalette(uniqueEnvironments, audience),
-          architecturalStyle: artStyle
+          name: analysis.primaryLocation || 'story setting',
+          type: analysis.locationType || 'mixed',
+          description: analysis.primaryLocation || 'Story setting with consistent visual elements',
+          keyFeatures: analysis.keyVisualElements || [],
+          colorPalette: analysis.dominantColors || ['vibrant', 'warm'],
+          architecturalStyle: analysis.architecturalStyle || artStyle
         },
         lightingContext: {
-          timeOfDay: 'afternoon',
+          timeOfDay: analysis.timeOfDay || 'afternoon',
           weatherCondition: 'pleasant',
-          lightingMood: this.determineLightingMood(storyBeats, audience),
-          shadowDirection: 'natural',
+          lightingMood: analysis.atmosphericMood || 'bright and cheerful',
+          shadowDirection: this.determineShadowDirection(analysis.timeOfDay || 'afternoon'),
           consistencyRules: ['maintain_lighting_direction', 'consistent_shadow_intensity']
         },
         visualContinuity: {
-          backgroundElements: this.extractBackgroundElements(uniqueEnvironments),
+          backgroundElements: analysis.keyVisualElements || [],
           recurringObjects: this.createRecurringObjects(storyBeats),
           colorConsistency: {
-            dominantColors: this.determineEnvironmentalColorScheme(uniqueEnvironments, audience),
-            accentColors: ['warm_highlights', 'cool_shadows'],
+            dominantColors: analysis.dominantColors || ['warm', 'vibrant'],
+            accentColors: this.determineAccentColors(analysis.dominantColors || []),
             avoidColors: ['jarring_contrasts']
           },
           perspectiveGuidelines: 'consistent_viewpoint_flow'
@@ -524,7 +564,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         atmosphericElements: {
           ambientEffects: this.determineAtmosphericEffects(audience),
           particleEffects: [],
-          environmentalMood: this.determineEnvironmentalMood(audience),
+          environmentalMood: analysis.atmosphericMood || this.determineEnvironmentalMood(audience),
           seasonalContext: 'timeless'
         },
         panelTransitions: {
@@ -534,21 +574,107 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         },
         metadata: {
           createdAt: new Date().toISOString(),
-          processingTime: 0,
+          processingTime: Date.now(),
           audience,
-          consistencyTarget: 'world_building',
+          consistencyTarget: 'story-based-environmental-consistency',
           fallback: false
         }
       };
 
-      console.log('🌍 Environmental DNA created for world consistency');
+      console.log('✅ Environmental DNA created from story context');
+      console.log(`   📍 Primary Location: ${environmentalDNA.primaryLocation.name}`);
+      console.log(`   ⏰ Time of Day: ${environmentalDNA.lightingContext.timeOfDay}`);
+      console.log(`   🎨 Key Features: ${environmentalDNA.primaryLocation.keyFeatures.slice(0, 3).join(', ')}...`);
       
       return environmentalDNA;
 
     } catch (error) {
       console.error('❌ Environmental DNA creation failed:', error);
-      throw this.errorHandler.handleError(error, 'createEnvironmentalDNA');
+      return this.createFallbackEnvironmentalDNA(storyBeats, audience, artStyle);
     }
+  }
+
+  /**
+   * Create fallback environmental DNA when Gemini analysis fails
+   */
+  private createFallbackEnvironmentalDNA(
+    storyBeats: StoryBeat[],
+    audience: AudienceType,
+    artStyle: string
+  ): EnvironmentalDNA {
+    console.log('⚠️ Using fallback environmental DNA from story beats');
+    
+    const environments = storyBeats.map(beat => beat.environment).filter(Boolean);
+    const primaryEnv = environments[0] || 'general setting';
+    
+    return {
+      primaryLocation: {
+        name: primaryEnv,
+        type: 'mixed',
+        description: primaryEnv,
+        keyFeatures: ['consistent background elements'],
+        colorPalette: ['warm', 'vibrant'],
+        architecturalStyle: artStyle
+      },
+      lightingContext: {
+        timeOfDay: 'afternoon',
+        weatherCondition: 'pleasant',
+        lightingMood: 'bright and cheerful',
+        shadowDirection: 'natural',
+        consistencyRules: ['maintain_lighting_direction']
+      },
+      visualContinuity: {
+        backgroundElements: [],
+        recurringObjects: [],
+        colorConsistency: {
+          dominantColors: ['warm', 'vibrant'],
+          accentColors: ['bright'],
+          avoidColors: []
+        },
+        perspectiveGuidelines: 'consistent_viewpoint_flow'
+      },
+      atmosphericElements: {
+        ambientEffects: [],
+        particleEffects: [],
+        environmentalMood: 'cheerful',
+        seasonalContext: 'timeless'
+      },
+      panelTransitions: {
+        movementFlow: 'smooth_progression',
+        cameraMovement: 'natural_flow',
+        spatialRelationships: 'consistent_geography'
+      },
+      metadata: {
+        createdAt: new Date().toISOString(),
+        processingTime: Date.now(),
+        audience: audience,
+        consistencyTarget: 'fallback',
+        fallback: true
+      }
+    };
+  }
+
+  /**
+   * Determine shadow direction based on time of day
+   */
+  private determineShadowDirection(timeOfDay: string): string {
+    const shadowMap: Record<string, string> = {
+      'morning': 'long shadows from west',
+      'afternoon': 'shorter shadows',
+      'evening': 'long shadows from east',
+      'night': 'minimal shadows or moonlight'
+    };
+    return shadowMap[timeOfDay] || 'natural lighting';
+  }
+
+  /**
+   * Determine accent colors based on dominant colors
+   */
+  private determineAccentColors(dominantColors: string[]): string[] {
+    if (!dominantColors || dominantColors.length === 0) {
+      return ['bright', 'vibrant'];
+    }
+    return ['light variations', 'complementary tones'];
   }
 
   // ===== OPTIMIZED COMIC BOOK PAGE GENERATION (FROM BOTH FILES) =====
@@ -714,18 +840,47 @@ COMIC BOOK PROFESSIONAL STANDARDS:
       };
     });
 
-    // ✅ SIMPLIFIED BATCHING: Process batches, but let errors propagate
-    const batchSize = 4;  // ✅ Increased from 3 to 4 for slightly better throughput
+    // ✅ ADAPTIVE BATCHING: Adjusts delay based on API performance
+    const batchSize = 4;
     const panels: ComicPanel[] = [];
+    let adaptiveDelay = 300;  // Start with 300ms (aggressive)
+    let consecutiveSuccesses = 0;
 
     for (let i = 0; i < panelPromises.length; i += batchSize) {
+      const batchStartTime = Date.now();
       const batch = panelPromises.slice(i, i + batchSize);
-      const batchResults = await Promise.all(batch);  // ✅ If any panel fails, entire batch fails
-      panels.push(...batchResults);
+      const batchNumber = Math.floor(i / batchSize) + 1;
+      const totalBatches = Math.ceil(panelPromises.length / batchSize);
 
-      // ✅ Reduced delay: Only wait between batches if needed
+      console.log(`📦 Processing batch ${batchNumber}/${totalBatches} (${batch.length} panels)...`);
+
+      try {
+        const batchResults = await Promise.all(batch);
+        panels.push(...batchResults);
+        
+        const batchDuration = Date.now() - batchStartTime;
+        consecutiveSuccesses++;
+        
+        // ✅ ADAPTIVE: If batches completing quickly, reduce delay
+        if (consecutiveSuccesses >= 2 && batchDuration < 30000) {  // Under 30 seconds = fast
+          adaptiveDelay = Math.max(100, adaptiveDelay - 50);  // Reduce delay, minimum 100ms
+          console.log(`⚡ API performing well, reducing delay to ${adaptiveDelay}ms`);
+        }
+        
+        console.log(`✅ Batch ${batchNumber} completed in ${(batchDuration / 1000).toFixed(1)}s`);
+        
+      } catch (batchError) {
+        // If batch fails, increase delay before rethrowing
+        consecutiveSuccesses = 0;
+        adaptiveDelay = Math.min(1000, adaptiveDelay + 200);  // Increase delay, maximum 1000ms
+        console.error(`❌ Batch ${batchNumber} failed, increasing delay to ${adaptiveDelay}ms`);
+        throw batchError;  // Re-throw to stop job
+      }
+
+      // Only delay between batches, not after last batch
       if (i + batchSize < panelPromises.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));  // ✅ Reduced from 1000ms to 500ms
+        console.log(`⏳ Waiting ${adaptiveDelay}ms before next batch...`);
+        await new Promise(resolve => setTimeout(resolve, adaptiveDelay));
       }
     }
 

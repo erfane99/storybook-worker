@@ -673,14 +673,14 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
       // Create environmental DNA for consistent world-building
 // FIX: Pass storyBeats array, not the full analysis object
 environmentalDNA = await aiService.createEnvironmentalDNA(
+  story,
   storyAnalysis ? storyAnalysis.storyBeats : pages.map((p: any, i: number) => ({ 
     description: `Page ${i + 1}`, 
     setting: 'general',
     environment: 'general setting'
   })),
   audience,
-  character_art_style,
-  story
+  character_art_style
 );
       
       console.log(`✅ Environmental DNA created: ${environmentalDNA.primaryLocation?.name || 'Generic Setting'}`);
@@ -985,32 +985,41 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
               // Validation failed - regenerate if not last attempt
               if (attempt < 3) {
-                console.warn(`Panel ${globalPanelNumber} failed validation (attempt ${attempt}/3): score=${validationScore.overallScore}%`);
+                console.warn(`❌ Panel ${globalPanelNumber} failed validation (attempt ${attempt}/3): score=${validationScore.overallScore}%`);
+                console.log(`   Failure reasons: ${validationScore.failureReasons.join(', ')}`);
 
-                // Build enhanced prompt
-                const enhancedPrompt = characterValidator.buildEnhancedPrompt(
+                // Build enhanced guidance from failure reasons (TEXT guidance for what to fix)
+                const enhancedGuidance = characterValidator.buildEnhancedPrompt(
                   scene.imagePrompt,
                   attempt + 1,
                   validationScore.failureReasons
                 );
 
-                // Regenerate panel image
+                console.log(`🔄 Regenerating panel ${globalPanelNumber} with enhanced guidance from validation feedback...`);
+
+                // ✅ CRITICAL FIX: Use generatePanelWithEnhancedGuidance for ACTUAL IMAGE generation
+                // This returns a Cloudinary URL, not text!
                 this.trackServiceUsage(job.id, 'ai');
-                const regenerateResult = await aiService.generateSceneImage({
-                  image_prompt: enhancedPrompt,
-                  character_description: characterDescriptionToUse,
+                const regenerateResult = await aiService.generatePanelWithEnhancedGuidance({
+                  cartoonImageUrl: characterDNA?.cartoonImage || character_image,
+                  sceneDescription: scene.imagePrompt,
                   emotion: scene.emotion || 'neutral',
-                  audience: audience as any,
-                  cartoon_image: character_image,
-                  characterArtStyle: character_art_style,
-                  environmentalContext: {
-                    characterDNA: characterDNA,
-                    environmentalDNA: environmentalDNA,
-                  },
+                  enhancedGuidance: enhancedGuidance,
+                  artStyle: character_art_style,
+                  panelType: 'standard',
+                  lighting: environmentalDNA?.lightingContext?.lightingMood || 'natural',
+                  backgroundComplexity: environmentalDNA ? 'detailed' : 'moderate'
                 });
 
                 const unwrappedRegenerate = await regenerateResult.unwrap();
                 if (unwrappedRegenerate && unwrappedRegenerate.url) {
+                  // ✅ VALIDATION: Ensure we got a Cloudinary URL, not text
+                  if (!unwrappedRegenerate.url.includes('cloudinary.com')) {
+                    console.error(`❌ Invalid regeneration result - got text instead of URL: ${unwrappedRegenerate.url.substring(0, 100)}`);
+                    throw new Error('Panel regeneration returned text instead of image URL');
+                  }
+                  
+                  console.log(`✅ Panel ${globalPanelNumber} image regenerated: ${unwrappedRegenerate.url.substring(0, 60)}...`);
                   finalScene = {
                     ...finalScene,
                     generatedImage: unwrappedRegenerate.url,

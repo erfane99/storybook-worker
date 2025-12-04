@@ -257,6 +257,24 @@ export class SequentialConsistencyValidator {
   }
 
   /**
+   * Validate that a URL is a valid Cloudinary image URL
+   * Prevents "Failed to download image" errors from invalid URLs
+   */
+  private isValidImageUrl(url: string): boolean {
+    if (!url || typeof url !== 'string') {
+      return false;
+    }
+    
+    // Must be from Cloudinary and be an actual image file
+    const validPatterns = [
+      /^https:\/\/res\.cloudinary\.com\/.+\.(jpg|jpeg|png|webp)/i,
+      /^https:\/\/res\.cloudinary\.com\/.+\/image\/upload\//i
+    ];
+    
+    return validPatterns.some(pattern => pattern.test(url));
+  }
+
+  /**
    * Validate sequential consistency between two consecutive panels
    *
    * This is the main entry point for validation
@@ -270,6 +288,29 @@ export class SequentialConsistencyValidator {
     context: SequentialValidationContext
   ): Promise<SequentialConsistencyReport> {
     const attemptNumber = context.attemptNumber || 1;
+
+    // ✅ PRE-CHECK: Validate both panel URLs before Vision API call
+    if (!this.isValidImageUrl(context.previousPanelUrl)) {
+      this.logger.error(`❌ Invalid previous panel URL: ${context.previousPanelUrl?.substring(0, 100)}...`);
+      throw new SequentialValidationError(
+        `Invalid previous panel URL for sequential validation. Expected Cloudinary URL, got: ${context.previousPanelUrl?.substring(0, 100)}...`,
+        0,
+        ['Invalid URL format for previous panel - expected Cloudinary image URL'],
+        context.previousPanelNumber,
+        context.currentPanelNumber
+      );
+    }
+    
+    if (!this.isValidImageUrl(context.currentPanelUrl)) {
+      this.logger.error(`❌ Invalid current panel URL: ${context.currentPanelUrl?.substring(0, 100)}...`);
+      throw new SequentialValidationError(
+        `Invalid current panel URL for sequential validation. Expected Cloudinary URL, got: ${context.currentPanelUrl?.substring(0, 100)}...`,
+        0,
+        ['Invalid URL format for current panel - expected Cloudinary image URL'],
+        context.previousPanelNumber,
+        context.currentPanelNumber
+      );
+    }
 
     this.logger.log(
       `🔗 Validating sequential: Panel ${context.previousPanelNumber} → ${context.currentPanelNumber} (attempt ${attemptNumber}/${MAX_REGENERATION_ATTEMPTS})`

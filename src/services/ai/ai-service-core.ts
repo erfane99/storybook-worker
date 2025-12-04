@@ -542,84 +542,176 @@ async createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescr
   }
 
   /**
-   * FIXED: Add missing createEnvironmentalDNA method implementation
+   * ✅ FIXED: Now uses Gemini to analyze FULL story context for accurate location extraction
+   * Parameter order: story FIRST (required), then storyBeats, audience, artStyle
    */
-  async createEnvironmentalDNA(storyBeatsOrAnalysis: StoryBeat[] | any, audience: AudienceType, artStyle?: string, story?: string): Promise<EnvironmentalDNA> {
-  const result = await this.withErrorHandling(
-    async () => {
-      this.log('info', '🌍 Creating environmental DNA for world consistency...');
-      
-      // Handle both array of beats and full analysis object
-      let storyBeats: StoryBeat[] = [];
-      if (Array.isArray(storyBeatsOrAnalysis)) {
-        storyBeats = storyBeatsOrAnalysis;
-      } else if (storyBeatsOrAnalysis && storyBeatsOrAnalysis.storyBeats) {
-        storyBeats = storyBeatsOrAnalysis.storyBeats;
-      } else {
-        this.log('warn', 'Invalid story beats format, using empty array');
-        storyBeats = [];
-      }
-      
-      // Use full story context if provided for enhanced environmental analysis
-      let enhancedEnvironmentalContext = '';
-      if (story && story.length > 0) {
-        enhancedEnvironmentalContext = `\n\nFull Story Context: ${story.substring(0, 500)}`;
-        this.log('info', '📖 Using full story context to enhance environmental DNA quality');
-      }
-      
-      // Extract environmental elements from story beats
-      const environments = storyBeats.map(beat => 
-        typeof beat === 'object' ? (beat.environment || beat.setting || 'general setting') : 'general setting'
-      ).filter(Boolean);
-      const uniqueEnvironments = [...new Set(environments)];
-
-      const environmentalDNA: EnvironmentalDNA = {
-  primaryLocation: {
-    name: uniqueEnvironments[0] || 'general setting',
-    type: 'mixed',
-    description: `Story setting with consistent visual elements${enhancedEnvironmentalContext}`,
-          keyFeatures: uniqueEnvironments,
-          colorPalette: this.determineColorPalette(audience),
-          architecturalStyle: artStyle || 'storybook'
-        },
-        lightingContext: {
-          timeOfDay: 'afternoon',
-          weatherCondition: 'pleasant',
-          lightingMood: this.determineLightingMood(audience),
-          shadowDirection: 'natural',
-          consistencyRules: ['maintain_lighting_direction', 'consistent_shadow_intensity']
-        },
-        visualContinuity: {
-          backgroundElements: uniqueEnvironments,
-          recurringObjects: ['consistent_props'],
-          colorConsistency: {
-            dominantColors: this.determineColorPalette(audience),
-            accentColors: ['warm_highlights', 'cool_shadows'],
-            avoidColors: ['jarring_contrasts']
-          },
-          perspectiveGuidelines: 'consistent_viewpoint_flow'
-        },
-        metadata: {
-          createdAt: new Date().toISOString(),
-          processingTime: 0,
-          audience,
-          consistencyTarget: 'world_building',
-          fallback: storyBeats.length === 0
+  async createEnvironmentalDNA(story: string, storyBeatsOrAnalysis: StoryBeat[] | any, audience: AudienceType, artStyle: string): Promise<EnvironmentalDNA> {
+    const result = await this.withErrorHandling(
+      async () => {
+        this.log('info', '🌍 Creating environmental DNA from FULL story context...');
+        
+        // Handle both array of beats and full analysis object
+        let storyBeats: StoryBeat[] = [];
+        if (Array.isArray(storyBeatsOrAnalysis)) {
+          storyBeats = storyBeatsOrAnalysis;
+        } else if (storyBeatsOrAnalysis && storyBeatsOrAnalysis.storyBeats) {
+          storyBeats = storyBeatsOrAnalysis.storyBeats;
+        } else {
+          this.log('warn', 'Invalid story beats format, using empty array');
+          storyBeats = [];
         }
-      };
+        
+        // ✅ NEW: Use Gemini to analyze full story for environmental details
+        if (story && story.length > 50) {
+          this.log('info', '📖 Using Gemini to analyze full story for environmental context...');
+          
+          const environmentalAnalysisPrompt = `Analyze this story and extract the PRIMARY VISUAL SETTING that should be consistent across most comic panels.
 
-      this.log('info', '✅ Environmental DNA created for world consistency');
-      return environmentalDNA;
-    },
-    'createEnvironmentalDNA'
-  );
+STORY:
+${story}
 
-  if (result.success) {
-    return result.data;
-  } else {
-    throw result.error;
+CRITICAL INSTRUCTIONS:
+- Identify the MAIN location where most of the story takes place
+- If the story has multiple locations, choose the most prominent one
+- Extract specific visual elements that should appear consistently
+- Be very specific about the setting (not generic like "backyard")
+
+Extract and return ONLY valid JSON (no markdown, no code blocks):
+{
+  "primaryLocation": "specific detailed location description",
+  "locationType": "indoor" OR "outdoor" OR "mixed",
+  "timeOfDay": "morning" OR "afternoon" OR "evening" OR "night",
+  "keyVisualElements": ["specific element 1", "specific element 2", "element 3", "element 4", "element 5"],
+  "atmosphericMood": "mood description",
+  "dominantColors": ["color1", "color2", "color3"],
+  "architecturalStyle": "style description if applicable"
+}`;
+
+          try {
+            const analysisResult = await this.geminiIntegration.generateTextCompletion(
+              environmentalAnalysisPrompt,
+              { temperature: 0.3, max_output_tokens: 1000 }
+            );
+            
+            // Parse Gemini's analysis
+            const cleanJson = analysisResult.replace(/```json\n?|\n?```/g, '').trim();
+            const analysis = JSON.parse(cleanJson);
+            
+            const environmentalDNA: EnvironmentalDNA = {
+              primaryLocation: {
+                name: analysis.primaryLocation || 'story setting',
+                type: analysis.locationType || 'mixed',
+                description: analysis.primaryLocation || 'Story setting with consistent visual elements',
+                keyFeatures: analysis.keyVisualElements || [],
+                colorPalette: analysis.dominantColors || this.determineColorPalette(audience),
+                architecturalStyle: analysis.architecturalStyle || artStyle || 'storybook'
+              },
+              lightingContext: {
+                timeOfDay: analysis.timeOfDay || 'afternoon',
+                weatherCondition: 'pleasant',
+                lightingMood: analysis.atmosphericMood || this.determineLightingMood(audience),
+                shadowDirection: this.determineShadowDirectionFromTime(analysis.timeOfDay || 'afternoon'),
+                consistencyRules: ['maintain_lighting_direction', 'consistent_shadow_intensity']
+              },
+              visualContinuity: {
+                backgroundElements: analysis.keyVisualElements || [],
+                recurringObjects: ['consistent_props'],
+                colorConsistency: {
+                  dominantColors: analysis.dominantColors || this.determineColorPalette(audience),
+                  accentColors: ['warm_highlights', 'cool_shadows'],
+                  avoidColors: ['jarring_contrasts']
+                },
+                perspectiveGuidelines: 'consistent_viewpoint_flow'
+              },
+              metadata: {
+                createdAt: new Date().toISOString(),
+                processingTime: Date.now(),
+                audience,
+                consistencyTarget: 'story-based-environmental-consistency',
+                fallback: false
+              }
+            };
+            
+            this.log('info', '✅ Environmental DNA created from story context');
+            this.log('info', `   📍 Primary Location: ${environmentalDNA.primaryLocation.name}`);
+            this.log('info', `   ⏰ Time of Day: ${environmentalDNA.lightingContext.timeOfDay}`);
+            this.log('info', `   🎨 Key Features: ${environmentalDNA.primaryLocation.keyFeatures.slice(0, 3).join(', ')}...`);
+            
+            return environmentalDNA;
+            
+          } catch (parseError) {
+            this.log('warn', '⚠️ Failed to parse Gemini environmental analysis, using fallback');
+            // Fall through to fallback logic
+          }
+        }
+        
+        // Fallback: Extract environmental elements from story beats
+        this.log('info', '⚠️ Using fallback environmental DNA from story beats');
+        const environments = storyBeats.map(beat => 
+          typeof beat === 'object' ? (beat.environment || beat.setting || 'general setting') : 'general setting'
+        ).filter(Boolean);
+        const uniqueEnvironments = [...new Set(environments)];
+
+        const environmentalDNA: EnvironmentalDNA = {
+          primaryLocation: {
+            name: uniqueEnvironments[0] || 'general setting',
+            type: 'mixed',
+            description: 'Story setting with consistent visual elements',
+            keyFeatures: uniqueEnvironments,
+            colorPalette: this.determineColorPalette(audience),
+            architecturalStyle: artStyle || 'storybook'
+          },
+          lightingContext: {
+            timeOfDay: 'afternoon',
+            weatherCondition: 'pleasant',
+            lightingMood: this.determineLightingMood(audience),
+            shadowDirection: 'natural',
+            consistencyRules: ['maintain_lighting_direction', 'consistent_shadow_intensity']
+          },
+          visualContinuity: {
+            backgroundElements: uniqueEnvironments,
+            recurringObjects: ['consistent_props'],
+            colorConsistency: {
+              dominantColors: this.determineColorPalette(audience),
+              accentColors: ['warm_highlights', 'cool_shadows'],
+              avoidColors: ['jarring_contrasts']
+            },
+            perspectiveGuidelines: 'consistent_viewpoint_flow'
+          },
+          metadata: {
+            createdAt: new Date().toISOString(),
+            processingTime: 0,
+            audience,
+            consistencyTarget: 'world_building',
+            fallback: true
+          }
+        };
+
+        this.log('info', '✅ Environmental DNA created (fallback)');
+        return environmentalDNA;
+      },
+      'createEnvironmentalDNA'
+    );
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw result.error;
+    }
   }
-}
+
+  /**
+   * Determine shadow direction based on time of day
+   */
+  private determineShadowDirectionFromTime(timeOfDay: string): string {
+    const shadowMap: Record<string, string> = {
+      'morning': 'long shadows from west',
+      'afternoon': 'shorter shadows',
+      'evening': 'long shadows from east',
+      'night': 'minimal shadows or moonlight'
+    };
+    return shadowMap[timeOfDay] || 'natural';
+  }
 
   // ===== UTILITY METHODS FOR NEW INTERFACE METHODS =====
 
@@ -867,7 +959,9 @@ async createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescr
         
         // Extract DNA elements from environmentalContext
         const characterDNA = options.environmentalContext?.characterDNA;
-        const environmentalDNA = options.environmentalContext?.environmentalDNA || options.environmentalContext;
+        // ✅ FIX: Properly extract environmentalDNA and cast to correct type
+        const rawEnvDNA = options.environmentalContext?.environmentalDNA || options.environmentalContext;
+        const environmentalDNA = (rawEnvDNA && 'primaryLocation' in rawEnvDNA) ? rawEnvDNA as EnvironmentalDNA : null;
         const panelNumber = options.environmentalContext?.panelNumber || 1;
         const totalPanels = options.environmentalContext?.totalPanels || 1;
         
@@ -941,15 +1035,40 @@ REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art
         
         this.log('info', `World-class prompt created (${worldClassPrompt.length} chars) with DNA: ${!!characterDNA}, Env: ${!!environmentalDNA}`);
         
-        // Generate the image with world-class prompt
-        // GEMINI: This method needs updating - for now using text completion
-        const result = await this.geminiIntegration.generateTextCompletion(worldClassPrompt) as any;
+        // ✅ CRITICAL FIX: Use generatePanelWithCharacter for ACTUAL IMAGE generation
+        // Previously used generateTextCompletion which returned TEXT instead of image URL
+        const cartoonImageUrl = options.cartoon_image || characterDNA?.cartoonImage;
+        
+        if (!cartoonImageUrl) {
+          throw new Error('No cartoon image URL provided for panel generation. Required for character consistency.');
+        }
+        
+        // Generate actual image using Gemini's image-to-image generation
+        const imageUrl = await this.geminiIntegration.generatePanelWithCharacter(
+          cartoonImageUrl,
+          worldClassPrompt,  // Use the world-class prompt as scene description
+          options.emotion || 'neutral',
+          {
+            artStyle: options.characterArtStyle || 'storybook',
+            cameraAngle: panelType === 'closeup' ? 'close-up' : panelType === 'wide' ? 'wide angle' : 'eye level',
+            lighting: environmentalDNA?.lightingContext?.lightingMood || 'natural',
+            panelType: panelType,
+            backgroundComplexity: environmentalDNA ? 'detailed' : 'moderate',
+            temperature: 0.7
+          }
+        );
         
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, true);
         
+        // ✅ VALIDATION: Ensure we got a valid Cloudinary URL, not text
+        if (!imageUrl || !imageUrl.includes('cloudinary.com')) {
+          this.log('error', `Invalid image URL returned: ${imageUrl?.substring(0, 100)}`);
+          throw new Error('Panel generation returned invalid URL instead of Cloudinary image');
+        }
+        
         return {
-          url: result,
+          url: imageUrl,
           prompt_used: worldClassPrompt,
           reused: false,
           quality: 'world-class',
@@ -1883,6 +2002,76 @@ private determineCameraAngle(index: number, total: number): string {
   }
 
   generateSceneImage = this.generateImages;
+
+  /**
+   * Generate panel with enhanced guidance for failed panel regeneration
+   * CRITICAL: Used when a panel fails validation and needs regeneration with specific fixes
+   * This returns an actual Cloudinary URL (not text!)
+   */
+  async generatePanelWithEnhancedGuidance(options: {
+    cartoonImageUrl: string;
+    sceneDescription: string;
+    emotion: string;
+    enhancedGuidance: string;
+    artStyle: string;
+    panelType?: string;
+    cameraAngle?: string;
+    lighting?: string;
+    backgroundComplexity?: string;
+  }): Promise<AsyncResult<{ url: string }, AIServiceUnavailableError>> {
+    const startTime = Date.now();
+    
+    const resultPromise = this.withErrorHandling(
+      async () => {
+        this.log('info', '🔄 Generating panel with enhanced guidance for regeneration...');
+        
+        // ✅ Use Gemini's enhanced guidance method (returns Cloudinary URL)
+        const imageUrl = await this.geminiIntegration.generatePanelWithEnhancedGuidance(
+          options.cartoonImageUrl,
+          options.sceneDescription,
+          options.emotion,
+          options.enhancedGuidance,
+          {
+            artStyle: options.artStyle,
+            cameraAngle: options.cameraAngle,
+            lighting: options.lighting,
+            panelType: options.panelType,
+            backgroundComplexity: options.backgroundComplexity,
+            temperature: 0.6
+          }
+        );
+        
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generatePanelWithEnhancedGuidance', duration, true);
+        
+        // ✅ VALIDATION: Ensure we got a valid Cloudinary URL, not text
+        if (!imageUrl || !imageUrl.includes('cloudinary.com')) {
+          this.log('error', `Invalid image URL returned: ${imageUrl?.substring(0, 100)}`);
+          throw new Error('Enhanced panel generation returned invalid URL instead of Cloudinary image');
+        }
+        
+        this.log('info', `✅ Enhanced panel generated: ${imageUrl.substring(0, 60)}...`);
+        
+        return { url: imageUrl };
+      },
+      'generatePanelWithEnhancedGuidance',
+      options
+    );
+
+    return new AsyncResult(resultPromise.then(result => {
+      if (result.success) {
+        return Result.success(result.data);
+      } else {
+        const duration = Date.now() - startTime;
+        this.enterpriseMonitoring.recordOperationMetrics('generatePanelWithEnhancedGuidance', duration, false);
+        const aiError = new AIServiceUnavailableError(result.error.message, {
+          service: this.getName(),
+          operation: 'generatePanelWithEnhancedGuidance'
+        });
+        return Result.failure(aiError);
+      }
+    }));
+  }
   
   async describeCharacter(imageUrl: string, prompt: string): Promise<AsyncResult<string, AIServiceUnavailableError>>;
   async describeCharacter(options: CharacterDescriptionOptions): Promise<AsyncResult<CharacterDescriptionResult, AIServiceUnavailableError>>;

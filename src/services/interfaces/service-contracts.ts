@@ -1096,7 +1096,7 @@ export interface IAIOperations {
   // ✅ FIXED: Added missing enterprise methods
   analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis>;
   createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescription?: string): Promise<CharacterDNA>;
-  createEnvironmentalDNA(storyBeats: StoryBeat[], audience: AudienceType, artStyle?: string, story?: string): Promise<EnvironmentalDNA>;
+  createEnvironmentalDNA(story: string, storyBeats: StoryBeat[], audience: AudienceType, artStyle: string): Promise<EnvironmentalDNA>;
   analyzePanelContinuity(storyBeats: any[]): Promise<any>;
   
   // Enhanced Scene Generation with Audience Support
@@ -1252,6 +1252,20 @@ export interface IAIService extends
     },
     limit?: number
   ): Promise<SuccessPattern[]>;
+  
+  // ✅ Panel Regeneration with Enhanced Guidance
+  // Used when panels fail validation and need regeneration with specific fixes
+  generatePanelWithEnhancedGuidance(options: {
+    cartoonImageUrl: string;
+    sceneDescription: string;
+    emotion: string;
+    enhancedGuidance: string;
+    artStyle: string;
+    panelType?: string;
+    cameraAngle?: string;
+    lighting?: string;
+    backgroundComplexity?: string;
+  }): Promise<AsyncResult<{ url: string }, AIServiceUnavailableError>>;
 }
 
 // ===== SUCCESS PATTERN LEARNING INTERFACES =====

@@ -378,6 +378,128 @@ const response = await this.generateWithRetry<GeminiResponse>({
   }
 
   /**
+   * Generate panel with enhanced guidance for failed panel regeneration
+   * CRITICAL: Used when a panel fails validation and needs regeneration with specific fixes
+   * 
+   * @param cartoonImageUrl - Reference cartoon image for character consistency
+   * @param sceneDescription - Original scene description
+   * @param emotion - Character emotion
+   * @param enhancedGuidance - Text guidance about what to fix (from failed validation)
+   * @param options - Panel generation options
+   * @returns Cloudinary URL of the regenerated panel
+   */
+  public async generatePanelWithEnhancedGuidance(
+    cartoonImageUrl: string,
+    sceneDescription: string,
+    emotion: string,
+    enhancedGuidance: string,
+    options: PanelOptions
+  ): Promise<string> {
+    this.logger.log('🔄 Regenerating panel with enhanced guidance...', { 
+      cartoonImageUrl: cartoonImageUrl.substring(0, 50) + '...',
+      emotion, 
+      artStyle: options.artStyle,
+      guidanceLength: enhancedGuidance.length
+    });
+    
+    try {
+      // Fetch cartoon image as base64 with optimization (uses cache!)
+      const base64Cartoon = await this.fetchImageAsBase64(cartoonImageUrl, true);
+      
+      // Build enhanced panel generation prompt with failure fix guidance
+      const enhancedPanelPrompt = this.buildEnhancedPanelPrompt(
+        sceneDescription,
+        emotion,
+        enhancedGuidance,
+        options
+      );
+      
+      // Call Gemini with cartoon image + enhanced prompt
+      const response = await this.generateWithRetry<GeminiResponse>({
+        contents: [{
+          parts: [
+            { text: enhancedPanelPrompt },
+            {
+              inline_data: {
+                mime_type: 'image/jpeg',
+                data: base64Cartoon
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: Math.max(0.5, (options.temperature || 0.7) - 0.1),  // Slightly lower temp for more consistent output
+          max_output_tokens: 2000,
+          responseModalities: ['TEXT', 'IMAGE'],
+          imageConfig: {
+            aspectRatio: '16:9',
+            imageSize: '1K'
+          }
+        }
+      }, 'generatePanelWithEnhancedGuidance');
+      
+      // Extract generated panel URL (uploads to Cloudinary)
+      const panelUrl = await this.extractImageUrlFromResponse(response);
+      
+      // Validate we got an actual URL
+      if (!panelUrl || !panelUrl.includes('cloudinary.com')) {
+        throw new Error(`Invalid image URL returned: ${panelUrl?.substring(0, 100) || 'null'}`);
+      }
+      
+      this.logger.log('✅ Panel regenerated successfully with enhanced guidance', { panelUrl });
+      
+      return panelUrl;
+      
+    } catch (error) {
+      this.logger.error('❌ Enhanced panel generation failed:', error);
+      throw this.handleGeminiError(error, 'generatePanelWithEnhancedGuidance');
+    }
+  }
+
+  /**
+   * Build enhanced prompt incorporating failure fix guidance
+   */
+  private buildEnhancedPanelPrompt(
+    sceneDescription: string,
+    emotion: string,
+    enhancedGuidance: string,
+    options: PanelOptions
+  ): string {
+    return `REGENERATION WITH FIXES - Create a ${options.artStyle} comic book panel using the character design from the reference image.
+
+CRITICAL FIXES REQUIRED (from previous failed validation):
+${enhancedGuidance}
+
+SCENE CONTEXT:
+${sceneDescription}
+
+CHARACTER DESIGN CONSISTENCY:
+- Use the character design shown in the reference image as your visual guide
+- Maintain the established art style and visual design elements
+- Character expression: ${emotion}
+- Keep consistent line work, colors, and proportions from the reference
+- Express the emotion through pose, expression, and body language
+
+PANEL COMPOSITION:
+- Shot type: ${options.panelType || 'medium shot'}
+- Camera angle: ${options.cameraAngle || 'eye level'}
+- Lighting: ${options.lighting || 'natural, evenly distributed'}
+- Background detail: ${options.backgroundComplexity || 'moderate detail that supports but doesn\'t overwhelm the character'}
+- Visual focus: Character as the primary focal point
+
+${options.artStyle.toUpperCase()} QUALITY STANDARDS:
+- Professional comic book illustration
+- Clean, expressive line work
+- Vibrant, publication-ready colors
+- Visual consistency with established character design
+- Engaging composition that advances the narrative
+
+MANDATORY: Address ALL issues listed in CRITICAL FIXES REQUIRED section above.
+
+Create a compelling comic panel that fixes the previous validation failures while maintaining design consistency in ${options.artStyle} style.`;
+  }
+
+  /**
    * Generate text completion (for story analysis, no images)
    */
   public async generateTextCompletion(
