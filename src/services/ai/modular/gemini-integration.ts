@@ -989,18 +989,6 @@ this.logger.log('✅ Found image in response part', {
           }
         }
         
-        // Check if we've exceeded max total retry duration
-        if (attempt > 1 && Date.now() - startTime > this.MAX_TOTAL_RETRY_DURATION_MS) {
-          throw new AITimeoutError(
-            `Operation ${operationName} exceeded maximum retry duration`,
-            {
-              service: 'GeminiIntegration',
-              operation: operationName,
-              details: { totalDuration: Date.now() - startTime }
-            }
-          );
-        }
-        
         // Apply retry delay
         if (attempt > 1) {
           const baseDelay = 1000;
@@ -1088,6 +1076,25 @@ this.logger.log('✅ Found image in response part', {
     );
   }
 
+/**
+   * Get appropriate timeout based on operation type
+   * Evidence-based timeouts from production logs
+   */
+private getTimeoutForOperation(operationName: string, isImageGeneration: boolean): number {
+  // Image generation: 120s (proven in production logs)
+  if (isImageGeneration) {
+    return 120000;
+  }
+  
+  // Story analysis and complex text: 120s (large prompts + complex reasoning)
+  if (operationName === 'generateTextCompletion') {
+    return 120000;
+  }
+  
+  // Simple text operations: 45s (fast fail for broken calls)
+  return 45000;
+}
+
   /**
    * Execute Gemini API call
    */
@@ -1096,12 +1103,12 @@ this.logger.log('✅ Found image in response part', {
     operationName: string
   ): Promise<T> {
     // ✅ Determine model based on responseModalities
-    const isImageGeneration = request.generationConfig?.responseModalities?.includes('IMAGE');
+    const isImageGeneration = request.generationConfig?.responseModalities?.includes('IMAGE') || false;
     const model = isImageGeneration ? this.imageModel : this.defaultModel;
     const endpoint = `${this.baseUrl}/${model}:generateContent`;
     
     // ✅ OPTIMIZED: Different timeouts for images (60s) vs text (30s)
-    const timeout = isImageGeneration ? 60000 : 30000; // 60s for images, 30s for text
+    const timeout = this.getTimeoutForOperation(operationName, isImageGeneration);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     
