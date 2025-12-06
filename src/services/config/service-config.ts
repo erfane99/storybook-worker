@@ -60,19 +60,19 @@ export class ServiceConfigManager {
       },
       retries: {
         database: {
-          attempts: Number(process.env.DATABASE_RETRY_ATTEMPTS) || 3,
+          attempts: Number(process.env.DATABASE_RETRY_ATTEMPTS) || 1,
           delay: Number(process.env.DATABASE_RETRY_DELAY) || 1000,
           backoffMultiplier: 2,
           maxDelay: 10000,
         },
         openai: {
-          attempts: Number(process.env.OPENAI_RETRY_ATTEMPTS) || 3,
+          attempts: Number(process.env.OPENAI_RETRY_ATTEMPTS) || 1,
           delay: Number(process.env.OPENAI_RETRY_DELAY) || 2000,
           backoffMultiplier: 2,
           maxDelay: 30000,
         },
         storage: {
-          attempts: Number(process.env.STORAGE_RETRY_ATTEMPTS) || 3,
+          attempts: Number(process.env.STORAGE_RETRY_ATTEMPTS) || 1,
           delay: Number(process.env.STORAGE_RETRY_DELAY) || 2000,
           backoffMultiplier: 2,
           maxDelay: 20000,

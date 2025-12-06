@@ -983,7 +983,7 @@ export const LEARNING_PATTERN_CONFIG = {
 
 // ===== ERROR HANDLING CONSTANTS =====
 export const ERROR_HANDLING_CONSTANTS = {
-  DEFAULT_RETRY_ATTEMPTS: 3,
+  DEFAULT_RETRY_ATTEMPTS: 1,
   DEFAULT_BASE_DELAY: 1000,
   DEFAULT_MAX_DELAY: 30000,
   CIRCUIT_BREAKER_THRESHOLD: 5,
@@ -1027,7 +1027,7 @@ export const DEFAULT_AI_SERVICE_CONFIG: Partial<AIServiceConfig> = {
   temperature: 0.7,
   model: 'gpt-4o',
   imageModel: 'dall-e-3',
-  maxRetries: 3,
+  maxRetries: 1,
   retryDelay: 1000,
   rateLimitPerMinute: 60,
   enableAdvancedNarrative: true,

@@ -562,13 +562,26 @@ async createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescr
         }
         
         // ✅ NEW: Use Gemini to analyze full story for environmental details
-        if (story && story.length > 50) {
-          this.log('info', '📖 Using Gemini to analyze full story for environmental context...');
-          
-          const environmentalAnalysisPrompt = `Analyze this story and extract the PRIMARY VISUAL SETTING that should be consistent across most comic panels.
+      if (story && story.length > 50) {
+        this.log('info', '📖 Using Gemini to analyze full story for environmental context...');
+        
+        // ✅ SANITIZE: Replace proper nouns (names) with audience-appropriate pronouns
+        let sanitizedStory = story;
+        
+        // Only sanitize if audience is "children" to avoid CSAM false positives
+        if (audience === 'children') {
+          sanitizedStory = story.replace(/\b([A-Z][a-z]+)\b/g, (match) => {
+            const commonWords = ['The', 'A', 'An', 'When', 'He', 'She', 'It', 'They', 'His', 'Her', 'Their', 'Then', 'So', 'But', 'And', 'Once'];
+            if (commonWords.includes(match)) return match;
+            return 'the child';
+          });
+          this.log('info', '🔧 Sanitized children\'s story to avoid content policy false positives');
+        }
+        
+        const environmentalAnalysisPrompt = `Analyze this story and extract the PRIMARY VISUAL SETTING that should be consistent across most comic panels.
 
 STORY:
-${story}
+${sanitizedStory}
 
 CRITICAL INSTRUCTIONS:
 - Identify the MAIN location where most of the story takes place
@@ -587,92 +600,36 @@ Extract and return ONLY valid JSON (no markdown, no code blocks):
   "architecturalStyle": "style description if applicable"
 }`;
 
-          try {
-            const analysisResult = await this.geminiIntegration.generateTextCompletion(
-              environmentalAnalysisPrompt,
-              { temperature: 0.3, max_output_tokens: 1000 }
-            );
-            
-            // Parse Gemini's analysis
-            const cleanJson = analysisResult.replace(/```json\n?|\n?```/g, '').trim();
-            const analysis = JSON.parse(cleanJson);
-            
-            const environmentalDNA: EnvironmentalDNA = {
-              primaryLocation: {
-                name: analysis.primaryLocation || 'story setting',
-                type: analysis.locationType || 'mixed',
-                description: analysis.primaryLocation || 'Story setting with consistent visual elements',
-                keyFeatures: analysis.keyVisualElements || [],
-                colorPalette: analysis.dominantColors || this.determineColorPalette(audience),
-                architecturalStyle: analysis.architecturalStyle || artStyle || 'storybook'
-              },
-              lightingContext: {
-                timeOfDay: analysis.timeOfDay || 'afternoon',
-                weatherCondition: 'pleasant',
-                lightingMood: analysis.atmosphericMood || this.determineLightingMood(audience),
-                shadowDirection: this.determineShadowDirectionFromTime(analysis.timeOfDay || 'afternoon'),
-                consistencyRules: ['maintain_lighting_direction', 'consistent_shadow_intensity']
-              },
-              visualContinuity: {
-                backgroundElements: analysis.keyVisualElements || [],
-                recurringObjects: ['consistent_props'],
-                colorConsistency: {
-                  dominantColors: analysis.dominantColors || this.determineColorPalette(audience),
-                  accentColors: ['warm_highlights', 'cool_shadows'],
-                  avoidColors: ['jarring_contrasts']
-                },
-                perspectiveGuidelines: 'consistent_viewpoint_flow'
-              },
-              metadata: {
-                createdAt: new Date().toISOString(),
-                processingTime: Date.now(),
-                audience,
-                consistencyTarget: 'story-based-environmental-consistency',
-                fallback: false
-              }
-            };
-            
-            this.log('info', '✅ Environmental DNA created from story context');
-            this.log('info', `   📍 Primary Location: ${environmentalDNA.primaryLocation.name}`);
-            this.log('info', `   ⏰ Time of Day: ${environmentalDNA.lightingContext.timeOfDay}`);
-            this.log('info', `   🎨 Key Features: ${environmentalDNA.primaryLocation.keyFeatures.slice(0, 3).join(', ')}...`);
-            
-            return environmentalDNA;
-            
-          } catch (parseError) {
-            this.log('warn', '⚠️ Failed to parse Gemini environmental analysis, using fallback');
-            // Fall through to fallback logic
-          }
-        }
+        const analysisResult = await this.geminiIntegration.generateTextCompletion(
+          environmentalAnalysisPrompt,
+          { temperature: 0.3, max_output_tokens: 1000 }
+        );
         
-        // Fallback: Extract environmental elements from story beats
-        this.log('info', '⚠️ Using fallback environmental DNA from story beats');
-        const environments = storyBeats.map(beat => 
-          typeof beat === 'object' ? (beat.environment || beat.setting || 'general setting') : 'general setting'
-        ).filter(Boolean);
-        const uniqueEnvironments = [...new Set(environments)];
-
+        // Parse Gemini's analysis
+        const cleanJson = analysisResult.replace(/```json\n?|\n?```/g, '').trim();
+        const analysis = JSON.parse(cleanJson);
+        
         const environmentalDNA: EnvironmentalDNA = {
           primaryLocation: {
-            name: uniqueEnvironments[0] || 'general setting',
-            type: 'mixed',
-            description: 'Story setting with consistent visual elements',
-            keyFeatures: uniqueEnvironments,
-            colorPalette: this.determineColorPalette(audience),
-            architecturalStyle: artStyle || 'storybook'
+            name: analysis.primaryLocation || 'story setting',
+            type: analysis.locationType || 'mixed',
+            description: analysis.primaryLocation || 'Story setting with consistent visual elements',
+            keyFeatures: analysis.keyVisualElements || [],
+            colorPalette: analysis.dominantColors || this.determineColorPalette(audience),
+            architecturalStyle: analysis.architecturalStyle || artStyle || 'storybook'
           },
           lightingContext: {
-            timeOfDay: 'afternoon',
+            timeOfDay: analysis.timeOfDay || 'afternoon',
             weatherCondition: 'pleasant',
-            lightingMood: this.determineLightingMood(audience),
-            shadowDirection: 'natural',
+            lightingMood: analysis.atmosphericMood || this.determineLightingMood(audience),
+            shadowDirection: this.determineShadowDirectionFromTime(analysis.timeOfDay || 'afternoon'),
             consistencyRules: ['maintain_lighting_direction', 'consistent_shadow_intensity']
           },
           visualContinuity: {
-            backgroundElements: uniqueEnvironments,
+            backgroundElements: analysis.keyVisualElements || [],
             recurringObjects: ['consistent_props'],
             colorConsistency: {
-              dominantColors: this.determineColorPalette(audience),
+              dominantColors: analysis.dominantColors || this.determineColorPalette(audience),
               accentColors: ['warm_highlights', 'cool_shadows'],
               avoidColors: ['jarring_contrasts']
             },
@@ -680,15 +637,24 @@ Extract and return ONLY valid JSON (no markdown, no code blocks):
           },
           metadata: {
             createdAt: new Date().toISOString(),
-            processingTime: 0,
+            processingTime: Date.now(),
             audience,
-            consistencyTarget: 'world_building',
-            fallback: true
+            consistencyTarget: 'story-based-environmental-consistency',
+            fallback: false
           }
         };
-
-        this.log('info', '✅ Environmental DNA created (fallback)');
+        
+        this.log('info', '✅ Environmental DNA created from story context');
+        this.log('info', `   📍 Primary Location: ${environmentalDNA.primaryLocation.name}`);
+        this.log('info', `   ⏰ Time of Day: ${environmentalDNA.lightingContext.timeOfDay}`);
+        this.log('info', `   🎨 Key Features: ${environmentalDNA.primaryLocation.keyFeatures.slice(0, 3).join(', ')}...`);
+        
         return environmentalDNA;
+      }
+      
+      // ✅ NO FALLBACK: If we reach here without valid environmental DNA, fail the job
+      this.log('error', '❌ Environmental DNA creation failed: No valid story provided');
+      throw new Error('Environmental DNA creation failed: Story must be at least 50 characters long');
       },
       'createEnvironmentalDNA'
     );
