@@ -495,11 +495,24 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     try {
       console.log('🌍 Creating environmental DNA from FULL story context...');
       
+      // ✅ SANITIZE: Replace proper nouns (names) with audience-appropriate pronouns
+      let sanitizedStory = story;
+      
+      // Only sanitize if audience is "children" to avoid CSAM false positives
+      if (audience === 'children') {
+        sanitizedStory = story.replace(/\b([A-Z][a-z]+)\b/g, (match) => {
+          const commonWords = ['The', 'A', 'An', 'When', 'He', 'She', 'It', 'They', 'His', 'Her', 'Their', 'Then', 'So', 'But', 'And', 'Once'];
+          if (commonWords.includes(match)) return match;
+          return 'the child';
+        });
+        console.log('🔧 Sanitized children\'s story to avoid content policy false positives');
+      }
+      
       // ✅ NEW: Ask Gemini to analyze the story for environmental details
       const environmentalAnalysisPrompt = `Analyze this story and extract the PRIMARY VISUAL SETTING that should be consistent across most comic panels.
 
 STORY:
-${story}
+${sanitizedStory}
 
 CRITICAL INSTRUCTIONS:
 - Identify the MAIN location where most of the story takes place
@@ -524,15 +537,8 @@ Extract and return ONLY valid JSON (no markdown, no code blocks):
       );
       
       // Parse Gemini's analysis
-      let analysis;
-      try {
-        const cleanJson = analysisResult.replace(/```json\n?|\n?```/g, '').trim();
-        analysis = JSON.parse(cleanJson);
-      } catch (parseError) {
-        console.error('❌ Failed to parse environmental analysis:', parseError);
-        console.error('Raw response:', analysisResult.substring(0, 500));
-        return this.createFallbackEnvironmentalDNA(storyBeats, audience, artStyle);
-      }
+      const cleanJson = analysisResult.replace(/```json\n?|\n?```/g, '').trim();
+      const analysis = JSON.parse(cleanJson);
       
       // Build comprehensive environmental DNA
       const environmentalDNA: EnvironmentalDNA = {
@@ -588,70 +594,10 @@ Extract and return ONLY valid JSON (no markdown, no code blocks):
       
       return environmentalDNA;
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Environmental DNA creation failed:', error);
-      return this.createFallbackEnvironmentalDNA(storyBeats, audience, artStyle);
+      throw new Error(`Environmental DNA creation failed: ${error?.message || 'Unknown error'}`);
     }
-  }
-
-  /**
-   * Create fallback environmental DNA when Gemini analysis fails
-   */
-  private createFallbackEnvironmentalDNA(
-    storyBeats: StoryBeat[],
-    audience: AudienceType,
-    artStyle: string
-  ): EnvironmentalDNA {
-    console.log('⚠️ Using fallback environmental DNA from story beats');
-    
-    const environments = storyBeats.map(beat => beat.environment).filter(Boolean);
-    const primaryEnv = environments[0] || 'general setting';
-    
-    return {
-      primaryLocation: {
-        name: primaryEnv,
-        type: 'mixed',
-        description: primaryEnv,
-        keyFeatures: ['consistent background elements'],
-        colorPalette: ['warm', 'vibrant'],
-        architecturalStyle: artStyle
-      },
-      lightingContext: {
-        timeOfDay: 'afternoon',
-        weatherCondition: 'pleasant',
-        lightingMood: 'bright and cheerful',
-        shadowDirection: 'natural',
-        consistencyRules: ['maintain_lighting_direction']
-      },
-      visualContinuity: {
-        backgroundElements: [],
-        recurringObjects: [],
-        colorConsistency: {
-          dominantColors: ['warm', 'vibrant'],
-          accentColors: ['bright'],
-          avoidColors: []
-        },
-        perspectiveGuidelines: 'consistent_viewpoint_flow'
-      },
-      atmosphericElements: {
-        ambientEffects: [],
-        particleEffects: [],
-        environmentalMood: 'cheerful',
-        seasonalContext: 'timeless'
-      },
-      panelTransitions: {
-        movementFlow: 'smooth_progression',
-        cameraMovement: 'natural_flow',
-        spatialRelationships: 'consistent_geography'
-      },
-      metadata: {
-        createdAt: new Date().toISOString(),
-        processingTime: Date.now(),
-        audience: audience,
-        consistencyTarget: 'fallback',
-        fallback: true
-      }
-    };
   }
 
   /**

@@ -749,7 +749,7 @@ export const AI_SERVICE_VERSION_INFO = {
 
 // ===== RETRY CONFIGURATION =====
 export const DEFAULT_RETRY_CONFIG: RetryConfig = {
-  attempts: 3,
+  attempts: 1,
   delay: 1000,
   backoffMultiplier: 2,
   maxDelay: 10000
@@ -1076,7 +1076,7 @@ export function createDefaultConfig(overrides?: Partial<AIServiceConfig>): AISer
     // Required base service config properties
     name: 'ModularAIService',
     timeout: overrides?.timeout || 180000,
-    retryAttempts: overrides?.maxRetries || 3,
+    retryAttempts: overrides?.maxRetries || 1,
     retryDelay: overrides?.retryDelay || 1000,
     circuitBreakerThreshold: overrides?.circuitBreakerThreshold || 5
   } as AIServiceConfig;
