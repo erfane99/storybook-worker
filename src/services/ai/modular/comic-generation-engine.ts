@@ -98,9 +98,11 @@ export class ComicGenerationEngine {
         characterDNA = await this.createMasterCharacterDNA(characterImage, characterArtStyle);
       }
 
-      // Step 3: Create environmental DNA for world consistency (FROM CURRENTAISERV.TXT)
-      // ✅ FIXED: Now passes full story for Gemini analysis
-      const environmentalDNA = await this.createEnvironmentalDNA(story, storyAnalysis.storyBeats, audience, characterArtStyle);
+      // Step 3: Environmental DNA MUST be provided by AIService - NO FALLBACK
+      const environmentalDNA = options.enhancedContext?.environmentalDNA;
+      if (!environmentalDNA) {
+        throw new Error('CRITICAL: Environmental DNA not provided by AIService. Quality requirement not met. Job must fail immediately.');
+      }
 
       // Step 4: Generate professional comic book pages with optimized prompts (FROM BOTH FILES)
       const config = PROFESSIONAL_AUDIENCE_CONFIG[audience as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
@@ -477,126 +479,6 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     } catch (error) {
       console.error('❌ Character DNA creation failed:', error);
       throw this.errorHandler.handleError(error, 'createMasterCharacterDNA');
-    }
-  }
-
-  // ===== ENVIRONMENTAL DNA CREATION (FROM CURRENTAISERV.TXT) =====
-
-  /**
-   * Create environmental DNA for world consistency
-   * ✅ FIXED: Now uses Gemini to analyze FULL story context for accurate location extraction
-   */
-  private async createEnvironmentalDNA(
-    story: string,              // ✅ NEW: Story as FIRST parameter for Gemini analysis
-    storyBeats: StoryBeat[], 
-    audience: AudienceType, 
-    artStyle: string
-  ): Promise<EnvironmentalDNA> {
-    try {
-      console.log('🌍 Creating environmental DNA from FULL story context...');
-      
-      // ✅ SANITIZE: Replace proper nouns (names) with audience-appropriate pronouns
-      let sanitizedStory = story;
-      
-      // Only sanitize if audience is "children" to avoid CSAM false positives
-      if (audience === 'children') {
-        sanitizedStory = story.replace(/\b([A-Z][a-z]+)\b/g, (match) => {
-          const commonWords = ['The', 'A', 'An', 'When', 'He', 'She', 'It', 'They', 'His', 'Her', 'Their', 'Then', 'So', 'But', 'And', 'Once'];
-          if (commonWords.includes(match)) return match;
-          return 'the child';
-        });
-        console.log('🔧 Sanitized children\'s story to avoid content policy false positives');
-      }
-      
-      // ✅ NEW: Ask Gemini to analyze the story for environmental details
-      const environmentalAnalysisPrompt = `Analyze this story and extract the PRIMARY VISUAL SETTING that should be consistent across most comic panels.
-
-STORY:
-${sanitizedStory}
-
-CRITICAL INSTRUCTIONS:
-- Identify the MAIN location where most of the story takes place
-- If the story has multiple locations, choose the most prominent one
-- Extract specific visual elements that should appear consistently
-- Be very specific about the setting (not generic like "backyard")
-
-Extract and return ONLY valid JSON (no markdown, no code blocks):
-{
-  "primaryLocation": "specific detailed location description",
-  "locationType": "indoor" OR "outdoor" OR "mixed",
-  "timeOfDay": "morning" OR "afternoon" OR "evening" OR "night",
-  "keyVisualElements": ["specific element 1", "specific element 2", "element 3", "element 4", "element 5"],
-  "atmosphericMood": "mood description",
-  "dominantColors": ["color1", "color2", "color3"],
-  "architecturalStyle": "style description if applicable"
-}`;
-
-      const analysisResult = await this.geminiIntegration.generateTextCompletion(
-        environmentalAnalysisPrompt,
-        { temperature: 0.3, max_output_tokens: 1000 }
-      );
-      
-      // Parse Gemini's analysis
-      const cleanJson = analysisResult.replace(/```json\n?|\n?```/g, '').trim();
-      const analysis = JSON.parse(cleanJson);
-      
-      // Build comprehensive environmental DNA
-      const environmentalDNA: EnvironmentalDNA = {
-        primaryLocation: {
-          name: analysis.primaryLocation || 'story setting',
-          type: analysis.locationType || 'mixed',
-          description: analysis.primaryLocation || 'Story setting with consistent visual elements',
-          keyFeatures: analysis.keyVisualElements || [],
-          colorPalette: analysis.dominantColors || ['vibrant', 'warm'],
-          architecturalStyle: analysis.architecturalStyle || artStyle
-        },
-        lightingContext: {
-          timeOfDay: analysis.timeOfDay || 'afternoon',
-          weatherCondition: 'pleasant',
-          lightingMood: analysis.atmosphericMood || 'bright and cheerful',
-          shadowDirection: this.determineShadowDirection(analysis.timeOfDay || 'afternoon'),
-          consistencyRules: ['maintain_lighting_direction', 'consistent_shadow_intensity']
-        },
-        visualContinuity: {
-          backgroundElements: analysis.keyVisualElements || [],
-          recurringObjects: this.createRecurringObjects(storyBeats),
-          colorConsistency: {
-            dominantColors: analysis.dominantColors || ['warm', 'vibrant'],
-            accentColors: this.determineAccentColors(analysis.dominantColors || []),
-            avoidColors: ['jarring_contrasts']
-          },
-          perspectiveGuidelines: 'consistent_viewpoint_flow'
-        },
-        atmosphericElements: {
-          ambientEffects: this.determineAtmosphericEffects(audience),
-          particleEffects: [],
-          environmentalMood: analysis.atmosphericMood || this.determineEnvironmentalMood(audience),
-          seasonalContext: 'timeless'
-        },
-        panelTransitions: {
-          movementFlow: 'smooth_progression',
-          cameraMovement: 'natural_flow',
-          spatialRelationships: 'consistent_geography'
-        },
-        metadata: {
-          createdAt: new Date().toISOString(),
-          processingTime: Date.now(),
-          audience,
-          consistencyTarget: 'story-based-environmental-consistency',
-          fallback: false
-        }
-      };
-
-      console.log('✅ Environmental DNA created from story context');
-      console.log(`   📍 Primary Location: ${environmentalDNA.primaryLocation.name}`);
-      console.log(`   ⏰ Time of Day: ${environmentalDNA.lightingContext.timeOfDay}`);
-      console.log(`   🎨 Key Features: ${environmentalDNA.primaryLocation.keyFeatures.slice(0, 3).join(', ')}...`);
-      
-      return environmentalDNA;
-
-    } catch (error: any) {
-      console.error('❌ Environmental DNA creation failed:', error);
-      throw new Error(`Environmental DNA creation failed: ${error?.message || 'Unknown error'}`);
     }
   }
 
