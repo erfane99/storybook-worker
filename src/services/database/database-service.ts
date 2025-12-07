@@ -459,8 +459,10 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
 
     const tableName = this.getTableName(job.type);
     const now = new Date().toISOString();
+    
+    // FIXED: When shouldRetry is false, immediately mark as failed regardless of retry count
     const newRetryCount = job.retry_count + 1;
-    const canRetry = shouldRetry && newRetryCount <= job.max_retries;
+    const canRetry = shouldRetry ? (newRetryCount <= job.max_retries) : false;
 
     const updateData: any = {
       status: canRetry ? 'pending' : 'failed',
@@ -471,7 +473,7 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
 
     if (!canRetry) {
       updateData.completed_at = now;
-      updateData.current_step = 'Failed after retries';
+      updateData.current_step = 'Failed - Quality standards not met';
     } else {
       updateData.current_step = `Retrying (${newRetryCount}/${job.max_retries})`;
       updateData.progress = 0;

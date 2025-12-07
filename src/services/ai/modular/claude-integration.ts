@@ -58,9 +58,17 @@ Return JSON:
         ? message.content[0].text 
         : '';
       
-      console.log('✅ Claude response received:', responseText.substring(0, 200));
-      
-      const analysis = JSON.parse(responseText);
+        console.log('✅ Claude response received:', responseText.substring(0, 200));
+
+        // Strip markdown code fences if present
+        let cleanedResponse = responseText.trim();
+        if (cleanedResponse.startsWith('```json')) {
+          cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (cleanedResponse.startsWith('```')) {
+          cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+        
+        const analysis = JSON.parse(cleanedResponse);
       
       // Convert Claude's response to EnvironmentalDNA format
       const environmentalDNA: EnvironmentalDNA = {
@@ -102,9 +110,16 @@ Return JSON:
       return environmentalDNA;
 
     } catch (error: any) {
-      console.error('❌ Claude API error:', error);
-      throw new Error(`Claude environmental analysis failed: ${error?.message || 'Unknown error'}`);
-    }
+        console.error('❌ Claude API error:', error);
+        const errorMessage = `Claude environmental analysis failed: ${error?.message || 'Unknown error'}`;
+        
+        // Create non-retryable error to fail job immediately
+        const criticalError: any = new Error(errorMessage);
+        criticalError.retryable = false;
+        criticalError.severity = 'critical';
+        
+        throw criticalError;
+      }
   }
 
   private classifyLocationType(location: string): 'indoor' | 'outdoor' | 'mixed' {

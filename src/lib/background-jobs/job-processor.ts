@@ -690,8 +690,14 @@ environmentalDNA = await aiService.createEnvironmentalDNA(
     } catch (envError: any) {
       const errorMsg = `Environmental DNA creation failed - quality standards not met: ${envError?.message || 'Unknown error'}`;
       console.error(`❌ ${errorMsg}`);
-      await jobService.updateJobProgress(job.id, 0, 'Failed: Environmental context creation failed');
-      throw new Error(errorMsg);
+      
+      // CRITICAL: Use handleCriticalError to ensure shouldRetry = false
+      await this.handleCriticalError(
+        job.id,
+        envError,
+        'PHASE 2: Environmental DNA Creation',
+        false  // Do NOT retry - quality standards not met
+      );
     }
 
     // PHASE 3: CHARACTER DNA CREATION
