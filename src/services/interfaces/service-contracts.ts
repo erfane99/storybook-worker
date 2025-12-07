@@ -896,6 +896,7 @@ export interface SceneGenerationOptions {
   characterArtStyle?: string;
   layoutType?: string;
   enhancedContext?: any;
+  environmentalDNA?: EnvironmentalDNA;
 }
 
 export interface SceneGenerationResult {
