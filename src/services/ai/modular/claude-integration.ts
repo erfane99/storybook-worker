@@ -162,4 +162,51 @@ Return JSON:
     
     return palettes[timeOfDay]?.[audience] || palettes['afternoon']['children'];
   }
+
+  /**
+   * Analyze story structure to extract cinematic story beats for comic generation
+   * @param story - The full story text to analyze
+   * @param audience - Target audience type
+   * @param analysisPrompt - The complete analysis prompt built by AIService
+   * @returns Raw JSON string response (parsed by AIService)
+   */
+  async analyzeStoryStructure(
+    story: string,
+    audience: AudienceType,
+    analysisPrompt: string
+  ): Promise<string> {
+    try {
+      console.log('🔵 Calling Claude API for story analysis...');
+      
+      const message = await this.client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 16000,
+        temperature: 0.3,
+        messages: [{
+          role: 'user',
+          content: analysisPrompt
+        }]
+      });
+
+      const responseText = message.content[0].type === 'text' 
+        ? message.content[0].text 
+        : '';
+      
+      console.log('✅ Claude story analysis received:', responseText.substring(0, 200));
+
+      // Claude may wrap response in markdown - strip it
+      let cleanedResponse = responseText.trim();
+      if (cleanedResponse.startsWith('```json')) {
+        cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      return cleanedResponse;
+
+    } catch (error: any) {
+      console.error('❌ Claude story analysis error:', error);
+      throw new Error(`Claude story analysis failed: ${error?.message || 'Unknown error'}`);
+    }
+  }
 }

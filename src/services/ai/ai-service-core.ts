@@ -1391,7 +1391,7 @@ ${WORLD_CLASS_STORY_PROMPTS.outputFormat}`;
   async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
   const result = await this.withErrorHandling(
     async () => {
-      this.log('info', '📖 Creating CINEMATIC story beats for world-class comic...');
+      this.log('info', `📖 Analyzing story structure for ${audience} audience using Claude API...`);
       
       const panelCount = PROFESSIONAL_AUDIENCE_CONFIG[audience].totalPanels;
       
@@ -1451,15 +1451,10 @@ Return your response as a json object with the following properties:
   "visualThemes": ["consistent visual elements that appear throughout"]
 }`;
 
-      const response = await this.geminiIntegration.generateTextCompletion(
-        analysisPrompt,
-        {
-          temperature: 0.3,
-          max_output_tokens: 16000,
-          top_p: 0.9
-          // model: 'gpt-4o',  // Gemini doesn't use model parameter
-          // useJsonMode: true  // Gemini doesn't have JSON mode flag
-        }
+      const response = await this.claudeIntegration.analyzeStoryStructure(
+        story,
+        audience,
+        analysisPrompt
       );
       
       // Validate response before proceeding
