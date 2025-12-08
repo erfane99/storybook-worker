@@ -1678,6 +1678,176 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       this.log('error', `Unexpected error in updatePatternWithRating: ${error.message}`);
     }
   }
+
+  // ===== CHARACTER DATA CACHING SYSTEM =====
+  // Eliminates redundant API calls on job retries by caching character analysis results
+
+  /**
+   * Get cached character data for a source image
+   * Used to skip redundant character DNA creation on job retries
+   * 
+   * Database schema (cartoon_images table):
+   * - original_cloudinary_url: The uploaded photo URL (cache key)
+   * - cartoonized_cloudinary_url: The generated cartoon URL
+   * - character_description: Cached Gemini analysis
+   * - cartoon_style: Art style (e.g., 'comic-book')
+   * 
+   * @param sourceImageUrl - The original uploaded photo URL
+   * @returns Cached character data or null if not found
+   */
+  async getCachedCharacterData(sourceImageUrl: string): Promise<{
+    character_description: string;
+    cartoon_image_url: string;
+    art_style: string;
+  } | null> {
+    try {
+      if (!this.supabase) {
+        this.log('warn', 'Supabase client not available for character cache lookup');
+        return null;
+      }
+
+      if (!sourceImageUrl) {
+        this.log('warn', 'No source image URL provided for character cache lookup');
+        return null;
+      }
+
+      this.log('info', `🔍 Checking character cache for: ${sourceImageUrl.substring(0, 60)}...`);
+
+      // Query using correct column names from cartoon_images table
+      const { data, error } = await this.supabase
+        .from('cartoon_images')
+        .select('character_description, cartoonized_cloudinary_url, cartoon_style')
+        .eq('original_cloudinary_url', sourceImageUrl)
+        .not('character_description', 'is', null)
+        .neq('character_description', '')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        this.log('warn', `Character cache lookup failed: ${error.message}`);
+        return null;
+      }
+
+      if (data && data.character_description && data.cartoonized_cloudinary_url) {
+        this.log('info', `✅ Found cached character data (description: ${data.character_description.length} chars)`);
+        return {
+          character_description: data.character_description,
+          cartoon_image_url: data.cartoonized_cloudinary_url,
+          art_style: data.cartoon_style || 'storybook'
+        };
+      }
+
+      this.log('info', '📝 No cached character data found');
+      return null;
+
+    } catch (error: any) {
+      this.log('warn', `Character cache lookup error (non-critical): ${error.message}`);
+      return null; // Graceful degradation - don't break job if cache fails
+    }
+  }
+
+  /**
+   * Cache character data for future reuse
+   * Stores the character description and cartoon URL to avoid redundant API calls on retries
+   * 
+   * Database schema (cartoon_images table):
+   * - user_id: UUID (NOT NULL)
+   * - original_cloudinary_url: The uploaded photo URL
+   * - cartoonized_cloudinary_url: The generated cartoon URL
+   * - character_description: Cached Gemini analysis
+   * - cartoon_style: Art style (e.g., 'comic-book')
+   * 
+   * Note: Records may already be created by the cartoonize endpoint.
+   * This method updates existing records with character_description if they exist,
+   * or creates new records if needed.
+   * 
+   * @param data - Character data to cache
+   * @returns true if cached successfully, false otherwise
+   */
+  async cacheCharacterData(data: {
+    sourceImageUrl: string;
+    characterDescription: string;
+    cartoonImageUrl: string;
+    artStyle: string;
+    userId?: string;
+  }): Promise<boolean> {
+    try {
+      if (!this.supabase) {
+        this.log('warn', 'Supabase client not available for character cache storage');
+        return false;
+      }
+
+      if (!data.sourceImageUrl || !data.characterDescription || !data.cartoonImageUrl) {
+        this.log('warn', 'Missing required data for character cache storage');
+        return false;
+      }
+
+      this.log('info', `💾 Caching character data for: ${data.sourceImageUrl.substring(0, 60)}...`);
+
+      // First, check if a record already exists for this image
+      const { data: existingRecord, error: selectError } = await this.supabase
+        .from('cartoon_images')
+        .select('id')
+        .eq('original_cloudinary_url', data.sourceImageUrl)
+        .limit(1)
+        .maybeSingle();
+
+      if (selectError && selectError.code !== 'PGRST116') {
+        // PGRST116 = no rows returned, which is fine
+        this.log('warn', `Character cache select error: ${selectError.message}`);
+      }
+
+      if (existingRecord?.id) {
+        // Update existing record with character description
+        const { error: updateError } = await this.supabase
+          .from('cartoon_images')
+          .update({
+            character_description: data.characterDescription,
+            cartoonized_cloudinary_url: data.cartoonImageUrl,
+            cartoon_style: data.artStyle
+          })
+          .eq('id', existingRecord.id);
+
+        if (updateError) {
+          this.log('warn', `Character cache update failed: ${updateError.message}`);
+          return false;
+        }
+
+        this.log('info', '✅ Updated existing character cache record with description');
+        return true;
+
+      } else {
+        // Create new record (only if we have a userId, as it's required)
+        if (!data.userId) {
+          this.log('warn', 'Cannot create new character cache record: userId is required');
+          return false;
+        }
+
+        const { error: insertError } = await this.supabase
+          .from('cartoon_images')
+          .insert({
+            user_id: data.userId,
+            original_cloudinary_url: data.sourceImageUrl,
+            cartoonized_cloudinary_url: data.cartoonImageUrl,
+            cartoon_style: data.artStyle,
+            character_description: data.characterDescription
+          });
+
+        if (insertError) {
+          this.log('warn', `Character cache insert failed: ${insertError.message}`);
+          return false;
+        }
+
+        this.log('info', '✅ Created new character cache record');
+        return true;
+      }
+
+    } catch (error: any) {
+      this.log('warn', `Character cache storage error (non-critical): ${error.message}`);
+      return false; // Graceful degradation - caching is optional optimization
+    }
+  }
 }
 
 // Export singleton instance

@@ -704,6 +704,7 @@ environmentalDNA = await aiService.createEnvironmentalDNA(
 console.log('🧬 PHASE 3: Character DNA Creation for Maximum Consistency...');
 let characterDescriptionToUse = character_description;
 let characterDNA: any = null;
+let usedCachedCharacterData = false;
 
 // CRITICAL FIX: Use existing description for reused images
 if (is_reused_image && character_description) {
@@ -715,25 +716,76 @@ if (character_image) {
   this.updateComicGenerationProgress(job.id, { targetPanels: audience === 'children' ? 8 : audience === 'young adults' ? 15 : 24 });
   
   try {
-    this.trackServiceUsage(job.id, 'ai');
-    if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
+    // ===== CHARACTER DATA CACHING - Eliminate redundant API calls on retries =====
+    // Check if we already have cached character data for this image
+    const cachedCharacter = await databaseService.getCachedCharacterData(character_image);
     
-    // Pass the existing description for reused cartoons
-    characterDNA = await aiService.createMasterCharacterDNA(
-      character_image, 
-      character_art_style,
-      characterDescriptionToUse  // ✅ FIX: Pass the character description as third parameter
-    );
-    
-    // Only extract description if we don't already have one
-    if (!is_reused_image || !characterDescriptionToUse) {
-      characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
-    }
-        this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
-        console.log('✅ Professional character DNA created with maximum consistency protocols');
+    if (cachedCharacter?.character_description && cachedCharacter?.cartoon_image_url) {
+      // ✅ CACHE HIT: Reuse cached data (saves $0.04-0.06 and ~60 seconds per retry)
+      console.log('✅ Found cached character data, skipping regeneration (saving $0.04-0.06 and ~60 seconds)');
+      console.log('   📋 Reusing character description and cartoon from previous analysis');
+      
+      characterDNA = {
+        description: cachedCharacter.character_description,
+        cartoonImage: cachedCharacter.cartoon_image_url,
+        sourceImage: character_image,
+        artStyle: character_art_style,
+        cached: true
+      };
+      
+      characterDescriptionToUse = cachedCharacter.character_description;
+      usedCachedCharacterData = true;
+      
+      this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
+      console.log('✅ Character DNA loaded from cache');
+      
+      const totalPanels = audience === 'children' ? 8 : audience === 'young adults' ? 15 : 24;
+      await jobService.updateJobProgress(job.id, 35, `Character data loaded from cache - ensuring consistency across all ${totalPanels} panels...`);
+      
+    } else {
+      // ❌ CACHE MISS: Create character DNA from scratch
+      console.log('📝 No cached character data found, creating new character DNA...');
+      
+      this.trackServiceUsage(job.id, 'ai');
+      if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
+      
+      // Pass the existing description for reused cartoons
+      characterDNA = await aiService.createMasterCharacterDNA(
+        character_image, 
+        character_art_style,
+        characterDescriptionToUse  // ✅ FIX: Pass the character description as third parameter
+      );
+      
+      // Only extract description if we don't already have one
+      if (!is_reused_image || !characterDescriptionToUse) {
+        characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
+      }
+      
+      this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
+      console.log('✅ Professional character DNA created with maximum consistency protocols');
+      
+      const totalPanels = audience === 'children' ? 8 : audience === 'young adults' ? 15 : 24;
+      await jobService.updateJobProgress(job.id, 35, `Creating visual DNA for your character - ensuring perfect consistency across all ${totalPanels} panels...`);
+      
+      // ===== CACHE THE NEW CHARACTER DATA FOR FUTURE RETRIES =====
+      // Store in database to avoid redundant API calls if job retries
+      try {
+        const cacheSuccess = await databaseService.cacheCharacterData({
+          sourceImageUrl: character_image,
+          characterDescription: characterDescriptionToUse || characterDNA?.description || '',
+          cartoonImageUrl: characterDNA?.cartoonImage || '',
+          artStyle: character_art_style,
+          userId: job.user_id
+        });
         
-        const totalPanels = audience === 'children' ? 8 : audience === 'young adults' ? 15 : 24;
-        await jobService.updateJobProgress(job.id, 35, `Creating visual DNA for your character - ensuring perfect consistency across all ${totalPanels} panels...`);
+        if (cacheSuccess) {
+          console.log('💾 Cached character data for future retries');
+        }
+      } catch (cacheError) {
+        console.warn('⚠️ Failed to cache character data (non-critical):', cacheError);
+        // Don't fail job if caching fails - it's just an optimization
+      }
+    }
         
       } catch (dnaError) {
         console.warn('⚠️ Character DNA creation failed, using fallback description method:', dnaError);
@@ -1005,6 +1057,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
                 // ✅ CRITICAL FIX: Use generatePanelWithEnhancedGuidance for ACTUAL IMAGE generation
                 // This returns a Cloudinary URL, not text!
+                // ✅ NEW: Pass environmentalContext for environmental consistency enforcement
                 this.trackServiceUsage(job.id, 'ai');
                 const regenerateResult = await aiService.generatePanelWithEnhancedGuidance({
                   cartoonImageUrl: characterDNA?.cartoonImage || character_image,
@@ -1014,7 +1067,13 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
                   artStyle: character_art_style,
                   panelType: 'standard',
                   lighting: environmentalDNA?.lightingContext?.lightingMood || 'natural',
-                  backgroundComplexity: environmentalDNA ? 'detailed' : 'moderate'
+                  backgroundComplexity: environmentalDNA ? 'detailed' : 'moderate',
+                  environmentalContext: {
+                    characterDNA: characterDNA,
+                    environmentalDNA: environmentalDNA,
+                    panelNumber: globalPanelNumber,
+                    totalPanels: totalScenes
+                  }
                 });
 
                 const unwrappedRegenerate = await regenerateResult.unwrap();

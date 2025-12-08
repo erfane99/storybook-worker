@@ -1088,6 +1088,21 @@ export interface IDatabaseOperations {
 
   // Transaction Support
   executeTransaction<T>(operations: DatabaseOperation<T>[]): Promise<T[]>;
+
+  // Character Data Caching (Eliminates redundant API calls on job retries)
+  getCachedCharacterData(sourceImageUrl: string): Promise<{
+    character_description: string;
+    cartoon_image_url: string;
+    art_style: string;
+  } | null>;
+  
+  cacheCharacterData(data: {
+    sourceImageUrl: string;
+    characterDescription: string;
+    cartoonImageUrl: string;
+    artStyle: string;
+    userId?: string;
+  }): Promise<boolean>;
 }
 
 export interface IAIOperations {
@@ -1256,6 +1271,7 @@ export interface IAIService extends
   
   // ✅ Panel Regeneration with Enhanced Guidance
   // Used when panels fail validation and need regeneration with specific fixes
+  // ✅ ENHANCED: Now includes environmentalContext for environmental consistency enforcement
   generatePanelWithEnhancedGuidance(options: {
     cartoonImageUrl: string;
     sceneDescription: string;
@@ -1266,6 +1282,12 @@ export interface IAIService extends
     cameraAngle?: string;
     lighting?: string;
     backgroundComplexity?: string;
+    environmentalContext?: {
+      characterDNA?: any;
+      environmentalDNA?: any;
+      panelNumber?: number;
+      totalPanels?: number;
+    };
   }): Promise<AsyncResult<{ url: string }, AIServiceUnavailableError>>;
 }
 

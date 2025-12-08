@@ -126,6 +126,12 @@ interface PanelOptions {
   panelType?: string;
   backgroundComplexity?: string;
   temperature?: number;
+  environmentalContext?: {
+    characterDNA?: any;
+    environmentalDNA?: any;
+    panelNumber?: number;
+    totalPanels?: number;
+  };
 }
 
 // ===== GEMINI INTEGRATION CLASS =====
@@ -316,6 +322,7 @@ const response = await this.generateWithRetry<GeminiResponse>({
   /**
    * Generate panel with character using image-based reference
    * CRITICAL: Gemini SEES the actual cartoon image for perfect consistency
+   * ENHANCED: Now includes environmental DNA enforcement for consistent time/location/lighting
    */
   public async generatePanelWithCharacter(
     cartoonImageUrl: string,
@@ -323,17 +330,28 @@ const response = await this.generateWithRetry<GeminiResponse>({
     emotion: string,
     options: PanelOptions
   ): Promise<string> {
+    const hasEnvDNA = !!options.environmentalContext?.environmentalDNA;
+    
     this.logger.log('🎬 Generating panel with character reference...', { 
-      cartoonImageUrl, 
+      cartoonImageUrl: cartoonImageUrl.substring(0, 50) + '...', 
       emotion, 
-      artStyle: options.artStyle 
+      artStyle: options.artStyle,
+      hasEnvironmentalDNA: hasEnvDNA,
+      timeOfDay: hasEnvDNA ? options.environmentalContext?.environmentalDNA?.lightingContext?.timeOfDay : 'not specified',
+      location: hasEnvDNA ? options.environmentalContext?.environmentalDNA?.primaryLocation?.name : 'not specified'
     });
+    
+    if (hasEnvDNA) {
+      this.logger.log('🌍 Environmental DNA enforcement ENABLED for this panel');
+    } else {
+      this.logger.warn('⚠️ No environmental DNA provided - panel may have inconsistent environment');
+    }
     
     try {
       // Fetch cartoon image as base64 with OPTIMIZATION (512×512, 82% smaller)
       const base64Cartoon = await this.fetchImageAsBase64(cartoonImageUrl, true);  // ✅ Enable optimization
       
-      // Build panel generation prompt
+      // Build panel generation prompt (now includes environmental enforcement if DNA provided)
       const panelPrompt = this.buildPanelGenerationPrompt(
         sceneDescription,
         emotion,
@@ -367,7 +385,10 @@ const response = await this.generateWithRetry<GeminiResponse>({
       // Extract generated panel URL (now uploads to Cloudinary)
       const panelUrl = await this.extractImageUrlFromResponse(response);
       
-      this.logger.log('✅ Panel generated successfully', { panelUrl });
+      this.logger.log('✅ Panel generated successfully', { 
+        panelUrl: panelUrl.substring(0, 60) + '...',
+        environmentEnforced: hasEnvDNA
+      });
       
       return panelUrl;
       
@@ -465,7 +486,7 @@ const response = await this.generateWithRetry<GeminiResponse>({
     enhancedGuidance: string,
     options: PanelOptions
   ): string {
-    return `REGENERATION WITH FIXES - Create a ${options.artStyle} comic book panel using the character design from the reference image.
+    let prompt = `REGENERATION WITH FIXES - Create a ${options.artStyle} comic book panel using the character design from the reference image.
 
 CRITICAL FIXES REQUIRED (from previous failed validation):
 ${enhancedGuidance}
@@ -485,7 +506,40 @@ PANEL COMPOSITION:
 - Camera angle: ${options.cameraAngle || 'eye level'}
 - Lighting: ${options.lighting || 'natural, evenly distributed'}
 - Background detail: ${options.backgroundComplexity || 'moderate detail that supports but doesn\'t overwhelm the character'}
-- Visual focus: Character as the primary focal point
+- Visual focus: Character as the primary focal point`;
+
+    // ===== ENVIRONMENTAL DNA ENFORCEMENT FOR REGENERATION =====
+    // Critical: Failed panels often fail due to environmental inconsistency
+    if (options.environmentalContext?.environmentalDNA) {
+      const envDNA = options.environmentalContext.environmentalDNA;
+      
+      const timeOfDay = envDNA.lightingContext?.timeOfDay || 'afternoon';
+      const lightingMood = envDNA.lightingContext?.lightingMood || 'natural';
+      const locationName = envDNA.primaryLocation?.name || 'setting';
+      const keyFeatures = envDNA.primaryLocation?.keyFeatures || [];
+      const dominantColors = envDNA.visualContinuity?.colorConsistency?.dominantColors || [];
+      
+      prompt += `
+
+🌍 ENVIRONMENTAL CONSISTENCY - MANDATORY FOR REGENERATION:
+
+⚠️ THE PREVIOUS PANEL LIKELY FAILED DUE TO ENVIRONMENTAL MISMATCH. FIX THIS:
+
+TIME OF DAY: ${timeOfDay.toUpperCase()} (NOT any other time)
+- ${timeOfDay === 'night' || timeOfDay === 'evening' ? 'MUST show night/evening darkness. NO bright daylight.' : ''}
+- ${timeOfDay === 'morning' ? 'MUST show early morning light.' : ''}
+- ${timeOfDay === 'afternoon' ? 'MUST show afternoon daylight.' : ''}
+
+LIGHTING MOOD: ${lightingMood}
+LOCATION: ${locationName} (show THIS specific location)
+
+KEY FEATURES TO INCLUDE:
+${keyFeatures.slice(0, 3).map((f: string) => `- ${f}`).join('\n') || '- Story-specific environmental elements'}
+
+COLOR PALETTE: ${dominantColors.slice(0, 4).join(', ') || 'colors matching the specified time of day'}`;
+    }
+
+    prompt += `
 
 ${options.artStyle.toUpperCase()} QUALITY STANDARDS:
 - Professional comic book illustration
@@ -497,6 +551,8 @@ ${options.artStyle.toUpperCase()} QUALITY STANDARDS:
 MANDATORY: Address ALL issues listed in CRITICAL FIXES REQUIRED section above.
 
 Create a compelling comic panel that fixes the previous validation failures while maintaining design consistency in ${options.artStyle} style.`;
+
+    return prompt;
   }
 
   /**
@@ -671,7 +727,8 @@ Create a compelling comic panel that fixes the previous validation failures whil
     emotion: string,
     options: PanelOptions
   ): string {
-    return `Create a ${options.artStyle} comic book panel using the character design from the reference image.
+    // Build base prompt
+    let prompt = `Create a ${options.artStyle} comic book panel using the character design from the reference image.
   
   SCENE CONTEXT:
   ${sceneDescription}
@@ -688,13 +745,69 @@ Create a compelling comic panel that fixes the previous validation failures whil
   - Camera angle: ${options.cameraAngle || 'eye level'}
   - Lighting: ${options.lighting || 'natural, evenly distributed'}
   - Background detail: ${options.backgroundComplexity || 'moderate detail that supports but doesn\'t overwhelm the character'}
-  - Visual focus: Character as the primary focal point
+  - Visual focus: Character as the primary focal point`;
+
+    // ===== ENVIRONMENTAL DNA ENFORCEMENT =====
+    // This is CRITICAL for passing environmental validation (70% threshold)
+    // Without this, Gemini ignores time of day, location, and lighting specifications
+    if (options.environmentalContext?.environmentalDNA) {
+      const envDNA = options.environmentalContext.environmentalDNA;
+      
+      // Extract environmental elements with fallbacks
+      const timeOfDay = envDNA.lightingContext?.timeOfDay || 'afternoon';
+      const lightingMood = envDNA.lightingContext?.lightingMood || 'natural';
+      const weatherCondition = envDNA.lightingContext?.weatherCondition || 'pleasant';
+      const locationName = envDNA.primaryLocation?.name || 'setting';
+      const keyFeatures = envDNA.primaryLocation?.keyFeatures || [];
+      const dominantColors = envDNA.visualContinuity?.colorConsistency?.dominantColors || [];
+      const accentColors = envDNA.visualContinuity?.colorConsistency?.accentColors || [];
+      const backgroundElements = envDNA.visualContinuity?.backgroundElements || [];
+      
+      prompt += `
+
+🌍 ENVIRONMENTAL CONSISTENCY - MANDATORY REQUIREMENTS:
+
+⚠️ CRITICAL: This panel MUST match these environmental specifications EXACTLY.
+Ignoring these will cause validation failure. Every panel must exist in the same visual world.
+
+TIME OF DAY: ${timeOfDay.toUpperCase()}
+- ${timeOfDay === 'night' || timeOfDay === 'evening' ? 'DO NOT show bright daylight. Show darkness, moonlight, or evening lighting.' : ''}
+- ${timeOfDay === 'morning' ? 'Show early morning light with soft, warm tones.' : ''}
+- ${timeOfDay === 'afternoon' ? 'Show bright daylight with clear visibility.' : ''}
+- Match the specified time PRECISELY in the sky, shadows, and ambient light.
+
+LIGHTING MOOD: ${lightingMood}
+WEATHER/ATMOSPHERE: ${weatherCondition}
+
+PRIMARY LOCATION: ${locationName}
+- This specific location MUST be recognizable in the panel
+- NOT a generic outdoor scene - show THIS specific ${locationName}
+- Location characteristics must be consistent across all panels
+
+KEY FEATURES THAT MUST BE VISIBLE:
+${keyFeatures.slice(0, 4).map((f: string) => `- ${f}`).join('\n') || '- Consistent environmental elements from the story setting'}
+
+COLOR PALETTE (USE THESE COLORS):
+- Dominant colors: ${dominantColors.slice(0, 4).join(', ') || 'natural colors matching the time of day'}
+- Accent colors: ${accentColors.slice(0, 3).join(', ') || 'complementary colors for visual interest'}
+
+BACKGROUND ELEMENTS TO INCLUDE:
+${backgroundElements.slice(0, 4).map((e: string) => `- ${e}`).join('\n') || '- Consistent background elements from the story world'}
+
+ENVIRONMENTAL CONTINUITY RULES:
+- All panels share the SAME time of day (${timeOfDay})
+- All panels share the SAME location type (${locationName})
+- All panels share the SAME lighting mood (${lightingMood})
+- Transitioning between scenes must maintain environmental coherence`;
+    }
+
+    // Add quality standards
+    prompt += `
   
   ${options.artStyle.toUpperCase()} QUALITY STANDARDS:
   - Professional comic book illustration
   - Clean, expressive line work
   - Vibrant, publication-ready colors
-  - 2K resolution for print quality
   - Visual consistency with established character design
   - Engaging composition that advances the narrative
   - Sequential art best practices
@@ -706,6 +819,8 @@ Create a compelling comic panel that fixes the previous validation failures whil
   - Art style and rendering approach should match the reference
   
   Create a compelling comic panel that maintains design consistency while bringing the scene to life in ${options.artStyle} style with appropriate emotional expression and dynamic composition.`;
+
+    return prompt;
   }
 
   // ===== HELPER METHODS =====

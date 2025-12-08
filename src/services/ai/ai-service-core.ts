@@ -941,6 +941,7 @@ REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art
         }
         
         // Generate actual image using Gemini's image-to-image generation
+        // ✅ CRITICAL: Pass environmentalContext to enforce time/location/lighting consistency
         const imageUrl = await this.geminiIntegration.generatePanelWithCharacter(
           cartoonImageUrl,
           worldClassPrompt,  // Use the world-class prompt as scene description
@@ -951,7 +952,14 @@ REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art
             lighting: environmentalDNA?.lightingContext?.lightingMood || 'natural',
             panelType: panelType,
             backgroundComplexity: environmentalDNA ? 'detailed' : 'moderate',
-            temperature: 0.7
+            temperature: 0.7,
+            // ✅ NEW: Pass environmental context for MANDATORY enforcement in Gemini prompts
+            environmentalContext: {
+              characterDNA: characterDNA,
+              environmentalDNA: environmentalDNA,
+              panelNumber: panelNumber,
+              totalPanels: totalPanels
+            }
           }
         );
         
@@ -1910,6 +1918,12 @@ private determineCameraAngle(index: number, total: number): string {
     cameraAngle?: string;
     lighting?: string;
     backgroundComplexity?: string;
+    environmentalContext?: {
+      characterDNA?: any;
+      environmentalDNA?: any;
+      panelNumber?: number;
+      totalPanels?: number;
+    };
   }): Promise<AsyncResult<{ url: string }, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
@@ -1918,6 +1932,7 @@ private determineCameraAngle(index: number, total: number): string {
         this.log('info', '🔄 Generating panel with enhanced guidance for regeneration...');
         
         // ✅ Use Gemini's enhanced guidance method (returns Cloudinary URL)
+        // ✅ CRITICAL: Pass environmentalContext for environmental consistency enforcement
         const imageUrl = await this.geminiIntegration.generatePanelWithEnhancedGuidance(
           options.cartoonImageUrl,
           options.sceneDescription,
@@ -1929,7 +1944,9 @@ private determineCameraAngle(index: number, total: number): string {
             lighting: options.lighting,
             panelType: options.panelType,
             backgroundComplexity: options.backgroundComplexity,
-            temperature: 0.6
+            temperature: 0.6,
+            // ✅ NEW: Pass environmental context for MANDATORY enforcement in regeneration
+            environmentalContext: options.environmentalContext
           }
         );
         

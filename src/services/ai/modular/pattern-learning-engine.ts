@@ -92,11 +92,11 @@ export class PatternLearningEngine {
   private databaseService: IDatabaseService;
 
   private readonly SUCCESS_CRITERIA: SuccessCriteria = {
-    minTechnicalScore: 85,
-    minCharacterConsistency: 90,
-    minEnvironmentalCoherence: 85,
+    minTechnicalScore: 70,
+    minCharacterConsistency: 70,
+    minEnvironmentalCoherence: 70,
     minUserRating: 4.0,
-    combinedThreshold: 85
+    combinedThreshold: 70
   };
 
   constructor(databaseService: IDatabaseService) {

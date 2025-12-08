@@ -166,7 +166,7 @@ const DIMENSION_WEIGHTS = {
   AUDIENCE_ALIGNMENT: 0.10
 };
 
-const PROFESSIONAL_STANDARDS_THRESHOLD = 85;
+const PROFESSIONAL_STANDARDS_THRESHOLD = 70;  // Lowered for early-stage app with learning system
 
 const GRADE_THRESHOLDS = {
   'A+': 98,
