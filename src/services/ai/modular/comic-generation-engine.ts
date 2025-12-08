@@ -625,10 +625,16 @@ COMIC BOOK PROFESSIONAL STANDARDS:
           {
             artStyle,
             cameraAngle: 'eye level',
-            lighting: 'natural',
+            lighting: environmentalDNA?.lightingContext?.lightingMood || 'natural',
             panelType,
-            backgroundComplexity: 'moderate',
-            temperature: 0.7
+            backgroundComplexity: environmentalDNA ? 'detailed' : 'moderate',
+            temperature: 0.7,
+            environmentalContext: {
+              characterDNA: characterDNA,
+              environmentalDNA: environmentalDNA,
+              panelNumber: panelNumber,
+              totalPanels: totalPanels
+            }
           }
         );
       } else {

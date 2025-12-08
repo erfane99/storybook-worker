@@ -341,11 +341,11 @@ const response = await this.generateWithRetry<GeminiResponse>({
       location: hasEnvDNA ? options.environmentalContext?.environmentalDNA?.primaryLocation?.name : 'not specified'
     });
     
-    if (hasEnvDNA) {
-      this.logger.log('🌍 Environmental DNA enforcement ENABLED for this panel');
-    } else {
-      this.logger.warn('⚠️ No environmental DNA provided - panel may have inconsistent environment');
+    if (!hasEnvDNA) {
+      throw new Error('FATAL: Environmental DNA is required for panel generation. Cannot proceed without world consistency specifications.');
     }
+    
+    this.logger.log('🌍 Environmental DNA enforcement ENABLED for this panel');
     
     try {
       // Fetch cartoon image as base64 with OPTIMIZATION (512×512, 82% smaller)

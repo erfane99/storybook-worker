@@ -456,28 +456,19 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     if (!job) {
       throw new Error(`Cannot mark failed - job not found: ${jobId}`);
     }
-
+  
     const tableName = this.getTableName(job.type);
     const now = new Date().toISOString();
     
-    // FIXED: When shouldRetry is false, immediately mark as failed regardless of retry count
-    const newRetryCount = job.retry_count + 1;
-    const canRetry = shouldRetry ? (newRetryCount <= job.max_retries) : false;
-
+    // NO RETRIES: Always mark as failed immediately
     const updateData: any = {
-      status: canRetry ? 'pending' : 'failed',
+      status: 'failed',
       error_message: errorMessage,
       updated_at: now,
-      retry_count: newRetryCount
+      completed_at: now,
+      current_step: 'Failed - Quality standards not met',
+      retry_count: job.retry_count + 1
     };
-
-    if (!canRetry) {
-      updateData.completed_at = now;
-      updateData.current_step = 'Failed - Quality standards not met';
-    } else {
-      updateData.current_step = `Retrying (${newRetryCount}/${job.max_retries})`;
-      updateData.progress = 0;
-    }
 
     const result = await this.executeQuery<{ id: string }>(
       'Mark job failed',
