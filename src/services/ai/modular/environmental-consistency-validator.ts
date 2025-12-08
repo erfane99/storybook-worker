@@ -101,7 +101,7 @@ export interface EnvironmentalDNA {
 export class EnvironmentalValidationError extends BaseServiceError {
   public readonly type = 'ENVIRONMENTAL_VALIDATION_ERROR';
   public readonly category = ErrorCategory.VALIDATION;
-  public readonly retryable = true;  // Retryable via page regeneration
+  public readonly retryable = false;  // Retryable via page regeneration
   public readonly severity = ErrorSeverity.HIGH;
   public override readonly name = 'EnvironmentalValidationError';
 
