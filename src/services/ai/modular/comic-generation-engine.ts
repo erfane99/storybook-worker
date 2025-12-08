@@ -669,7 +669,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     });
 
     // ✅ ADAPTIVE BATCHING: Adjusts delay based on API performance
-    const batchSize = 4;
+    const batchSize = Math.min(config.panelsPerPage * 2, 6);
     const panels: ComicPanel[] = [];
     let adaptiveDelay = 300;  // Start with 300ms (aggressive)
     let consecutiveSuccesses = 0;
