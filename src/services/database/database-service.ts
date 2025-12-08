@@ -1824,15 +1824,25 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
           return false;
         }
 
-        const { error: insertError } = await this.supabase
-          .from('cartoon_images')
-          .insert({
-            user_id: data.userId,
-            original_cloudinary_url: data.sourceImageUrl,
-            cartoonized_cloudinary_url: data.cartoonImageUrl,
-            cartoon_style: data.artStyle,
-            character_description: data.characterDescription
-          });
+        // Extract public_id from Cloudinary URL
+const publicIdMatch = data.cartoonImageUrl.match(/\/([^/]+)\.[^.]+$/);
+const publicId = publicIdMatch ? publicIdMatch[1] : null;
+
+if (!publicId) {
+  this.log('warn', 'Cannot cache character: missing Cloudinary public_id');
+  return false;
+}
+
+const { error: insertError } = await this.supabase
+  .from('cartoon_images')
+  .insert({
+    user_id: data.userId,
+    original_cloudinary_url: data.sourceImageUrl,
+    cartoonized_cloudinary_url: data.cartoonImageUrl,
+    cartoonized_cloudinary_public_id: publicId,  // ← ADDED: Extract from URL
+    cartoon_style: data.artStyle,
+    character_description: data.characterDescription
+  });
 
         if (insertError) {
           this.log('warn', `Character cache insert failed: ${insertError.message}`);

@@ -856,11 +856,18 @@ async createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescr
         
         // Extract DNA elements from environmentalContext
         const characterDNA = options.environmentalContext?.characterDNA;
-        // ✅ FIX: Properly extract environmentalDNA and cast to correct type
-        const rawEnvDNA = options.environmentalContext?.environmentalDNA || options.environmentalContext;
-        const environmentalDNA = (rawEnvDNA && 'primaryLocation' in rawEnvDNA) ? rawEnvDNA as EnvironmentalDNA : null;
+        // ✅ FIXED: Direct extraction - environmentalContext contains the DNA objects directly
+        // Previous code had flawed fallback logic that caused environmentalDNA to be null
+        const environmentalDNA = options.environmentalContext?.environmentalDNA as EnvironmentalDNA | null;
         const panelNumber = options.environmentalContext?.panelNumber || 1;
         const totalPanels = options.environmentalContext?.totalPanels || 1;
+        
+        // Debug logging for environmental DNA propagation
+        if (environmentalDNA) {
+          this.log('info', `🌍 Environmental DNA received: timeOfDay=${environmentalDNA.lightingContext?.timeOfDay}, location=${environmentalDNA.primaryLocation?.name?.substring(0, 30)}...`);
+        } else {
+          this.log('warn', `⚠️ No environmental DNA in context - panels may have inconsistent environments`);
+        }
         
         // Panel type specifications (from original files)
         const panelSpecs: Record<string, string> = {
