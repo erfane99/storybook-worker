@@ -111,7 +111,10 @@ export class ComicGenerationEngine {
         characterDNA, 
         environmentalDNA, 
         config, 
-        characterArtStyle
+        characterArtStyle,
+        audience,
+        story,
+        undefined  // Character name extracted from story context
       );
 
       console.log(`Professional comic book layout generated: ${pages.length} pages with ${config.totalPanels} total panels`);
@@ -516,7 +519,10 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     characterDNA: CharacterDNA | null,
     environmentalDNA: EnvironmentalDNA,
     config: any,
-    artStyle: string
+    artStyle: string,
+    audience: AudienceType,
+    story: string,
+    characterName?: string
   ): Promise<ComicPanel[]> {
     try {
       const pages: ComicPanel[] = [];
@@ -540,7 +546,10 @@ COMIC BOOK PROFESSIONAL STANDARDS:
           config,
           artStyle,
           pageNumber,
-          storyAnalysis.totalPanels
+          storyAnalysis.totalPanels,
+          audience,
+          story,
+          characterName
         );
 
         const pagePanel: any = {
@@ -591,7 +600,10 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     config: any,
     artStyle: string,
     pageNumber: number,
-    totalPanels: number
+    totalPanels: number,
+    audience: AudienceType,
+    story: string,
+    characterName?: string
   ): Promise<ComicPanel[]> {
     console.log(`Generating ${pageBeats.length} actual images for page ${pageNumber} in parallel...`);
 
@@ -649,7 +661,14 @@ COMIC BOOK PROFESSIONAL STANDARDS:
       console.log(`✅ Panel ${panelNumber} image generated successfully`);
 
       // Generate rich narration text (20-40 words) from beat
-      const narration = this.generatePanelNarration(beat, panelNumber, totalPanels);
+      const narration = await this.generatePanelNarration(
+        beat,
+        panelNumber,
+        totalPanels,
+        audience,
+        characterName || 'the character',
+        story
+      );
 
       return {
         description: beat.beat,  // Keep short summary for internal use
@@ -723,59 +742,66 @@ COMIC BOOK PROFESSIONAL STANDARDS:
   }
 
   /**
-   * Generate rich narration text for panel (20-40 words)
-   * Transforms beat summary into engaging narrative prose
-   */
-  private generatePanelNarration(
-    beat: StoryBeat,
-    panelNumber: number,
-    totalPanels: number
-  ): string {
-    const { beat: summary, characterAction, emotion, environment, dialogue } = beat;
-    
-    // Build narration components
-    const actionText = characterAction && characterAction !== 'standing' 
-      ? ` ${characterAction}` 
-      : '';
-    
-    const emotionText = emotion && emotion !== 'neutral'
-      ? ` with ${emotion} ${emotion === 'happy' ? 'joy' : emotion === 'scared' ? 'fear' : 'emotion'}`
-      : '';
-    
-    const environmentText = environment && environment !== 'general setting' && environment !== 'story setting'
-      ? ` in the ${environment}`
-      : '';
-    
-    // Create narrative sentence structure
-    let narration = `${summary}${actionText}${emotionText}${environmentText}.`;
-    
-    // Add contextual richness based on panel position
-    if (panelNumber === 1) {
-      // Opening panel - set the scene
-      narration = `Our story begins as ${summary.toLowerCase()}${actionText}${environmentText}${emotionText}.`;
-    } else if (panelNumber === totalPanels) {
-      // Final panel - provide closure
-      narration = `And so, ${summary.toLowerCase()}${actionText}${emotionText}, bringing our tale to its end.`;
-    } else if (beat.narrativeFunction === 'climax' || beat.panelPurpose === 'climax') {
-      // Climax moment - add drama
-      narration = `In this crucial moment, ${summary.toLowerCase()}${actionText}${emotionText}${environmentText}!`;
-    }
-    
-    // Ensure length is appropriate (20-50 words)
-    const wordCount = narration.split(/\s+/).length;
-    
-    if (wordCount < 15) {
-      // Too short - add descriptive detail
-      const detail = beat.visualPriority === 'environment' 
-        ? ' The scene unfolds with vivid detail.'
-        : beat.visualPriority === 'character'
-        ? ' Every emotion is clear on the character\'s face.'
-        : ' The moment is captured perfectly.';
-      narration += detail;
-    }
-    
-    return narration;
+ * Generate rich narration text for panel (20-40 words)
+ * Uses Gemini AI to transform beat data into engaging narrative prose
+ */
+private async generatePanelNarration(
+  beat: StoryBeat,
+  panelNumber: number,
+  totalPanels: number,
+  audience: AudienceType,
+  characterName: string,
+  originalStory: string
+): Promise<string> {
+  // Build narration generation prompt
+  const prompt = `You are a professional storybook narrator writing engaging narrative text for a ${audience} audience comic book panel.
+
+CONTEXT:
+- Original Story: "${originalStory.substring(0, 300)}..."
+- Panel ${panelNumber} of ${totalPanels}
+- Character Name: ${characterName}
+- Story Moment: ${beat.beat}
+- Character Action: ${beat.characterAction}
+- Emotion: ${beat.emotion}
+- Setting: ${beat.environment}
+${beat.dialogue ? `- Dialogue: "${beat.dialogue}"` : ''}
+
+NARRATION REQUIREMENTS:
+1. Write in storytelling voice appropriate for ${audience} audience
+2. Length: 20-40 words exactly
+3. Use proper grammar, capitalization, and punctuation
+4. Create flowing narrative prose, NOT technical descriptions
+5. Capture the emotional essence of this moment
+6. ${panelNumber === 1 ? 'Begin with scene-setting language that draws readers in' : panelNumber === totalPanels ? 'Provide satisfying conclusion with emotional closure' : 'Build narrative momentum and emotional engagement'}
+7. Use vivid, sensory language that enhances the visual storytelling
+8. Maintain narrative consistency with the original story tone
+
+STYLE GUIDE FOR ${audience.toUpperCase()}:
+${audience === 'children' ? '- Simple, clear sentences with magical wonder\n- Warm, encouraging tone\n- Focus on discovery and emotion\n- Use accessible vocabulary' : audience === 'young adults' ? '- Dynamic, engaging prose with personality\n- Balance action and emotion\n- Contemporary voice with depth\n- Build excitement and connection' : '- Sophisticated narrative voice\n- Nuanced emotional layers\n- Literary quality with precision\n- Complex themes handled with care'}
+
+Generate ONLY the narration text. No labels, no extra commentary. Just the 20-40 word narrative prose.`;
+
+  const narration = await this.geminiIntegration.generateTextCompletion(prompt, {
+    temperature: 0.7,  // Creative but controlled
+    max_output_tokens: 150,  // ~40 words max
+    top_p: 0.9
+  });
+  
+  // Clean up response (remove any markdown, quotes, or labels)
+  const cleaned = narration
+    .replace(/```/g, '')
+    .replace(/^["']|["']$/g, '')
+    .replace(/^Narration:\s*/i, '')
+    .trim();
+  
+  // Validate length (20-40 words)
+  const wordCount = cleaned.split(/\s+/).length;
+  if (wordCount < 15 || wordCount > 50) {
+    console.warn(`⚠️ Narration length (${wordCount} words) outside target range (20-40 words)`);
   }
+  
+  return cleaned;
+}
 
   // ===== OPTIMIZED IMAGE PROMPT BUILDING (FROM BOTH FILES) =====
 
