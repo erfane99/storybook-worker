@@ -209,4 +209,33 @@ Return JSON:
       throw new Error(`Claude story analysis failed: ${error?.message || 'Unknown error'}`);
     }
   }
+
+  /**
+   * Generate narration text for comic panel
+   * @param prompt - The narration generation prompt
+   * @returns Generated narration text
+   */
+  async generateNarrationText(prompt: string): Promise<string> {
+    try {
+      const message = await this.client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 150,
+        temperature: 0.7,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      });
+
+      const narration = message.content[0].type === 'text' 
+        ? message.content[0].text 
+        : '';
+
+      return narration;
+
+    } catch (error: any) {
+      console.error('❌ Claude narration generation error:', error);
+      throw new Error(`Claude narration generation failed: ${error?.message || 'Unknown error'}`);
+    }
+  }
 }

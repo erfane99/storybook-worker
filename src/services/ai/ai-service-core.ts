@@ -386,8 +386,13 @@ class AIService extends ErrorAwareBaseService implements IAIService {
       // Note: Gemini doesn't need learning engine integration like OpenAI did
 
       // 7. Comic Generation Engine (using adapter) - NOW USES GEMINI
-      this.comicEngine = new ComicGenerationEngine(this.geminiIntegration, this.errorHandlerAdapter as any);
-      this.log('info', '✅ Comic Generation Engine initialized with Gemini image-based panels');
+      // 7. Comic Generation Engine (using adapter) - USES GEMINI FOR IMAGES, CLAUDE FOR NARRATION
+this.comicEngine = new ComicGenerationEngine(
+  this.geminiIntegration, 
+  this.errorHandlerAdapter as any,
+  this.claudeIntegration
+);
+this.log('info', '✅ Comic Generation Engine initialized with Gemini image-based panels + Claude narration');
 
       this.log('info', '🎯 All modular systems initialized successfully');
 

@@ -47,6 +47,7 @@ import {
 // import { OpenAIIntegration, STYLE_SPECIFIC_PANEL_CALIBRATION } from './openai-integration.js';
 import { GeminiIntegration } from './gemini-integration.js';
 import { STYLE_SPECIFIC_PANEL_CALIBRATION } from './openai-integration.js';
+import { ClaudeIntegration } from './claude-integration.js';
 
 /**
  * ===== COMIC GENERATION ENGINE CLASS =====
@@ -56,13 +57,16 @@ import { STYLE_SPECIFIC_PANEL_CALIBRATION } from './openai-integration.js';
 export class ComicGenerationEngine {
   private geminiIntegration: GeminiIntegration;
   private errorHandler: ErrorHandlingSystem;
+  private claudeIntegration: ClaudeIntegration;
 
   constructor(
     geminiIntegration: GeminiIntegration,
-    errorHandler: ErrorHandlingSystem
+    errorHandler: ErrorHandlingSystem,
+    claudeIntegration: ClaudeIntegration
   ) {
     this.geminiIntegration = geminiIntegration;
     this.errorHandler = errorHandler;
+    this.claudeIntegration = claudeIntegration;
   }
 
   // ===== MAIN COMIC GENERATION METHOD (FROM BOTH FILES) =====
@@ -781,11 +785,8 @@ ${audience === 'children' ? '- Simple, clear sentences with magical wonder\n- Wa
 
 Generate ONLY the narration text. No labels, no extra commentary. Just the 20-40 word narrative prose.`;
 
-  const narration = await this.geminiIntegration.generateTextCompletion(prompt, {
-    temperature: 0.7,  // Creative but controlled
-    max_output_tokens: 150,  // ~40 words max
-    top_p: 0.9
-  });
+  // Use Claude for narration (same as story analysis - no content policy issues)
+const narration = await this.claudeIntegration.generateNarrationText(prompt);
   
   // Clean up response (remove any markdown, quotes, or labels)
   const cleaned = narration
