@@ -202,18 +202,25 @@ export class VisualConsistencyValidator {
       return imageUrl;
     }
     
-    // Skip if already has transformations that include our optimization
+    // Skip if already has transformations
     if (imageUrl.includes('w_512') || imageUrl.includes('q_auto:low')) {
       return imageUrl;
     }
     
-    // Inject transformation parameters after /upload/
-    // w_512,h_512 = resize to 512×512
-    // c_fill = fill frame maintaining aspect
-    // q_auto:low = auto quality optimization (lower for cost)
-    const transform = 'w_512,h_512,c_fill,q_auto:low';
+    // Check if URL already has ANY transformations (like f_auto,q_auto:good,fl_progressive)
+    const hasExistingTransforms = /\/upload\/[a-z_]+/.test(imageUrl);
     
-    return imageUrl.replace('/upload/', `/upload/${transform}/`);
+    if (hasExistingTransforms) {
+      // URL structure: /upload/{existing_transforms}/v{version}/path
+      // Replace existing transforms with our validation-optimized version
+      return imageUrl.replace(
+        /\/upload\/[^\/]+\//,
+        '/upload/w_512,h_512,c_fill,q_auto:low/'
+      );
+    } else {
+      // No transforms, add ours after /upload/
+      return imageUrl.replace('/upload/', '/upload/w_512,h_512,c_fill,q_auto:low/');
+    }
   }
 
   /**

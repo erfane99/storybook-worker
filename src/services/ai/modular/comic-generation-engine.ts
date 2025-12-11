@@ -758,33 +758,34 @@ private async generatePanelNarration(
   originalStory: string
 ): Promise<string> {
   // Build narration generation prompt
-  const prompt = `You are a professional storybook narrator writing engaging narrative text for a ${audience} audience comic book panel.
+  const prompt = `You are a professional comic book narrator. Write a caption that describes EXACTLY what readers see in this specific panel image.
 
-CONTEXT:
-- Original Story: "${originalStory.substring(0, 300)}..."
-- Panel ${panelNumber} of ${totalPanels}
-- Character Name: ${characterName}
-- Story Moment: ${beat.beat}
-- Character Action: ${beat.characterAction}
-- Emotion: ${beat.emotion}
-- Setting: ${beat.environment}
-${beat.dialogue ? `- Dialogue: "${beat.dialogue}"` : ''}
+WHAT'S VISUALLY HAPPENING IN THIS PANEL:
+- Scene Description: ${beat.beat}
+- ${characterName}'s Action: ${beat.characterAction}
+- ${characterName}'s Visible Emotion: ${beat.emotion}
+- Location/Setting: ${beat.environment}
+${beat.dialogue ? `- Speech Bubble Text: "${beat.dialogue}"` : ''}
+- Panel Position: ${panelNumber} of ${totalPanels}
 
-NARRATION REQUIREMENTS:
-1. Write in storytelling voice appropriate for ${audience} audience
-2. Length: 20-40 words exactly
-3. Use proper grammar, capitalization, and punctuation
-4. Create flowing narrative prose, NOT technical descriptions
-5. Capture the emotional essence of this moment
-6. ${panelNumber === 1 ? 'Begin with scene-setting language that draws readers in' : panelNumber === totalPanels ? 'Provide satisfying conclusion with emotional closure' : 'Build narrative momentum and emotional engagement'}
-7. Use vivid, sensory language that enhances the visual storytelling
-8. Maintain narrative consistency with the original story tone
+CRITICAL - DESCRIBE WHAT'S IN THE IMAGE:
+Your caption must describe the VISUAL SCENE readers see in this panel. Focus on:
+- What ${characterName} is physically doing in the image
+- What objects or elements are visible in the scene
+- The atmosphere and mood shown visually
+- Observable actions, not internal thoughts
 
-STYLE GUIDE FOR ${audience.toUpperCase()}:
-${audience === 'children' ? '- Simple, clear sentences with magical wonder\n- Warm, encouraging tone\n- Focus on discovery and emotion\n- Use accessible vocabulary' : audience === 'young adults' ? '- Dynamic, engaging prose with personality\n- Balance action and emotion\n- Contemporary voice with depth\n- Build excitement and connection' : '- Sophisticated narrative voice\n- Nuanced emotional layers\n- Literary quality with precision\n- Complex themes handled with care'}
+CAPTION STYLE FOR ${audience.toUpperCase()}:
+${audience === 'children' ? '- Simple, clear descriptions of what\'s happening\n- Warm, engaging tone\n- Describe visible actions and emotions\n- Make the magic come alive through what they see' : audience === 'young adults' ? '- Dynamic descriptions of action and emotion\n- Balance what\'s seen with what it means\n- Contemporary, engaging voice\n- Build excitement through visual details' : '- Sophisticated visual storytelling\n- Layer meaning with precise observation\n- Literary quality describing the scene\n- Capture nuance in what\'s shown'}
 
-Generate ONLY the narration text. No labels, no extra commentary. Just the 20-40 word narrative prose.`;
+CAPTION REQUIREMENTS:
+- 20-40 words exactly
+- Proper grammar and capitalization
+- Describe THIS panel's visual content specifically
+- Match the tone to ${audience} audience
+- ${panelNumber === 1 ? 'Set the scene by describing the opening image' : panelNumber === totalPanels ? 'Describe the final image that concludes the story' : 'Describe this moment in the visual sequence'}
 
+Generate ONLY the caption text. No labels, no preamble. Just the 20-40 word description of what's in this panel.`;
   // Use Claude for narration (same as story analysis - no content policy issues)
 const narration = await this.claudeIntegration.generateNarrationText(prompt);
   
