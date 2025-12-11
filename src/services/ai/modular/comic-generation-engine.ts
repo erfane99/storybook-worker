@@ -746,7 +746,10 @@ COMIC BOOK PROFESSIONAL STANDARDS:
 
   /**
  * Generate rich narration text for panel (20-40 words)
- * Uses Gemini AI to transform beat data into engaging narrative prose
+ * Uses Claude AI to create STORY-DRIVEN narrative prose
+ * 
+ * PHILOSOPHY: Narration TELLS THE STORY. Images support the narration.
+ * Professional standard: "narrative function drives visual choices"
  */
 private async generatePanelNarration(
   beat: StoryBeat,
@@ -756,49 +759,63 @@ private async generatePanelNarration(
   characterName: string,
   originalStory: string
 ): Promise<string> {
-  // Build narration generation prompt
-  const prompt = `You are a professional comic book narrator. Write a caption that describes EXACTLY what readers see in this specific panel image.
+  // Determine narrative position for pacing
+  const position = panelNumber / totalPanels;
+  const narrativePosition = position < 0.15 ? 'OPENING' 
+    : position < 0.3 ? 'SETUP' 
+    : position < 0.7 ? 'RISING_ACTION' 
+    : position < 0.85 ? 'CLIMAX' 
+    : 'RESOLUTION';
 
-WHAT'S VISUALLY HAPPENING IN THIS PANEL:
-- Scene Description: ${beat.beat}
-- ${characterName}'s Action: ${beat.characterAction}
-- ${characterName}'s Visible Emotion: ${beat.emotion}
-- Location/Setting: ${beat.environment}
-${beat.dialogue ? `- Speech Bubble Text: "${beat.dialogue}"` : ''}
-- Panel Position: ${panelNumber} of ${totalPanels}
+  // Build STORY-DRIVEN narration prompt
+  const prompt = `You are a master comic book writer in the tradition of Neil Gaiman and Alan Moore. Write narrative prose that TELLS THIS MOMENT OF THE STORY—not a description of an image.
 
-CRITICAL - DESCRIBE WHAT'S IN THE IMAGE:
-Your caption must describe the VISUAL SCENE readers see in this panel. Focus on:
-- What ${characterName} is physically doing in the image
-- What objects or elements are visible in the scene
-- The atmosphere and mood shown visually
-- Observable actions, not internal thoughts
+ORIGINAL STORY (for tone, themes, and voice):
+"${originalStory}"
 
-CAPTION STYLE FOR ${audience.toUpperCase()}:
-${audience === 'children' ? '- Simple, clear descriptions of what\'s happening\n- Warm, engaging tone\n- Describe visible actions and emotions\n- Make the magic come alive through what they see' : audience === 'young adults' ? '- Dynamic descriptions of action and emotion\n- Balance what\'s seen with what it means\n- Contemporary, engaging voice\n- Build excitement through visual details' : '- Sophisticated visual storytelling\n- Layer meaning with precise observation\n- Literary quality describing the scene\n- Capture nuance in what\'s shown'}
+THIS PANEL'S STORY MOMENT:
+- What happens: ${beat.beat}
+- Character's action: ${beat.characterAction}
+- Emotional beat: ${beat.emotion}
+- Setting: ${beat.environment}
+- Panel ${panelNumber} of ${totalPanels} (${narrativePosition} of story arc)
+${beat.dialogue ? `- Dialogue in this panel: "${beat.dialogue}"` : ''}
 
-CAPTION REQUIREMENTS:
+NARRATIVE WRITING RULES:
+1. TELL THE STORY, don't describe an image
+2. Match the narrative voice and tone of the original story
+3. Show emotion through evocative language, not by stating feelings
+4. Connect this moment to the story's themes
+5. Use active, vivid verbs that create momentum
+6. ${narrativePosition === 'OPENING' ? 'Hook the reader—establish wonder and draw them in' : ''}${narrativePosition === 'CLIMAX' ? 'This is the peak moment—make it feel momentous and earned' : ''}${narrativePosition === 'RESOLUTION' ? 'Bring emotional closure—leave the reader satisfied but moved' : ''}
+
+AUDIENCE VOICE FOR ${audience.toUpperCase()}:
+${audience === 'children' ? '- Warm, wonder-filled prose that sparks imagination\n- Simple but evocative language\n- Make magic feel real and exciting' : audience === 'young adults' ? '- Dynamic, emotionally resonant prose\n- Contemporary voice with literary depth\n- Balance action with meaning' : '- Sophisticated literary narration\n- Layered meaning and subtext\n- Precise, evocative language'}
+
+REQUIREMENTS:
 - 20-40 words exactly
-- Proper grammar and capitalization
-- Describe THIS panel's visual content specifically
-- Match the tone to ${audience} audience
-- ${panelNumber === 1 ? 'Set the scene by describing the opening image' : panelNumber === totalPanels ? 'Describe the final image that concludes the story' : 'Describe this moment in the visual sequence'}
+- Narrative prose, NOT image description
+- Must feel like part of the same story as the original text
 
-Generate ONLY the caption text. No labels, no preamble. Just the 20-40 word description of what's in this panel.`;
-  // Use Claude for narration (same as story analysis - no content policy issues)
-const narration = await this.claudeIntegration.generateNarrationText(prompt);
+Write ONLY the narration. No labels, quotes, or preamble.`;
+
+  const narration = await this.claudeIntegration.generateNarrationText(prompt);
   
-  // Clean up response (remove any markdown, quotes, or labels)
+  // Validate we got a real response
+  if (!narration || narration.trim().length < 10) {
+    throw new Error(`QUALITY FAILURE: Claude returned empty or invalid narration for panel ${panelNumber}. Job must fail.`);
+  }
+  
   const cleaned = narration
     .replace(/```/g, '')
     .replace(/^["']|["']$/g, '')
     .replace(/^Narration:\s*/i, '')
+    .replace(/^Caption:\s*/i, '')
     .trim();
   
-  // Validate length (20-40 words)
   const wordCount = cleaned.split(/\s+/).length;
-  if (wordCount < 15 || wordCount > 50) {
-    console.warn(`⚠️ Narration length (${wordCount} words) outside target range (20-40 words)`);
+  if (wordCount < 10) {
+    throw new Error(`QUALITY FAILURE: Narration too short (${wordCount} words) for panel ${panelNumber}. Minimum 10 words required.`);
   }
   
   return cleaned;
@@ -935,21 +952,36 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
 
   private validateStoryBeats(beats: any[], config: any): StoryBeat[] {
     if (!Array.isArray(beats) || beats.length === 0) {
-      return this.createFallbackStoryBeats(config);
+      throw new Error('QUALITY FAILURE: Story beats array is empty or invalid. AI must provide real story beats. Job must fail.');
     }
 
-    return beats.map(beat => ({
-      beat: this.ensureString(beat.beat) || 'Story moment',
-      emotion: this.ensureString(beat.emotion) || 'neutral',
-      visualPriority: this.ensureString(beat.visualPriority) || 'character',
-      characterAction: this.ensureString(beat.characterAction) || 'standing',
-      panelPurpose: this.ensureString(beat.panelPurpose) || 'narrative',
-      narrativeFunction: this.ensureString(beat.panelPurpose) || 'narrative',
-      environment: this.ensureString(beat.environment) || 'general setting',
-      dialogue: beat.dialogue || undefined,
-      hasSpeechBubble: Boolean(beat.hasSpeechBubble),
-      speechBubbleStyle: beat.speechBubbleStyle || undefined
-    }));
+    // Validate each beat has required fields - fail if any are missing
+    const validatedBeats = beats.map((beat, index) => {
+      if (!beat.beat || typeof beat.beat !== 'string' || beat.beat.length < 10) {
+        throw new Error(`QUALITY FAILURE: Story beat ${index + 1} has invalid or missing 'beat' description. Job must fail.`);
+      }
+      if (!beat.emotion || typeof beat.emotion !== 'string') {
+        throw new Error(`QUALITY FAILURE: Story beat ${index + 1} has invalid or missing 'emotion'. Job must fail.`);
+      }
+      if (!beat.characterAction || typeof beat.characterAction !== 'string') {
+        throw new Error(`QUALITY FAILURE: Story beat ${index + 1} has invalid or missing 'characterAction'. Job must fail.`);
+      }
+      
+      return {
+        beat: beat.beat,
+        emotion: beat.emotion,
+        visualPriority: beat.visualPriority || 'character',
+        characterAction: beat.characterAction,
+        panelPurpose: beat.panelPurpose || 'narrative',
+        narrativeFunction: beat.panelPurpose || 'narrative',
+        environment: beat.environment || 'story setting',
+        dialogue: beat.dialogue || undefined,
+        hasSpeechBubble: Boolean(beat.hasSpeechBubble),
+        speechBubbleStyle: beat.speechBubbleStyle || undefined
+      };
+    });
+
+    return validatedBeats;
   }
 
   private ensureArray(value: any): string[] {
@@ -969,45 +1001,13 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
   }
 
   private createFallbackStoryAnalysis(config: any, narrativeIntel: any): StoryAnalysis {
-    return {
-      storyBeats: this.createFallbackStoryBeats(config),
-      storyArchetype: narrativeIntel.storyArchetype,
-      emotionalArc: narrativeIntel.emotionalArc,
-      thematicElements: narrativeIntel.thematicElements,
-      characterArc: ['character_development'],
-      visualFlow: ['establishing', 'action', 'resolution'],
-      totalPanels: config.totalPanels,
-      pagesRequired: Math.ceil(config.totalPanels / config.panelsPerPage),
-      dialoguePanels: Math.floor(config.totalPanels * 0.4),
-      speechBubbleDistribution: { 'standard': 60, 'thought': 20, 'shout': 20 },
-      narrativeIntelligence: {
-        archetypeApplied: narrativeIntel.storyArchetype,
-        pacingStrategy: narrativeIntel.pacingStrategy,
-        characterGrowthIntegrated: true
-      }
-    };
+    // NO FALLBACKS - quality standard requires real story analysis
+    throw new Error('QUALITY FAILURE: Cannot create story analysis. AI analysis failed and no fallback is permitted. Job must fail.');
   }
 
   private createFallbackStoryBeats(config: any): StoryBeat[] {
-    const beats: StoryBeat[] = [];
-    const totalPanels = config.totalPanels;
-    
-    for (let i = 0; i < totalPanels; i++) {
-      beats.push({
-        beat: `Story moment ${i + 1}`,
-        emotion: i === 0 ? 'curious' : i === totalPanels - 1 ? 'happy' : 'engaged',
-        visualPriority: 'character',
-        characterAction: i === 0 ? 'introducing' : i === totalPanels - 1 ? 'concluding' : 'progressing',
-        panelPurpose: i === 0 ? 'introduction' : i === totalPanels - 1 ? 'resolution' : 'development',
-        narrativeFunction: i === 0 ? 'introduction' : i === totalPanels - 1 ? 'resolution' : 'development',
-        environment: 'story setting',
-        hasSpeechBubble: i % 3 === 0,
-        dialogue: i % 3 === 0 ? `Dialogue for panel ${i + 1}` : undefined,
-        speechBubbleStyle: 'standard'
-      });
-    }
-    
-    return beats;
+    // NO FALLBACKS - quality standard requires real story analysis
+    throw new Error('QUALITY FAILURE: Cannot create story beats. AI story analysis failed and no fallback is permitted. Job must fail.');
   }
 
   private groupBeatsIntoPages(beats: StoryBeat[], beatsPerPage: number): StoryBeat[][] {

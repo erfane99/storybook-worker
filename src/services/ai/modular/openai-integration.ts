@@ -742,9 +742,8 @@ export class OpenAIIntegration {
 
       return this.parseStoryAnalysis(response, panelCount);
     } catch (error) {
-      // Use emergency fallback for robustness
-      this.logger.warn('Using emergency story analysis fallback');
-      return this.emergencyStoryAnalysis(story, panelCount);
+      // NO FALLBACKS - fail fast with clear error
+      throw new Error(`QUALITY FAILURE: Story analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}. Job must fail.`);
     }
   }
 
@@ -1323,6 +1322,7 @@ export class OpenAIIntegration {
 
   /**
    * Parse story analysis response
+   * NO FALLBACKS - quality standard requires proper JSON parsing
    */
   private parseStoryAnalysis(response: string, panelCount: number): any {
     try {
@@ -1331,37 +1331,24 @@ export class OpenAIIntegration {
         return JSON.parse(jsonMatch[0]);
       }
 
-      // Fallback parsing
-      return this.emergencyStoryAnalysis(response, panelCount);
+      // NO FALLBACK - fail if JSON not found
+      throw new Error('QUALITY FAILURE: Story analysis response does not contain valid JSON. AI must return structured analysis. Job must fail.');
     } catch (error) {
+      if (error instanceof Error && error.message.startsWith('QUALITY FAILURE:')) {
+        throw error;
+      }
       this.logger.error('Failed to parse story analysis:', error);
-      return this.emergencyStoryAnalysis(response, panelCount);
+      throw new Error(`QUALITY FAILURE: Failed to parse story analysis JSON: ${error instanceof Error ? error.message : 'Unknown error'}. Job must fail.`);
     }
   }
 
   /**
    * Emergency story analysis fallback
+   * NO EMERGENCY FALLBACKS - quality standard requires proper AI analysis
    */
   private emergencyStoryAnalysis(story: string, panelCount: number): any {
-    const sentences = story.match(/[^.!?]+[.!?]+/g) || [story];
-    const panelsPerBeat = Math.ceil(panelCount / sentences.length);
-
-    return {
-      storyBeats: sentences.map((sentence, index) => ({
-        text: sentence.trim(),
-        panels: panelsPerBeat,
-        emotion: this.detectEmotion(sentence),
-        visualPriority: index === 0 ? 'environment' : 'character',
-        narrativePurpose: index === 0 ? 'setup' : index === sentences.length - 1 ? 'resolution' : 'development'
-      })),
-      totalPanels: panelCount,
-      archetype: 'general',
-      emotionalProgression: {
-        start: 'neutral',
-        middle: 'engaged',
-        end: 'satisfied'
-      }
-    };
+    // NO EMERGENCY FALLBACKS - quality standard requires proper AI analysis
+    throw new Error('QUALITY FAILURE: Story analysis failed. Cannot proceed with sentence-parsing fallback. AI must provide proper analysis. Job must fail.');
   }
 
   /**

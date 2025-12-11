@@ -689,30 +689,14 @@ Identify the PRIMARY archetype that best fits this story. Return ONLY the archet
 
   /**
    * Create emergency narrative intelligence
+   * NO EMERGENCY FALLBACKS - quality standard requires proper AI analysis
    */
   private createEmergencyNarrativeIntelligence(
     story: string, 
     audience: AudienceType
   ): NarrativeIntelligence {
-    console.warn('Using emergency narrative intelligence creation');
-    
-    const archetype = this.detectStoryArchetypeFromPatterns(story);
-    const archetypeData = STORYTELLING_ARCHETYPES[archetype as keyof typeof STORYTELLING_ARCHETYPES] || 
-                        STORYTELLING_ARCHETYPES.discovery;
-    
-    return {
-      storyArchetype: archetype as StoryArchetype,
-      emotionalArc: [...archetypeData.emotionalArc],
-      thematicElements: this.extractThemesFromPatterns(story).slice(0, 3),
-      pacingStrategy: this.determinePacingStrategy(story, audience) as any,
-      characterGrowth: ['learns_lesson', 'gains_confidence', 'helps_others'],
-      conflictProgression: [...archetypeData.structure],
-      confidence: 60,
-      alternativeArchetypes: [],
-      audienceAlignment: 75,
-      universalAppeal: 70,
-      reasoningFactors: ['emergency_fallback_used']
-    };
+    // NO EMERGENCY FALLBACKS - quality standard requires proper AI analysis
+    throw new Error('QUALITY FAILURE: Narrative intelligence creation failed. Cannot proceed without proper story analysis. Job must fail.');
   }
 
   // Helper methods

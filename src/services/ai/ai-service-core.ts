@@ -1555,44 +1555,49 @@ Return your response as a json object with the following properties:
 
 /**
  * Enrich story beats with additional cinematic details
+ * QUALITY STANDARD: No generic beats - AI must provide complete analysis
  */
 private enrichStoryBeats(beats: any[], targetCount: number, audience: AudienceType): StoryBeat[] {
-  // Ensure we have the right number of beats
-  while (beats.length < targetCount) {
-    beats.push(this.createCinematicBeat(beats.length, targetCount, audience));
+  // Validate we have beats
+  if (!Array.isArray(beats) || beats.length === 0) {
+    throw new Error('QUALITY FAILURE: No story beats provided by AI. Cannot proceed without real story analysis. Job must fail.');
   }
   
-  return beats.slice(0, targetCount).map((beat, index) => ({
-    beat: beat.beat || `Cinematic moment ${index + 1}`,
-    imagePrompt: beat.imagePrompt || this.generateCinematicPrompt(index, targetCount, audience),
-    emotion: beat.emotion || this.determineEmotionForBeat(index, targetCount),
-    characterAction: beat.characterAction || 'engaging with the story',
-    visualPriority: beat.visualPriority || 'character-full',
-    environment: beat.environment || 'richly detailed setting',
-    panelPurpose: beat.panelPurpose || this.determinePanelPurpose(index, targetCount),
-    narrativeFunction: beat.panelPurpose || this.determinePanelPurpose(index, targetCount),
-    cameraAngle: beat.cameraAngle || this.determineCameraAngle(index, targetCount),
-    lightingNote: beat.lightingNote || 'professional cinematic lighting',
-    compositionNote: beat.compositionNote || 'rule of thirds with dynamic composition',
-    hasSpeechBubble: beat.hasSpeechBubble || (index % 3 === 0),
-    dialogue: beat.dialogue,
-    speechBubbleStyle: beat.speechBubbleStyle || 'standard',
-    previousBeatContext: beat.previousBeatContext || (index > 0 ? beats[index - 1].beat : null),
-    previousBeatSummary: beat.previousBeatSummary || (index > 0 ? beats[index - 1].beat : null)
-  }));
+  // Validate we have enough beats - NO PADDING with generic content
+  if (beats.length < targetCount) {
+    throw new Error(`QUALITY FAILURE: AI provided ${beats.length} story beats but ${targetCount} are required. AI must provide complete story analysis. Job must fail.`);
+  }
+  
+  // Validate and map beats - fail if critical fields are missing
+  return beats.slice(0, targetCount).map((beat, index) => {
+    if (!beat.beat || beat.beat.length < 10) {
+      throw new Error(`QUALITY FAILURE: Story beat ${index + 1} has invalid description "${beat.beat}". Job must fail.`);
+    }
+    
+    return {
+      beat: beat.beat,
+      imagePrompt: beat.imagePrompt || beat.beat, // imagePrompt can fall back to beat description
+      emotion: beat.emotion || this.determineEmotionForBeat(index, targetCount),
+      characterAction: beat.characterAction || 'interacting with scene',
+      visualPriority: beat.visualPriority || 'character-full',
+      environment: beat.environment || 'story setting',
+      panelPurpose: beat.panelPurpose || this.determinePanelPurpose(index, targetCount),
+      narrativeFunction: beat.panelPurpose || this.determinePanelPurpose(index, targetCount),
+      cameraAngle: beat.cameraAngle || this.determineCameraAngle(index, targetCount),
+      lightingNote: beat.lightingNote || 'cinematic lighting',
+      compositionNote: beat.compositionNote || 'rule of thirds composition',
+      hasSpeechBubble: beat.hasSpeechBubble || false,
+      dialogue: beat.dialogue,
+      speechBubbleStyle: beat.speechBubbleStyle || 'standard',
+      previousBeatContext: index > 0 ? beats[index - 1].beat : null,
+      previousBeatSummary: index > 0 ? beats[index - 1].beat : null
+    };
+  });
 }
 
 private createCinematicBeat(index: number, total: number, audience: AudienceType): any {
-  const position = index / total;
-  return {
-    beat: position < 0.2 ? 'Establishing the scene' : position < 0.8 ? 'Story development' : 'Resolution moment',
-    imagePrompt: this.generateCinematicPrompt(index, total, audience),
-    emotion: this.determineEmotionForBeat(index, total),
-    characterAction: 'actively engaged in story',
-    visualPriority: 'character-action',
-    environment: 'detailed atmospheric setting',
-    panelPurpose: this.determinePanelPurpose(index, total)
-  };
+  // NO GENERIC BEATS - quality standard requires AI-generated content
+  throw new Error('QUALITY FAILURE: Cannot create generic cinematic beat. AI must provide all story beats. Job must fail.');
 }
 
 private generateCinematicPrompt(index: number, total: number, audience: AudienceType): string {
