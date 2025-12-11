@@ -1438,7 +1438,7 @@ For EACH of the ${panelCount} panels, provide RICH DETAIL:
     - Depth and composition (e.g., 'character in foreground, trees framing mid-ground, mountains in background')
     Make this so detailed an artist could draw it without seeing any other reference",
   "emotion": "Primary emotion (happy/sad/excited/curious/scared/surprised/determined/peaceful/angry/confused)",
-  "characterAction": "SPECIFIC physical action verb phrase (e.g., 'reaching toward the glowing orb' not just 'reaching')",
+  "characterAction": "EXACT physical action with body parts and positioning specified (e.g., 'Erfan crouches on left knee, right hand extended toward seed at ground level, left hand braced on grass for balance' NOT just 'Erfan reaches'). Include: posture, which limbs doing what, spatial positioning, body weight distribution",
   "visualPriority": "Exact focal point (character-face/character-full/action/environment/object-specific)",
   "environment": "RICH setting with 5+ environmental details (e.g., 'sunny forest clearing with tall pine trees, wildflowers dotting the grass, a small stream babbling nearby, butterflies in the air, moss-covered rocks')",
   "panelPurpose": "Story function (establish/develop/reveal/climax/transition/resolve)",

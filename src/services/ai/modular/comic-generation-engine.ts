@@ -595,7 +595,10 @@ COMIC BOOK PROFESSIONAL STANDARDS:
 
   /**
    * Generate individual panels for a page with professional standards
-   * ENHANCED: Parallel generation with batched concurrency control
+   * ENHANCED: SEQUENTIAL generation with previous panel context for narrative continuity
+   * 
+   * Professional comic standard: "Panel X must show consequences of Panel X-1"
+   * Each panel receives context from the previous panel for visual continuity.
    */
   private async generatePanelsForPage(
     pageBeats: StoryBeat[],
@@ -609,10 +612,17 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     story: string,
     characterName?: string
   ): Promise<ComicPanel[]> {
-    console.log(`Generating ${pageBeats.length} actual images for page ${pageNumber} in parallel...`);
+    console.log(`🔗 Generating ${pageBeats.length} panels for page ${pageNumber} SEQUENTIALLY with narrative continuity...`);
 
-    const panelPromises = pageBeats.map(async (beat, beatIndex) => {
+    const panels: ComicPanel[] = [];
+    let adaptiveDelay = 300;  // Start with 300ms between panels
+    let consecutiveSuccesses = 0;
+
+    // Generate panels ONE AT A TIME for narrative continuity
+    for (let beatIndex = 0; beatIndex < pageBeats.length; beatIndex++) {
+      const beat = pageBeats[beatIndex];
       const panelNumber = (pageNumber - 1) * config.panelsPerPage + beatIndex + 1;
+      const panelStartTime = Date.now();
 
       const imagePrompt = this.buildOptimizedImagePrompt(
         beat,
@@ -625,15 +635,29 @@ COMIC BOOK PROFESSIONAL STANDARDS:
 
       const panelType = this.determinePanelType(beat, beatIndex, pageBeats.length);
 
+      // Build previous panel context for panels 2+ (first panel has no context)
+      // Only include if previous panel exists and has a valid generated image URL
+      const previousPanel = beatIndex > 0 ? panels[beatIndex - 1] : null;
+      const previousPanelContext = previousPanel?.generatedImage ? {
+        imageUrl: previousPanel.generatedImage,
+        description: pageBeats[beatIndex - 1].beat,
+        action: pageBeats[beatIndex - 1].characterAction
+      } : undefined;
+
       // ✅ REMOVED TRY-CATCH: Let errors bubble up immediately for fail-fast behavior
-      console.log(`🎬 Generating panel ${panelNumber}/${totalPanels} (${panelType}) with ${characterDNA ? 'CHARACTER IMAGE REFERENCE' : 'text only'}...`);
+      console.log(`🎬 Generating panel ${panelNumber}/${totalPanels} (${panelType}) with ${characterDNA ? 'CHARACTER IMAGE REFERENCE' : 'text only'}${previousPanelContext ? ' + PREVIOUS PANEL CONTEXT' : ' (first panel)'}...`);
       
       // GEMINI MIGRATION: Use image-based generation if character DNA has cartoon image
       let imageUrl: string;
       
       if (characterDNA?.cartoonImage) {
         // IMAGE-BASED GENERATION: Gemini sees actual cartoon for 95% consistency
+        // SEQUENTIAL: Now also receives previous panel for narrative continuity
         console.log(`   📸 Using cartoon image reference for perfect consistency`);
+        if (previousPanelContext) {
+          console.log(`   🔗 Including previous panel context for continuity: "${previousPanelContext.action}"`);
+        }
+        
         imageUrl = await this.geminiIntegration.generatePanelWithCharacter(
           characterDNA.cartoonImage,
           beat.beat,  // Scene description
@@ -650,7 +674,9 @@ COMIC BOOK PROFESSIONAL STANDARDS:
               environmentalDNA: environmentalDNA,
               panelNumber: panelNumber,
               totalPanels: totalPanels
-            }
+            },
+            // SEQUENTIAL CONTEXT: Pass previous panel for narrative continuity
+            previousPanelContext
           }
         );
       } else {
@@ -662,7 +688,8 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         }) as any; // This will need Cloudinary upload in real implementation
       }
 
-      console.log(`✅ Panel ${panelNumber} image generated successfully`);
+      const panelDuration = Date.now() - panelStartTime;
+      console.log(`✅ Panel ${panelNumber} image generated successfully in ${(panelDuration / 1000).toFixed(1)}s`);
 
       // Generate rich narration text (20-40 words) from beat
       const narration = await this.generatePanelNarration(
@@ -674,7 +701,8 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         story
       );
 
-      return {
+      // Store panel result (will be used as context for next panel)
+      const panel: ComicPanel = {
         description: beat.beat,  // Keep short summary for internal use
         narration,  // ✅ NEW: Rich 20-40 word narrative text
         emotion: beat.emotion,
@@ -695,53 +723,24 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         characterDNAUsed: !!characterDNA,
         environmentalDNAUsed: !!environmentalDNA
       };
-    });
+      panels.push(panel);
 
-    // ✅ ADAPTIVE BATCHING: Adjusts delay based on API performance
-    const batchSize = Math.min(config.panelsPerPage * 2, 6);
-    const panels: ComicPanel[] = [];
-    let adaptiveDelay = 300;  // Start with 300ms (aggressive)
-    let consecutiveSuccesses = 0;
-
-    for (let i = 0; i < panelPromises.length; i += batchSize) {
-      const batchStartTime = Date.now();
-      const batch = panelPromises.slice(i, i + batchSize);
-      const batchNumber = Math.floor(i / batchSize) + 1;
-      const totalBatches = Math.ceil(panelPromises.length / batchSize);
-
-      console.log(`📦 Processing batch ${batchNumber}/${totalBatches} (${batch.length} panels)...`);
-
-      try {
-        const batchResults = await Promise.all(batch);
-        panels.push(...batchResults);
-        
-        const batchDuration = Date.now() - batchStartTime;
-        consecutiveSuccesses++;
-        
-        // ✅ ADAPTIVE: If batches completing quickly, reduce delay
-        if (consecutiveSuccesses >= 2 && batchDuration < 30000) {  // Under 30 seconds = fast
-          adaptiveDelay = Math.max(100, adaptiveDelay - 50);  // Reduce delay, minimum 100ms
-          console.log(`⚡ API performing well, reducing delay to ${adaptiveDelay}ms`);
-        }
-        
-        console.log(`✅ Batch ${batchNumber} completed in ${(batchDuration / 1000).toFixed(1)}s`);
-        
-      } catch (batchError) {
-        // If batch fails, increase delay before rethrowing
-        consecutiveSuccesses = 0;
-        adaptiveDelay = Math.min(1000, adaptiveDelay + 200);  // Increase delay, maximum 1000ms
-        console.error(`❌ Batch ${batchNumber} failed, increasing delay to ${adaptiveDelay}ms`);
-        throw batchError;  // Re-throw to stop job
+      // ✅ ADAPTIVE DELAY: Adjust based on API performance
+      consecutiveSuccesses++;
+      
+      // If panels completing quickly (under 30 seconds), reduce delay
+      if (consecutiveSuccesses >= 2 && panelDuration < 30000) {
+        adaptiveDelay = Math.max(100, adaptiveDelay - 50);  // Reduce delay, minimum 100ms
       }
 
-      // Only delay between batches, not after last batch
-      if (i + batchSize < panelPromises.length) {
-        console.log(`⏳ Waiting ${adaptiveDelay}ms before next batch...`);
+      // Apply delay between panels (not after last panel)
+      if (beatIndex < pageBeats.length - 1) {
+        console.log(`⏳ Waiting ${adaptiveDelay}ms before next panel (maintaining API rate)...`);
         await new Promise(resolve => setTimeout(resolve, adaptiveDelay));
       }
     }
 
-    console.log(`✅ Generated ${panels.length} panels for page ${pageNumber}`);
+    console.log(`✅ Generated ${panels.length} panels for page ${pageNumber} with sequential continuity`);
     return panels;
   }
 

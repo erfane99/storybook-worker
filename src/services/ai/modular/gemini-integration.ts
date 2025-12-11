@@ -119,7 +119,13 @@ interface CharacterAnalysis {
   expressionBaseline: string;
 }
 
-interface PanelOptions {
+export interface PreviousPanelContext {
+  imageUrl: string;
+  description: string;
+  action: string;
+}
+
+export interface PanelOptions {
   artStyle: string;
   cameraAngle?: string;
   lighting?: string;
@@ -132,6 +138,7 @@ interface PanelOptions {
     panelNumber?: number;
     totalPanels?: number;
   };
+  previousPanelContext?: PreviousPanelContext;
 }
 
 // ===== GEMINI INTEGRATION CLASS =====
@@ -323,6 +330,7 @@ const response = await this.generateWithRetry<GeminiResponse>({
    * Generate panel with character using image-based reference
    * CRITICAL: Gemini SEES the actual cartoon image for perfect consistency
    * ENHANCED: Now includes environmental DNA enforcement for consistent time/location/lighting
+   * ENHANCED: Now supports previousPanelContext for narrative continuity between panels
    */
   public async generatePanelWithCharacter(
     cartoonImageUrl: string,
@@ -331,12 +339,14 @@ const response = await this.generateWithRetry<GeminiResponse>({
     options: PanelOptions
   ): Promise<string> {
     const hasEnvDNA = !!options.environmentalContext?.environmentalDNA;
+    const hasPreviousPanel = !!options.previousPanelContext;
     
     this.logger.log('🎬 Generating panel with character reference...', { 
       cartoonImageUrl: cartoonImageUrl.substring(0, 50) + '...', 
       emotion, 
       artStyle: options.artStyle,
       hasEnvironmentalDNA: hasEnvDNA,
+      hasPreviousPanelContext: hasPreviousPanel,
       timeOfDay: hasEnvDNA ? options.environmentalContext?.environmentalDNA?.lightingContext?.timeOfDay : 'not specified',
       location: hasEnvDNA ? options.environmentalContext?.environmentalDNA?.primaryLocation?.name : 'not specified'
     });
@@ -346,30 +356,50 @@ const response = await this.generateWithRetry<GeminiResponse>({
     }
     
     this.logger.log('🌍 Environmental DNA enforcement ENABLED for this panel');
+    if (hasPreviousPanel) {
+      this.logger.log('🔗 Previous panel context ENABLED for narrative continuity');
+    }
     
     try {
       // Fetch cartoon image as base64 with OPTIMIZATION (512×512, 82% smaller)
       const base64Cartoon = await this.fetchImageAsBase64(cartoonImageUrl, true);  // ✅ Enable optimization
       
-      // Build panel generation prompt (now includes environmental enforcement if DNA provided)
+      // Build parts array starting with prompt and cartoon reference
+      const parts: (GeminiTextPart | GeminiImagePart)[] = [];
+      
+      // Build panel generation prompt (now includes environmental enforcement and previous panel context)
       const panelPrompt = this.buildPanelGenerationPrompt(
         sceneDescription,
         emotion,
         options
       );
+      parts.push({ text: panelPrompt });
       
-      // Call Gemini with cartoon image + scene description
+      // Add cartoon character reference image (PRIMARY reference)
+      parts.push({
+        inline_data: {
+          mime_type: 'image/jpeg',
+          data: base64Cartoon
+        }
+      });
+      
+      // SEQUENTIAL CONTEXT: If previous panel exists, add it as SECOND reference image
+      if (hasPreviousPanel && options.previousPanelContext?.imageUrl) {
+        this.logger.log('📷 Fetching previous panel for continuity reference...');
+        const base64PreviousPanel = await this.fetchImageAsBase64(options.previousPanelContext.imageUrl, true);
+        parts.push({
+          inline_data: {
+            mime_type: 'image/jpeg',
+            data: base64PreviousPanel
+          }
+        });
+        this.logger.log('✅ Previous panel added to generation context');
+      }
+      
+      // Call Gemini with cartoon image + (optionally) previous panel + scene description
       const response = await this.generateWithRetry<GeminiResponse>({
         contents: [{
-          parts: [
-            { text: panelPrompt },
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64Cartoon
-              }
-            }
-          ]
+          parts
         }],
         generationConfig: {
           temperature: options.temperature || 0.7,
@@ -387,7 +417,8 @@ const response = await this.generateWithRetry<GeminiResponse>({
       
       this.logger.log('✅ Panel generated successfully', { 
         panelUrl: panelUrl.substring(0, 60) + '...',
-        environmentEnforced: hasEnvDNA
+        environmentEnforced: hasEnvDNA,
+        previousPanelUsed: hasPreviousPanel
       });
       
       return panelUrl;
@@ -727,14 +758,38 @@ Create a compelling comic panel that fixes the previous validation failures whil
     emotion: string,
     options: PanelOptions
   ): string {
-    // Build base prompt
-    let prompt = `Create a ${options.artStyle} comic book panel using the character design from the reference image.
+    // Build base prompt - note whether previous panel context exists
+    const hasPreviousPanel = !!options.previousPanelContext;
+    
+    let prompt = `Create a ${options.artStyle} comic book panel using the character design from the FIRST reference image (the character cartoon).${hasPreviousPanel ? ' The SECOND reference image shows the PREVIOUS panel - maintain visual continuity from it.' : ''}
   
   SCENE CONTEXT:
-  ${sceneDescription}
+  ${sceneDescription}`;
+
+    // SEQUENTIAL CONTINUITY: Add previous panel context if available
+    if (hasPreviousPanel && options.previousPanelContext) {
+      prompt += `
+
+🔗 NARRATIVE CONTINUITY FROM PREVIOUS PANEL:
+This panel shows what happens IMMEDIATELY AFTER the previous panel.
+
+PREVIOUS PANEL SHOWED: ${options.previousPanelContext.description}
+PREVIOUS CHARACTER ACTION: ${options.previousPanelContext.action}
+
+CRITICAL CONTINUITY REQUIREMENTS:
+- This panel MUST show the visual consequences of the previous panel
+- Character position/location should logically follow from previous panel
+- If character was reaching for something, this panel might show them holding it
+- If character was moving, show them further along that path
+- Maintain spatial logic: what was on the left stays on the left
+- Objects from previous panel should remain visible unless story moves to new location
+- Character's pose should flow naturally from previous action`;
+    }
+
+    prompt += `
   
   CHARACTER DESIGN CONSISTENCY:
-  - Use the character design shown in the reference image as your visual guide
+  - Use the character design shown in the ${hasPreviousPanel ? 'FIRST ' : ''}reference image as your visual guide
   - Maintain the established art style and visual design elements
   - Character expression: ${emotion}
   - Keep consistent line work, colors, and proportions from the reference

@@ -154,7 +154,7 @@ Flag ANY deviations that would break reader immersion.`
  * These examples train the AI to produce consistent JSON output
  */
 const STORY_BEAT_FEW_SHOT_EXAMPLES = {
-  // Example for children's adventure story
+  // Example for children's adventure story with continuityNote for sequential panel generation
   childrenExample: `
 
 EXAMPLE INPUT:
@@ -174,7 +174,8 @@ EXAMPLE OUTPUT:
       "emotion": "curious",
       "dialogue": "",
       "narrativePurpose": "setup",
-      "visualPriority": "environment"
+      "visualPriority": "environment",
+      "continuityNote": ""
     },
     {
       "beatNumber": 2,
@@ -183,7 +184,8 @@ EXAMPLE OUTPUT:
       "emotion": "determined",
       "dialogue": "I can do this!",
       "narrativePurpose": "development",
-      "visualPriority": "character"
+      "visualPriority": "character",
+      "continuityNote": "Luna has moved from the forest edge into the trees visible in previous panel"
     },
     {
       "beatNumber": 3,
@@ -192,7 +194,8 @@ EXAMPLE OUTPUT:
       "emotion": "cautious",
       "dialogue": "Be careful of the river, little one.",
       "narrativePurpose": "development",
-      "visualPriority": "character"
+      "visualPriority": "character",
+      "continuityNote": "Same dark forest setting, Luna still visible looking up at the owl"
     },
     {
       "beatNumber": 4,
@@ -201,7 +204,8 @@ EXAMPLE OUTPUT:
       "emotion": "scared",
       "dialogue": "",
       "narrativePurpose": "development",
-      "visualPriority": "environment"
+      "visualPriority": "environment",
+      "continuityNote": "Luna arrives at the river the owl warned about, forest visible behind her"
     },
     {
       "beatNumber": 5,
@@ -210,7 +214,8 @@ EXAMPLE OUTPUT:
       "emotion": "determined",
       "dialogue": "",
       "narrativePurpose": "climax",
-      "visualPriority": "action"
+      "visualPriority": "action",
+      "continuityNote": "Luna now on the stepping stones she was looking at, same river from previous panel"
     },
     {
       "beatNumber": 6,
@@ -219,7 +224,8 @@ EXAMPLE OUTPUT:
       "emotion": "surprised",
       "dialogue": "Wow!",
       "narrativePurpose": "development",
-      "visualPriority": "character"
+      "visualPriority": "character",
+      "continuityNote": "Luna has crossed to far bank, river still visible behind her, wet paws from crossing"
     },
     {
       "beatNumber": 7,
@@ -228,7 +234,8 @@ EXAMPLE OUTPUT:
       "emotion": "amazed",
       "dialogue": "",
       "narrativePurpose": "development",
-      "visualPriority": "environment"
+      "visualPriority": "environment",
+      "continuityNote": "This is what Luna saw - the garden she gasped at in the previous panel, she is visible at edge"
     },
     {
       "beatNumber": 8,
@@ -237,7 +244,8 @@ EXAMPLE OUTPUT:
       "emotion": "happy",
       "dialogue": "Mom will love this!",
       "narrativePurpose": "resolution",
-      "visualPriority": "character"
+      "visualPriority": "character",
+      "continuityNote": "Luna now holding one of the glowing flowers from the garden, same magical glow colors"
     }
   ],
   "totalPanels": 8,
@@ -262,6 +270,7 @@ TARGET AUDIENCE: [AUDIENCE]
 TOTAL PANELS AVAILABLE: [PANEL_COUNT]
 
 CONTINUITY RULE: Beat N+1 must directly follow from Beat N. Include clear cause-effect relationships.
+Each beat MUST specify HOW it continues from the previous beat (what carries over visually).
 
 REQUIRED ANALYSIS COMPONENTS:
 
@@ -308,8 +317,16 @@ REQUIRED ANALYSIS COMPONENTS:
    - Emotional peak placement
    - Reader engagement curve
 
+7. SEQUENTIAL CONTINUITY NOTES (CRITICAL FOR AI GENERATION):
+   For each beat after the first, specify:
+   - What visual element carries over from the previous panel
+   - How the character's position/action continues
+   - Any objects that must remain visible
+   Example: "Character still holding the glowing seed from panel 1" or "Character has moved closer to the door shown in previous panel"
+
 CRITICAL: Return COMPLETE JSON with EVERY beat fully specified.
 NO missing fields. This drives the ENTIRE visual generation pipeline.
+INCLUDE continuityNote for panels 2+ to ensure narrative flow.
 
 ${STORY_BEAT_FEW_SHOT_EXAMPLES.childrenExample}
 
@@ -329,6 +346,9 @@ ARCHETYPE: [STORY_ARCHETYPE]
 AUDIENCE: [AUDIENCE]
 EMOTIONAL ARC: [EMOTIONAL_PROGRESSION]
 
+CRITICAL SEQUENTIAL RULE: Each panel MUST visually continue from the previous panel.
+Panel 2 shows consequences of Panel 1. Panel 3 shows consequences of Panel 2. And so on.
+
 For EACH panel, generate:
 
 {
@@ -344,15 +364,22 @@ For EACH panel, generate:
   "narrativePurpose": "setup|development|climax|resolution|transition",
   "cameraAngle": "straight|high|low|dutch|aerial|worm",
   "backgroundComplexity": "simple|moderate|detailed",
-  "lightingMood": "bright|soft|dramatic|dark|mystical"
+  "lightingMood": "bright|soft|dramatic|dark|mystical",
+  "continuityNote": "What carries over from previous panel (empty for panel 1)"
 }
+
+CONTINUITY EXAMPLES:
+- Panel 1: "Character reaches for glowing seed" → Panel 2 continuityNote: "Character now holding the seed they reached for"
+- Panel 2: "Character holds seed, looks at forest" → Panel 3 continuityNote: "Seed still in hand, character facing the forest path"
+- If scene changes: "New location - character arrives at the cave mentioned in previous dialogue"
 
 PACING RULES:
 - Start with establishing shot
 - Build tension gradually
 - Use panel types strategically
 - Place dialogue for maximum impact
-- Ensure visual flow between panels`,
+- Ensure visual flow between panels
+- EVERY panel after first must have continuityNote explaining visual flow`,
 
   emergencyFallback: `QUICK STORY STRUCTURE
 
