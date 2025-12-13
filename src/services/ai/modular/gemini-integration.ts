@@ -753,127 +753,57 @@ Create a compelling comic panel that fixes the previous validation failures whil
   OUTPUT: A professional ${artStyle} cartoon character design that captures the essence of the reference while serving as the foundation for consistent sequential art across all comic panels.`;
   }
 
+  /**
+   * Build compressed panel generation prompt
+   * 2025 BEST PRACTICE: Concise prompts (~500 chars) outperform verbose prompts
+   * Gemini processes image references first, so text prompt is supplementary guidance
+   */
   private buildPanelGenerationPrompt(
     sceneDescription: string,
     emotion: string,
     options: PanelOptions
   ): string {
-    // Build base prompt - note whether previous panel context exists
     const hasPreviousPanel = !!options.previousPanelContext;
+    const hasEnvDNA = !!options.environmentalContext?.environmentalDNA;
     
-    let prompt = `Create a ${options.artStyle} comic book panel using the character design from the FIRST reference image (the character cartoon).${hasPreviousPanel ? ' The SECOND reference image shows the PREVIOUS panel - maintain visual continuity from it.' : ''}
-  
-  SCENE CONTEXT:
-  ${sceneDescription}`;
+    // Extract environmental DNA values (if present)
+    const envDNA = options.environmentalContext?.environmentalDNA;
+    const timeOfDay = envDNA?.lightingContext?.timeOfDay || 'afternoon';
+    const lightingMood = envDNA?.lightingContext?.lightingMood || 'natural';
+    const locationName = envDNA?.primaryLocation?.name || 'setting';
+    const keyFeatures = envDNA?.primaryLocation?.keyFeatures?.slice(0, 2) || [];
+    const dominantColors = envDNA?.visualContinuity?.colorConsistency?.dominantColors?.slice(0, 3) || [];
 
-    // SEQUENTIAL CONTINUITY: Add previous panel context if available
+    // Build compressed prompt - essential info only
+    let prompt = `${options.artStyle} comic panel. CHARACTER: Match IMAGE 1 exactly.${hasPreviousPanel ? ' CONTINUITY: Follow from IMAGE 2.' : ''}
+
+SCENE: ${sceneDescription}
+EMOTION: ${emotion}
+SHOT: ${options.panelType || 'medium'}, ${options.cameraAngle || 'eye level'}`;
+
+    // Add previous panel context (compressed)
     if (hasPreviousPanel && options.previousPanelContext) {
       prompt += `
-
-🔗 NARRATIVE CONTINUITY FROM PREVIOUS PANEL:
-This panel shows what happens IMMEDIATELY AFTER the previous panel.
-
-PREVIOUS PANEL SHOWED: ${options.previousPanelContext.description}
-PREVIOUS CHARACTER ACTION: ${options.previousPanelContext.action}
-
-CRITICAL CONTINUITY REQUIREMENTS:
-- This panel MUST show the visual consequences of the previous panel
-- Character position/location should logically follow from previous panel
-- If character was reaching for something, this panel might show them holding it
-- If character was moving, show them further along that path
-- Maintain spatial logic: what was on the left stays on the left
-- Objects from previous panel should remain visible unless story moves to new location
-- Character's pose should flow naturally from previous action`;
+PREVIOUS: ${options.previousPanelContext.action} - show what happens next`;
     }
 
-    prompt += `
-  
-  CHARACTER DESIGN CONSISTENCY:
-  - Use the character design shown in the ${hasPreviousPanel ? 'FIRST ' : ''}reference image as your visual guide
-  - Maintain the established art style and visual design elements
-  - Character expression: ${emotion}
-  - Keep consistent line work, colors, and proportions from the reference
-  - Express the emotion through pose, expression, and body language
-  
-  PANEL COMPOSITION:
-  - Shot type: ${options.panelType || 'medium shot'}
-  - Camera angle: ${options.cameraAngle || 'eye level'}
-  - Lighting: ${options.lighting || 'natural, evenly distributed'}
-  - Background detail: ${options.backgroundComplexity || 'moderate detail that supports but doesn\'t overwhelm the character'}
-  - Visual focus: Character as the primary focal point`;
-
-    // ===== ENVIRONMENTAL DNA ENFORCEMENT =====
-    // This is CRITICAL for passing environmental validation (70% threshold)
-    // Without this, Gemini ignores time of day, location, and lighting specifications
-    if (options.environmentalContext?.environmentalDNA) {
-      const envDNA = options.environmentalContext.environmentalDNA;
-      
-      // Extract environmental elements with fallbacks
-      const timeOfDay = envDNA.lightingContext?.timeOfDay || 'afternoon';
-      const lightingMood = envDNA.lightingContext?.lightingMood || 'natural';
-      const weatherCondition = envDNA.lightingContext?.weatherCondition || 'pleasant';
-      const locationName = envDNA.primaryLocation?.name || 'setting';
-      const keyFeatures = envDNA.primaryLocation?.keyFeatures || [];
-      const dominantColors = envDNA.visualContinuity?.colorConsistency?.dominantColors || [];
-      const accentColors = envDNA.visualContinuity?.colorConsistency?.accentColors || [];
-      const backgroundElements = envDNA.visualContinuity?.backgroundElements || [];
-      
+    // Add environmental DNA (compressed)
+    if (hasEnvDNA) {
       prompt += `
 
-🌍 ENVIRONMENTAL CONSISTENCY - MANDATORY REQUIREMENTS:
-
-⚠️ CRITICAL: This panel MUST match these environmental specifications EXACTLY.
-Ignoring these will cause validation failure. Every panel must exist in the same visual world.
-
-TIME OF DAY: ${timeOfDay.toUpperCase()}
-- ${timeOfDay === 'night' || timeOfDay === 'evening' ? 'DO NOT show bright daylight. Show darkness, moonlight, or evening lighting.' : ''}
-- ${timeOfDay === 'morning' ? 'Show early morning light with soft, warm tones.' : ''}
-- ${timeOfDay === 'afternoon' ? 'Show bright daylight with clear visibility.' : ''}
-- Match the specified time PRECISELY in the sky, shadows, and ambient light.
-
-LIGHTING MOOD: ${lightingMood}
-WEATHER/ATMOSPHERE: ${weatherCondition}
-
-PRIMARY LOCATION: ${locationName}
-- This specific location MUST be recognizable in the panel
-- NOT a generic outdoor scene - show THIS specific ${locationName}
-- Location characteristics must be consistent across all panels
-
-KEY FEATURES THAT MUST BE VISIBLE:
-${keyFeatures.slice(0, 4).map((f: string) => `- ${f}`).join('\n') || '- Consistent environmental elements from the story setting'}
-
-COLOR PALETTE (USE THESE COLORS):
-- Dominant colors: ${dominantColors.slice(0, 4).join(', ') || 'natural colors matching the time of day'}
-- Accent colors: ${accentColors.slice(0, 3).join(', ') || 'complementary colors for visual interest'}
-
-BACKGROUND ELEMENTS TO INCLUDE:
-${backgroundElements.slice(0, 4).map((e: string) => `- ${e}`).join('\n') || '- Consistent background elements from the story world'}
-
-ENVIRONMENTAL CONTINUITY RULES:
-- All panels share the SAME time of day (${timeOfDay})
-- All panels share the SAME location type (${locationName})
-- All panels share the SAME lighting mood (${lightingMood})
-- Transitioning between scenes must maintain environmental coherence`;
+ENV: ${timeOfDay} lighting, ${locationName}
+COLORS: ${dominantColors.join(', ') || 'natural palette'}
+FEATURES: ${keyFeatures.join(', ') || 'consistent background'}`;
     }
 
-    // Add quality standards
+    // Add style requirements (compressed)
     prompt += `
-  
-  ${options.artStyle.toUpperCase()} QUALITY STANDARDS:
-  - Professional comic book illustration
-  - Clean, expressive line work
-  - Vibrant, publication-ready colors
-  - Visual consistency with established character design
-  - Engaging composition that advances the narrative
-  - Sequential art best practices
-  
-  DESIGN CONTINUITY GUIDELINES:
-  - Character design elements should match the reference
-  - Hair style, clothing, and accessories should be consistent
-  - Overall silhouette and proportions should be recognizable
-  - Art style and rendering approach should match the reference
-  
-  Create a compelling comic panel that maintains design consistency while bringing the scene to life in ${options.artStyle} style with appropriate emotional expression and dynamic composition.`;
+
+REQUIREMENTS:
+- Match character from reference image exactly
+- ${timeOfDay} lighting throughout
+- Rule of thirds composition
+- ${options.artStyle} style, publication quality`;
 
     return prompt;
   }

@@ -750,6 +750,8 @@ COMIC BOOK PROFESSIONAL STANDARDS:
  * 
  * PHILOSOPHY: Narration TELLS THE STORY. Images support the narration.
  * Professional standard: "narrative function drives visual choices"
+ * 
+ * 2025 PROMPT ENGINEERING: Few-shot examples + forbidden patterns
  */
 private async generatePanelNarration(
   beat: StoryBeat,
@@ -767,37 +769,50 @@ private async generatePanelNarration(
     : position < 0.85 ? 'CLIMAX' 
     : 'RESOLUTION';
 
-  // Build STORY-DRIVEN narration prompt
-  const prompt = `You are a master comic book writer in the tradition of Neil Gaiman and Alan Moore. Write narrative prose that TELLS THIS MOMENT OF THE STORY—not a description of an image.
+  // Audience-specific voice guidance (concise)
+  const audienceVoice = audience === 'children' 
+    ? 'Warm, wonder-filled, simple but evocative' 
+    : audience === 'young adults' 
+    ? 'Dynamic, emotionally resonant, contemporary depth' 
+    : 'Sophisticated, layered subtext, precise language';
 
-ORIGINAL STORY (for tone, themes, and voice):
-"${originalStory}"
+  // Build WORLD-CLASS narration prompt with few-shot examples
+  const prompt = `Write 20-40 word narration for comic panel ${panelNumber}/${totalPanels}.
 
-THIS PANEL'S STORY MOMENT:
-- What happens: ${beat.beat}
-- Character's action: ${beat.characterAction}
-- Emotional beat: ${beat.emotion}
-- Setting: ${beat.environment}
-- Panel ${panelNumber} of ${totalPanels} (${narrativePosition} of story arc)
-${beat.dialogue ? `- Dialogue in this panel: "${beat.dialogue}"` : ''}
+EXAMPLES BY NARRATIVE POSITION:
+OPENING: "The garden had always whispered secrets to those patient enough to listen. Today, it had one meant only for ${characterName}."
+SETUP: "Every step toward the ancient oak felt heavier than the last, as if the earth itself was testing resolve."
+RISING_ACTION: "The shadows grew longer, but so did ${characterName}'s determination. Some doors, once opened, refuse to close."
+CLIMAX: "In that single heartbeat, everything changed—and nothing would ever be the same again."
+RESOLUTION: "Some magic isn't meant to be understood. Only shared."
 
-NARRATIVE WRITING RULES:
-1. TELL THE STORY, don't describe an image
-2. Match the narrative voice and tone of the original story
-3. Show emotion through evocative language, not by stating feelings
-4. Connect this moment to the story's themes
-5. Use active, vivid verbs that create momentum
-6. ${narrativePosition === 'OPENING' ? 'Hook the reader—establish wonder and draw them in' : ''}${narrativePosition === 'CLIMAX' ? 'This is the peak moment—make it feel momentous and earned' : ''}${narrativePosition === 'RESOLUTION' ? 'Bring emotional closure—leave the reader satisfied but moved' : ''}
+STORY CONTEXT (match this voice):
+"${originalStory.substring(0, 500)}"
 
-AUDIENCE VOICE FOR ${audience.toUpperCase()}:
-${audience === 'children' ? '- Warm, wonder-filled prose that sparks imagination\n- Simple but evocative language\n- Make magic feel real and exciting' : audience === 'young adults' ? '- Dynamic, emotionally resonant prose\n- Contemporary voice with literary depth\n- Balance action with meaning' : '- Sophisticated literary narration\n- Layered meaning and subtext\n- Precise, evocative language'}
+THIS MOMENT:
+- Action: ${beat.beat}
+- Emotion: ${beat.emotion}
+- Position: ${narrativePosition}
+${beat.dialogue ? `- Dialogue: "${beat.dialogue}"` : ''}
 
-REQUIREMENTS:
-- 20-40 words exactly
-- Narrative prose, NOT image description
-- Must feel like part of the same story as the original text
+VOICE: ${audienceVoice}
 
-Write ONLY the narration. No labels, quotes, or preamble.`;
+RULES:
+- TELL the story moment, don't describe what's visible
+- Match the original story's narrative voice
+- Show emotion through evocative language, not statements
+- Use active verbs that create momentum
+${narrativePosition === 'OPENING' ? '- Hook the reader with wonder and intrigue' : ''}${narrativePosition === 'CLIMAX' ? '- Make this feel momentous and earned' : ''}${narrativePosition === 'RESOLUTION' ? '- Bring emotional closure that satisfies' : ''}
+
+AVOID (these patterns produce bad narration):
+- Describing visuals: "He stood there looking at...", "She was wearing..."
+- Stating emotions: "He felt happy", "She was sad", "They were excited"
+- Generic phrases: "Little did he know", "It was a beautiful day", "Once upon a time"
+- Physical descriptions as narration: "His small hands", "Her brown eyes"
+- Passive voice: "The door was opened", "The seed was found"
+- Clichés: "Time seemed to stop", "Heart skipped a beat"
+
+Write ONLY the narration. No quotes, labels, or preamble.`;
 
   const narration = await this.claudeIntegration.generateNarrationText(prompt);
   

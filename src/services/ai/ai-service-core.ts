@@ -1415,61 +1415,81 @@ ${WORLD_CLASS_STORY_PROMPTS.outputFormat}`;
       
       const panelCount = PROFESSIONAL_AUDIENCE_CONFIG[audience].totalPanels;
       
-      // Enhanced prompt incorporating best practices from original files
-      const analysisPrompt = `You are a world-class comic book writer and visual storyteller creating a masterpiece ${audience} comic.
+      // World-class prompt with few-shot examples (2025 prompt engineering best practices)
+      const emotionalProgression = audience === 'children' 
+        ? 'wonder → curiosity → challenge → triumph' 
+        : audience === 'young adults' 
+        ? 'intrigue → tension → action → revelation' 
+        : 'complexity → conflict → climax → resolution';
 
-STORY TO TRANSFORM:
+      const analysisPrompt = `Create ${panelCount} comic panels for this ${audience} story. Return JSON only.
+
+STORY:
 "${story}"
 
-SEQUENTIAL CONTEXT REQUIREMENT: Each panel must reference and flow from the previous panel. Panel X must show consequences of panel X-1. Every beat should build upon what happened before, creating clear cause-effect relationships throughout the story.
-
-Create exactly ${panelCount} CINEMATIC comic panels that transform this story into a visually stunning narrative.
-
-For EACH of the ${panelCount} panels, provide RICH DETAIL:
+OUTPUT SCHEMA:
 {
-  "beat": "Specific cinematic moment - what's happening in this exact frame",
-  "imagePrompt": "ULTRA-DETAILED 80+ word description including:
-    - Exact character position and pose (e.g., 'standing with arms crossed, weight on left foot')
-    - Facial expression details (e.g., 'wide eyes with raised eyebrows showing surprise')
-    - Environmental details (at least 3 specific objects or features)
-    - Lighting direction and quality (e.g., 'warm sunlight from upper left casting soft shadows')
-    - Color mood (e.g., 'warm golden hour tones with purple shadows')
-    - Camera angle (e.g., 'low angle looking up' or 'bird's eye view')
-    - Depth and composition (e.g., 'character in foreground, trees framing mid-ground, mountains in background')
-    Make this so detailed an artist could draw it without seeing any other reference",
-  "emotion": "Primary emotion (happy/sad/excited/curious/scared/surprised/determined/peaceful/angry/confused)",
-  "characterAction": "EXACT physical action with body parts and positioning specified (e.g., 'Erfan crouches on left knee, right hand extended toward seed at ground level, left hand braced on grass for balance' NOT just 'Erfan reaches'). Include: posture, which limbs doing what, spatial positioning, body weight distribution",
-  "visualPriority": "Exact focal point (character-face/character-full/action/environment/object-specific)",
-  "environment": "RICH setting with 5+ environmental details (e.g., 'sunny forest clearing with tall pine trees, wildflowers dotting the grass, a small stream babbling nearby, butterflies in the air, moss-covered rocks')",
-  "panelPurpose": "Story function (establish/develop/reveal/climax/transition/resolve)",
-  "cameraAngle": "Specific shot type (close-up/medium/wide/extreme-wide/over-shoulder/POV/dutch-angle)",
-  "lightingNote": "Specific lighting setup for mood",
-  "compositionNote": "Rule of thirds, golden ratio, or other composition principle"
-}
-
-CRITICAL REQUIREMENTS:
-- Each panel must be visually distinct - no two panels should look similar
-- Vary camera angles dramatically between panels for visual interest
-- Include specific props and environmental details that enhance the story
-- Build emotional progression: ${audience === 'children' ? 'wonder → curiosity → challenge → triumph' : audience === 'young adults' ? 'intrigue → tension → action → revelation' : 'complexity → conflict → climax → resolution'}
-- Use cinematic techniques: establishing shots, reaction shots, action sequences, emotional close-ups
-- Every imagePrompt must be so detailed it could stand alone as an art brief
-
-PANEL PROGRESSION GUIDANCE:
-- Panel 1: Establishing shot setting the world and tone
-- Panels 2-${Math.floor(panelCount * 0.3)}: Building tension and character
-- Panels ${Math.floor(panelCount * 0.3) + 1}-${Math.floor(panelCount * 0.7)}: Core action and conflict
-- Panels ${Math.floor(panelCount * 0.7) + 1}-${panelCount - 1}: Climax and resolution buildup  
-- Panel ${panelCount}: Satisfying conclusion with emotional payoff
-
-Return your response as a json object with the following properties:
-{
-  "storyBeats": [array of ${panelCount} richly detailed panel objects],
+  "storyBeats": [{
+    "beat": "specific moment happening",
+    "characterAction": "exact pose with body parts specified",
+    "emotion": "happy|sad|excited|curious|scared|surprised|determined|peaceful|angry|confused",
+    "environment": "setting with 4+ specific details",
+    "cameraAngle": "close-up|medium|wide|extreme-wide|over-shoulder|low-angle|high-angle",
+    "panelPurpose": "establish|develop|reveal|climax|transition|resolve",
+    "visualPriority": "character-face|character-full|action|environment",
+    "lightingNote": "lighting mood",
+    "dialogue": "character speech or null",
+    "hasSpeechBubble": true|false
+  }],
   "totalPanels": ${panelCount},
   "pagesRequired": ${PROFESSIONAL_AUDIENCE_CONFIG[audience].pagesPerStory},
   "emotionalArc": ["emotion1", "emotion2", "emotion3", "emotion4"],
-  "visualThemes": ["consistent visual elements that appear throughout"]
-}`;
+  "visualThemes": ["recurring visual elements"]
+}
+
+GOOD BEAT EXAMPLE:
+{
+  "beat": "Character discovers a glowing golden seed half-buried in the garden soil",
+  "characterAction": "kneeling on left knee, right hand brushing dirt from seed, left hand braced on ground, eyes wide with wonder, body leaning forward",
+  "emotion": "curious",
+  "environment": "sunny backyard garden with tomato plants on wooden stakes, weathered picket fence, morning dew on grass, blue sky with wispy clouds, terra cotta pots nearby",
+  "cameraAngle": "medium",
+  "panelPurpose": "reveal",
+  "visualPriority": "character-full",
+  "lightingNote": "warm morning sunlight from upper left",
+  "dialogue": null,
+  "hasSpeechBubble": false
+}
+
+BAD BEAT EXAMPLE (avoid this):
+{
+  "beat": "Character finds something", ← TOO VAGUE: what exactly?
+  "characterAction": "looking", ← NO BODY DETAIL: posture? limbs? expression?
+  "emotion": "happy", ← GENERIC: be specific to moment
+  "environment": "outside", ← NO DETAILS: what objects? what features?
+  "cameraAngle": "normal", ← NOT A REAL ANGLE: use specific shot type
+  "panelPurpose": "story", ← MEANINGLESS: use establish/develop/reveal/climax/resolve
+  "visualPriority": "scene" ← VAGUE: use character-face/character-full/action/environment
+}
+
+RULES:
+1. Panel N+1 must show consequence of Panel N (sequential continuity)
+2. Character appears in 90%+ of panels
+3. No two consecutive panels have same camera angle
+4. characterAction must specify: posture, which limbs doing what, body weight, expression
+5. environment must have 4+ specific objects or features
+6. Vary visual rhythm: close-up → wide → medium → action shot
+
+PANEL DISTRIBUTION:
+- Panel 1: Wide establishing shot (world + tone)
+- Panels 2-${Math.floor(panelCount * 0.3)}: Setup and character introduction
+- Panels ${Math.floor(panelCount * 0.3) + 1}-${Math.floor(panelCount * 0.7)}: Rising action and conflict
+- Panels ${Math.floor(panelCount * 0.7) + 1}-${panelCount - 1}: Climax sequence
+- Panel ${panelCount}: Resolution with emotional payoff
+
+EMOTIONAL ARC: ${emotionalProgression}
+
+Return ONLY valid JSON. No markdown, no explanation.`;
 
       const response = await this.claudeIntegration.analyzeStoryStructure(
         story,

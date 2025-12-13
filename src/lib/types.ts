@@ -6,7 +6,7 @@ export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'can
 export type AudienceType = 'children' | 'young adults' | 'adults';
 export type CharacterArtStyle = 'storybook' | 'comic-book' | 'anime' | 'semi-realistic' | 'cartoon';
 export type LayoutType = 'comic-book-panels' | 'individual-scenes';
-export type GenreType = 'adventure' | 'siblings' | 'bedtime' | 'fantasy' | 'history';
+export type GenreType = 'adventure' | 'fantasy' | 'mystery' | 'comedy' | 'friendship' | 'courage' | 'nature' | 'creativity' | 'sports' | 'siblings' | 'bedtime' | 'history';
 
 // ✅ DATABASE-FIRST: Base job structure matches actual database columns
 export interface BaseJobData {

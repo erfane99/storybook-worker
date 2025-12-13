@@ -30,7 +30,7 @@ export type AIAsyncResult<
 // ===== CONSOLIDATED AI SERVICE TYPES - SINGLE SOURCE OF TRUTH =====
 export type PanelType = 'standard' | 'wide' | 'tall' | 'splash' | 'establishing' | 'closeup';
 export type AudienceType = 'children' | 'young adults' | 'adults';
-export type GenreType = 'adventure' | 'siblings' | 'bedtime' | 'fantasy' | 'history';
+export type GenreType = 'adventure' | 'fantasy' | 'mystery' | 'comedy' | 'friendship' | 'courage' | 'nature' | 'creativity' | 'sports' | 'siblings' | 'bedtime' | 'history';
 
 // ===== MODULAR SYSTEM TYPES (ADDED FROM constants-and-types.ts) =====
 export type StoryArchetype = 'hero_journey' | 'redemption' | 'discovery' | 'transformation' | 'mystery' | 'adventure';

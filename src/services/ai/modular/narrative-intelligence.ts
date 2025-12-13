@@ -168,7 +168,79 @@ Your stories combine rich character development, meaningful dialogue, and powerf
 - Character flaws drive humor
 - Escalating absurdity
 - Heart beneath the humor
-- Theme: Joy in imperfection`
+- Theme: Joy in imperfection`,
+
+      friendship: `FRIENDSHIP GENRE WARMTH:
+- Show characters meeting or reconnecting meaningfully
+- Build trust through shared challenges
+- Include moments of misunderstanding then reconciliation
+- Demonstrate loyalty through actions not just words
+- Celebrate differences that complement each other
+- Create memories that bond characters together
+- Theme: True friends make us better`,
+
+      courage: `COURAGE GENRE STRENGTH:
+- Present a fear that feels real and relatable
+- Show hesitation before the brave choice
+- Build to a moment requiring difficult action
+- Include internal struggle alongside external challenge
+- Demonstrate that courage isn't absence of fear
+- Reward bravery with growth, not just success
+- Theme: Bravery is feeling fear and acting anyway`,
+
+      nature: `NATURE GENRE WONDER:
+- Immerse reader in vivid natural settings
+- Feature animals or plants as characters or guides
+- Show respect and care for the environment
+- Include sensory details: sounds, smells, textures of nature
+- Demonstrate interconnection of living things
+- Create awe at natural beauty or phenomena
+- Theme: Nature teaches those who listen`,
+
+      creativity: `CREATIVITY GENRE EXPRESSION:
+- Celebrate imagination and original thinking
+- Show the creative process with struggles and breakthroughs
+- Include moments of inspiration from unexpected sources
+- Feature art, music, building, or invention
+- Demonstrate that mistakes lead to discoveries
+- Encourage experimentation and play
+- Theme: Everyone has something unique to create`,
+
+      sports: `SPORTS GENRE TRIUMPH:
+- Establish clear goals and stakes
+- Show training, practice, and dedication
+- Include setbacks that test resolve
+- Feature teamwork and individual growth
+- Build to an exciting climactic moment
+- Emphasize effort and sportsmanship over winning
+- Theme: Victory is becoming your best self`,
+
+      history: `HISTORY GENRE DISCOVERY:
+- Ground story in accurate historical context
+- Make past eras feel vivid and alive
+- Connect historical events to personal stories
+- Include authentic period details
+- Show how past connects to present
+- Feature real or realistic historical figures
+- Theme: History is made by ordinary people`,
+
+      siblings: `FAMILY GENRE CONNECTION:
+- Show realistic sibling dynamics
+- Include playful rivalry and deep loyalty
+- Feature shared experiences that bond
+- Demonstrate learning from each other
+- Navigate conflicts with eventual understanding
+- Celebrate family traditions or create new ones
+- Theme: Family is where we first learn love`,
+
+      bedtime: `BEDTIME GENRE CALM:
+- Create peaceful, soothing atmosphere
+- Use gentle pacing with no sudden tensions
+- Include cozy, safe settings
+- Feature soft imagery: moonlight, stars, warm beds
+- Build toward sleepy, satisfied conclusion
+- Incorporate gentle repetition and rhythm
+- Theme: Rest comes to those at peace`
     }
   },
 
@@ -279,6 +351,7 @@ export class NarrativeIntelligenceEngine {
 
   /**
    * Generate a complete story with ENHANCED emotional depth and character development
+   * 2025 BEST PRACTICE: Word count targets, 3-act conflict structure, sensory details
    */
   async generateEnhancedStory(
     title: string,
@@ -291,12 +364,20 @@ export class NarrativeIntelligenceEngine {
     try {
       console.log('📖 Generating enhanced story with emotional intelligence...');
 
+      // Word count targets by audience
+      const wordCountTarget = audience === 'children' 
+        ? '400-600 words' 
+        : audience === 'young adults' 
+        ? '600-900 words' 
+        : '800-1200 words';
+
       const storyPrompt = `${ENHANCED_STORY_PROMPTS.storyGeneration.base}
 
 STORY TITLE: "${title}"
 GENRE: ${genre.toUpperCase()}
 AUDIENCE: ${audience}
 PAGES: ${pages} (with multiple scenes per page)
+WORD COUNT: ${wordCountTarget}
 
 MAIN CHARACTER (Maintain EXACTLY throughout):
 ${characterDescription}
@@ -309,15 +390,26 @@ ${audience === 'children' ? 'MANDATORY: NO violence, NO scary content, NO weapon
 
 ${ENHANCED_STORY_PROMPTS.storyGeneration.genreSpecific[genre as keyof typeof ENHANCED_STORY_PROMPTS.storyGeneration.genreSpecific] || ''}
 
+CONFLICT STRUCTURE (3-Act):
+- Act 1 (first 25%): Introduce character in their world, establish desire, hint at challenge
+- Act 2 (middle 50%): Challenge intensifies, character struggles, learns something crucial
+- Act 3 (final 25%): Climax confrontation, resolution, transformation visible
+
+SENSORY RICHNESS (include in every scene):
+- SIGHT: Colors, shapes, movement, light and shadow
+- SOUND: Dialogue, ambient sounds, meaningful silence
+- FEEL: Textures, temperature, physical sensations, emotions
+
 ${customPrompt ? `\nADDITIONAL REQUIREMENTS:\n${customPrompt}` : ''}
 
 CRITICAL REQUIREMENTS:
 1. Character appears in 80%+ of scenes
 2. Every scene advances plot AND character
 3. Dialogue feels natural and age-appropriate
-4. Emotional stakes rise throughout
+4. Emotional stakes rise throughout Act 2, peak in Act 3
 5. Visual descriptions enable illustration
-6. Ending satisfies but leaves room for imagination
+6. Include sensory details in every scene
+7. Ending satisfies but leaves room for imagination
 
 Create a story that readers will remember long after the last page.`;
 
