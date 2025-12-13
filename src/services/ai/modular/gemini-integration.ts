@@ -757,6 +757,8 @@ Create a compelling comic panel that fixes the previous validation failures whil
    * Build compressed panel generation prompt
    * 2025 BEST PRACTICE: Concise prompts (~500 chars) outperform verbose prompts
    * Gemini processes image references first, so text prompt is supplementary guidance
+   * 
+   * FIX A: Added camera angle enforcement to prevent repetitive compositions
    */
   private buildPanelGenerationPrompt(
     sceneDescription: string,
@@ -774,17 +776,22 @@ Create a compelling comic panel that fixes the previous validation failures whil
     const keyFeatures = envDNA?.primaryLocation?.keyFeatures?.slice(0, 2) || [];
     const dominantColors = envDNA?.visualContinuity?.colorConsistency?.dominantColors?.slice(0, 3) || [];
 
+    // Determine camera angle with enforcement
+    const cameraAngle = options.cameraAngle || 'medium';
+    const panelType = options.panelType || 'standard';
+
     // Build compressed prompt - essential info only
-    let prompt = `${options.artStyle} comic panel. CHARACTER: Match IMAGE 1 exactly.${hasPreviousPanel ? ' CONTINUITY: Follow from IMAGE 2.' : ''}
+    let prompt = `${options.artStyle} comic panel. CHARACTER: Match IMAGE 1 exactly.${hasPreviousPanel ? ' CONTINUITY: Follow from IMAGE 2 but CHANGE composition.' : ''}
 
 SCENE: ${sceneDescription}
-EMOTION: ${emotion}
-SHOT: ${options.panelType || 'medium'}, ${options.cameraAngle || 'eye level'}`;
+EMOTION: ${emotion} (show clearly in face and body language)
+CAMERA: ${cameraAngle} shot, ${panelType} panel`;
 
-    // Add previous panel context (compressed)
+    // Add previous panel context with DIVERSITY enforcement
     if (hasPreviousPanel && options.previousPanelContext) {
       prompt += `
-PREVIOUS: ${options.previousPanelContext.action} - show what happens next`;
+PREVIOUS ACTION: ${options.previousPanelContext.action}
+THIS PANEL: Show what happens NEXT with DIFFERENT pose and angle`;
     }
 
     // Add environmental DNA (compressed)
@@ -796,13 +803,15 @@ COLORS: ${dominantColors.join(', ') || 'natural palette'}
 FEATURES: ${keyFeatures.join(', ') || 'consistent background'}`;
     }
 
-    // Add style requirements (compressed)
+    // Add style requirements with DIVERSITY enforcement
     prompt += `
 
 REQUIREMENTS:
 - Match character from reference image exactly
 - ${timeOfDay} lighting throughout
-- Rule of thirds composition
+- ${cameraAngle} camera angle (MUST follow this angle)
+- Character pose must be DIFFERENT from previous panel
+- Dynamic composition, not static
 - ${options.artStyle} style, publication quality`;
 
     return prompt;

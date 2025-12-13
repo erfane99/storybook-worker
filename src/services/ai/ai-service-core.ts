@@ -1422,8 +1422,26 @@ ${WORLD_CLASS_STORY_PROMPTS.outputFormat}`;
         ? 'intrigue → tension → action → revelation' 
         : 'complexity → conflict → climax → resolution';
 
-      const analysisPrompt = `Create ${panelCount} comic panels for this ${audience} story. Return JSON only.
+        // Priority 2: Detect if story is a brief summary and needs enhancement
+      const wordCount = story.split(/\s+/).length;
+      const isBriefSummary = wordCount < 200;
+      
+      const storyEnhancementInstruction = isBriefSummary ? `
+STORY ENHANCEMENT REQUIRED:
+The provided story is a brief summary (${wordCount} words). You must EXPAND it mentally before creating panels:
+- Add sensory details (sights, sounds, textures)
+- Imagine character emotions at each moment
+- Fill in scene transitions
+- Create natural dialogue the character would say
+- Expand each sentence into a vivid scene
+` : '';
 
+      // Priority 1: Calculate dialogue targets based on audience
+      const dialogueTarget = audience === 'children' ? '40-50%' : audience === 'young adults' ? '50-60%' : '50-60%';
+      const minDialoguePanels = Math.ceil(panelCount * (audience === 'children' ? 0.4 : 0.5));
+
+      const analysisPrompt = `Create ${panelCount} comic panels for this ${audience} story. Return JSON only.
+${storyEnhancementInstruction}
 STORY:
 "${story}"
 
@@ -1439,7 +1457,8 @@ OUTPUT SCHEMA:
     "visualPriority": "character-face|character-full|action|environment",
     "lightingNote": "lighting mood",
     "dialogue": "character speech or null",
-    "hasSpeechBubble": true|false
+    "hasSpeechBubble": true|false,
+    "locationChange": "same|new-location-name (if scene changes)"
   }],
   "totalPanels": ${panelCount},
   "pagesRequired": ${PROFESSIONAL_AUDIENCE_CONFIG[audience].pagesPerStory},
@@ -1447,38 +1466,64 @@ OUTPUT SCHEMA:
   "visualThemes": ["recurring visual elements"]
 }
 
-GOOD BEAT EXAMPLE:
-{
-  "beat": "Character discovers a glowing golden seed half-buried in the garden soil",
-  "characterAction": "kneeling on left knee, right hand brushing dirt from seed, left hand braced on ground, eyes wide with wonder, body leaning forward",
-  "emotion": "curious",
-  "environment": "sunny backyard garden with tomato plants on wooden stakes, weathered picket fence, morning dew on grass, blue sky with wispy clouds, terra cotta pots nearby",
-  "cameraAngle": "medium",
-  "panelPurpose": "reveal",
-  "visualPriority": "character-full",
-  "lightingNote": "warm morning sunlight from upper left",
-  "dialogue": null,
-  "hasSpeechBubble": false
-}
+DIALOGUE GENERATION (CRITICAL - ${dialogueTarget} of panels MUST have dialogue):
+- Minimum ${minDialoguePanels} panels MUST have hasSpeechBubble: true
+- If story has no dialogue, GENERATE natural speech for emotional moments
+- Dialogue types by emotion:
+  * Wonder/Discovery: "Wow!", "What's this?", "I can't believe it!"
+  * Determination: "I can do this!", "Here goes nothing!", "I won't give up!"
+  * Fear/Concern: "Oh no...", "What if...?", "I'm scared, but..."
+  * Joy/Triumph: "Yes!", "I did it!", "This is amazing!"
+  * Kindness: "Here, take this", "Let me help you", "We're in this together"
+- Keep dialogue SHORT (3-8 words per bubble)
+- Match dialogue to character's age and audience
 
-BAD BEAT EXAMPLE (avoid this):
-{
-  "beat": "Character finds something", ← TOO VAGUE: what exactly?
-  "characterAction": "looking", ← NO BODY DETAIL: posture? limbs? expression?
-  "emotion": "happy", ← GENERIC: be specific to moment
-  "environment": "outside", ← NO DETAILS: what objects? what features?
-  "cameraAngle": "normal", ← NOT A REAL ANGLE: use specific shot type
-  "panelPurpose": "story", ← MEANINGLESS: use establish/develop/reveal/climax/resolve
-  "visualPriority": "scene" ← VAGUE: use character-face/character-full/action/environment
-}
+GOOD DIALOGUE DISTRIBUTION (8 panels, children):
+Panel 1: hasSpeechBubble: false (establishing shot)
+Panel 2: hasSpeechBubble: true, dialogue: "What's that glow?" (discovery)
+Panel 3: hasSpeechBubble: true, dialogue: "It's... beautiful!" (wonder)
+Panel 4: hasSpeechBubble: false (action shot)
+Panel 5: hasSpeechBubble: true, dialogue: "Can I help you?" (kindness)
+Panel 6: hasSpeechBubble: true, dialogue: "I have an idea!" (determination)
+Panel 7: hasSpeechBubble: true, dialogue: "It's working!" (climax)
+Panel 8: hasSpeechBubble: false (resolution - let art speak)
+= 5/8 panels with dialogue (62%) ✓
 
-RULES:
+BAD DIALOGUE DISTRIBUTION:
+Panel 1-7: hasSpeechBubble: false
+Panel 8: hasSpeechBubble: true, dialogue: "The end"
+= 1/8 panels with dialogue (12%) ✗ UNACCEPTABLE
+
+GOOD PANEL SEQUENCE (diverse, dynamic):
+Panel 1: { "beat": "Maya discovers glowing seed in backyard", "characterAction": "kneeling, brushing dirt with right hand, eyes wide", "cameraAngle": "medium", "environment": "sunny backyard with fence, tomato plants, terra cotta pots", "dialogue": null, "hasSpeechBubble": false }
+Panel 2: { "beat": "Maya holds the seed up to examine it", "characterAction": "sitting back on heels, seed cupped in both palms, face lit by golden glow", "cameraAngle": "close-up", "environment": "same backyard, seed's glow illuminating face", "dialogue": "What are you, little seed?", "hasSpeechBubble": true }
+Panel 3: { "beat": "Magical beanstalk erupts from soil at night", "characterAction": "stumbling backward, arms raised in surprise, mouth open", "cameraAngle": "low-angle", "environment": "same backyard now moonlit, beanstalk towering, stars visible", "dialogue": "Whoa!", "hasSpeechBubble": true }
+Panel 4: { "beat": "Maya begins climbing the massive beanstalk", "characterAction": "gripping vine with both hands, one foot on leaf, looking up determinedly", "cameraAngle": "wide", "environment": "beanstalk surrounded by clouds, house tiny below", "dialogue": "Here I go!", "hasSpeechBubble": true, "locationChange": "new-climbing beanstalk" }
+
+BAD PANEL SEQUENCE (no dialogue, repetitive - AVOID):
+Panel 1: { "beat": "Maya in garden", "characterAction": "standing", "cameraAngle": "medium", "dialogue": null, "hasSpeechBubble": false }
+Panel 2: { "beat": "Maya sees vegetables", "characterAction": "looking", "cameraAngle": "medium", "dialogue": null, "hasSpeechBubble": false }
+↑ NO DIALOGUE = SILENT COMIC = BORING
+
+PANEL DIVERSITY RULES (CRITICAL):
 1. Panel N+1 must show consequence of Panel N (sequential continuity)
-2. Character appears in 90%+ of panels
-3. No two consecutive panels have same camera angle
-4. characterAction must specify: posture, which limbs doing what, body weight, expression
-5. environment must have 4+ specific objects or features
-6. Vary visual rhythm: close-up → wide → medium → action shot
+2. NO two consecutive panels with same cameraAngle
+3. NO two consecutive panels with same characterAction verb (standing→kneeling→climbing→running)
+4. characterAction MUST specify: posture, which limbs doing what, facial expression
+5. environment must have 4+ specific objects/features
+6. If story changes location, set locationChange to new location name
+7. Each panel must be VISUALLY DISTINCT from the previous panel
+8. AT LEAST ${minDialoguePanels} panels MUST have hasSpeechBubble: true with dialogue
+
+CAMERA ANGLE ROTATION (follow this pattern):
+Panel 1: wide (establishing)
+Panel 2: medium or close-up
+Panel 3: low-angle or high-angle
+Panel 4: over-shoulder or wide
+Panel 5: close-up (emotion)
+Panel 6: medium or wide
+Panel 7: dramatic angle (low/high/dutch)
+Panel 8: medium or close-up (resolution)
 
 PANEL DISTRIBUTION:
 - Panel 1: Wide establishing shot (world + tone)
