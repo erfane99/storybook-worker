@@ -93,13 +93,26 @@ export class ComicGenerationEngine {
 
       console.log(`Generating professional comic book layout for ${audience} audience...`);
 
-      // Step 1: Advanced story analysis with narrative intelligence (FROM AISERVNOW.TXT)
-      const storyAnalysis = await this.analyzeStoryStructure(story, audience);
+      // Step 1: USE STORY ANALYSIS FROM ENHANCED CONTEXT (Already analyzed by Claude in PHASE 1)
+      // This eliminates duplicate API calls and uses Claude (more reliable) instead of Gemini for text analysis
+      let storyAnalysis = options.enhancedContext?.storyAnalysis;
       
-      // Step 2: Create character DNA with visual fingerprinting (FROM CURRENTAISERV.TXT)
-      let characterDNA: CharacterDNA | null = null;
-      if (characterImage) {
+      if (!storyAnalysis || !storyAnalysis.storyBeats || storyAnalysis.storyBeats.length === 0) {
+        throw new Error('CRITICAL: Story analysis not provided in enhancedContext. Claude story analysis from PHASE 1 is required. Job must fail.');
+      }
+      
+      console.log(`✅ Using pre-analyzed story structure: ${storyAnalysis.storyBeats.length} beats from Claude analysis`);
+      
+      // Step 2: USE CHARACTER DNA FROM ENHANCED CONTEXT (Already created in PHASE 3)
+      // This eliminates duplicate API calls
+      let characterDNA: CharacterDNA | null = options.enhancedContext?.characterDNA || null;
+      
+      if (characterImage && !characterDNA) {
+        // Only create if not provided (fallback for edge cases)
+        console.log('⚠️ Character DNA not in context, creating new...');
         characterDNA = await this.createMasterCharacterDNA(characterImage, characterArtStyle);
+      } else if (characterDNA) {
+        console.log('✅ Using pre-created Character DNA from PHASE 3');
       }
 
       // Step 3: Environmental DNA MUST be provided by AIService - NO FALLBACK
