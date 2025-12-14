@@ -1482,6 +1482,35 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       baseJob.layout_type = tableData.layout_type;
       baseJob.processed_pages = tableData.processed_pages;
       baseJob.storybook_entry_id = tableData.storybook_entry_id;
+    } else if (jobType === 'auto-story') {
+      // ✅ AUTO-STORY: Map all fields from auto_story_jobs table
+      baseJob.genre = tableData.genre;
+      baseJob.character_description = tableData.character_description;
+      baseJob.cartoon_image_url = tableData.cartoon_image_url;
+      baseJob.audience = tableData.audience;
+      baseJob.character_art_style = tableData.character_art_style;
+      baseJob.layout_type = tableData.layout_type;
+      baseJob.generated_story = tableData.generated_story;
+      baseJob.generated_scenes = tableData.generated_scenes;
+      baseJob.storybook_entry_id = tableData.storybook_entry_id;
+    } else if (jobType === 'scenes') {
+      // ✅ SCENES: Map all fields from scene_generation_jobs table
+      baseJob.story = tableData.story;
+      baseJob.character_image = tableData.character_image;
+      baseJob.audience = tableData.audience;
+      baseJob.character_description = tableData.character_description;
+      baseJob.generated_pages = tableData.generated_pages;
+    } else if (jobType === 'image-generation') {
+      // ✅ IMAGE-GENERATION: Map all fields from image_generation_jobs table
+      baseJob.image_prompt = tableData.image_prompt;
+      baseJob.character_description = tableData.character_description;
+      baseJob.emotion = tableData.emotion;
+      baseJob.audience = tableData.audience;
+      baseJob.is_reused_image = tableData.is_reused_image;
+      baseJob.cartoon_image = tableData.cartoon_image;
+      baseJob.style = tableData.style;
+      baseJob.generated_image_url = tableData.generated_image_url;
+      baseJob.final_prompt_used = tableData.final_prompt_used;
     } else if (jobType === 'character-description') {
       baseJob.image_url = tableData.image_url;
       baseJob.analysis_type = tableData.analysis_type;
@@ -1490,7 +1519,6 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       baseJob.include_background = tableData.include_background;
       baseJob.character_description = tableData.character_description;
     }
-    // Add other job type mappings as needed
   }
 
   private addJobSpecificResultFields(jobType: JobType, updateData: any, resultData: any): void {
