@@ -1032,9 +1032,26 @@ private addCloudinaryTransformations(url: string): string {
       throw new Error(`Gemini API error: ${response.error.message}`);
     }
     
+    // ✅ DIAGNOSTIC: Log full response structure to identify why text is missing
+    const candidate = response.candidates?.[0];
+    this.logger.log('🔍 DIAGNOSTIC - Gemini response structure:', {
+      hasCandidates: !!response.candidates,
+      candidatesLength: response.candidates?.length || 0,
+      finishReason: candidate?.finishReason,
+      hasContent: !!candidate?.content,
+      partsLength: candidate?.content?.parts?.length || 0,
+      firstPartKeys: candidate?.content?.parts?.[0] ? Object.keys(candidate.content.parts[0]) : [],
+      firstPartTextLength: candidate?.content?.parts?.[0]?.text?.length || 0,
+      // Log first 200 chars of text if exists
+      textPreview: candidate?.content?.parts?.[0]?.text?.substring(0, 200) || 'NO TEXT FOUND'
+    });
+    
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!text) {
+      // ✅ DIAGNOSTIC: Log what we actually received when text is missing
+      this.logger.error('❌ DIAGNOSTIC - No text found. Full candidate:', JSON.stringify(candidate, null, 2));
+      
       throw new AIValidationError('No text in Gemini response', {
         service: 'GeminiIntegration',
         operation: 'extractTextFromResponse',
