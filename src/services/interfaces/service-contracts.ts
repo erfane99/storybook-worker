@@ -858,6 +858,15 @@ export interface ImageGenerationOptions {
     totalPanels?: number;
     enforceConsistency?: boolean;
   };
+  enhancedContext?: {
+    learnedPatterns?: {
+      feedbackEnhancements?: {
+        imageEnhancement?: string;
+        storyEnhancement?: string;
+        feedbackCount?: number;
+      };
+    };
+  };
 }
 
 export interface ComicGenerationResult {

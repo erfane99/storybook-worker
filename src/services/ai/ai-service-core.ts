@@ -954,6 +954,9 @@ REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art
         
         // Generate actual image using Gemini's image-to-image generation
         // ✅ CRITICAL: Pass environmentalContext to enforce time/location/lighting consistency
+        // Get feedback image enhancement from context if available
+        const feedbackImageEnhancement = options.enhancedContext?.learnedPatterns?.feedbackEnhancements?.imageEnhancement || '';
+
         const imageUrl = await this.geminiIntegration.generatePanelWithCharacter(
           cartoonImageUrl,
           worldClassPrompt,  // Use the world-class prompt as scene description
@@ -963,6 +966,7 @@ REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art
             cameraAngle: panelType === 'closeup' ? 'close-up' : panelType === 'wide' ? 'wide angle' : 'eye level',
             lighting: environmentalDNA?.lightingContext?.lightingMood || 'natural',
             panelType: panelType,
+            feedbackImageEnhancement: feedbackImageEnhancement,
             backgroundComplexity: environmentalDNA ? 'detailed' : 'moderate',
             temperature: 0.7,
             // ✅ NEW: Pass environmental context for MANDATORY enforcement in Gemini prompts

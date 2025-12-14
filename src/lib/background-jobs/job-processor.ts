@@ -1468,6 +1468,19 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       console.warn('⚠️ Failed to record success pattern (non-critical):', patternError instanceof Error ? patternError.message : String(patternError));
     }
 
+    // Process any pending user feedback (non-blocking)
+    try {
+      const { FeedbackProcessor } = await import('../../services/feedback/feedback-processor.js');
+      // Cast to any - safe because service container returns DatabaseService instance with getClient()
+      const feedbackProcessor = new FeedbackProcessor(databaseService as any);
+      const feedbackResults = await feedbackProcessor.processAllPendingFeedback();
+      if (feedbackResults.processed > 0) {
+        console.log(`📝 Processed ${feedbackResults.processed} user feedback items`);
+      }
+    } catch (feedbackError) {
+      console.warn('⚠️ Feedback processing skipped (non-critical):', feedbackError instanceof Error ? feedbackError.message : String(feedbackError));
+    }
+
     console.log(`✅ ENHANCED storybook job completed: ${job.id}`);
     console.log(`🎭 Character DNA: ${characterDNA ? 'ACTIVE' : 'FALLBACK'}`);
     console.log(`🎭 Character Consistency: ${qualityMetrics.characterConsistency}%`);
@@ -1581,6 +1594,35 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     console.log('🧠 Applying learned success patterns to enhance context...');
     
     try {
+      // Get feedback-based adjustments
+      let feedbackEnhancements = {
+        storyEnhancement: '',
+        imageEnhancement: '',
+        feedbackCount: 0
+      };
+
+      try {
+        const { FeedbackPatternAggregator } = await import('../../services/feedback/feedback-pattern-aggregator.js');
+        const { DatabaseService } = await import('../../services/database/database-service.js');
+        
+        // Get database service from context or create new instance reference
+        const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
+        const aggregator = new FeedbackPatternAggregator(databaseService as any);
+        
+        const patterns = await aggregator.getAggregatedPatterns();
+        
+        if (patterns.totalFeedbackCount > 0) {
+          feedbackEnhancements = {
+            storyEnhancement: await aggregator.getStoryAnalysisEnhancement(),
+            imageEnhancement: await aggregator.getImageGenerationEnhancement(),
+            feedbackCount: patterns.totalFeedbackCount
+          };
+          console.log(`📊 Applied feedback patterns from ${patterns.totalFeedbackCount} user feedbacks`);
+        }
+      } catch (feedbackError) {
+        console.warn('⚠️ Feedback pattern loading skipped (non-critical):', feedbackError instanceof Error ? feedbackError.message : String(feedbackError));
+      }
+
       const learnedPatterns = {
         successfulPromptPatterns: [
           'detailed character descriptions improve consistency',
@@ -1592,6 +1634,8 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
           environmentalCoherenceBoost: 3,
           narrativeFlowImprovement: 2
         },
+        // Add feedback-driven enhancements
+        feedbackEnhancements: feedbackEnhancements,
         appliedAt: new Date().toISOString(),
         jobId: jobId
       };
@@ -1599,7 +1643,8 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       return {
         ...enhancedContext,
         learnedPatterns: learnedPatterns,
-        patternsApplied: true
+        patternsApplied: true,
+        feedbackPatternsApplied: feedbackEnhancements.feedbackCount > 0
       };
       
     } catch (error: any) {

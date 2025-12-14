@@ -139,6 +139,7 @@ export interface PanelOptions {
     totalPanels?: number;
   };
   previousPanelContext?: PreviousPanelContext;
+  feedbackImageEnhancement?: string;
 }
 
 // ===== GEMINI INTEGRATION CLASS =====
@@ -813,6 +814,13 @@ REQUIREMENTS:
 - Character pose must be DIFFERENT from previous panel
 - Dynamic composition, not static
 - ${options.artStyle} style, publication quality`;
+
+    // Add feedback-driven image enhancements if available
+    if (options.feedbackImageEnhancement) {
+      prompt += `
+
+${options.feedbackImageEnhancement}`;
+    }
 
     return prompt;
   }

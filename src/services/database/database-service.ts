@@ -40,6 +40,14 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     maxDelay: 10000,
   };
 
+  /**
+   * Get the Supabase client instance
+   * Used by other services that need direct database access
+   */
+  getClient(): SupabaseClient | null {
+    return this.supabase;
+  }
+
   constructor() {
     const config: DatabaseConfig = {
       name: 'DatabaseService',
@@ -51,6 +59,7 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       connectionTimeout: 5000,
       queryTimeout: 30000,
     };
+    
     
     super(config);
   }
