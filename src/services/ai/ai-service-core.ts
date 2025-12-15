@@ -276,7 +276,7 @@ ACT 3 (Panels 20-24): Event concludes, character changed, connection to present,
       panelCount: '8-12 panels',
       wordTarget: '800-1200 words'
     },
-    young_adults: {
+    'young adults': {
       vocabulary: 'Grade 6-9 reading level. Contemporary language. Literary devices ok.',
       maturityLevel: 'Can handle: conflict, failure, disappointment, complex relationships, moral ambiguity (with resolution)',
       panelCount: '15-18 panels',
