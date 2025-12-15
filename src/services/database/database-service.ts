@@ -1522,27 +1522,44 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
   }
 
   private addJobSpecificResultFields(jobType: JobType, updateData: any, resultData: any): void {
-    if (jobType === 'cartoonize') {
-      if (resultData?.generated_image_url) {
-        updateData.generated_image_url = resultData.generated_image_url;
-      }
-      if (resultData?.final_cloudinary_url) {
-        updateData.final_cloudinary_url = resultData.final_cloudinary_url;
-      }
-    } else if (jobType === 'storybook') {
-      if (resultData?.storybook_id) {
-        updateData.storybook_entry_id = resultData.storybook_id;
-      }
-      if (resultData?.pages) {
-        updateData.processed_pages = resultData.pages;
-      }
-    } else if (jobType === 'character-description') {
-      if (resultData?.character_description) {
-        updateData.character_description = resultData.character_description;
-      }
+  if (jobType === 'cartoonize') {
+    if (resultData?.generated_image_url) {
+      updateData.generated_image_url = resultData.generated_image_url;
     }
-    // Add other job type mappings as needed
+    if (resultData?.final_cloudinary_url) {
+      updateData.final_cloudinary_url = resultData.final_cloudinary_url;
+    }
+  } else if (jobType === 'storybook') {
+    if (resultData?.storybook_id) {
+      updateData.storybook_entry_id = resultData.storybook_id;
+    }
+    if (resultData?.pages) {
+      updateData.processed_pages = resultData.pages;
+    }
+  } else if (jobType === 'auto-story') {
+    if (resultData?.storybook_id) {
+      updateData.storybook_entry_id = resultData.storybook_id;
+    }
+    if (resultData?.generated_story) {
+      updateData.generated_story = resultData.generated_story;
+    }
+  } else if (jobType === 'scenes') {
+    if (resultData?.generated_pages) {
+      updateData.generated_pages = resultData.generated_pages;
+    }
+  } else if (jobType === 'image-generation') {
+    if (resultData?.generated_image_url) {
+      updateData.generated_image_url = resultData.generated_image_url;
+    }
+    if (resultData?.final_prompt_used) {
+      updateData.final_prompt_used = resultData.final_prompt_used;
+    }
+  } else if (jobType === 'character-description') {
+    if (resultData?.character_description) {
+      updateData.character_description = resultData.character_description;
+    }
   }
+}
 
   private async updatePatternWithRating(
     comicId: string,
@@ -1741,10 +1758,15 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
 
       this.log('info', `🔍 Checking character cache for: ${sourceImageUrl.substring(0, 60)}...`);
 
-      // Query using correct column names from cartoon_images table
-      const { data, error } = await this.supabase
+      // FIXED: Check BOTH original_cloudinary_url AND cartoonized_cloudinary_url
+      // This handles both:
+      // - New uploads: URL matches original_cloudinary_url
+      // - Reused images: URL matches cartoonized_cloudinary_url (the cartoon the user selected)
+      
+      // First try: Check if URL matches original photo
+      let { data, error } = await this.supabase
         .from('cartoon_images')
-        .select('character_description, cartoonized_cloudinary_url, cartoon_style')
+        .select('character_description, cartoonized_cloudinary_url, cartoon_style, original_cloudinary_url')
         .eq('original_cloudinary_url', sourceImageUrl)
         .not('character_description', 'is', null)
         .neq('character_description', '')
@@ -1752,13 +1774,36 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
         .limit(1)
         .maybeSingle();
 
+      // Second try: If not found, check if URL matches the cartoon (reused image case)
+      if (!data && !error) {
+        this.log('info', '🔄 URL not found in original_cloudinary_url, checking cartoonized_cloudinary_url...');
+        const result = await this.supabase
+          .from('cartoon_images')
+          .select('character_description, cartoonized_cloudinary_url, cartoon_style, original_cloudinary_url')
+          .eq('cartoonized_cloudinary_url', sourceImageUrl)
+          .not('character_description', 'is', null)
+          .neq('character_description', '')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        data = result.data;
+        error = result.error;
+        
+        if (data) {
+          this.log('info', '✅ Found match in cartoonized_cloudinary_url (reused image)');
+        }
+      }
+
       if (error) {
         this.log('warn', `Character cache lookup failed: ${error.message}`);
         return null;
       }
 
       if (data && data.character_description && data.cartoonized_cloudinary_url) {
+        const matchedOn = sourceImageUrl === data.original_cloudinary_url ? 'original_url' : 'cartoon_url';
         this.log('info', `✅ Found cached character data (description: ${data.character_description.length} chars)`);
+        this.log('info', `   📎 Matched on: ${matchedOn}`);
         return {
           character_description: data.character_description,
           cartoon_image_url: data.cartoonized_cloudinary_url,

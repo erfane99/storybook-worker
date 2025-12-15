@@ -55,12 +55,167 @@ import {
 // FIXED: Import ErrorCategory from the correct path (error-types.ts) to resolve enum conflicts
 import { ErrorCategory } from '../errors/error-types.js';
 
-// ===== WORLD-CLASS STORY PROMPTS =====
+// ===== WORLD-CLASS STORY PROMPTS WITH AUDIENCE-SPECIFIC STRUCTURE =====
 const WORLD_CLASS_STORY_PROMPTS = {
   systemPrompt: (audience: string, genre: string) => 
     `You are an EMMY-AWARD WINNING comic book writer specializing in ${audience} content. 
     Your ${genre} stories have perfect pacing, emotional depth, and visual richness.
-    Every sentence must suggest a panel image.`,
+    Every sentence must suggest a panel image.
+    
+${WORLD_CLASS_STORY_PROMPTS.getAudienceStoryStructure(audience)}`,
+
+  /**
+   * ===== AUDIENCE-SPECIFIC STORY STRUCTURE REQUIREMENTS =====
+   * Every story MUST have: SETUP, GOAL, OBSTACLE, RISING ACTION, CLIMAX, RESOLUTION
+   */
+  getAudienceStoryStructure: (audience: string): string => {
+    const structures: Record<string, string> = {
+      children: `
+STORY STRUCTURE FOR CHILDREN (8 panels, Ages 4-8):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Story Complexity: Simple, linear narrative with ONE clear problem and ONE clear solution
+
+REQUIRED STORY BEATS:
+• SETUP (panels 1-2): Establish character, setting, and initial situation
+• GOAL INTRODUCTION (panel 2-3): What does the character want or need?
+• OBSTACLE (panel 3-4): What prevents them from getting it?
+• RISING ACTION (panels 4-6): Character attempts to overcome obstacle
+• CLIMAX (panel 7): Critical moment of confrontation or decision
+• RESOLUTION (panel 8): Outcome and transformation
+
+ACCEPTABLE GOAL TYPES (concrete, relatable):
+✓ Find something lost (toy, pet, friend)
+✓ Help someone in need (friend is sad, animal is stuck)
+✓ Overcome a simple fear (dark, new place, trying something new)
+✓ Make a new friend
+✓ Learn a new skill
+
+ACCEPTABLE OBSTACLE TYPES (age-appropriate, NOT scary):
+✓ Physical barrier (too high, too far, can't reach)
+✓ Social challenge (shyness, misunderstanding)
+✓ Lack of knowledge (doesn't know how)
+✓ Weather or nature (rain stops play, path is blocked)
+
+RESOLUTION REQUIREMENTS:
+✓ Character MUST take action (not passive)
+✓ Clear cause-and-effect (because X did Y, Z happened)
+✓ Explicit lesson stated simply ("Maya learned that...")
+✓ Emotionally satisfying (happy, hopeful, or peaceful ending)
+
+FORBIDDEN FOR CHILDREN:
+✗ Unresolved conflicts
+✗ Ambiguous endings
+✗ Abstract philosophical conclusions
+✗ Scary obstacles (monsters, death, violence, abandonment)
+✗ Complex moral dilemmas
+✗ Endings like "The magic would always be there" (too abstract)
+✗ Endings like "In that moment, everything changed" (too vague)`,
+
+      'young adults': `
+STORY STRUCTURE FOR YOUNG ADULTS (15 panels, Ages 12-17):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Story Complexity: Multi-layered narrative with internal AND external conflicts
+
+REQUIRED STORY BEATS:
+• SETUP (panels 1-3): Establish world, relationships, and status quo
+• GOAL INTRODUCTION (panels 2-4): Internal or external desire revealed
+• FIRST OBSTACLE (panels 4-6): Initial challenge or complication
+• RISING ACTION (panels 6-10): Escalating stakes, multiple attempts
+• MIDPOINT SHIFT (panels 7-9): New information changes everything
+• DARK MOMENT (panels 10-12): All seems lost, internal conflict peaks
+• CLIMAX (panels 12-14): Character makes defining choice
+• RESOLUTION (panel 15): Consequences shown, transformation evident
+
+ACCEPTABLE GOAL TYPES (identity and relationship focused):
+✓ Prove oneself / earn respect
+✓ Navigate social dynamics (fitting in vs. being authentic)
+✓ Protect or stand up for someone
+✓ Discover truth about self or situation
+✓ Overcome self-doubt to achieve something meaningful
+
+ACCEPTABLE OBSTACLE TYPES (emotionally complex):
+✓ Internal conflict (fear vs. desire, loyalty vs. truth)
+✓ Social pressure (peer expectations, authority figures)
+✓ Moral gray areas (no clear right answer)
+✓ Consequences of past choices
+✓ Competing loyalties
+
+RESOLUTION REQUIREMENTS:
+✓ Character demonstrates growth or change
+✓ Actions have meaningful consequences
+✓ May include bittersweet elements
+✓ Theme emerges through story (not stated explicitly)
+✓ Respects reader intelligence - show don't tell
+
+THEMES TO EMBRACE:
+• Identity formation
+• First experiences (responsibility, independence, failure)
+• Questioning authority/rules
+• Loyalty and betrayal
+• Finding your voice
+
+FORBIDDEN FOR YOUNG ADULTS:
+✗ Preachy moral lessons
+✗ Adult lecturing tone
+✗ Childish simplification
+✗ Cynicism without hope
+✗ Neat moral statements in resolution`,
+
+      adults: `
+STORY STRUCTURE FOR ADULTS (24 panels, Ages 18+):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Story Complexity: Sophisticated narrative with subtext, moral ambiguity, nuanced psychology
+
+REQUIRED STORY BEATS:
+• OPENING IMAGE (panel 1): Visual thesis statement
+• SETUP (panels 1-4): World, character psychology, hidden tensions
+• INCITING INCIDENT (panels 3-5): Event that disrupts equilibrium
+• FIRST ACT TURN (panels 5-7): Point of no return
+• RISING COMPLICATIONS (panels 7-14): Layered obstacles, relationships tested
+• MIDPOINT REVELATION (panels 11-13): Truth changes perspective
+• ALL IS LOST (panels 16-18): Consequences of choices crystallize
+• DARK NIGHT (panels 18-20): Internal reckoning
+• CLIMAX (panels 20-22): Moment of truth, defining action
+• RESOLUTION (panels 23-24): New equilibrium, thematic resonance
+
+ACCEPTABLE GOAL TYPES (existential and consequential):
+✓ Reconcile with past decisions
+✓ Navigate complex relationships
+✓ Face moral/ethical dilemmas with real stakes
+✓ Find meaning or purpose
+✓ Protect what matters while facing impossible choices
+
+ACCEPTABLE OBSTACLE TYPES (psychologically complex):
+✓ Internal demons (guilt, regret, addiction, trauma)
+✓ Systemic forces (society, institutions, fate)
+✓ Competing valid perspectives
+✓ No-win situations requiring sacrifice
+✓ Consequences of character's own flaws
+
+RESOLUTION REQUIREMENTS:
+✓ Earned emotional payoff (not easy answers)
+✓ Character transformation through suffering or insight
+✓ Thematic resonance without being preachy
+✓ May be tragic, bittersweet, or triumphant
+✓ Respects complexity - avoids neat resolutions if unrealistic
+
+NARRATIVE TECHNIQUES TO USE:
+• Subtext and implication
+• Unreliable perspectives
+• Parallel storylines
+• Symbolic imagery
+• Moral ambiguity embraced
+
+FORBIDDEN FOR ADULTS:
+✗ Spelling out themes explicitly
+✗ Happy endings that feel unearned
+✗ Simplistic moral conclusions
+✗ Treating reader as needing guidance
+✗ Neat tidy resolutions for complex situations`
+    };
+    
+    return structures[audience] || structures.children;
+  },
 
   genrePrompts: {
     adventure: {
