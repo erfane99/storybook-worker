@@ -14,6 +14,11 @@ import {
   AI_PROMPTS
 } from './constants-and-types.js';
 
+import {
+  StoryCharacter,
+  AGE_DESCRIPTIONS
+} from '../../../lib/types.js';
+
 import { 
   ErrorHandlingSystem,
   AIServiceError,
@@ -352,6 +357,7 @@ export class NarrativeIntelligenceEngine {
   /**
    * Generate a complete story with ENHANCED emotional depth and character development
    * 2025 BEST PRACTICE: Word count targets, 3-act conflict structure, sensory details
+   * ENHANCED: Multi-character support with up to 4 named characters
    */
   async generateEnhancedStory(
     title: string,
@@ -359,10 +365,12 @@ export class NarrativeIntelligenceEngine {
     audience: AudienceType,
     characterDescription: string,
     customPrompt?: string,
-    pages: number = 4
+    pages: number = 4,
+    characters?: StoryCharacter[]  // NEW: Multi-character support
   ): Promise<string> {
     try {
       console.log('📖 Generating enhanced story with emotional intelligence...');
+      console.log(`👥 Characters: ${characters?.length || 1}`);
 
       // Word count targets by audience
       const wordCountTarget = audience === 'children' 
@@ -370,6 +378,9 @@ export class NarrativeIntelligenceEngine {
         : audience === 'young adults' 
         ? '600-900 words' 
         : '800-1200 words';
+
+      // Build character profiles from array
+      const characterProfiles = this.buildCharacterProfiles(characterDescription, characters);
 
       const storyPrompt = `${ENHANCED_STORY_PROMPTS.storyGeneration.base}
 
@@ -379,8 +390,7 @@ AUDIENCE: ${audience}
 PAGES: ${pages} (with multiple scenes per page)
 WORD COUNT: ${wordCountTarget}
 
-MAIN CHARACTER (Maintain EXACTLY throughout):
-${characterDescription}
+${characterProfiles}
 
 ${ENHANCED_STORY_PROMPTS.storyGeneration.structure}
 
@@ -403,13 +413,15 @@ SENSORY RICHNESS (include in every scene):
 ${customPrompt ? `\nADDITIONAL REQUIREMENTS:\n${customPrompt}` : ''}
 
 CRITICAL REQUIREMENTS:
-1. Character appears in 80%+ of scenes
+1. Main character appears in 80%+ of scenes
 2. Every scene advances plot AND character
 3. Dialogue feels natural and age-appropriate
 4. Emotional stakes rise throughout Act 2, peak in Act 3
 5. Visual descriptions enable illustration
 6. Include sensory details in every scene
 7. Ending satisfies but leaves room for imagination
+8. Use ONLY the character names provided - do NOT invent new named characters
+9. Secondary characters must be described CONSISTENTLY when they appear
 
 Create a story that readers will remember long after the last page.`;
 
@@ -430,6 +442,79 @@ Create a story that readers will remember long after the last page.`;
       console.error('❌ Story generation failed:', error);
       throw this.errorHandler.handleError(error, 'generateEnhancedStory');
     }
+  }
+
+  /**
+   * Build character profiles for story generation prompt
+   * Creates detailed profiles for main and secondary characters
+   */
+  private buildCharacterProfiles(characterDescription: string, characters?: StoryCharacter[]): string {
+    // If no characters array, use legacy single character
+    if (!characters || characters.length === 0) {
+      return `MAIN CHARACTER (Maintain EXACTLY throughout):
+${characterDescription}`;
+    }
+
+    const mainCharacter = characters.find(c => c.role === 'main');
+    const secondaryCharacters = characters.filter(c => c.role === 'secondary');
+
+    // Build main character prompt
+    let profile = `===== CHARACTER PROFILES =====
+
+MAIN CHARACTER (appears in 80%+ of panels, MUST match cartoonized image exactly):
+- Name: ${mainCharacter?.name || 'Main Character'}
+- Age: ${mainCharacter?.age ? this.getAgeDescription(mainCharacter.age) : 'child'}
+- Gender: ${mainCharacter?.gender || 'child'}
+${mainCharacter?.characterDescription ? `- Visual Description: ${mainCharacter.characterDescription}` : (characterDescription ? `- Visual Description: ${characterDescription}` : '')}
+`;
+
+    // Build secondary characters prompt
+    if (secondaryCharacters.length > 0) {
+      profile += `
+SECONDARY CHARACTERS (described but not cartoonized - AI will render based on description):
+`;
+      secondaryCharacters.forEach((char, index) => {
+        profile += `
+Character ${index + 2}: ${char.name}
+- Age: ${this.getAgeDescription(char.age)}
+- Gender: ${char.gender}
+- Relationship to ${mainCharacter?.name || 'main character'}: ${char.relationship || 'companion'}
+- Hair: ${char.hairColor || 'not specified'}
+- Eyes: ${char.eyeColor || 'not specified'}
+- Visual Style: Must be CONSISTENT across all panels - same height relative to ${mainCharacter?.name || 'main character'}, same facial features, same clothing throughout
+`;
+      });
+    }
+
+    // Add critical character rules
+    profile += `
+CRITICAL CHARACTER RULES:
+1. Use ONLY the character names provided above - do NOT invent new named characters
+2. ${mainCharacter?.name || 'Main character'} is the MAIN character and should appear in most scenes
+3. Secondary characters must be described CONSISTENTLY every time they appear:
+   - Same physical features (height, hair, eyes) in every panel
+   - Same clothing throughout the story (unless story specifically involves costume change)
+   - Age-appropriate proportions maintained
+4. When ${mainCharacter?.name || 'main character'} interacts with secondary characters, clearly describe their relative sizes based on ages
+5. Generic background characters (shopkeepers, passersby) should NOT have names
+`;
+
+    return profile;
+  }
+
+  /**
+   * Get human-readable age description for prompts
+   */
+  private getAgeDescription(age: string): string {
+    const ageMap: Record<string, string> = {
+      'toddler': 'toddler (1-3 years old, very small, chubby cheeks)',
+      'child': 'child (4-10 years old, small stature)',
+      'teen': 'teenager (11-17 years old, growing, youthful)',
+      'young-adult': 'young adult (18-25 years old)',
+      'adult': 'adult (26-55 years old)',
+      'senior': 'senior (55+ years old, may have gray hair, wrinkles)'
+    };
+    return ageMap[age] || age;
   }
 
   /**

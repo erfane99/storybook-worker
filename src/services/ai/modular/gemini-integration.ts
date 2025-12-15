@@ -140,6 +140,18 @@ export interface PanelOptions {
   };
   previousPanelContext?: PreviousPanelContext;
   feedbackImageEnhancement?: string;
+  // NEW: Multi-character support
+  mainCharacterName?: string;         // Name of the main character
+  secondaryCharacters?: {             // Secondary characters in this panel
+    name: string;
+    age: string;
+    gender: string;
+    relationship?: string;
+    hairColor?: string;
+    eyeColor?: string;
+    action?: string;
+    position?: string;
+  }[];
 }
 
 // ===== GEMINI INTEGRATION CLASS =====
@@ -571,6 +583,24 @@ ${keyFeatures.slice(0, 3).map((f: string) => `- ${f}`).join('\n') || '- Story-sp
 COLOR PALETTE: ${dominantColors.slice(0, 4).join(', ') || 'colors matching the specified time of day'}`;
     }
 
+    // ===== MULTI-CHARACTER SUPPORT FOR REGENERATION =====
+    // Include secondary characters if present in this scene
+    const mainCharName = options.mainCharacterName || 'the main character';
+    const hasSecondaryCharacters = options.secondaryCharacters && options.secondaryCharacters.length > 0;
+    
+    if (hasSecondaryCharacters) {
+      prompt += `
+
+👥 SECONDARY CHARACTERS IN SCENE (render consistently but NOT from reference image):`;
+      options.secondaryCharacters!.forEach((char, index) => {
+        prompt += `
+- ${char.name}: ${char.age || 'child'} ${char.gender || 'child'}${char.hairColor ? `, ${char.hairColor} hair` : ''}${char.eyeColor ? `, ${char.eyeColor} eyes` : ''}
+  Relationship: ${char.relationship || 'companion'} of ${mainCharName}
+  ${char.action ? `Action: ${char.action}` : ''}${char.position ? `, Position: ${char.position}` : ''}
+  MUST BE: Visually distinct from ${mainCharName}, age-appropriate size, consistent appearance`;
+      });
+    }
+
     prompt += `
 
 ${options.artStyle.toUpperCase()} QUALITY STANDARDS:
@@ -578,7 +608,16 @@ ${options.artStyle.toUpperCase()} QUALITY STANDARDS:
 - Clean, expressive line work
 - Vibrant, publication-ready colors
 - Visual consistency with established character design
-- Engaging composition that advances the narrative
+- Engaging composition that advances the narrative`;
+
+    if (hasSecondaryCharacters) {
+      prompt += `
+- Secondary characters must be CONSISTENT with descriptions above
+- Show age-appropriate size differences between characters
+- Each secondary character must have DISTINCT appearance from main character`;
+    }
+
+    prompt += `
 
 MANDATORY: Address ALL issues listed in CRITICAL FIXES REQUIRED section above.
 
@@ -760,6 +799,7 @@ Create a compelling comic panel that fixes the previous validation failures whil
    * Gemini processes image references first, so text prompt is supplementary guidance
    * 
    * FIX A: Added camera angle enforcement to prevent repetitive compositions
+   * ENHANCED: Multi-character support with secondary character descriptions
    */
   private buildPanelGenerationPrompt(
     sceneDescription: string,
@@ -768,6 +808,7 @@ Create a compelling comic panel that fixes the previous validation failures whil
   ): string {
     const hasPreviousPanel = !!options.previousPanelContext;
     const hasEnvDNA = !!options.environmentalContext?.environmentalDNA;
+    const hasSecondaryCharacters = options.secondaryCharacters && options.secondaryCharacters.length > 0;
     
     // Extract environmental DNA values (if present)
     const envDNA = options.environmentalContext?.environmentalDNA;
@@ -780,17 +821,35 @@ Create a compelling comic panel that fixes the previous validation failures whil
     // Determine camera angle with enforcement
     const cameraAngle = options.cameraAngle || 'medium';
     const panelType = options.panelType || 'standard';
+    
+    // Main character name
+    const mainCharName = options.mainCharacterName || 'the main character';
 
     // Build compressed prompt - essential info only
-    let prompt = `${options.artStyle} comic panel. CHARACTER: Match IMAGE 1 exactly.${hasPreviousPanel ? ' CONTINUITY: Follow from IMAGE 2 but CHANGE composition.' : ''}
+    let prompt = `${options.artStyle} comic panel. CHARACTER 1 (${mainCharName}): Match IMAGE 1 exactly.${hasPreviousPanel ? ' CONTINUITY: Follow from IMAGE 2 but CHANGE composition.' : ''}
 
 SCENE: ${sceneDescription}
 EMOTION: ${emotion} (show clearly in face and body language)
 CAMERA: ${cameraAngle} shot, ${panelType} panel`;
 
+    // Add secondary characters section
+    if (hasSecondaryCharacters) {
+      prompt += `
+
+SECONDARY CHARACTERS IN SCENE (render consistently but NOT from reference image):`;
+      options.secondaryCharacters!.forEach((char, index) => {
+        prompt += `
+- ${char.name}: ${char.age || 'child'} ${char.gender || 'child'}${char.hairColor ? `, ${char.hairColor} hair` : ''}${char.eyeColor ? `, ${char.eyeColor} eyes` : ''}
+  Relationship: ${char.relationship || 'companion'} of ${mainCharName}
+  ${char.action ? `Action: ${char.action}` : ''}${char.position ? `, Position: ${char.position}` : ''}
+  MUST BE: Visually distinct from ${mainCharName}, age-appropriate size, consistent appearance`;
+      });
+    }
+
     // Add previous panel context with DIVERSITY enforcement
     if (hasPreviousPanel && options.previousPanelContext) {
       prompt += `
+
 PREVIOUS ACTION: ${options.previousPanelContext.action}
 THIS PANEL: Show what happens NEXT with DIFFERENT pose and angle`;
     }
@@ -808,12 +867,20 @@ FEATURES: ${keyFeatures.join(', ') || 'consistent background'}`;
     prompt += `
 
 REQUIREMENTS:
-- Match character from reference image exactly
+- Match ${mainCharName} from reference image exactly
 - ${timeOfDay} lighting throughout
 - ${cameraAngle} camera angle (MUST follow this angle)
 - Character pose must be DIFFERENT from previous panel
 - Dynamic composition, not static
 - ${options.artStyle} style, publication quality`;
+
+    // Add secondary character consistency rules if present
+    if (hasSecondaryCharacters) {
+      prompt += `
+- Secondary characters must be CONSISTENT with descriptions above
+- Show age-appropriate size differences between characters
+- Each secondary character must have DISTINCT appearance from main character`;
+    }
 
     // Add feedback-driven image enhancements if available
     if (options.feedbackImageEnhancement) {

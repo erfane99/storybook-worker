@@ -622,11 +622,20 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
       is_reused_image = false, 
       character_art_style = 'storybook', 
       layout_type = 'comic-book-panels', 
-      character_description = '' 
+      character_description = '',
+      characters = []  // NEW: Multi-character support
     } = job;
+
+    // NEW: Extract main and secondary characters
+    const mainCharacter = characters.find(c => c.role === 'main');
+    const secondaryCharacters = characters.filter(c => c.role === 'secondary');
+    const characterCount = characters.length;
 
     console.log('🎨 Starting ENHANCED storybook generation with environmental consistency and professional comic standards...');
     console.log(`📊 Configuration: ${character_art_style} style, ${audience} audience, reused: ${is_reused_image}`);
+    if (characterCount > 0) {
+      console.log(`👥 Characters: ${characterCount} (Main: ${mainCharacter?.name || 'unnamed'}, Secondary: ${secondaryCharacters.length})`);
+    }
 
     const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
     const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
@@ -750,10 +759,16 @@ if (character_image) {
       if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
       
       // Pass the existing description for reused cartoons
+      // NEW: Include character identity for multi-character stories
       characterDNA = await aiService.createMasterCharacterDNA(
         character_image, 
         character_art_style,
-        characterDescriptionToUse  // ✅ FIX: Pass the character description as third parameter
+        characterDescriptionToUse,  // ✅ FIX: Pass the character description as third parameter
+        mainCharacter ? {           // NEW: Pass character identity if available
+          name: mainCharacter.name,
+          age: mainCharacter.age,
+          gender: mainCharacter.gender
+        } : undefined
       );
       
       // Only extract description if we don't already have one
@@ -883,6 +898,7 @@ if (resolvedDescription && typeof resolvedDescription === 'string') {
         if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
         
         // FIXED: Pass Character DNA to scene generation
+        // NEW: Include multi-character support with characters array
 const sceneResultAsync = await aiService.generateScenesWithAudience({
   story: story,
   audience: audience as any,
@@ -893,7 +909,10 @@ const sceneResultAsync = await aiService.generateScenesWithAudience({
     ...enhancedContext,
     characterDNA: characterDNA,  // Pass Character DNA through enhanced context
     environmentalDNA: environmentalDNA,  // Pass Environmental DNA through enhanced context
-    enforceConsistency: true  // Enable strict consistency through enhanced context
+    enforceConsistency: true,  // Enable strict consistency through enhanced context
+    characters: characters,  // NEW: Pass full characters array for multi-character stories
+    mainCharacter: mainCharacter,  // NEW: Main character reference
+    secondaryCharacters: secondaryCharacters  // NEW: Secondary characters for panel rendering
   }
 });
 
@@ -1058,6 +1077,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
                 // ✅ CRITICAL FIX: Use generatePanelWithEnhancedGuidance for ACTUAL IMAGE generation
                 // This returns a Cloudinary URL, not text!
                 // ✅ NEW: Pass environmentalContext for environmental consistency enforcement
+                // ✅ NEW: Include secondary characters for multi-character rendering
                 this.trackServiceUsage(job.id, 'ai');
                 const regenerateResult = await aiService.generatePanelWithEnhancedGuidance({
                   cartoonImageUrl: characterDNA?.cartoonImage || character_image,
@@ -1073,7 +1093,9 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
                     environmentalDNA: environmentalDNA,
                     panelNumber: globalPanelNumber,
                     totalPanels: totalScenes
-                  }
+                  },
+                  mainCharacterName: mainCharacter?.name,  // NEW: Main character name
+                  secondaryCharacters: secondaryCharacters  // NEW: Secondary characters for rendering
                 });
 
                 const unwrappedRegenerate = await regenerateResult.unwrap();
@@ -1731,7 +1753,16 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     servicesUsed: string[]
   ): Promise<ComicGenerationResult> {
     const startTime = Date.now();
-    console.log(`🎨 AUTO-STORY: Genre=${job.genre}, Audience=${job.audience}`);
+    
+    // NEW: Extract characters from job data
+    const characters = job.characters || [];
+    const mainCharacter = characters.find(c => c.role === 'main');
+    const characterCount = characters.length;
+    
+    console.log(`🎨 AUTO-STORY: Genre=${job.genre}, Audience=${job.audience}, Characters=${characterCount}`);
+    if (mainCharacter) {
+      console.log(`   👤 Main Character: ${mainCharacter.name} (${mainCharacter.age} ${mainCharacter.gender})`);
+    }
 
     const jobService = await serviceContainer.resolve<IJobService>(SERVICE_TOKENS.JOB);
     const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
@@ -1741,13 +1772,14 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     servicesUsed.push('job', 'ai');
 
     try {
-      // PHASE 1: Generate story using Gemini
-      await jobService.updateJobProgress(job.id, 10, `Creating ${job.genre} story...`);
+      // PHASE 1: Generate story using AI with multi-character support
+      await jobService.updateJobProgress(job.id, 10, `Creating ${job.genre} story with ${characterCount} character(s)...`);
       
       const storyResult = await aiService.generateStoryWithOptions({
         genre: job.genre,
         characterDescription: job.character_description,
-        audience: job.audience
+        audience: job.audience,
+        characters: characters  // NEW: Pass characters array for multi-character stories
       });
 
       const resolvedStory = await storyResult.unwrap();
@@ -1768,7 +1800,8 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
         is_reused_image: true,
         character_description: job.character_description,
         character_art_style: job.character_art_style,
-        layout_type: job.layout_type
+        layout_type: job.layout_type,
+        characters: characters  // NEW: Pass characters through to storybook processing
       } as StorybookJobData, servicesUsed);
 
     } catch (error) {

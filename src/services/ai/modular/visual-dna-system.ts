@@ -192,10 +192,23 @@ export class VisualDNASystem {
   /**
    * Create master character DNA with GEMINI IMAGE-BASED GENERATION for 95% consistency
    * CRITICAL CHANGE: Now generates cartoon from actual photo using Gemini
+   * ENHANCED: Added character identity (name, age, gender) for multi-character stories
    */
-  async createMasterCharacterDNA(characterImage: string, artStyle: string, existingDescription?: string): Promise<CharacterDNA> {
+  async createMasterCharacterDNA(
+    characterImage: string, 
+    artStyle: string, 
+    existingDescription?: string,
+    characterIdentity?: {
+      name?: string;
+      age?: string;
+      gender?: string;
+    }
+  ): Promise<CharacterDNA> {
     try {
       console.log('🎨 Generating Character DNA with Gemini image-based analysis...');
+      if (characterIdentity?.name) {
+        console.log(`👤 Character Identity: ${characterIdentity.name} (${characterIdentity.age || 'unknown'} ${characterIdentity.gender || ''})`);
+      }
       
       // Use existing description if provided (for reused cartoons)
       if (existingDescription && existingDescription.length > 20) {
@@ -240,11 +253,19 @@ export class VisualDNASystem {
         cartoonImage: cartoonImageUrl,  // NEW: Stored for image-based panel generation
         description: analysis.description,
         artStyle: artStyle,
+        // NEW: Store character identity for multi-character stories
+        characterName: characterIdentity?.name,
+        characterAge: characterIdentity?.age,
+        characterGender: characterIdentity?.gender,
         visualDNA: forensicVisualDNA,
         consistencyPrompts: {
-          basePrompt: `Use the cartoon image as exact reference. Match ALL features perfectly.`,
+          basePrompt: characterIdentity?.name 
+            ? `Use the cartoon image as exact reference for ${characterIdentity.name}. Match ALL features perfectly.`
+            : `Use the cartoon image as exact reference. Match ALL features perfectly.`,
           artStyleIntegration: `Render in ${artStyle} style while maintaining EXACT character appearance from reference image`,
-          variationGuidance: 'CRITICAL: Use cartoon image as reference. Character MUST appear IDENTICAL in every panel.'
+          variationGuidance: characterIdentity?.name
+            ? `CRITICAL: ${characterIdentity.name} MUST appear IDENTICAL in every panel. Use cartoon image as reference.`
+            : 'CRITICAL: Use cartoon image as reference. Character MUST appear IDENTICAL in every panel.'
         },
         metadata: {
           createdAt: new Date().toISOString(),
@@ -260,6 +281,7 @@ export class VisualDNASystem {
       this.dnaDatabase.set(characterImage, characterDNA);
 
       console.log('✅ Character DNA created successfully');
+      console.log(`   👤 Name: ${characterIdentity?.name || 'Not specified'}`);
       console.log(`   📸 Source: ${characterImage.substring(0, 50)}...`);
       console.log(`   🎨 Cartoon: ${cartoonImageUrl.substring(0, 50)}...`);
       console.log(`   🎭 Art Style: ${artStyle}`);

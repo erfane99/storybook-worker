@@ -36,6 +36,9 @@ import {
   AI_PROMPTS
 } from './constants-and-types.js';
 
+// NEW: Import StoryCharacter type for multi-character support
+import { StoryCharacter } from '../../../lib/types.js';
+
 import { 
   ErrorHandlingSystem,
   AIServiceError,
@@ -396,6 +399,20 @@ export class ComicGenerationEngine {
       
       console.log(`✅ Using pre-analyzed story structure: ${storyAnalysis.storyBeats.length} beats from Claude analysis`);
       
+      // NEW: Extract characters from enhanced context for multi-character support
+      const characters: StoryCharacter[] = options.enhancedContext?.characters || [];
+      const mainCharacter = options.enhancedContext?.mainCharacter || characters.find(c => c.role === 'main');
+      const secondaryCharacters: StoryCharacter[] = options.enhancedContext?.secondaryCharacters || 
+        characters.filter(c => c.role === 'secondary');
+      
+      if (characters.length > 0) {
+        console.log(`👥 Multi-character mode: ${characters.length} characters (Main: ${mainCharacter?.name || 'unnamed'})`);
+        
+        // Tag story beats with character presence
+        storyAnalysis.storyBeats = this.tagBeatsWithCharacters(storyAnalysis.storyBeats, characters);
+        console.log(`   📝 Tagged ${storyAnalysis.storyBeats.length} beats with character presence`);
+      }
+      
       // Step 2: USE CHARACTER DNA FROM ENHANCED CONTEXT (Already created in PHASE 3)
       // This eliminates duplicate API calls
       let characterDNA: CharacterDNA | null = options.enhancedContext?.characterDNA || null;
@@ -424,7 +441,8 @@ export class ComicGenerationEngine {
         characterArtStyle,
         audience,
         story,
-        undefined  // Character name extracted from story context
+        mainCharacter?.name,  // NEW: Pass main character name
+        characters  // NEW: Pass full characters array for multi-character support
       );
 
       console.log(`Professional comic book layout generated: ${pages.length} pages with ${config.totalPanels} total panels`);
@@ -582,6 +600,106 @@ NO missing fields. NO undefined values. NO empty strings.
       characterGrowth: this.determineCharacterGrowth(story, archetype),
       conflictProgression: archetypeData.structure
     };
+  }
+
+  // ===== MULTI-CHARACTER DETECTION (NEW FOR MULTI-CHARACTER SUPPORT) =====
+
+  /**
+   * Detect which characters are present in a story beat description
+   * NEW: Supports multi-character stories by parsing beat descriptions for character names
+   * Returns array of character names found in the beat
+   */
+  private detectCharactersInBeat(
+    beatDescription: string,
+    characters: StoryCharacter[]
+  ): string[] {
+    if (!characters || characters.length === 0) {
+      return [];
+    }
+
+    const presentCharacters: string[] = [];
+    const beatLower = beatDescription.toLowerCase();
+    
+    for (const char of characters) {
+      if (char.name && beatLower.includes(char.name.toLowerCase())) {
+        presentCharacters.push(char.name);
+      }
+    }
+    
+    // If no specific character detected, assume main character is present
+    if (presentCharacters.length === 0) {
+      const mainChar = characters.find(c => c.role === 'main');
+      if (mainChar?.name) {
+        presentCharacters.push(mainChar.name);
+      }
+    }
+    
+    return presentCharacters;
+  }
+
+  /**
+   * Tag story beats with character presence information
+   * NEW: Processes each beat to identify which characters appear
+   * Used for consistent character rendering in panel generation
+   */
+  private tagBeatsWithCharacters(
+    storyBeats: StoryBeat[],
+    characters: StoryCharacter[]
+  ): StoryBeat[] {
+    if (!characters || characters.length === 0) {
+      return storyBeats;
+    }
+
+    const mainCharacter = characters.find(c => c.role === 'main');
+    
+    return storyBeats.map(beat => {
+      // Detect which characters are in this beat
+      const charactersPresent = this.detectCharactersInBeat(beat.beat, characters);
+      
+      // Determine primary character (first mentioned or main character)
+      const primaryCharacter = charactersPresent.length > 0 
+        ? charactersPresent[0] 
+        : mainCharacter?.name || 'main character';
+      
+      // Find secondary characters in this scene
+      const secondaryCharactersInScene = charactersPresent
+        .filter(name => name !== primaryCharacter)
+        .map(name => {
+          const char = characters.find(c => c.name === name);
+          return char ? {
+            name: char.name,
+            action: undefined,  // Will be inferred from beat description
+            position: undefined  // Will be determined by panel composition
+          } : { name };
+        });
+
+      return {
+        ...beat,
+        charactersPresent,
+        primaryCharacter,
+        secondaryCharactersInScene
+      };
+    });
+  }
+
+  /**
+   * Get secondary characters that should appear in a specific beat
+   * Returns full StoryCharacter objects for characters present in the beat
+   */
+  private getSecondaryCharactersForBeat(
+    beat: StoryBeat,
+    characters: StoryCharacter[]
+  ): StoryCharacter[] {
+    if (!characters || characters.length === 0 || !beat.charactersPresent) {
+      return [];
+    }
+
+    const mainCharacter = characters.find(c => c.role === 'main');
+    
+    return characters.filter(char => 
+      char.role === 'secondary' && 
+      beat.charactersPresent?.includes(char.name)
+    );
   }
 
   // ===== SYSTEM PROMPT BUILDING (FROM AISERVNOW.TXT) =====
@@ -823,6 +941,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
   /**
    * Generate professional comic book pages with optimized prompts
    * FIXED: All TypeScript errors resolved
+   * ENHANCED: Multi-character support with characters array
    */
   private async generateOptimizedComicBookPages(
     storyAnalysis: StoryAnalysis,
@@ -832,7 +951,8 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     artStyle: string,
     audience: AudienceType,
     story: string,
-    characterName?: string
+    characterName?: string,
+    characters?: StoryCharacter[]  // NEW: Multi-character support
   ): Promise<ComicPanel[]> {
     try {
       const pages: ComicPanel[] = [];
@@ -849,6 +969,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         console.log(`Generating page ${pageNumber}/${pageGroups.length} with ${pageBeats.length} panels...`);
 
         // Generate panels for this page (FROM BOTH FILES)
+        // NEW: Pass characters for multi-character support
         const panels = await this.generatePanelsForPage(
           pageBeats,
           characterDNA,
@@ -859,7 +980,8 @@ COMIC BOOK PROFESSIONAL STANDARDS:
           storyAnalysis.totalPanels,
           audience,
           story,
-          characterName
+          characterName,
+          characters  // NEW: Pass characters array
         );
 
         const pagePanel: any = {
@@ -924,6 +1046,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
   /**
    * Generate individual panels for a page with professional standards
    * ENHANCED: SEQUENTIAL generation with previous panel context for narrative continuity
+   * ENHANCED: Multi-character support with secondary characters rendering
    * 
    * Professional comic standard: "Panel X must show consequences of Panel X-1"
    * Each panel receives context from the previous panel for visual continuity.
@@ -938,9 +1061,15 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     totalPanels: number,
     audience: AudienceType,
     story: string,
-    characterName?: string
+    characterName?: string,
+    characters?: StoryCharacter[]  // NEW: Multi-character support
   ): Promise<ComicPanel[]> {
     console.log(`🔗 Generating ${pageBeats.length} panels for page ${pageNumber} SEQUENTIALLY with narrative continuity...`);
+    
+    // NEW: Log multi-character information
+    if (characters && characters.length > 1) {
+      console.log(`   👥 Multi-character mode: ${characters.length} characters available for panel generation`);
+    }
 
     const panels: ComicPanel[] = [];
     let adaptiveDelay = 300;  // Start with 300ms between panels
@@ -990,6 +1119,12 @@ COMIC BOOK PROFESSIONAL STANDARDS:
           console.log(`   🔗 Including previous panel context for continuity: "${previousPanelContext.action}"`);
         }
         
+        // NEW: Get secondary characters for this beat if multi-character mode
+        const secondaryCharsInBeat = characters ? this.getSecondaryCharactersForBeat(beat, characters) : [];
+        if (secondaryCharsInBeat.length > 0) {
+          console.log(`   👥 Secondary characters in scene: ${secondaryCharsInBeat.map(c => c.name).join(', ')}`);
+        }
+        
         imageUrl = await this.geminiIntegration.generatePanelWithCharacter(
           characterDNA.cartoonImage,
           beat.beat,  // Scene description
@@ -1008,7 +1143,20 @@ COMIC BOOK PROFESSIONAL STANDARDS:
               totalPanels: totalPanels
             },
             // SEQUENTIAL CONTEXT: Pass previous panel for narrative continuity
-            previousPanelContext
+            previousPanelContext,
+            // NEW: Multi-character support - pass main character name and secondary characters
+            mainCharacterName: characterName || characterDNA?.characterName,
+            secondaryCharacters: secondaryCharsInBeat.map(char => ({
+              name: char.name,
+              age: char.age,
+              gender: char.gender,
+              relationship: char.relationship,
+              hairColor: char.hairColor,
+              eyeColor: char.eyeColor,
+              // Get action/position from the beat's secondary character info if available
+              action: beat.secondaryCharactersInScene?.find(sc => sc.name === char.name)?.action,
+              position: beat.secondaryCharactersInScene?.find(sc => sc.name === char.name)?.position
+            }))
           }
         );
       } else {

@@ -16,10 +16,10 @@ import type {
 } from '../errors/index.js';
 
 // ===== IMPORT AND RE-EXPORT JOB TYPES =====
-import type { JobData, JobType, JobStatus, JobMetrics } from '../../lib/types';
+import type { JobData, JobType, JobStatus, JobMetrics, StoryCharacter } from '../../lib/types';
 
 // Re-export job types so other modules can import them from here
-export type { JobData, JobType, JobStatus, JobMetrics };
+export type { JobData, JobType, JobStatus, JobMetrics, StoryCharacter };
 
 // ===== CANONICAL Result-union ALIAS ★
 export type AIAsyncResult<
@@ -355,6 +355,7 @@ export interface StoryGenerationOptions {
   temperature?: number;
   maxTokens?: number;
   model?: string;
+  characters?: StoryCharacter[];  // NEW: Multi-character support
 }
 
 export interface StoryGenerationResult {
@@ -369,6 +370,10 @@ export interface CharacterDNA {
   cartoonImage?: string;  // NEW: Generated cartoon URL for image-based panel generation (Gemini)
   description: string;
   artStyle: string;
+  // NEW: Character identity for multi-character stories
+  characterName?: string;           // Name of this character
+  characterAge?: string;            // Age category (toddler, child, teen, etc.)
+  characterGender?: string;         // Gender for rendering
   visualDNA: {
     imageBasedReference?: string;  // NEW: Cartoon image URL for image-based consistency (Gemini)
     facialFeatures: string[];
@@ -511,6 +516,14 @@ export interface StoryBeat {
   cleanedDialogue?: string;
   previousBeatContext?: string;
   previousBeatSummary?: string;
+  // NEW: Multi-character support
+  charactersPresent?: string[];       // Names of characters in this panel
+  primaryCharacter?: string;          // Main focus of this panel (name)
+  secondaryCharactersInScene?: {      // Secondary character details for this panel
+    name: string;
+    action?: string;
+    position?: string;                // e.g., "left", "right", "background"
+  }[];
   [key: string]: any;
 }
 
@@ -1120,7 +1133,16 @@ export interface IAIOperations {
   
   // ✅ FIXED: Added missing enterprise methods
   analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis>;
-  createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescription?: string): Promise<CharacterDNA>;
+  createMasterCharacterDNA(
+    imageUrl: string, 
+    artStyle: string, 
+    existingDescription?: string,
+    characterIdentity?: {
+      name?: string;
+      age?: string;
+      gender?: string;
+    }
+  ): Promise<CharacterDNA>;
   createEnvironmentalDNA(story: string, storyBeats: StoryBeat[], audience: AudienceType, artStyle: string): Promise<EnvironmentalDNA>;
   analyzePanelContinuity(storyBeats: any[]): Promise<any>;
   
@@ -1281,6 +1303,7 @@ export interface IAIService extends
   // ✅ Panel Regeneration with Enhanced Guidance
   // Used when panels fail validation and need regeneration with specific fixes
   // ✅ ENHANCED: Now includes environmentalContext for environmental consistency enforcement
+  // ✅ ENHANCED: Now includes multi-character support with mainCharacterName and secondaryCharacters
   generatePanelWithEnhancedGuidance(options: {
     cartoonImageUrl: string;
     sceneDescription: string;
@@ -1297,6 +1320,8 @@ export interface IAIService extends
       panelNumber?: number;
       totalPanels?: number;
     };
+    mainCharacterName?: string;  // NEW: Multi-character support
+    secondaryCharacters?: StoryCharacter[];  // NEW: Secondary characters for panel rendering
   }): Promise<AsyncResult<{ url: string }, AIServiceUnavailableError>>;
 }
 

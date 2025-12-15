@@ -1482,6 +1482,12 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       baseJob.layout_type = tableData.layout_type;
       baseJob.processed_pages = tableData.processed_pages;
       baseJob.storybook_entry_id = tableData.storybook_entry_id;
+      // NEW: Multi-character support - parse characters from JSONB
+      baseJob.characters = tableData.characters 
+        ? (typeof tableData.characters === 'string' 
+            ? JSON.parse(tableData.characters) 
+            : tableData.characters) 
+        : [];
     } else if (jobType === 'auto-story') {
       // ✅ AUTO-STORY: Map all fields from auto_story_jobs table
       baseJob.genre = tableData.genre;
@@ -1493,6 +1499,12 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
       baseJob.generated_story = tableData.generated_story;
       baseJob.generated_scenes = tableData.generated_scenes;
       baseJob.storybook_entry_id = tableData.storybook_entry_id;
+      // NEW: Multi-character support - parse characters from JSONB
+      baseJob.characters = tableData.characters 
+        ? (typeof tableData.characters === 'string' 
+            ? JSON.parse(tableData.characters) 
+            : tableData.characters) 
+        : [];
     } else if (jobType === 'scenes') {
       // ✅ SCENES: Map all fields from scene_generation_jobs table
       baseJob.story = tableData.story;

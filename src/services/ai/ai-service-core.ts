@@ -648,17 +648,31 @@ this.log('info', '✅ Comic Generation Engine initialized with Gemini image-base
  /**
  * Create master character DNA - DELEGATES to VisualDNASystem
  * This is the correct entry point that job processor calls
+ * ENHANCED: Added character identity parameter for multi-character support
  */
-async createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescription?: string): Promise<CharacterDNA> {
+async createMasterCharacterDNA(
+  imageUrl: string, 
+  artStyle: string, 
+  existingDescription?: string,
+  characterIdentity?: {
+    name?: string;
+    age?: string;
+    gender?: string;
+  }
+): Promise<CharacterDNA> {
   const result = await this.withErrorHandling(
     async () => {
       this.log('info', '🧬 Creating Character DNA (delegating to VisualDNASystem)...');
+      if (characterIdentity?.name) {
+        this.log('info', `👤 Character Identity: ${characterIdentity.name}`);
+      }
       
-      // FIXED: Delegate to the correct modular engine
+      // FIXED: Delegate to the correct modular engine with character identity
       const characterDNA = await this.visualDNASystem.createMasterCharacterDNA(
         imageUrl, 
         artStyle,
-        existingDescription
+        existingDescription,
+        characterIdentity  // NEW: Pass character identity for multi-character support
       );
       
       this.log('info', '✅ Character DNA created successfully');
@@ -797,6 +811,86 @@ async createMasterCharacterDNA(imageUrl: string, artStyle: string, existingDescr
       adults: 'sophisticated_immersive'
     };
     return moods[audience] || 'playful_inviting';
+  }
+
+  /**
+   * Build multi-character profiles for story generation
+   * NEW: Supports up to 4 characters with main + secondary characters
+   */
+  private buildMultiCharacterProfiles(characterDescription: string, characters?: any[]): string {
+    // If no multi-character data, fall back to legacy single character integration
+    if (!characters || characters.length === 0) {
+      return WORLD_CLASS_STORY_PROMPTS.characterIntegration(characterDescription);
+    }
+
+    const mainCharacter = characters.find(c => c.role === 'main');
+    const secondaryCharacters = characters.filter(c => c.role === 'secondary');
+
+    // Build age description mapping
+    const getAgeDescription = (age: string): string => {
+      const ageMap: Record<string, string> = {
+        'toddler': 'toddler (1-3 years old, very small, chubby cheeks)',
+        'child': 'child (4-10 years old, small stature)',
+        'teen': 'teenager (11-17 years old, growing, youthful)',
+        'young-adult': 'young adult (18-25 years old)',
+        'adult': 'adult (26-55 years old)',
+        'senior': 'senior (55+ years old, may have gray hair, wrinkles)'
+      };
+      return ageMap[age] || age || 'child';
+    };
+
+    let profiles = '';
+
+    // Main character profile
+    if (mainCharacter) {
+      profiles += `
+=== MAIN CHARACTER (appears in 80%+ of panels, MUST match cartoonized image exactly) ===
+- Name: ${mainCharacter.name || 'Main Character'}
+- Age: ${getAgeDescription(mainCharacter.age)}
+- Gender: ${mainCharacter.gender || 'child'}
+${characterDescription ? `- Visual Description: ${characterDescription}` : ''}
+CRITICAL: Use ONLY this name "${mainCharacter.name}" for the main character. Do NOT invent other names.
+`;
+    } else {
+      // Fallback if no main character defined
+      profiles += WORLD_CLASS_STORY_PROMPTS.characterIntegration(characterDescription);
+    }
+
+    // Secondary characters profiles
+    if (secondaryCharacters.length > 0) {
+      profiles += `
+
+=== SECONDARY CHARACTERS (described but not cartoonized - AI will render based on description) ===
+`;
+      secondaryCharacters.forEach((char, i) => {
+        profiles += `
+Character ${i + 2}: ${char.name || `Character ${i + 2}`}
+- Age: ${getAgeDescription(char.age)}
+- Gender: ${char.gender || 'child'}
+- Relationship to ${mainCharacter?.name || 'main character'}: ${char.relationship || 'companion'}
+- Hair: ${char.hairColor || 'not specified'}
+- Eyes: ${char.eyeColor || 'not specified'}
+- Visual Style: Must be CONSISTENT across all panels - same height relative to ${mainCharacter?.name || 'main character'}, same facial features, same clothing throughout
+`;
+      });
+    }
+
+    // Add critical character rules
+    profiles += `
+
+=== CRITICAL CHARACTER RULES ===
+1. Use ONLY the character names provided above - do NOT invent new named characters
+2. ${mainCharacter?.name || 'The main character'} is the MAIN character and should appear in most scenes
+3. Secondary characters must be described CONSISTENTLY every time they appear:
+   - Same physical features (height, hair, eyes) in every panel
+   - Same clothing throughout the story (unless story specifically involves costume change)
+   - Age-appropriate proportions maintained
+4. When characters interact, clearly describe their relative sizes based on ages
+5. Generic background characters (shopkeepers, passersby) should NOT have names
+6. Every scene should make clear which named characters are present
+`;
+
+    return profiles;
   }
 
   // ===== MAIN SERVICE INTERFACE IMPLEMENTATION =====
@@ -1466,6 +1560,7 @@ async cartoonizeImage(options: CartoonizeOptions): Promise<AsyncResult<Cartooniz
   /**
    * Generate story with options - interface compatibility method
    * FIXED: Correct method signature to match interface and replace non-existent method call
+   * ENHANCED: Multi-character support with up to 4 characters
    */
   async generateStoryWithOptions(options: StoryGenerationOptions): Promise<AsyncResult<StoryGenerationResult, AIServiceUnavailableError>> {
     const startTime = Date.now();
@@ -1480,6 +1575,15 @@ async cartoonizeImage(options: CartoonizeOptions): Promise<AsyncResult<Cartooniz
         const audience = options.audience || 'children';
         const genre = options.genre; // Now guaranteed to be defined
         const characterDescription = options.characterDescription || 'a character'; // FIX: Provide default
+        const characters = options.characters || [];  // NEW: Multi-character support
+        
+        // NEW: Build character profiles for multi-character stories
+        const characterProfiles = this.buildMultiCharacterProfiles(characterDescription, characters);
+        const characterCount = characters.length;
+        
+        if (characterCount > 0) {
+          console.log(`👥 Story generation with ${characterCount} character(s)`);
+        }
         
         const genreConfig = WORLD_CLASS_STORY_PROMPTS.genrePrompts[genre as keyof typeof WORLD_CLASS_STORY_PROMPTS.genrePrompts];
         if (!genreConfig) {
@@ -1488,7 +1592,7 @@ async cartoonizeImage(options: CartoonizeOptions): Promise<AsyncResult<Cartooniz
 
         const audienceConfig = WORLD_CLASS_STORY_PROMPTS.audienceRequirements[audience as keyof typeof WORLD_CLASS_STORY_PROMPTS.audienceRequirements];
 
-        // Build comprehensive prompt
+        // Build comprehensive prompt with multi-character support
         const storyPrompt = `${WORLD_CLASS_STORY_PROMPTS.systemPrompt(audience, genre)}
 
 GENRE: ${genre.toUpperCase()}
@@ -1504,10 +1608,8 @@ VOCABULARY: ${audienceConfig.vocabulary}
 ${audience === 'children' && 'safetyRules' in audienceConfig ? `SAFETY RULES (MANDATORY): ${audienceConfig.safetyRules.join('; ')}` : ''}
 TARGET: ${audienceConfig.wordTarget}, ${audienceConfig.panelCount}
 
-${WORLD_CLASS_STORY_PROMPTS.characterIntegration(characterDescription)}
+${characterProfiles}
 ${WORLD_CLASS_STORY_PROMPTS.dialogueRequirements(audience)}
-
-Create a ${genre} story featuring: "${characterDescription}"
 
 ${WORLD_CLASS_STORY_PROMPTS.outputFormat}`;
 
@@ -2148,6 +2250,7 @@ private determineCameraAngle(index: number, total: number): string {
    * Generate panel with enhanced guidance for failed panel regeneration
    * CRITICAL: Used when a panel fails validation and needs regeneration with specific fixes
    * This returns an actual Cloudinary URL (not text!)
+   * ENHANCED: Added multi-character support with mainCharacterName and secondaryCharacters
    */
   async generatePanelWithEnhancedGuidance(options: {
     cartoonImageUrl: string;
@@ -2165,6 +2268,8 @@ private determineCameraAngle(index: number, total: number): string {
       panelNumber?: number;
       totalPanels?: number;
     };
+    mainCharacterName?: string;  // NEW: Multi-character support
+    secondaryCharacters?: any[];  // NEW: Secondary characters for panel rendering
   }): Promise<AsyncResult<{ url: string }, AIServiceUnavailableError>> {
     const startTime = Date.now();
     
@@ -2174,6 +2279,7 @@ private determineCameraAngle(index: number, total: number): string {
         
         // ✅ Use Gemini's enhanced guidance method (returns Cloudinary URL)
         // ✅ CRITICAL: Pass environmentalContext for environmental consistency enforcement
+        // ✅ NEW: Pass multi-character context for consistent rendering
         const imageUrl = await this.geminiIntegration.generatePanelWithEnhancedGuidance(
           options.cartoonImageUrl,
           options.sceneDescription,
@@ -2186,8 +2292,11 @@ private determineCameraAngle(index: number, total: number): string {
             panelType: options.panelType,
             backgroundComplexity: options.backgroundComplexity,
             temperature: 0.6,
-            // ✅ NEW: Pass environmental context for MANDATORY enforcement in regeneration
-            environmentalContext: options.environmentalContext
+            // ✅ Pass environmental context for MANDATORY enforcement in regeneration
+            environmentalContext: options.environmentalContext,
+            // ✅ NEW: Pass multi-character context
+            mainCharacterName: options.mainCharacterName,
+            secondaryCharacters: options.secondaryCharacters
           }
         );
         
