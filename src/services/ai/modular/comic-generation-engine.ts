@@ -534,7 +534,10 @@ GOOD: "gripping rope tightly, preparing to pull friend up from the muddy ditch"
       "environment": "string - setting description",
       "dialogue": "string - character speech (if applicable)",
       "hasSpeechBubble": boolean,
-      "speechBubbleStyle": "string - bubble type (if applicable)"
+      "speechBubbleStyle": "string - bubble type (if applicable)",
+      "speakerName": "string - name of character speaking (REQUIRED if hasSpeechBubble is true)",
+      "speakerPosition": "left|center|right - where speaker is positioned in panel composition",
+      "bubblePosition": "top-left|top-right|bottom-left|bottom-right|top-center - optimal bubble placement (opposite speaker)"
     }
   ],
   "storyArchetype": "string",
@@ -753,6 +756,23 @@ ENHANCED DIALOGUE ANALYSIS WITH SPEECH INTELLIGENCE:
 10. Generate contextual dialogue for key emotional beats without existing speech
 11. Ensure dialogue enhances story progression and character development
 12. Apply speech bubble psychology based on emotional states
+
+SPEECH BUBBLE POSITIONING (CRITICAL - PROFESSIONAL COMIC STANDARD):
+When hasSpeechBubble is true, you MUST also provide:
+
+• speakerName: Which character is speaking this dialogue (use their actual name)
+• speakerPosition: Where the speaker will be in the panel composition:
+  - "left" = speaker on left third of panel
+  - "center" = speaker in middle of panel
+  - "right" = speaker on right third of panel
+  Base this on: the action being performed, interaction with other characters/objects, natural scene composition
+
+• bubblePosition: Place bubble OPPOSITE the speaker (professional comic convention):
+  - Speaker on LEFT → bubblePosition: "top-right" (bubble on right, tail points left toward speaker)
+  - Speaker on RIGHT → bubblePosition: "top-left" (bubble on left, tail points right toward speaker)
+  - Speaker in CENTER → bubblePosition: "top-center" (bubble centered, tail points down toward speaker)
+
+For multi-character scenes: Position the PRIMARY speaker based on their action/focus in this specific panel.
 
 COMIC BOOK PROFESSIONAL STANDARDS:
 - Every panel advances the ${narrativeIntel.storyArchetype} narrative
@@ -1240,6 +1260,10 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         dialogue: beat.dialogue,
         hasSpeechBubble: beat.hasSpeechBubble || false,
         speechBubbleStyle: beat.speechBubbleStyle,
+        // NEW: AI-driven speech bubble positioning
+        speakerName: beat.speakerName,
+        speakerPosition: beat.speakerPosition,
+        bubblePosition: beat.bubblePosition,
         panelNumber,
         pageNumber,
         environmentalContext: beat.environment,
@@ -2327,7 +2351,11 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
         environment: beat.environment || 'story setting',
         dialogue: beat.dialogue || undefined,
         hasSpeechBubble: Boolean(beat.hasSpeechBubble),
-        speechBubbleStyle: beat.speechBubbleStyle || undefined
+        speechBubbleStyle: beat.speechBubbleStyle || undefined,
+        // NEW: AI-driven speech bubble positioning
+        speakerName: beat.speakerName || undefined,
+        speakerPosition: beat.speakerPosition || undefined,
+        bubblePosition: beat.bubblePosition || undefined
       };
     });
 

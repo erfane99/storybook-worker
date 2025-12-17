@@ -134,6 +134,10 @@ export interface ComicPanel {
   dialogue?: string;
   hasSpeechBubble: boolean;
   speechBubbleStyle?: string;
+  // NEW: AI-driven speech bubble positioning
+  speakerName?: string;                                                      // Name of character speaking
+  speakerPosition?: 'left' | 'center' | 'right';                             // Where speaker is in panel
+  bubblePosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center';  // Optimal bubble placement
   panelNumber: number;
   pageNumber: number;
   environmentalContext?: string;
@@ -514,6 +518,10 @@ export interface StoryBeat {
   dialogue?: string;
   hasSpeechBubble?: boolean;
   speechBubbleStyle?: string;
+  // NEW: AI-driven speech bubble positioning
+  speakerName?: string;                                                      // Name of character speaking
+  speakerPosition?: 'left' | 'center' | 'right';                             // Where speaker is in panel
+  bubblePosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center';  // Optimal bubble placement
   cleanedDialogue?: string;
   previousBeatContext?: string;
   previousBeatSummary?: string;

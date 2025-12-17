@@ -1789,6 +1789,9 @@ OUTPUT SCHEMA:
     "lightingNote": "lighting mood",
     "dialogue": "character speech or null",
     "hasSpeechBubble": true|false,
+    "speakerName": "name of character speaking (REQUIRED if hasSpeechBubble is true)",
+    "speakerPosition": "left|center|right - where speaker is positioned in panel",
+    "bubblePosition": "top-left|top-right|bottom-left|bottom-right|top-center - optimal bubble placement",
     "locationChange": "same|new-location-name (if scene changes)"
   }],
   "totalPanels": ${panelCount},
@@ -1808,6 +1811,18 @@ DIALOGUE GENERATION (CRITICAL - ${dialogueTarget} of panels MUST have dialogue):
   * Kindness: "Here, take this", "Let me help you", "We're in this together"
 - Keep dialogue SHORT (3-8 words per bubble)
 - Match dialogue to character's age and audience
+
+SPEECH BUBBLE POSITIONING (CRITICAL - PROFESSIONAL COMIC STANDARD):
+When hasSpeechBubble is true, you MUST also provide:
+• speakerName: Which character is speaking this dialogue (use their actual name)
+• speakerPosition: Where the speaker will be in the panel composition:
+  - "left" = speaker on left third of panel
+  - "center" = speaker in middle of panel
+  - "right" = speaker on right third of panel
+• bubblePosition: Place bubble OPPOSITE the speaker (professional comic convention):
+  - Speaker on LEFT → bubblePosition: "top-right"
+  - Speaker on RIGHT → bubblePosition: "top-left"
+  - Speaker in CENTER → bubblePosition: "top-center"
 
 GOOD DIALOGUE DISTRIBUTION (8 panels, children):
 Panel 1: hasSpeechBubble: false (establishing shot)
@@ -1985,6 +2000,10 @@ private enrichStoryBeats(beats: any[], targetCount: number, audience: AudienceTy
       hasSpeechBubble: beat.hasSpeechBubble || false,
       dialogue: beat.dialogue,
       speechBubbleStyle: beat.speechBubbleStyle || 'standard',
+      // NEW: AI-driven speech bubble positioning
+      speakerName: beat.speakerName || undefined,
+      speakerPosition: beat.speakerPosition || undefined,
+      bubblePosition: beat.bubblePosition || undefined,
       previousBeatContext: index > 0 ? beats[index - 1].beat : null,
       previousBeatSummary: index > 0 ? beats[index - 1].beat : null
     };
