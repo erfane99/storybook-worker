@@ -1143,7 +1143,24 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         action: previousBeat?.characterAction || previousPanel.characterAction || 'previous action'
       } : undefined;
 
-      // ✅ REMOVED TRY-CATCH: Let errors bubble up immediately for fail-fast behavior
+      // ✅ NARRATION-FIRST ARCHITECTURE: Generate narration FIRST, then use it for image generation
+      // This ensures images match exactly what narration describes (no more "crawling" in text but "standing" in image)
+      console.log(`📝 Generating narration FIRST for panel ${panelNumber}/${totalPanels}...`);
+      
+      // STEP 1: Generate rich narration text (20-40 words) from beat FIRST
+      const narration = await this.generatePanelNarration(
+        beat,
+        panelNumber,
+        totalPanels,
+        audience,
+        characterName || 'the character',
+        story
+      );
+      
+      // STEP 2: Build visual description FROM narration (narration becomes source of truth for image)
+      const visualDescription = this.buildVisualDescriptionFromNarration(narration, beat);
+      console.log(`🎨 Generating image FROM narration: "${visualDescription.substring(0, 100)}..."`);
+      
       console.log(`🎬 Generating panel ${panelNumber}/${totalPanels} (${panelType}) with ${characterDNA ? 'CHARACTER IMAGE REFERENCE' : 'text only'}${previousPanelContext ? ' + PREVIOUS PANEL CONTEXT' : ' (first panel)'}...`);
       
       // GEMINI MIGRATION: Use image-based generation if character DNA has cartoon image
@@ -1165,7 +1182,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         
         imageUrl = await this.geminiIntegration.generatePanelWithCharacter(
           characterDNA.cartoonImage,
-          beat.beat,  // Scene description
+          visualDescription,  // ✅ NARRATION-FIRST: Use narration-based description instead of beat.beat
           beat.emotion,
           {
             artStyle,
@@ -1208,16 +1225,6 @@ COMIC BOOK PROFESSIONAL STANDARDS:
 
       const panelDuration = Date.now() - panelStartTime;
       console.log(`✅ Panel ${panelNumber} image generated successfully in ${(panelDuration / 1000).toFixed(1)}s`);
-
-      // Generate rich narration text (20-40 words) from beat
-      const narration = await this.generatePanelNarration(
-        beat,
-        panelNumber,
-        totalPanels,
-        audience,
-        characterName || 'the character',
-        story
-      );
 
       // Store panel result (will be used as context for next panel)
       const panel: ComicPanel = {
@@ -1328,6 +1335,109 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     console.log(`   Words: ${wordCount}, Avg sentence length: ${this.calculateAvgSentenceLength(cleaned)}`);
     
     return cleaned;
+  }
+
+  /**
+   * ===== BUILD VISUAL DESCRIPTION FROM NARRATION =====
+   * NARRATION-FIRST ARCHITECTURE: Extracts visual scene description from narration text
+   * This ensures the image matches exactly what the narration describes
+   * 
+   * @param narration - The generated narration text (20-40 words)
+   * @param beat - The original story beat with characterAction details
+   * @returns Visual description for Gemini image generation
+   */
+  private buildVisualDescriptionFromNarration(narration: string, beat: StoryBeat): string {
+    // Start with the narration as the primary scene description
+    let visualDescription = narration;
+    
+    // PHYSICAL ACTION MAPPING: Extract specific physical requirements from narration and characterAction
+    const physicalRequirements: string[] = [];
+    const combinedText = `${narration} ${beat.characterAction || ''}`.toLowerCase();
+    
+    // Map common action words to explicit visual requirements
+    const actionMappings: Record<string, string> = {
+      'crawl': 'Character MUST be on hands and knees, body low to ground',
+      'crawled': 'Character MUST be on hands and knees, body low to ground',
+      'crawling': 'Character MUST be on hands and knees, body low to ground',
+      'run': 'Character MUST have legs in motion, body leaning forward, feet not both flat on ground',
+      'ran': 'Character MUST have legs in motion, body leaning forward, feet not both flat on ground',
+      'running': 'Character MUST have legs in motion, body leaning forward, feet not both flat on ground',
+      'tongue out': 'Character\'s tongue MUST be visible outside mouth',
+      'sticks out tongue': 'Character\'s tongue MUST be visible outside mouth',
+      'licks': 'Character\'s tongue MUST be visible, making contact with object',
+      'watching': 'Character in still pose, eyes directed at subject, attentive expression',
+      'looking': 'Character\'s eyes and head directed toward subject of interest',
+      'staring': 'Character\'s eyes wide and fixed on subject, intense focus',
+      'sitting': 'Character MUST be seated, weight on bottom, legs folded or extended',
+      'sat': 'Character MUST be seated, weight on bottom, legs folded or extended',
+      'reaching': 'Arm extended toward target object, fingers stretched out',
+      'reached': 'Arm extended toward target object, fingers stretched out',
+      'jump': 'Both feet off ground, body elevated in air',
+      'jumped': 'Both feet off ground, body elevated in air',
+      'jumping': 'Both feet off ground, body elevated in air',
+      'crying': 'Visible tears on cheeks, downturned mouth, sad expression',
+      'tears': 'Visible tears streaming down cheeks',
+      'hugging': 'Arms wrapped around other character or object, bodies close',
+      'hugged': 'Arms wrapped around other character or object, bodies close',
+      'waving': 'Hand raised, palm open, arm moving in greeting gesture',
+      'waved': 'Hand raised, palm open, in greeting position',
+      'sleeping': 'Eyes closed, body relaxed, horizontal position',
+      'pointing': 'Arm extended, index finger directed at target',
+      'pointed': 'Arm extended, index finger directed at target',
+      'climbing': 'Hands and feet gripping surface, body at angle against vertical surface',
+      'climbed': 'Hands and feet gripping surface, elevated position',
+      'falling': 'Body in mid-air, arms flailing, gravity pulling downward',
+      'fell': 'Body on ground or mid-fall position',
+      'kneeling': 'On one or both knees, upper body upright',
+      'knelt': 'On one or both knees, upper body upright',
+      'tiptoeing': 'Standing on toes, feet raised, careful balance',
+      'tiptoed': 'Standing on toes, careful stepping motion',
+      'dancing': 'Body in motion, arms and legs in expressive movement',
+      'hiding': 'Body partially concealed behind object, peeking out',
+      'hid': 'Body concealed or partially hidden',
+      'whispering': 'Leaning close to listener, hand near mouth, secretive pose',
+      'shouting': 'Mouth wide open, body tense, possibly hands cupped around mouth',
+      'laughing': 'Mouth open in smile, eyes crinkled, body showing joy'
+    };
+    
+    // Scan for action keywords and collect physical requirements
+    for (const [keyword, requirement] of Object.entries(actionMappings)) {
+      if (combinedText.includes(keyword)) {
+        physicalRequirements.push(requirement);
+      }
+    }
+    
+    // Also extract specific body part mentions from characterAction
+    if (beat.characterAction) {
+      // Check for specific body positions mentioned in characterAction
+      if (beat.characterAction.toLowerCase().includes('hands and knees')) {
+        physicalRequirements.push('Body position: on hands and knees');
+      }
+      if (beat.characterAction.toLowerCase().includes('arms raised') || beat.characterAction.toLowerCase().includes('arms up')) {
+        physicalRequirements.push('Arms raised above head or shoulders');
+      }
+      if (beat.characterAction.toLowerCase().includes('chubby fingers') || beat.characterAction.toLowerCase().includes('little hands')) {
+        physicalRequirements.push('Show small, chubby toddler hands');
+      }
+    }
+    
+    // Build the final visual description
+    if (physicalRequirements.length > 0) {
+      const uniqueRequirements = [...new Set(physicalRequirements)]; // Remove duplicates
+      visualDescription += `\n\nMANDATORY PHYSICAL STATE:\n${uniqueRequirements.map(r => `• ${r}`).join('\n')}`;
+    }
+    
+    // Add the original characterAction context for additional detail
+    if (beat.characterAction && beat.characterAction.length > 10) {
+      visualDescription += `\n\nCHARACTER ACTION CONTEXT: ${beat.characterAction}`;
+    }
+    
+    // Add actionContext if available (from the earlier enhancement)
+    if (beat.actionContext) {
+      visualDescription += `\n\nACTION PURPOSE: ${beat.actionContext}`;
+    }
+    
+    return visualDescription;
   }
 
   /**

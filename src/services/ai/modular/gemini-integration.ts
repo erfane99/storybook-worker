@@ -824,6 +824,9 @@ Create a compelling comic panel that fixes the previous validation failures whil
     
     // Main character name
     const mainCharName = options.mainCharacterName || 'the main character';
+    
+    // NARRATION-FIRST: Extract mandatory physical actions from scene description
+    const physicalActions = this.extractMandatoryPhysicalActions(sceneDescription);
 
     // Build compressed prompt - essential info only
     let prompt = `${options.artStyle} comic panel. CHARACTER 1 (${mainCharName}): Match IMAGE 1 exactly.${hasPreviousPanel ? ' CONTINUITY: Follow from IMAGE 2 but CHANGE composition.' : ''}
@@ -838,6 +841,15 @@ EMOTION: ${emotion} - CHARACTER'S FACE MUST SHOW THIS EMOTION:
 - curious = tilted head, raised eyebrow, slight smile
 THE FACIAL EXPRESSION IS CRITICAL - MUST MATCH "${emotion}" EXACTLY.
 CAMERA: ${cameraAngle} shot, ${panelType} panel`;
+
+    // Add mandatory physical action requirements if detected
+    if (physicalActions.length > 0) {
+      prompt += `
+
+⚠️ MANDATORY BODY POSITION (CRITICAL - DO NOT IGNORE):
+${physicalActions.map(action => `• ${action}`).join('\n')}
+THE CHARACTER'S BODY MUST SHOW THESE EXACT POSITIONS.`;
+    }
 
     // Add secondary characters section with STRICT consistency enforcement
     if (hasSecondaryCharacters) {
@@ -921,6 +933,92 @@ ${options.feedbackImageEnhancement}`;
     }
 
     return prompt;
+  }
+
+  /**
+   * ===== EXTRACT MANDATORY PHYSICAL ACTIONS =====
+   * NARRATION-FIRST: Scans scene description for action keywords and returns explicit visual requirements
+   * This ensures Gemini renders the correct body positions described in the narration
+   * 
+   * @param sceneDescription - The scene description (now derived from narration)
+   * @returns Array of mandatory physical action requirements
+   */
+  private extractMandatoryPhysicalActions(sceneDescription: string): string[] {
+    const physicalActions: string[] = [];
+    const textLower = sceneDescription.toLowerCase();
+    
+    // MANDATORY PHYSICAL ACTION MAPPINGS
+    // Maps common action words to explicit visual requirements that Gemini MUST follow
+    const actionMappings: [RegExp, string][] = [
+      // Movement/Position
+      [/\bcrawl(s|ed|ing)?\b/, 'Character MUST be on hands and knees, body low to ground, NOT standing or walking'],
+      [/\brun(s|ning)?\b|\bran\b/, 'Character MUST have legs in motion, body leaning forward, feet not both flat on ground'],
+      [/\bwalk(s|ed|ing)?\b/, 'Character MUST be upright, one foot forward, natural walking stride'],
+      [/\bjump(s|ed|ing)?\b/, 'Both feet MUST be off ground, body elevated in air'],
+      [/\bsit(s|ting)?\b|\bsat\b/, 'Character MUST be seated, weight on bottom, legs folded or extended'],
+      [/\bstand(s|ing)?\b|\bstood\b/, 'Character MUST be upright on feet, vertical body position'],
+      [/\bkneel(s|ing)?\b|\bknelt\b/, 'Character MUST be on one or both knees, upper body upright'],
+      [/\bly(ing)?\b|\blay\b|\blaid\b/, 'Character MUST be horizontal, lying down on surface'],
+      [/\bclimb(s|ed|ing)?\b/, 'Hands and feet MUST grip surface, body at angle against vertical surface'],
+      [/\bfall(s|ing)?\b|\bfell\b/, 'Body in mid-air or on ground, posture showing gravity effect'],
+      [/\btiptoe(s|d|ing)?\b/, 'Standing on toes ONLY, feet raised, careful balance'],
+      [/\bcrouch(es|ed|ing)?\b/, 'Body low, knees bent deeply, compact posture'],
+      [/\bsquat(s|ted|ting)?\b/, 'Knees bent, body low, weight on feet'],
+      
+      // Arm/Hand positions
+      [/\breach(es|ed|ing)?\b/, 'Arm MUST be extended toward target, fingers stretched out'],
+      [/\bpoint(s|ed|ing)?\b/, 'Arm extended, index finger directed at target'],
+      [/\bwave(s|d|ing)?\b/, 'Hand raised, palm open, arm in greeting gesture'],
+      [/\bhug(s|ged|ging)?\b/, 'Arms MUST wrap around other character or object, bodies close'],
+      [/\bhold(s|ing)?\b|\bheld\b/, 'Hands gripping or cradling object, secure grip visible'],
+      [/\bpush(es|ed|ing)?\b/, 'Arms extended forward, hands pressing against object'],
+      [/\bpull(s|ed|ing)?\b/, 'Arms bent, hands gripping, body leaning back'],
+      [/\bclap(s|ped|ping)?\b/, 'Both hands together in front of body'],
+      
+      // Facial/Head positions
+      [/\btongue\s+out\b|\bsticks?\s+out\s+tongue\b|\blick(s|ed|ing)?\b/, 'Tongue MUST be visible outside mouth'],
+      [/\bwatch(es|ed|ing)?\b|\blook(s|ed|ing)?\b/, 'Eyes and head directed toward subject of interest'],
+      [/\bstar(es|ed|ing)?\b/, 'Eyes wide and fixed on subject, intense unwavering focus'],
+      [/\bsmile(s|d)?\b|\bsmiling\b|\bgrin(s|ned|ning)?\b/, 'Mouth curved upward, teeth may show, cheeks raised'],
+      [/\bcry(ing)?\b|\bcried\b|\btears?\b/, 'Visible tears on cheeks, downturned mouth, sad expression'],
+      [/\blaugh(s|ed|ing)?\b/, 'Mouth open wide, eyes crinkled, joyful expression'],
+      [/\bfrown(s|ed|ing)?\b/, 'Eyebrows down, mouth turned down, displeased expression'],
+      [/\bwhisper(s|ed|ing)?\b/, 'Leaning close, hand near mouth, secretive pose'],
+      [/\bshout(s|ed|ing)?\b|\byell(s|ed|ing)?\b/, 'Mouth WIDE open, body tense, expressing loudly'],
+      
+      // Full body actions
+      [/\bdanc(e|es|ed|ing)\b/, 'Body in expressive motion, arms and legs in movement'],
+      [/\bhid(e|es|ing)?\b|\bhid\b/, 'Body partially or fully concealed behind object'],
+      [/\bsleep(s|ing)?\b|\bslept\b/, 'Eyes MUST be closed, body relaxed, horizontal position'],
+      [/\bswim(s|ming)?\b|\bswam\b/, 'Body horizontal in water, arms and legs in swimming motion']
+    ];
+    
+    // Scan for each action pattern
+    for (const [pattern, requirement] of actionMappings) {
+      if (pattern.test(textLower)) {
+        physicalActions.push(requirement);
+      }
+    }
+    
+    // Check for specific body part mentions
+    if (textLower.includes('hands and knees')) {
+      physicalActions.push('Body position: MUST be on hands and knees (all fours)');
+    }
+    if (textLower.includes('arms raised') || textLower.includes('arms up') || textLower.includes('hands up')) {
+      physicalActions.push('Arms raised above head or shoulders');
+    }
+    if (textLower.includes('chubby fingers') || textLower.includes('little hands') || textLower.includes('tiny hands')) {
+      physicalActions.push('Show small, chubby toddler/child hands');
+    }
+    if (textLower.includes('on tummy') || textLower.includes('on belly')) {
+      physicalActions.push('Lying face-down on stomach/tummy');
+    }
+    if (textLower.includes('on back')) {
+      physicalActions.push('Lying face-up on back');
+    }
+    
+    // Remove duplicates and return
+    return [...new Set(physicalActions)];
   }
 
   // ===== HELPER METHODS =====
