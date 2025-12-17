@@ -515,13 +515,21 @@ CRITICAL JSON SCHEMA COMPLIANCE:
 You MUST return EXACTLY this structure with ALL fields completed for EVERY beat.
 NO missing fields. NO undefined values. NO empty strings.
 
+ACTION CONTEXT RULE (CRITICAL FOR VISUAL ACCURACY):
+Every characterAction MUST explain the PURPOSE/GOAL of the action, not just the physical movement.
+BAD: "picking up a stick" (literal, no context - AI will draw random stick-holding)
+GOOD: "picking up a long stick to use as a reaching tool to retrieve the ball from under the bush"
+BAD: "holding a rope" (unclear purpose)
+GOOD: "gripping rope tightly, preparing to pull friend up from the muddy ditch"
+
 {
   "storyBeats": [
     {
       "beat": "string - specific story moment",
       "emotion": "string - primary emotion",
       "visualPriority": "string - what to focus on visually",
-      "characterAction": "string - what character is doing",
+      "characterAction": "string - exact pose/movement AND the purpose (e.g., 'reaching down to pick up stick to use as tool' not just 'holding stick')",
+      "actionContext": "string - WHY the character is doing this action, what goal it serves in the story",
       "panelPurpose": "string - narrative function",
       "environment": "string - setting description",
       "dialogue": "string - character speech (if applicable)",
@@ -731,6 +739,12 @@ STORY BEAT ANALYSIS WITH NARRATIVE INTELLIGENCE:
 4. Identify visual storytelling moments that advance narrative and character growth
 5. Ensure each panel has clear purpose in ${narrativeIntel.storyArchetype} progression
 6. Integrate thematic elements: ${narrativeIntel.thematicElements.join(', ')}
+
+ACTION CONTEXT REQUIREMENT (PREVENTS LITERAL/CONFUSING ILLUSTRATIONS):
+- Every characterAction MUST include the PURPOSE of the action, not just the physical movement
+- "Maya picks up a stick" → "Maya picks up a long stick to use as a reaching tool for the ball stuck under the bush"
+- "Character holds rope" → "Character grips rope tightly, preparing to pull friend up from the muddy ditch"
+- Include actionContext field explaining WHY this action matters to the story
 
 ENHANCED DIALOGUE ANALYSIS WITH SPEECH INTELLIGENCE:
 7. Extract existing dialogue from story text using quotation marks and speech patterns
@@ -962,6 +976,9 @@ COMIC BOOK PROFESSIONAL STANDARDS:
       const beatsPerPage = config.panelsPerPage;
       const pageGroups = this.groupBeatsIntoPages(storyBeats, beatsPerPage);
 
+      // Track last panel from previous page for cross-page consistency
+      let lastPanelFromPreviousPage: ComicPanel | null = null;
+
       for (let pageIndex = 0; pageIndex < pageGroups.length; pageIndex++) {
         const pageBeats = pageGroups[pageIndex];
         const pageNumber = pageIndex + 1;
@@ -970,6 +987,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
 
         // Generate panels for this page (FROM BOTH FILES)
         // NEW: Pass characters for multi-character support
+        // FIXED: Pass last panel from previous page for cross-page consistency
         const panels = await this.generatePanelsForPage(
           pageBeats,
           characterDNA,
@@ -981,8 +999,14 @@ COMIC BOOK PROFESSIONAL STANDARDS:
           audience,
           story,
           characterName,
-          characters  // NEW: Pass characters array
+          characters,  // NEW: Pass characters array
+          lastPanelFromPreviousPage  // FIXED: Cross-page consistency
         );
+
+        // Store last panel for next page's continuity
+        if (panels.length > 0) {
+          lastPanelFromPreviousPage = panels[panels.length - 1];
+        }
 
         const pagePanel: any = {
           pageNumber,
@@ -1062,7 +1086,8 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     audience: AudienceType,
     story: string,
     characterName?: string,
-    characters?: StoryCharacter[]  // NEW: Multi-character support
+    characters?: StoryCharacter[],  // NEW: Multi-character support
+    lastPanelFromPreviousPage?: ComicPanel | null  // FIXED: Cross-page consistency
   ): Promise<ComicPanel[]> {
     console.log(`🔗 Generating ${pageBeats.length} panels for page ${pageNumber} SEQUENTIALLY with narrative continuity...`);
     
@@ -1096,13 +1121,26 @@ COMIC BOOK PROFESSIONAL STANDARDS:
       // Use audience-aware panel type determination with diversity tracking
       const panelType = this.determinePanelType(beat, beatIndex, totalPanels, audience, panelHistory);
 
-      // Build previous panel context for panels 2+ (first panel has no context)
-      // Only include if previous panel exists and has a valid generated image URL
-      const previousPanel = beatIndex > 0 ? panels[beatIndex - 1] : null;
+      // Build previous panel context for panels 2+ OR use last panel from previous page
+      // FIXED: Cross-page consistency - first panel of new page uses last panel of previous page
+      let previousPanel: ComicPanel | null = null;
+      let previousBeat: StoryBeat | null = null;
+      
+      if (beatIndex > 0) {
+        // Within same page - use previous panel from this page
+        previousPanel = panels[beatIndex - 1];
+        previousBeat = pageBeats[beatIndex - 1];
+      } else if (lastPanelFromPreviousPage) {
+        // First panel of new page - use last panel from previous page for cross-page consistency
+        previousPanel = lastPanelFromPreviousPage;
+        // Note: previousBeat will be undefined, but we have the panel image and description
+        console.log(`   🔗 Using last panel from previous page for cross-page consistency`);
+      }
+      
       const previousPanelContext = previousPanel?.generatedImage ? {
         imageUrl: previousPanel.generatedImage,
-        description: pageBeats[beatIndex - 1].beat,
-        action: pageBeats[beatIndex - 1].characterAction
+        description: previousBeat?.beat || previousPanel.description || 'previous scene',
+        action: previousBeat?.characterAction || previousPanel.characterAction || 'previous action'
       } : undefined;
 
       // ✅ REMOVED TRY-CATCH: Let errors bubble up immediately for fail-fast behavior
@@ -2036,8 +2074,11 @@ Write ONLY the narration. Sophisticated. Layered. Earned.`;
     // Determine camera angle for this beat
     const cameraAngle = this.determineCameraAngle(beat);
 
-    // Core story moment (~300 chars)
-    const coreSection = `${beat.beat}. Character ${beat.characterAction} with ${beat.emotion} emotion. ${beat.visualPriority} visual focus. Camera angle: ${cameraAngle} for ${beat.emotion} emotion.`;
+    // Core story moment (~300 chars) - Include action context for purposeful illustrations
+    const actionDescription = beat.actionContext 
+      ? `${beat.characterAction} (PURPOSE: ${beat.actionContext})`
+      : beat.characterAction;
+    const coreSection = `${beat.beat}. Character ${actionDescription} with ${beat.emotion} emotion. ${beat.visualPriority} visual focus. Camera angle: ${cameraAngle} for ${beat.emotion} emotion.`;
 
     // Character DNA section - ENFORCE CONSISTENCY WITH FULL DESCRIPTION
     const characterSection = characterDNA ?
@@ -2170,6 +2211,7 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
         emotion: beat.emotion,
         visualPriority: beat.visualPriority || 'character',
         characterAction: beat.characterAction,
+        actionContext: beat.actionContext || undefined,  // WHY the action is being performed
         panelPurpose: beat.panelPurpose || 'narrative',
         narrativeFunction: beat.panelPurpose || 'narrative',
         environment: beat.environment || 'story setting',

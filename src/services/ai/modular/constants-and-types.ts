@@ -168,8 +168,8 @@ export const QUALITY_STANDARDS = {
 // ===== PROFESSIONAL AUDIENCE CONFIGURATION =====
 export const PROFESSIONAL_AUDIENCE_CONFIG = {
   children: {
-    totalPanels: 8,
-    pagesPerStory: 4,
+    totalPanels: 10,
+    pagesPerStory: 6,
     panelsPerPage: 2,
     maxWordsPerPanel: 15,
     complexityLevel: 'simple',

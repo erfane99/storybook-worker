@@ -509,6 +509,7 @@ export interface StoryBeat {
   panelPurpose: string;
   narrativeFunction: string;
   characterAction: string;
+  actionContext?: string;  // WHY the character is doing the action (purpose/goal)
   environment: string;
   dialogue?: string;
   hasSpeechBubble?: boolean;

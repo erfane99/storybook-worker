@@ -829,21 +829,52 @@ Create a compelling comic panel that fixes the previous validation failures whil
     let prompt = `${options.artStyle} comic panel. CHARACTER 1 (${mainCharName}): Match IMAGE 1 exactly.${hasPreviousPanel ? ' CONTINUITY: Follow from IMAGE 2 but CHANGE composition.' : ''}
 
 SCENE: ${sceneDescription}
-EMOTION: ${emotion} (show clearly in face and body language)
+EMOTION: ${emotion} - CHARACTER'S FACE MUST SHOW THIS EMOTION:
+- happy/excited = big smile, raised cheeks, bright eyes
+- sad = downturned mouth, droopy eyes, slumped posture
+- angry/determined = furrowed brows, tight jaw, intense eyes
+- scared = wide eyes, open mouth, raised eyebrows
+- surprised = wide eyes, raised eyebrows, open mouth
+- curious = tilted head, raised eyebrow, slight smile
+THE FACIAL EXPRESSION IS CRITICAL - MUST MATCH "${emotion}" EXACTLY.
 CAMERA: ${cameraAngle} shot, ${panelType} panel`;
 
-    // Add secondary characters section
+    // Add secondary characters section with STRICT consistency enforcement
     if (hasSecondaryCharacters) {
       prompt += `
 
-SECONDARY CHARACTERS IN SCENE (render consistently but NOT from reference image):`;
+===== SECONDARY CHARACTERS - STRICT VISUAL CONSISTENCY =====
+These characters MUST look IDENTICAL in EVERY panel they appear in:`;
       options.secondaryCharacters!.forEach((char, index) => {
+        const ageHeight = {
+          'toddler': 'very small, about 1/3 height of adult',
+          'child': 'small, about half height of adult',
+          'teen': 'medium height, slightly shorter than adult',
+          'young-adult': 'full adult height',
+          'adult': 'full adult height',
+          'senior': 'full adult height, possibly slightly stooped'
+        };
         prompt += `
-- ${char.name}: ${char.age || 'child'} ${char.gender || 'child'}${char.hairColor ? `, ${char.hairColor} hair` : ''}${char.eyeColor ? `, ${char.eyeColor} eyes` : ''}
-  Relationship: ${char.relationship || 'companion'} of ${mainCharName}
-  ${char.action ? `Action: ${char.action}` : ''}${char.position ? `, Position: ${char.position}` : ''}
-  MUST BE: Visually distinct from ${mainCharName}, age-appropriate size, consistent appearance`;
+
+${char.name.toUpperCase()} (MUST BE CONSISTENT):
+- Age: ${char.age || 'child'} (${ageHeight[char.age as keyof typeof ageHeight] || 'proportional to main character'})
+- Gender: ${char.gender || 'child'}
+- Hair: ${char.hairColor || 'brown'} hair - SAME COLOR IN EVERY PANEL
+- Eyes: ${char.eyeColor || 'brown'} eyes - SAME COLOR IN EVERY PANEL
+- Clothing: Keep IDENTICAL outfit throughout entire story
+- Relationship: ${char.relationship || 'companion'} of ${mainCharName}
+- Size relative to ${mainCharName}: ${char.age === 'toddler' ? 'MUCH smaller' : char.age === 'child' ? 'smaller' : 'similar size'}
+${char.action ? `- Current Action: ${char.action}` : ''}
+CRITICAL: ${char.name} must be INSTANTLY RECOGNIZABLE as the same person in every panel.`;
       });
+      
+      prompt += `
+
+SECONDARY CHARACTER RULES:
+1. SAME face shape, features, hair style in EVERY panel
+2. SAME clothing - do NOT change outfits between panels
+3. SAME height relative to ${mainCharName}
+4. If ${mainCharName} is a toddler and secondary is also toddler, they should be similar size`;
     }
 
     // Add previous panel context with DIVERSITY enforcement
