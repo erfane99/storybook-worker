@@ -522,6 +522,10 @@ export interface StoryBeat {
   speakerName?: string;                                                      // Name of character speaking
   speakerPosition?: 'left' | 'center' | 'right';                             // Where speaker is in panel
   bubblePosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center';  // Optimal bubble placement
+  // NEW: Story-driven camera angles
+  cameraAngle?: string;                                                       // AI-determined camera angle based on story moment
+  cameraReason?: string;                                                      // WHY this camera angle was chosen for this story moment
+  locationChange?: string;                                                    // Indicates scene change requiring establishing shot
   cleanedDialogue?: string;
   previousBeatContext?: string;
   previousBeatSummary?: string;

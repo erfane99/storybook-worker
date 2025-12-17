@@ -532,6 +532,9 @@ GOOD: "gripping rope tightly, preparing to pull friend up from the muddy ditch"
       "actionContext": "string - WHY the character is doing this action, what goal it serves in the story",
       "panelPurpose": "string - narrative function",
       "environment": "string - setting description",
+      "cameraAngle": "close-up|medium|wide|extreme-wide|over-shoulder|low-angle|high-angle|dutch-angle - story-driven camera choice",
+      "cameraReason": "string - WHY this camera angle for this specific story moment",
+      "locationChange": "same|new-location-name - indicates if scene changes location",
       "dialogue": "string - character speech (if applicable)",
       "hasSpeechBubble": boolean,
       "speechBubbleStyle": "string - bubble type (if applicable)",
@@ -773,6 +776,36 @@ When hasSpeechBubble is true, you MUST also provide:
   - Speaker in CENTER → bubblePosition: "top-center" (bubble centered, tail points down toward speaker)
 
 For multi-character scenes: Position the PRIMARY speaker based on their action/focus in this specific panel.
+
+CAMERA ANGLE INTELLIGENCE (CRITICAL - STORY DRIVES VISUALS):
+Choose cameraAngle based on WHAT IS HAPPENING IN THE STORY, not arbitrary rotation.
+
+NARRATIVE-TO-CAMERA MAPPING:
+• Character discovers/examines small object → "close-up" (show detail and wonder)
+• Character enters NEW location for first time → "wide" or "extreme-wide" (establish space)
+• Emotional confrontation or realization → "close-up" (capture emotion)
+• Character performing physical action (running, jumping, climbing) → "low-angle" or "dutch-angle" (dynamic energy)
+• Character feeling small, overwhelmed, or scared → "high-angle" (vulnerability)
+• Character feeling powerful, triumphant → "low-angle" (heroic)
+• Two characters talking → "over-shoulder" or alternating "medium" shots
+• Quiet, intimate moment → "close-up" or "medium" (personal)
+• Danger approaching from distance → "wide" (show threat and character)
+• Character hiding or sneaking → "low-angle" or "over-shoulder" (tension)
+• Story climax/most important moment → "close-up" (maximum emotional impact)
+• Resolution/ending → "medium" or "wide" (closure, context)
+
+ENVIRONMENT-DRIVEN ANGLES:
+• Indoor/confined space → prefer "medium" and "close-up" (intimacy)
+• Outdoor/vast space → include "wide" and "extreme-wide" (scope)
+• When locationChange occurs → MUST use "wide" or "extreme-wide" for that panel
+
+DIVERSITY REQUIREMENT:
+• Minimum 4 unique camera angles across all panels
+• NO two consecutive panels with identical cameraAngle
+• First panel should be "wide" or "extreme-wide" (establishing)
+• Climax panel (70-85% through) should be "close-up" or dramatic angle
+
+For each panel, provide cameraReason explaining your choice based on the story moment.
 
 COMIC BOOK PROFESSIONAL STANDARDS:
 - Every panel advances the ${narrativeIntel.storyArchetype} narrative
@@ -1116,6 +1149,12 @@ COMIC BOOK PROFESSIONAL STANDARDS:
       console.log(`   👥 Multi-character mode: ${characters.length} characters available for panel generation`);
     }
 
+    // ===== STORY-DRIVEN DIVERSITY PLANNING =====
+    // Plan all panel types BEFORE generation to guarantee diversity
+    // This respects AI's cameraAngle decisions while ensuring variety
+    console.log(`📐 Planning panel diversity for page ${pageNumber}...`);
+    const { plannedTypes, adjustments } = this.planPanelDiversity(pageBeats, audience);
+
     const panels: ComicPanel[] = [];
     let adaptiveDelay = 300;  // Start with 300ms between panels
     let consecutiveSuccesses = 0;
@@ -1135,11 +1174,9 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         { panelNumber, totalPanels, pageNumber }
       );
 
-      // Track panel history for diversity validation
-      const panelHistory = panels.map(p => p.panelType);
-      
-      // Use audience-aware panel type determination with diversity tracking
-      const panelType = this.determinePanelType(beat, beatIndex, totalPanels, audience, panelHistory);
+      // Use pre-planned panel type from diversity planning (story-driven)
+      // This respects AI's cameraAngle from story analysis
+      const panelType = plannedTypes[beatIndex] || this.determinePanelType(beat, beatIndex, totalPanels, audience, panels.map(p => p.panelType));
 
       // Build previous panel context for panels 2+ OR use last panel from previous page
       // FIXED: Cross-page consistency - first panel of new page uses last panel of previous page
@@ -2355,7 +2392,11 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
         // NEW: AI-driven speech bubble positioning
         speakerName: beat.speakerName || undefined,
         speakerPosition: beat.speakerPosition || undefined,
-        bubblePosition: beat.bubblePosition || undefined
+        bubblePosition: beat.bubblePosition || undefined,
+        // NEW: Story-driven camera angles
+        cameraAngle: beat.cameraAngle || undefined,
+        cameraReason: beat.cameraReason || undefined,
+        locationChange: beat.locationChange || undefined
       };
     });
 
@@ -2396,10 +2437,179 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
     return pages;
   }
 
+  // ===== STORY-DRIVEN PANEL DIVERSITY SYSTEM =====
+
+  /**
+   * Map AI's cameraAngle to internal shot type
+   * The AI analyzes the story and determines appropriate camera angles.
+   * This method converts those decisions to our internal naming system.
+   */
+  private mapCameraAngleToShotType(cameraAngle: string | undefined): string | null {
+    if (!cameraAngle) return null;
+    
+    const angleMapping: Record<string, string> = {
+      'close-up': 'close_up',
+      'closeup': 'close_up',
+      'medium': 'medium_shot',
+      'medium-shot': 'medium_shot',
+      'wide': 'wide_establishing',
+      'wide-shot': 'wide_establishing',
+      'extreme-wide': 'wide_establishing',
+      'establishing': 'wide_establishing',
+      'over-shoulder': 'pov_over_shoulder',
+      'over_shoulder': 'pov_over_shoulder',
+      'pov': 'pov_over_shoulder',
+      'low-angle': 'dramatic_angle',
+      'low_angle': 'dramatic_angle',
+      'high-angle': 'dramatic_angle',
+      'high_angle': 'dramatic_angle',
+      'dutch-angle': 'action_shot',
+      'dutch_angle': 'action_shot',
+      'action': 'action_shot',
+      'dynamic': 'action_shot',
+      'symbolic': 'symbolic_artistic',
+      'artistic': 'symbolic_artistic'
+    };
+    
+    const normalizedAngle = cameraAngle.toLowerCase().trim();
+    return angleMapping[normalizedAngle] || null;
+  }
+
+  /**
+   * Pre-generation diversity planning
+   * Analyzes ALL beats BEFORE generation and ensures diversity requirements are met.
+   * Respects AI decisions while guaranteeing minimum variety.
+   * 
+   * STORY-DRIVEN APPROACH:
+   * - AI's cameraAngle from story analysis is the PRIMARY source
+   * - Only adjust when diversity rules are violated
+   * - Never change story-critical shots (first panel, location changes, climax)
+   */
+  private planPanelDiversity(
+    beats: StoryBeat[],
+    audience: AudienceType
+  ): { plannedTypes: string[]; adjustments: string[] } {
+    const config = PANEL_DIVERSITY_CONFIG[audience as keyof typeof PANEL_DIVERSITY_CONFIG] 
+      || PANEL_DIVERSITY_CONFIG.children;
+    
+    const adjustments: string[] = [];
+    const totalPanels = beats.length;
+    
+    // Step 1: Map all AI camera angles to shot types
+    const plannedTypes: string[] = beats.map((beat, index) => {
+      const aiShotType = this.mapCameraAngleToShotType(beat.cameraAngle);
+      
+      if (aiShotType) {
+        const reason = beat.cameraReason ? ` (${beat.cameraReason})` : '';
+        console.log(`📐 Panel ${index + 1}: Using AI's camera angle '${beat.cameraAngle}' → '${aiShotType}'${reason}`);
+        return aiShotType;
+      } else {
+        // AI didn't provide camera angle - mark for later assignment
+        return 'NEEDS_ASSIGNMENT';
+      }
+    });
+    
+    // Step 2: Assign types to panels without AI decisions using story position
+    plannedTypes.forEach((type, index) => {
+      if (type === 'NEEDS_ASSIGNMENT') {
+        const position = index / totalPanels;
+        let assignedType: string;
+        
+        if (index === 0) {
+          assignedType = 'wide_establishing';
+          adjustments.push(`Panel ${index + 1}: Assigned 'wide_establishing' (first panel - establishing shot)`);
+        } else if (index === totalPanels - 1) {
+          assignedType = 'medium_shot';
+          adjustments.push(`Panel ${index + 1}: Assigned 'medium_shot' (final panel - resolution)`);
+        } else if (position > 0.7 && position < 0.9) {
+          assignedType = 'close_up';
+          adjustments.push(`Panel ${index + 1}: Assigned 'close_up' (climax section)`);
+        } else if (position < 0.3) {
+          assignedType = index % 2 === 0 ? 'medium_shot' : 'wide_establishing';
+          adjustments.push(`Panel ${index + 1}: Assigned '${assignedType}' (setup section)`);
+        } else {
+          const developmentTypes = ['medium_shot', 'close_up', 'action_shot'];
+          assignedType = developmentTypes[index % developmentTypes.length];
+          adjustments.push(`Panel ${index + 1}: Assigned '${assignedType}' (development section)`);
+        }
+        
+        plannedTypes[index] = assignedType;
+      }
+    });
+    
+    // Step 3: Check for consecutive same-type violations and fix them
+    for (let i = 1; i < plannedTypes.length; i++) {
+      if (plannedTypes[i] === plannedTypes[i - 1]) {
+        const beat = beats[i];
+        const isStoryCritical = 
+          i === 0 || 
+          i === totalPanels - 1 ||
+          (beat.locationChange && beat.locationChange !== 'same') ||
+          (beat.cameraReason && beat.cameraReason.length > 0);
+        
+        if (!isStoryCritical) {
+          // Find an alternative type
+          const alternatives = ['medium_shot', 'close_up', 'action_shot', 'wide_establishing', 'dramatic_angle']
+            .filter(t => t !== plannedTypes[i] && t !== plannedTypes[i - 1]);
+          const newType = alternatives[i % alternatives.length];
+          
+          adjustments.push(`Panel ${i + 1}: Changed '${plannedTypes[i]}' → '${newType}' (avoid consecutive same type)`);
+          plannedTypes[i] = newType;
+        }
+      }
+    }
+    
+    // Step 4: Ensure minimum unique shot types
+    const uniqueTypes = new Set(plannedTypes);
+    if (uniqueTypes.size < config.minUniqueShotTypes) {
+      const neededTypes = ['close_up', 'medium_shot', 'wide_establishing', 'action_shot', 'dramatic_angle']
+        .filter(t => !uniqueTypes.has(t));
+      
+      // Find medium_shot panels that can be changed (not story-critical)
+      const mediumIndices = plannedTypes
+        .map((t, i) => ({ type: t, index: i }))
+        .filter(({ type, index }) => {
+          const beat = beats[index];
+          return type === 'medium_shot' && 
+                 index !== 0 && 
+                 index !== totalPanels - 1 &&
+                 !(beat.locationChange && beat.locationChange !== 'same') &&
+                 !beat.cameraReason;
+        })
+        .map(({ index }) => index);
+      
+      // Replace some medium shots with needed types
+      for (let i = 0; i < Math.min(neededTypes.length, mediumIndices.length); i++) {
+        const targetIndex = mediumIndices[i];
+        const newType = neededTypes[i];
+        adjustments.push(`Panel ${targetIndex + 1}: Diversity adjustment '${plannedTypes[targetIndex]}' → '${newType}'`);
+        plannedTypes[targetIndex] = newType;
+      }
+    }
+    
+    // Log final diversity stats
+    const finalUniqueTypes = new Set(plannedTypes);
+    console.log(`📊 Diversity Plan Complete: ${finalUniqueTypes.size} unique shot types planned`);
+    console.log(`   Shot distribution: ${[...finalUniqueTypes].join(', ')}`);
+    
+    if (adjustments.length > 0) {
+      console.log(`   📝 ${adjustments.length} adjustments made for diversity`);
+    }
+    
+    return { plannedTypes, adjustments };
+  }
+
   /**
    * ===== AUDIENCE-AWARE PANEL TYPE DETERMINATION =====
    * Uses PANEL_DIVERSITY_CONFIG to ensure varied, professional compositions
    * Tracks panel history to prevent repetitive patterns
+   * 
+   * PRIORITY ORDER:
+   * 1. AI's cameraAngle from story analysis (if available)
+   * 2. Pre-planned type from planPanelDiversity (if provided)
+   * 3. Forbidden pattern avoidance
+   * 4. Recommended sequence from config
+   * 5. Story position-based fallback
    */
   private determinePanelType(
     beat: StoryBeat, 
@@ -2415,16 +2625,46 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
     const config = PANEL_DIVERSITY_CONFIG[audience as keyof typeof PANEL_DIVERSITY_CONFIG] 
       || PANEL_DIVERSITY_CONFIG.children;
     
-    // Check if there's a recommended type for this panel number
-    const recommendedPanel = config.recommendedSequence.find(p => p.panel === panelNumber);
+    // === PRIORITY 1 (NEW): Use AI's cameraAngle from story analysis ===
+    // The AI analyzes the story and determines appropriate camera angles.
+    // We should trust these story-driven decisions as the primary source.
+    const aiShotType = this.mapCameraAngleToShotType(beat.cameraAngle);
+    if (aiShotType) {
+      // Check for forbidden consecutive patterns before accepting
+      if (panelHistory.length > 0 && panelHistory[panelHistory.length - 1] === aiShotType) {
+        // AI's choice would create consecutive same-type - check if story-critical
+        const isStoryCritical = 
+          (beat.locationChange && beat.locationChange !== 'same') ||
+          (beat.cameraReason && beat.cameraReason.length > 0);
+        
+        if (isStoryCritical) {
+          // Story-critical shot - keep AI's decision
+          console.log(`📐 Panel ${panelNumber}: Using AI's story-critical '${beat.cameraAngle}' → '${aiShotType}' (${beat.cameraReason || 'location change'})`);
+          return aiShotType;
+        } else {
+          // Not story-critical - find alternative to avoid repetition
+          const alternatives = ['medium_shot', 'close_up', 'action_shot', 'wide_establishing', 'dramatic_angle']
+            .filter(t => t !== aiShotType);
+          const alternativeType = alternatives[panelNumber % alternatives.length];
+          console.log(`📐 Panel ${panelNumber}: AI suggested '${beat.cameraAngle}' but using '${alternativeType}' to avoid consecutive same type`);
+          return alternativeType;
+        }
+      }
+      
+      // No conflict - use AI's decision
+      const reason = beat.cameraReason ? ` (${beat.cameraReason})` : '';
+      console.log(`📐 Panel ${panelNumber}: Using AI's camera angle '${beat.cameraAngle}' → '${aiShotType}'${reason}`);
+      return aiShotType;
+    }
     
-    // === PRIORITY 1: Use recommended sequence if available ===
+    // === PRIORITY 2: Check for recommended sequence (fallback when AI didn't provide angle) ===
+    const recommendedPanel = config.recommendedSequence.find(p => p.panel === panelNumber);
     if (recommendedPanel) {
-      console.log(`📐 Panel ${panelNumber}: Using recommended type '${recommendedPanel.type}' for ${audience} - ${recommendedPanel.purpose}`);
+      console.log(`📐 Panel ${panelNumber}: AI angle not provided, using recommended '${recommendedPanel.type}' for ${audience} - ${recommendedPanel.purpose}`);
       return recommendedPanel.type;
     }
     
-    // === PRIORITY 2: Check for forbidden patterns ===
+    // === PRIORITY 3: Check for forbidden patterns ===
     // Prevent more than maxConsecutiveSameType in a row
     if (panelHistory.length >= config.maxConsecutiveSameType) {
       const recentPanels = panelHistory.slice(-config.maxConsecutiveSameType);

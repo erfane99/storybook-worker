@@ -1783,7 +1783,8 @@ OUTPUT SCHEMA:
     "characterAction": "exact pose with body parts specified",
     "emotion": "happy|sad|excited|curious|scared|surprised|determined|peaceful|angry|confused",
     "environment": "setting with 4+ specific details",
-    "cameraAngle": "close-up|medium|wide|extreme-wide|over-shoulder|low-angle|high-angle",
+    "cameraAngle": "close-up|medium|wide|extreme-wide|over-shoulder|low-angle|high-angle|dutch-angle",
+    "cameraReason": "string - WHY this camera angle for this specific story moment",
     "panelPurpose": "establish|develop|reveal|climax|transition|resolve",
     "visualPriority": "character-face|character-full|action|environment",
     "lightingNote": "lighting mood",
@@ -1823,6 +1824,36 @@ When hasSpeechBubble is true, you MUST also provide:
   - Speaker on LEFT → bubblePosition: "top-right"
   - Speaker on RIGHT → bubblePosition: "top-left"
   - Speaker in CENTER → bubblePosition: "top-center"
+
+CAMERA ANGLE INTELLIGENCE (CRITICAL - STORY DRIVES VISUALS):
+Choose camera angles based on WHAT IS HAPPENING IN THE STORY, not arbitrary rotation.
+
+NARRATIVE-TO-CAMERA MAPPING:
+• Character discovers/examines small object → "close-up" (show detail and wonder)
+• Character enters NEW location for first time → "wide" or "extreme-wide" (establish space)
+• Emotional confrontation or realization → "close-up" (capture emotion)
+• Character performing physical action (running, jumping, climbing) → "low-angle" or "dutch-angle" (dynamic energy)
+• Character feeling small, overwhelmed, or scared → "high-angle" (vulnerability)
+• Character feeling powerful, triumphant → "low-angle" (heroic)
+• Two characters talking → "over-shoulder" or alternating "medium" shots
+• Quiet, intimate moment → "close-up" or "medium" (personal)
+• Danger approaching from distance → "wide" (show threat and character)
+• Character hiding or sneaking → "low-angle" or "over-shoulder" (tension)
+• Story climax/most important moment → "close-up" (maximum emotional impact)
+• Resolution/ending → "medium" or "wide" (closure, context)
+
+ENVIRONMENT-DRIVEN ANGLES:
+• Indoor/confined space → prefer "medium" and "close-up" (intimacy)
+• Outdoor/vast space → include "wide" and "extreme-wide" (scope)
+• When locationChange occurs → MUST use "wide" or "extreme-wide" for that panel
+
+DIVERSITY REQUIREMENT:
+• Minimum 4 unique camera angles across all panels
+• NO two consecutive panels with identical cameraAngle
+• First panel should usually be "wide" (establishing)
+• Climax panel (70-85% through) should be "close-up" or dramatic angle
+
+For each panel, provide cameraReason explaining your choice based on the story moment.
 
 GOOD DIALOGUE DISTRIBUTION (8 panels, children):
 Panel 1: hasSpeechBubble: false (establishing shot)
@@ -1995,6 +2026,8 @@ private enrichStoryBeats(beats: any[], targetCount: number, audience: AudienceTy
       panelPurpose: beat.panelPurpose || this.determinePanelPurpose(index, targetCount),
       narrativeFunction: beat.panelPurpose || this.determinePanelPurpose(index, targetCount),
       cameraAngle: beat.cameraAngle || this.determineCameraAngle(index, targetCount),
+      cameraReason: beat.cameraReason || undefined,  // NEW: AI's explanation for camera choice
+      locationChange: beat.locationChange || undefined,  // NEW: Scene change indicator
       lightingNote: beat.lightingNote || 'cinematic lighting',
       compositionNote: beat.compositionNote || 'rule of thirds composition',
       hasSpeechBubble: beat.hasSpeechBubble || false,
