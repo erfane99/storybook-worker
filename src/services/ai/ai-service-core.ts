@@ -266,6 +266,76 @@ ACT 3 (Panels 20-24): Event concludes, character changed, connection to present,
       visualElements: ['Period-accurate costumes/settings', 'Historical artifacts detailed', 'Then vs now comparisons', 'Maps/dates clear', 'Authentic architecture'],
       dialogueStyle: 'Period-appropriate but understandable. Historical figures authentic. Modern character asks modern questions. Educational not preachy.',
       themes: 'History made by real people. Past connects present. Learn from before. Every era had heroes.'
+    },
+    
+    friendship: {
+      structure: `ACT 1 (Panels 1-3): Characters meet or reconnect, initial connection or conflict, decide to spend time together
+ACT 2 (Panels 4-9): Shared activity builds bond, misunderstanding or challenge tests friendship, moment of vulnerability and honesty
+ACT 3 (Panels 10-12): Reconciliation through understanding, demonstrate loyalty through action, friendship stronger than before`,
+      emotionalBeats: ['curiosity', 'connection', 'joy', 'hurt', 'understanding', 'love'],
+      visualElements: ['Side-by-side moments', 'Shared laughter', 'Physical comfort gestures', 'Matching expressions', 'Warm lighting'],
+      dialogueStyle: 'Natural conversation flow. Finishing each other\'s sentences. Inside jokes. Heartfelt apologies. "You\'re my best friend" moments.',
+      themes: 'True friends accept differences. Friendship requires honesty. Together we are stronger. Friends forgive.'
+    },
+    
+    courage: {
+      structure: `ACT 1 (Panels 1-3): Character faces something scary, shows initial fear, someone believes in them
+ACT 2 (Panels 4-9): First attempt fails, almost gives up, finds inner strength, tries again with new approach
+ACT 3 (Panels 10-12): Faces fear directly, succeeds through bravery not strength, realizes they were brave all along`,
+      emotionalBeats: ['fear', 'doubt', 'determination', 'struggle', 'bravery', 'pride'],
+      visualElements: ['Small character vs big challenge', 'Trembling poses becoming steady', 'Light emerging from darkness', 'Triumphant final pose'],
+      dialogueStyle: 'Internal doubts spoken aloud. Encouraging words from others. "I can do this" self-talk. Celebratory exclamations.',
+      themes: 'Courage is feeling fear and acting anyway. Bravery comes in many forms. Believe in yourself. Fear can be overcome.'
+    },
+    
+    nature: {
+      structure: `ACT 1 (Panels 1-3): Character enters natural setting, discovers something wonderful, wants to explore more
+ACT 2 (Panels 4-9): Learns about nature's wonders, faces weather or environmental challenge, animal or plant teaches lesson
+ACT 3 (Panels 10-12): Helps nature in return, deeper appreciation gained, promises to protect and return`,
+      emotionalBeats: ['wonder', 'curiosity', 'awe', 'challenge', 'understanding', 'gratitude'],
+      visualElements: ['Lush natural environments', 'Detailed flora and fauna', 'Weather effects', 'Character small against vast nature', 'Golden hour lighting'],
+      dialogueStyle: 'Exclamations of wonder. Questions about nature. Animal sounds represented. Quiet contemplative moments. "Thank you, nature" gratitude.',
+      themes: 'Nature is precious and fragile. All living things connected. Respect the environment. Nature teaches patience.'
+    },
+    
+    creativity: {
+      structure: `ACT 1 (Panels 1-3): Character wants to create something, faces doubt or creative block, gets inspired
+ACT 2 (Panels 4-9): Begins creating with enthusiasm, makes mistakes, learns that mistakes are part of the process
+ACT 3 (Panels 10-12): Creates something unique and personal, shares with others, inspires someone else to create`,
+      emotionalBeats: ['aspiration', 'frustration', 'inspiration', 'flow', 'satisfaction', 'joy'],
+      visualElements: ['Art supplies and creative tools', 'Messy creative process', 'Colorful imagination sequences', 'Before/after of creation', 'Proud display of work'],
+      dialogueStyle: 'Self-doubt becoming confidence. "What if I try..." experimentation. "I made this!" pride. Encouraging feedback from others.',
+      themes: 'Everyone is creative. Mistakes lead to discovery. Art comes from the heart. Creating brings joy.'
+    },
+    
+    sports: {
+      structure: `ACT 1 (Panels 1-3): Character wants to play or compete, faces initial challenge or tryout, team dynamics introduced
+ACT 2 (Panels 4-9): Training and practice, setback or loss, learns importance of teamwork and perseverance
+ACT 3 (Panels 10-12): Big game or competition, uses lessons learned, wins through sportsmanship not just skill`,
+      emotionalBeats: ['excitement', 'determination', 'frustration', 'teamwork', 'tension', 'triumph'],
+      visualElements: ['Dynamic action poses', 'Team uniforms and equipment', 'Crowd reactions', 'Slow-motion key moments', 'Victory celebrations'],
+      dialogueStyle: 'Coach encouragement. Teammate banter. "We can do this!" rallying. Sportsmanship to opponents. Celebratory cheers.',
+      themes: 'Teamwork makes the dream work. Practice leads to improvement. Good sportsmanship matters. Never give up.'
+    },
+    
+    mystery: {
+      structure: `ACT 1 (Panels 1-3): Something strange or missing discovered, character decides to investigate, first clue found
+ACT 2 (Panels 4-9): Follows clues, interviews suspects or witnesses, red herring misleads, breakthrough realization
+ACT 3 (Panels 10-12): Confronts truth, reveals solution, mystery solved and order restored`,
+      emotionalBeats: ['curiosity', 'suspicion', 'confusion', 'determination', 'surprise', 'satisfaction'],
+      visualElements: ['Magnifying glass and detective poses', 'Clue close-ups', 'Shadowy mysterious scenes', 'Thought bubble connections', 'Reveal moment lighting'],
+      dialogueStyle: 'Questions and hypotheses. "That\'s strange..." observations. "A-ha!" realizations. Explanation of solution. Grateful thanks from others.',
+      themes: 'Curiosity solves problems. Pay attention to details. Truth always comes out. Everyone has a story.'
+    },
+    
+    comedy: {
+      structure: `ACT 1 (Panels 1-3): Funny situation established, character's quirk causes problem, comedic misunderstanding begins
+ACT 2 (Panels 4-9): Attempts to fix make things worse, physical comedy ensues, escalating absurdity
+ACT 3 (Panels 10-12): Unexpected solution, everyone laughs together, character embraces their quirks`,
+      emotionalBeats: ['amusement', 'embarrassment', 'chaos', 'more_chaos', 'relief', 'joy'],
+      visualElements: ['Exaggerated expressions', 'Physical comedy poses', 'Comedic timing panels', 'Reaction shots', 'Happy group laughter'],
+      dialogueStyle: 'Witty one-liners. Funny misunderstandings. "Oops!" moments. Puns and wordplay. Contagious laughter dialogue.',
+      themes: 'Laughter heals. Embrace your quirks. Everyone makes mistakes. Joy is contagious.'
     }
   },
 
