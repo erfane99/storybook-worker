@@ -851,12 +851,16 @@ ${physicalActions.map(action => `• ${action}`).join('\n')}
 THE CHARACTER'S BODY MUST SHOW THESE EXACT POSITIONS.`;
     }
 
-    // Add secondary characters section with STRICT consistency enforcement
+    // Add secondary characters section with MANDATORY RENDERING + consistency enforcement
     if (hasSecondaryCharacters) {
       prompt += `
 
-===== SECONDARY CHARACTERS - STRICT VISUAL CONSISTENCY =====
-These characters MUST look IDENTICAL in EVERY panel they appear in:`;
+===== MANDATORY: RENDER ALL SECONDARY CHARACTERS =====
+⚠️ CRITICAL REQUIREMENT: You MUST include ALL ${options.secondaryCharacters!.length} secondary character(s) listed below in this panel.
+DO NOT generate the image without rendering EVERY secondary character.
+DO NOT make any character optional or skip any character.
+
+Each secondary character below MUST appear in the final image AND look IDENTICAL in EVERY panel they appear in:`;
       options.secondaryCharacters!.forEach((char, index) => {
         const ageHeight = {
           'toddler': 'very small, about 1/3 height of adult',
@@ -882,7 +886,14 @@ CRITICAL: ${char.name} must be INSTANTLY RECOGNIZABLE as the same person in ever
       
       prompt += `
 
-SECONDARY CHARACTER RULES:
+MANDATORY RENDERING CHECKLIST (verify BEFORE generating image):
+✓ ${mainCharName} is in the image? (from reference IMAGE 1)
+${options.secondaryCharacters!.map(char => `✓ ${char.name} is in the image? (matching description above)`).join('\n')}
+✓ All ${options.secondaryCharacters!.length + 1} characters visible in the composition?
+
+If ANY character is missing from your composition, START OVER and include them.
+
+SECONDARY CHARACTER CONSISTENCY RULES:
 1. SAME face shape, features, hair style in EVERY panel
 2. SAME clothing - do NOT change outfits between panels
 3. SAME height relative to ${mainCharName}
@@ -917,9 +928,10 @@ REQUIREMENTS:
 - Dynamic composition, not static
 - ${options.artStyle} style, publication quality`;
 
-    // Add secondary character consistency rules if present
+    // Add secondary character MANDATORY RENDERING rules if present
     if (hasSecondaryCharacters) {
       prompt += `
+- MANDATORY: All ${options.secondaryCharacters!.length} secondary character(s) MUST be visible in the image (${options.secondaryCharacters!.map(c => c.name).join(', ')})
 - Secondary characters must be CONSISTENT with descriptions above
 - Show age-appropriate size differences between characters
 - Each secondary character must have DISTINCT appearance from main character`;
