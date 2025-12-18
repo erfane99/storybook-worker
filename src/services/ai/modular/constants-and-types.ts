@@ -166,19 +166,25 @@ export const QUALITY_STANDARDS = {
 } as const;
 
 // ===== PROFESSIONAL AUDIENCE CONFIGURATION =====
+// UPGRADED: Panel counts increased to accommodate all 7 master comic creator principles
+// - Stan Lee transformation beats: +2-4 panels per story
+// - Moore symbolic callbacks: +1-3 panels
+// - Spiegelman dramatic pacing: some beats need extended space
 export const PROFESSIONAL_AUDIENCE_CONFIG = {
   children: {
-    totalPanels: 10,
-    pagesPerStory: 6,
-    panelsPerPage: 2,
+    totalPanels: 12,          // Changed from 10, now optimal at 12
+    minPanels: 10,            // NEW: minimum for quality with flexibility
+    maxPanels: 14,            // NEW: maximum allowing transformation beats
+    pagesPerStory: 3,         // Changed from 6, now fixed at 3
+    panelsPerPage: 4,
     maxWordsPerPanel: 15,
     complexityLevel: 'simple',
-    narrativeDepth: 'surface_emotions',
+    narrativeDepth: 'focused',
     vocabularyLevel: 'elementary',
     attentionSpan: 'short_bursts',
     visualStyle: 'bright_colorful',
     dialogueComplexity: 'simple',
-    speechBubbleRatio: 0.60,
+    speechBubbleRatio: 0.4,
     panelLayout: 'child-friendly-grid',
     readingLevel: 'grade_1_3',
     emotionalComplexity: 'basic_emotions',
@@ -186,17 +192,19 @@ export const PROFESSIONAL_AUDIENCE_CONFIG = {
     resolutionType: 'positive_clear'
   },
   'young adults': {
-    totalPanels: 12,
-    pagesPerStory: 4,
-    panelsPerPage: 3,
+    totalPanels: 20,          // Changed from 12, now optimal at 20
+    minPanels: 18,            // NEW: minimum for quality
+    maxPanels: 22,            // NEW: maximum for complex emotional arcs
+    pagesPerStory: 5,         // Changed from 4, now fixed at 5
+    panelsPerPage: 4,
     maxWordsPerPanel: 25,
     complexityLevel: 'moderate',
-    narrativeDepth: 'character_development',
+    narrativeDepth: 'layered',
     vocabularyLevel: 'intermediate',
     attentionSpan: 'extended_engagement',
     visualStyle: 'dynamic_detailed',
     dialogueComplexity: 'conversational',
-    speechBubbleRatio: 0.65,
+    speechBubbleRatio: 0.5,
     panelLayout: 'dynamic-flow',
     readingLevel: 'grade_6_9',
     emotionalComplexity: 'complex_relationships',
@@ -204,17 +212,19 @@ export const PROFESSIONAL_AUDIENCE_CONFIG = {
     resolutionType: 'growth_oriented'
   },
   adults: {
-    totalPanels: 16,
-    pagesPerStory: 4,
+    totalPanels: 27,          // Changed from 16, now optimal at 27
+    minPanels: 24,            // NEW: minimum for sophisticated storytelling
+    maxPanels: 30,            // NEW: maximum for symbolic depth
+    pagesPerStory: 7,         // Changed from 4, now fixed at 7
     panelsPerPage: 4,
     maxWordsPerPanel: 35,
     complexityLevel: 'sophisticated',
-    narrativeDepth: 'thematic_exploration',
+    narrativeDepth: 'complex',
     vocabularyLevel: 'advanced',
     attentionSpan: 'immersive_experience',
     visualStyle: 'cinematic_detailed',
     dialogueComplexity: 'nuanced',
-    speechBubbleRatio: 0.7,
+    speechBubbleRatio: 0.6,
     panelLayout: 'cinematic-composition',
     readingLevel: 'grade_10_plus',
     emotionalComplexity: 'psychological_depth',

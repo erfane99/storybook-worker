@@ -1661,27 +1661,177 @@ async cartoonizeImage(options: CartoonizeOptions): Promise<AsyncResult<Cartooniz
         }
 
         const audienceConfig = WORLD_CLASS_STORY_PROMPTS.audienceRequirements[audience as keyof typeof WORLD_CLASS_STORY_PROMPTS.audienceRequirements];
+        const config = PROFESSIONAL_AUDIENCE_CONFIG[audience as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
 
-        // Build comprehensive prompt with multi-character support
-        const storyPrompt = `${WORLD_CLASS_STORY_PROMPTS.systemPrompt(audience, genre)}
+        // Build comprehensive prompt with 7 master comic creator principles
+        const storyPrompt = `You are a master storyteller combining the principles of Will Eisner (sequential art), Scott McCloud (panel transitions), Stan Lee (emotional authenticity), Jack Kirby (visual power), Neil Gaiman (layered storytelling), Alan Moore (thematic depth), and Art Spiegelman (dramatic pacing).
 
+<objective>
+Create a ${audience} ${genre} story for ${characterProfiles.split('\n')[0] || 'the character'}. The story will become a ${config.minPanels}-${config.maxPanels} panel comic book, so write with visual storytelling and panel-to-panel flow in mind. Embed all 7 master comic creator principles PROACTIVELY into the narrative structure.
+</objective>
+
+<genre_framework>
 GENRE: ${genre.toUpperCase()}
 ${genreConfig.structure}
 
 EMOTIONAL JOURNEY: ${genreConfig.emotionalBeats.join(' → ')}
-VISUAL ELEMENTS: ${genreConfig.visualElements.join(', ')}
+KEY VISUAL MOMENTS: ${genreConfig.visualElements.join(', ')}
 DIALOGUE STYLE: ${genreConfig.dialogueStyle}
-THEMES: ${genreConfig.themes}
+CORE THEMES: ${genreConfig.themes}
+</genre_framework>
 
-AUDIENCE: ${audience.toUpperCase()}
-VOCABULARY: ${audienceConfig.vocabulary}
-${audience === 'children' && 'safetyRules' in audienceConfig ? `SAFETY RULES (MANDATORY): ${audienceConfig.safetyRules.join('; ')}` : ''}
-TARGET: ${audienceConfig.wordTarget}, ${audienceConfig.panelCount}
-
+<character_context>
 ${characterProfiles}
+</character_context>
+
+<audience_requirements>
+AUDIENCE: ${audience.toUpperCase()}
+TARGET LENGTH: ${audienceConfig.wordTarget}
+PANEL ALLOCATION: ${config.minPanels}-${config.maxPanels} panels (${config.pagesPerStory} pages)
+VOCABULARY: ${audienceConfig.vocabulary}
+${audience === 'children' && 'safetyRules' in audienceConfig ? `
+SAFETY RULES (MANDATORY):
+${(audienceConfig as any).safetyRules.map((rule: string) => `• ${rule}`).join('\n')}
+` : ''}
+${audience !== 'children' ? `MATURITY LEVEL: ${(audienceConfig as any).maturityLevel}` : ''}
+</audience_requirements>
+
+<seven_master_principles>
+Embed these principles PROACTIVELY as you write:
+
+▸▸▸ PRINCIPLE 1: EISNER - FROZEN MOMENTS ◂◂◂
+Write scenes as FROZEN MOMENTS IN TIME, not summaries:
+- BAD: "Maya fell to the ground feeling sad"
+- GOOD: "Maya's hands slip from the rung. Her body tilts backward, grass rushing up. Her eyes widen—the moment frozen between climb and fall."
+
+Write 70%+ of your story moments as present-tense action-in-progress.
+
+▸▸▸ PRINCIPLE 2: McCLOUD - SMOOTH TRANSITIONS ◂◂◂
+Ensure scenes flow naturally with clear connections:
+- Action-to-Action (65%): Same character continues action across scenes
+- Subject-to-Subject (20%): Shift focus within same location
+- Scene-to-Scene (15% MAX): Time/location jumps WITH clear transition phrases
+
+Use phrases like: "Moments later...", "Meanwhile...", "As the sun rose..." for scene changes.
+
+▸▸▸ PRINCIPLE 3: STAN LEE - TRANSFORMATION MOMENTS ◂◂◂
+CRITICAL: When emotion changes significantly (sad→happy, scared→brave), SHOW THE TURNING POINT:
+- Don't jump from defeat to triumph—show the moment realization dawns
+- Include beats like: "Her eyes widened. Wait... what if..." or "Something clicked inside her"
+- Make emotional shifts VISIBLE and EARNED
+
+Example structure:
+Scene A: Character discouraged, sitting alone
+Scene B: **"She looked up. In the distance, a light flickered. Hope stirred in her chest."** ← TRANSFORMATION MOMENT
+Scene C: Character standing, determined, moving toward light
+
+▸▸▸ PRINCIPLE 4: KIRBY - VISUAL POWER MOMENTS ◂◂◂
+Describe KEY emotional moments with VISUAL POWER:
+- Triumph: "She stood tall, sun breaking through clouds behind her like a spotlight"
+- Defeat: "Small and alone, she sat beneath towering trees that seemed to close in"
+- Realization: "Her face filled the moment—eyes suddenly understanding, mouth forming 'oh'"
+
+Match visual scale to emotional weight.
+
+▸▸▸ PRINCIPLE 5: GAIMAN - LAYERED RICHNESS ◂◂◂
+Every scene should have THREE LAYERS:
+1. Physical: What's happening (action)
+2. Sensory: What character experiences (sight, sound, touch, smell)
+3. Emotional/Symbolic: What it MEANS (internal state, theme)
+
+Example: "She gripped the cold metal rung (physical), rust flaking beneath sweaty palms (sensory), each grip tighter than the last—holding on as her confidence slipped (symbolic/emotional)."
+
+▸▸▸ PRINCIPLE 6: MOORE - SYMBOLIC THREADS ◂◂◂
+Weave ONE symbolic element throughout:
+- An object that represents the theme (stuffed animal = comfort, broken toy = loss, flower = growth)
+- A color with meaning (blue = safety, red = danger, gold = discovery)
+- A recurring visual (shadows lengthening = fear growing, light breaking through = hope)
+
+Introduce it early, reference it 2-3 times meaningfully, transform it by the end.
+
+▸▸▸ PRINCIPLE 7: SPIEGELMAN - DRAMATIC PACING ◂◂◂
+Structure your story with varied emotional intensity:
+- Opening (weight: 6/10): Strong start, establish stakes
+- Rising action (weight: 5-7/10): Build tension incrementally
+- Climax (weight: 10/10): BIGGEST moment—this should be described with maximum detail and emotion
+- Resolution (weight: 7-8/10): Satisfying but not overwhelming
+
+The climax should be your longest, most detailed scene description (3-4 sentences).
+</seven_master_principles>
+
+<story_structure>
+Your story MUST follow this proven structure:
+
+ACT 1 - SETUP (First 25% of panels):
+- Establish character in their normal world
+- Show what they want or need
+- Introduce the challenge/problem clearly
+
+ACT 2 - RISING ACTION (Middle 50% of panels):
+- Character attempts to overcome challenge
+- Obstacles escalate
+- Include 2-3 try-fail cycles
+- Show character learning/adapting
+- BUILD to emotional low point
+
+ACT 3 - CLIMAX & RESOLUTION (Final 25% of panels):
+- Darkest moment OR biggest challenge
+- **TRANSFORMATION MOMENT** (Principle 3: visible turning point)
+- Character applies what they learned
+- Resolution that shows change
+- Clear lesson or growth demonstrated
+
+${audience === 'children' ? `
+CHILDREN'S STORY SPECIFIC RULES:
+- Problem and solution must be CONCRETE (not abstract)
+- Lesson must be EXPLICIT and SIMPLE: "${characterProfiles.match(/Name: ([^\n]+)/)?.[1] || 'Character'} learned that..."
+- Ending must be POSITIVE and CLEAR
+- NO ambiguous or philosophical conclusions
+- Examples of good endings:
+  ✓ "Now Maya knew—asking for help was brave, not weak."
+  ✓ "From that day on, Leo wasn't scared of the dark. The stars were his friends."
+  ✗ "And the magic would always be there" (too abstract)
+  ✗ "In that moment, everything changed" (too vague)
+` : ''}
+</story_structure>
+
+<dialogue_requirements>
 ${WORLD_CLASS_STORY_PROMPTS.dialogueRequirements(audience)}
 
-${WORLD_CLASS_STORY_PROMPTS.outputFormat}`;
+DIALOGUE INTEGRATION WITH PRINCIPLES:
+- Transformation moments often need inner dialogue: "Wait... what if I..."
+- Emotional peaks need exclamations: "Yes!", "Oh no!", "I can do this!"
+- Keep dialogue SHORT (3-8 words per speech bubble)
+- Every line must advance plot OR reveal character
+</dialogue_requirements>
+
+<output_format>
+Return your story in this EXACT format:
+
+TITLE: [Compelling 3-6 word title]
+
+STORY:
+[Write the complete narrative. Make it ${audienceConfig.wordTarget}. Structure into clear scenes with paragraph breaks. Include dialogue in quotation marks. Apply all 7 principles throughout. Make the climax your longest, most detailed scene.]
+
+END OF STORY
+
+Do NOT add any commentary, analysis, or meta-text. Just the title and story.
+</output_format>
+
+<critical_reminders>
+✓ Write scenes as frozen moments (Eisner)
+✓ Connect scenes smoothly (McCloud)
+✓ Show emotional turning points (Stan Lee)
+✓ Match visual description to emotion (Kirby)
+✓ Add sensory + symbolic layers (Gaiman)
+✓ Weave ONE symbolic element throughout (Moore)
+✓ Make climax the most detailed, intense scene (Spiegelman)
+✓ Character appears in 80%+ of scenes
+✓ Ending is clear, satisfying, and shows growth
+${audience === 'children' ? '✓ Age-appropriate, safe, educational content ONLY' : ''}
+</critical_reminders>
+
+Now write the story.`;
 
         // Call Gemini
         // FIX 2: Use 'young adults' (with space) not 'young_adults'
@@ -1742,176 +1892,549 @@ ${WORLD_CLASS_STORY_PROMPTS.outputFormat}`;
   async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
   const result = await this.withErrorHandling(
     async () => {
-      this.log('info', `📖 Analyzing story structure for ${audience} audience using Claude API...`);
+      this.log('info', `📖 Analyzing story structure for ${audience} audience using Claude API with 7 Master Principles...`);
       
-      const panelCount = PROFESSIONAL_AUDIENCE_CONFIG[audience].totalPanels;
+      const config = PROFESSIONAL_AUDIENCE_CONFIG[audience];
+      const panelCount = config.totalPanels;
       
-      // World-class prompt with few-shot examples (2025 prompt engineering best practices)
-      const emotionalProgression = audience === 'children' 
-        ? 'wonder → curiosity → challenge → triumph' 
-        : audience === 'young adults' 
-        ? 'intrigue → tension → action → revelation' 
-        : 'complexity → conflict → climax → resolution';
+      // Narrative intelligence for archetype detection
+      const narrativeIntel = {
+        storyArchetype: 'adventure', // Will be detected by Claude
+        emotionalArc: audience === 'children' 
+          ? ['curious', 'nervous', 'determined', 'triumphant', 'joyful']
+          : audience === 'young adults'
+          ? ['intrigued', 'challenged', 'conflicted', 'resolved', 'transformed']
+          : ['complex', 'conflicted', 'tested', 'transformed', 'enlightened'],
+        thematicElements: ['courage', 'growth', 'discovery'],
+        pacingStrategy: audience === 'children' ? 'clear_progression' : 'emotional_depth',
+        characterGrowth: ['introduction', 'challenge', 'growth', 'transformation']
+      };
 
-        // Priority 2: Detect if story is a brief summary and needs enhancement
-      const wordCount = story.split(/\s+/).length;
-      const isBriefSummary = wordCount < 200;
-      
-      const storyEnhancementInstruction = isBriefSummary ? `
-STORY ENHANCEMENT REQUIRED:
-The provided story is a brief summary (${wordCount} words). You must EXPAND it mentally before creating panels:
-- Add sensory details (sights, sounds, textures)
-- Imagine character emotions at each moment
-- Fill in scene transitions
-- Create natural dialogue the character would say
-- Expand each sentence into a vivid scene
-` : '';
+      const analysisPrompt = `You are a master comic book story analyst combining the expertise of Will Eisner (sequential art), Scott McCloud (panel transitions), Stan Lee (emotional authenticity), Jack Kirby (visual power), Neil Gaiman (layered storytelling), Alan Moore (thematic depth), and Art Spiegelman (dramatic pacing).
 
-      // Priority 1: Calculate dialogue targets based on audience
-      const dialogueTarget = audience === 'children' ? '40-50%' : audience === 'young adults' ? '50-60%' : '50-60%';
-      const minDialoguePanels = Math.ceil(panelCount * (audience === 'children' ? 0.4 : 0.5));
+<objective>
+Analyze the provided story and generate ${config.minPanels}-${config.maxPanels} story beats (${panelCount} optimal) for ${audience} comic book adaptation. Each beat must be a compelling visual moment with proper panel-to-panel continuity, following ${narrativeIntel.storyArchetype} archetype structure. Apply all 7 professional comic book standards to achieve world-class quality.
+</objective>
 
-      const analysisPrompt = `Create ${panelCount} comic panels for this ${audience} story. Return JSON only.
-${storyEnhancementInstruction}
-STORY:
-"${story}"
+<narrative_intelligence>
+STORY ARCHETYPE: ${narrativeIntel.storyArchetype.toUpperCase()}
+EMOTIONAL PROGRESSION: ${narrativeIntel.emotionalArc.join(' → ')}
+THEMATIC ELEMENTS: ${narrativeIntel.thematicElements.join(', ')}
+PACING STRATEGY: ${narrativeIntel.pacingStrategy}
+CHARACTER GROWTH ARC: ${narrativeIntel.characterGrowth.join(', ')}
 
-OUTPUT SCHEMA:
+AUDIENCE: ${audience.toUpperCase()}
+TARGET: ${config.minPanels}-${config.maxPanels} panels (${panelCount} optimal) across ${config.pagesPerStory} pages
+COMPLEXITY: ${config.complexityLevel}
+NARRATIVE DEPTH: ${config.narrativeDepth}
+</narrative_intelligence>
+
+<story_input>
+${story}
+</story_input>
+
+<instructions>
+Generate story beats following this comprehensive three-step process:
+
+═══ STEP 1: INITIAL BEAT GENERATION WITH 7 MASTER PRINCIPLES ═══
+
+Break story into ${config.minPanels}-${config.maxPanels} beats (aim for ${panelCount}), applying ALL professional standards:
+
+▸▸▸ PRINCIPLE 1: EISNER - MOMENT CAPTURE ◂◂◂
+Each beat = ONE FROZEN MOMENT IN TIME (not a summary of completed action)
+- BAD: "Maya fell onto grass" (past tense, completed result)
+- GOOD: "Maya's hands slip from rung, body tilts backward mid-air, grass rushing up below" (present tense, frozen moment)
+- 70%+ of beats MUST show action-in-progress
+- Show the EXACT INSTANT something happens, not before/after
+
+▸▸▸ PRINCIPLE 2: McCLOUD - TRANSITION AWARENESS ◂◂◂
+Classify how each beat connects to previous beat:
+- Action-to-Action (65%): Same character continues action
+- Subject-to-Subject (20%): Same scene, different focus
+- Scene-to-Scene (15% MAX): Time/location jump
+Plan transitions consciously to maintain visual flow.
+
+▸▸▸ PRINCIPLE 3: STAN LEE - EMOTIONAL TRANSFORMATION ◂◂◂
+When emotion changes 2+ levels (e.g., sad → happy), INSERT transformation beat:
+- Show the MOMENT realization/change happens
+- Close-up on face capturing the shift
+- Example: Sad (Panel 7) → Helper arrives (Panel 8) → **CLOSE-UP: Eyes widen with understanding** (NEW Panel 8.5) → Happy (Panel 9)
+Track emotional jumps and ensure visible turning points.
+
+▸▸▸ PRINCIPLE 4: KIRBY - CAMERA-EMOTION POWER ◂◂◂
+Camera angles MUST amplify emotions, not just show action:
+- Defeat/vulnerability → high-angle (character looks small)
+- Triumph/power → low-angle (character looks heroic)
+- Realization/intimacy → close-up (emotion fills frame)
+- Discovery → wide-angle (character in vast space)
+Choose angles that FEEL the emotion, not just see it.
+
+▸▸▸ PRINCIPLE 5: GAIMAN - LAYERED BEATS ◂◂◂
+Each beat should have THREE LAYERS:
+- Physical: What character's body is doing
+- Sensory: What they see/hear/feel/smell (environment texture)
+- Symbolic/Emotional: What it MEANS (internal state)
+
+Example LAYERED beat:
+"Maya's fingers slip from cold metal rung (physical), rough surface scraping her palms (sensory), her confident grip dissolving into helplessness (symbolic/emotional)"
+
+NOT just: "Maya falls from ladder"
+
+Add richness through sensory details and emotional subtext.
+
+▸▸▸ PRINCIPLE 6: MOORE - VISUAL SYMBOLISM ◂◂◂
+Identify recurring symbolic objects/elements across the story:
+- Objects that represent themes (stuffed animal = comfort, broken toy = loss)
+- Colors that carry meaning (blue for safety, red for danger)
+- Visual motifs that echo through panels (shadows, reflections, repeated shapes)
+
+Track these symbols and note when they appear:
+- First appearance: Establish meaning
+- Recurrence: Reinforce theme
+- Transformation: Show character growth
+
+Example: Blue bunny appears in background when character feels safe (Panel 2, 5, 9)
+
+▸▸▸ PRINCIPLE 7: SPIEGELMAN - EMOTIONAL WEIGHT SIZING ◂◂◂
+Assign emotionalWeight score (1-10) to each beat:
+- 1-3: Transitional moments, minor beats (small panels)
+- 4-7: Standard story progression (medium panels)
+- 8-10: Climax, major realizations, peak emotions (large/splash panels)
+
+This guides panel sizing on page layout:
+- Climax beat (~75% through story): emotionalWeight = 10 (full page potential)
+- Resolution beat: emotionalWeight = 7-8 (satisfying closure)
+- Setup beats: emotionalWeight = 4-6 (establish efficiently)
+
+═══ STEP 2: COMPREHENSIVE SELF-VALIDATION (MUST RUN BEFORE RETURNING JSON) ═══
+
+Before finalizing beats, validate against ALL 7 professional standards:
+
+✓ CHECK 1 - McCLOUD TRANSITION DISTRIBUTION:
+Count transition types between consecutive beats:
+- Action-to-Action: TARGET 60-70%
+- Subject-to-Subject: TARGET 20-25%
+- Scene-to-Scene: TARGET 10-15% MAXIMUM
+
+IF Scene-to-Scene >15%: INSERT bridging Action-to-Action beats.
+IF Action-to-Action <50%: Story feels disconnected - consolidate jumps.
+
+✓ CHECK 2 - EISNER MOMENT CAPTURE:
+- 70%+ of beats MUST show action-in-progress (present tense), NOT completed results
+- Physical states must be ONGOING: "climbing" not "climbed", "falling" not "fell"
+- Emotional moments must be VISIBLE: "eyes widen with realization" not "learned lesson"
+
+IF <70% action-in-progress: REWRITE static beats as dynamic frozen moments.
+
+✓ CHECK 3 - CONTINUITY GAP DETECTION:
+For each consecutive pair, verify: "Can reader understand how we got from Beat N to Beat N+1?"
+
+COMMON GAP PATTERN (MUST FIX):
+❌ Beat 8: "Helper approaches"
+❌ Beat 9: "Character learned lesson"
+MISSING: The actual helping action!
+
+✅ CORRECT: Insert Beat showing helper's hands lifting character, working together.
+
+✓ CHECK 4 - KIRBY CAMERA-EMOTION SYNC:
+Verify camera angles amplify emotions:
+- Defeat → high-angle | Triumph → low-angle | Realization → close-up | Discovery → wide
+IF mismatched: ADJUST cameraAngle field.
+
+✓ CHECK 5 - STAN LEE EMOTIONAL TRANSFORMATION:
+Scan emotional progression for jumps of 2+ levels:
+- Sad → Neutral → Happy = OK (gradual)
+- Sad → Happy = MISSING transformation beat
+- Scared → Curious → Confident = OK
+- Scared → Confident = MISSING realization moment
+
+IF emotional jump >1 level without intermediate beat: INSERT close-up transformation panel.
+
+✓ CHECK 6 - GAIMAN LAYERED RICHNESS:
+Review 5 random beats for layering:
+- Does it have physical description? (what's happening)
+- Does it have sensory details? (how it feels/looks/sounds)
+- Does it have emotional/symbolic depth? (what it means)
+
+IF <60% of beats have all 3 layers: ADD sensory and symbolic details to flat beats.
+
+✓ CHECK 7 - MOORE SYMBOLIC TRACKING:
+Identify if story has recurring symbolic elements (objects, colors, motifs):
+- Are they introduced meaningfully?
+- Do they recur at thematically appropriate moments?
+- Do they transform/resolve by story's end?
+
+IF symbols exist but inconsistent: ADJUST beat descriptions to include them.
+IF no symbols identified but story would benefit: ADD one recurring element (stuffed animal, special object, color motif).
+
+✓ CHECK 8 - SPIEGELMAN EMOTIONAL WEIGHT:
+Review emotionalWeight scores across all beats:
+- Highest weight (9-10) should be at climax (~75% through story)
+- Should have variety: mix of 3-6 (transitions), 6-8 (story beats), 9-10 (peaks)
+- Opening beat should be 6-7 (strong start, not overwhelming)
+- Resolution should be 7-8 (satisfying, not anti-climactic)
+
+IF climax isn't highest weight: ADJUST scores.
+IF too many 9-10 scores (>2): Reduces impact - LOWER some to 7-8.
+
+═══ STEP 3: FINAL VALIDATION STATEMENT ═══
+
+Before returning JSON, confirm ALL checks:
+"All 7 master principles validated:
+✓ Eisner: 70%+ beats show frozen moments in time
+✓ McCloud: Transition distribution optimal (65/20/15)
+✓ Stan Lee: All emotional shifts have visible transformation beats
+✓ Kirby: Camera angles amplify every emotion
+✓ Gaiman: Beats have physical + sensory + symbolic layers
+✓ Moore: Symbolic elements tracked and meaningful
+✓ Spiegelman: Emotional weight scores guide dramatic pacing
+✓ Zero continuity gaps - every action has consequence"
+
+If ANY check fails, FIX in STEP 1, then re-validate.
+Only return JSON after ALL checks pass.
+</instructions>
+
+<critical_requirements>
+Preserve all existing system requirements:
+
+1. ACTION CONTEXT (Prevents literal/confusing illustrations):
+Every characterAction MUST explain PURPOSE/GOAL, not just physical movement.
+- BAD: "picking up stick" → AI draws random stick-holding
+- GOOD: "picking up long stick to use as reaching tool to retrieve ball stuck under bush"
+Include actionContext field explaining WHY action matters.
+
+2. SPEECH BUBBLE POSITIONING (Professional comic standard):
+When hasSpeechBubble is true:
+- speakerName: Character's actual name
+- speakerPosition: "left", "center", or "right"
+- bubblePosition: OPPOSITE speaker (professional convention)
+
+3. CAMERA ANGLE INTELLIGENCE:
+Choose based on STORY MOMENT:
+- Character discovers object → close-up
+- Enters new location → wide/extreme-wide
+- Emotional confrontation → close-up
+- Physical action → low-angle/dutch-angle
+- Feels overwhelmed → high-angle
+- Triumphant → low-angle
+- Climax → close-up
+
+Provide cameraReason explaining choice.
+DIVERSITY: Minimum 4 unique angles, no consecutive duplicates.
+
+4. MULTI-CHARACTER SUPPORT:
+- charactersPresent: Array of names in panel
+- primaryCharacter: Main focus
+- secondaryCharactersInScene: Array of {name, action, position}
+
+5. DIALOGUE QUALITY:
+SHORT (3-8 words), age-appropriate.
+Examples: "What's this?", "I can do this!", "Oh no...", "Yes!"
+</critical_requirements>
+
+<few_shot_example>
+INPUT:
+Story: "Luna the brave rabbit decided to explore the dark forest. She hopped through tall trees nervously. A wise owl perched above warned her about the river ahead. Luna carefully approached the water's edge and saw stepping stones. She took a deep breath, gathered her courage, then leaped between stones with determination. On the far side, Luna discovered a magical garden full of glowing flowers and gasped in wonder, realizing her bravery had led to something beautiful."
+Audience: children
+Panels: 10-14 (optimal 12)
+
+OUTPUT:
 {
-  "storyBeats": [{
-    "beat": "specific moment happening",
-    "characterAction": "exact pose with body parts specified",
-    "emotion": "happy|sad|excited|curious|scared|surprised|determined|peaceful|angry|confused",
-    "environment": "setting with 4+ specific details",
-    "cameraAngle": "close-up|medium|wide|extreme-wide|over-shoulder|low-angle|high-angle|dutch-angle",
-    "cameraReason": "string - WHY this camera angle for this specific story moment",
-    "panelPurpose": "establish|develop|reveal|climax|transition|resolve",
-    "visualPriority": "character-face|character-full|action|environment",
-    "lightingNote": "lighting mood",
-    "dialogue": "character speech or null",
-    "hasSpeechBubble": true|false,
-    "speakerName": "name of character speaking (REQUIRED if hasSpeechBubble is true)",
-    "speakerPosition": "left|center|right - where speaker is positioned in panel",
-    "bubblePosition": "top-left|top-right|bottom-left|bottom-right|top-center - optimal bubble placement",
-    "locationChange": "same|new-location-name (if scene changes)"
-  }],
-  "totalPanels": ${panelCount},
-  "pagesRequired": ${PROFESSIONAL_AUDIENCE_CONFIG[audience].pagesPerStory},
-  "emotionalArc": ["emotion1", "emotion2", "emotion3", "emotion4"],
-  "visualThemes": ["recurring visual elements"]
+  "storyArchetype": "adventure",
+  "emotionalArc": ["curious", "nervous", "cautious", "scared", "determined", "triumphant", "amazed"],
+  "thematicElements": ["courage", "discovery", "perseverance", "wonder"],
+  "symbolicElements": ["glowing_flowers_represent_reward_for_bravery"],
+  "storyBeats": [
+    {
+      "beatNumber": 1,
+      "beat": "Luna rabbit stands at dark forest edge, ears perked with curiosity, gazing at shadowy trees ahead, morning light behind her creating long shadow forward into unknown",
+      "emotion": "curious",
+      "characterAction": "standing alert at forest boundary, weight shifted forward on front paws, body language showing readiness to hop forward",
+      "actionContext": "preparing to enter unknown territory, gathering courage for adventure into the dark forest",
+      "physicalLayer": "Standing upright, ears fully extended, front paws at edge",
+      "sensoryLayer": "Cool morning air, dark shadows contrasting with bright clearing behind, smell of pine and earth",
+      "symbolicLayer": "Threshold between safety and adventure, light (known) vs shadow (unknown)",
+      "cameraAngle": "wide",
+      "cameraReason": "Wide establishing shot shows Luna small against vast forest, emphasizes the journey ahead and makes viewer feel the scale of her courage",
+      "panelType": "establishing_shot",
+      "transitionType": "first_panel",
+      "emotionalWeight": 6,
+      "dialogue": "",
+      "hasSpeechBubble": false,
+      "locationChange": "forest_edge",
+      "symbolicElements": ["long shadow pointing into forest = path of courage"]
+    },
+    {
+      "beatNumber": 2,
+      "beat": "Luna mid-hop between tall dark trees, ears pulled slightly back, eyes wide scanning surroundings, dappled shadows playing across her fur, twigs crackling under feet",
+      "emotion": "nervous",
+      "characterAction": "hopping cautiously through dense trees, body tense, glancing side to side with each hop",
+      "actionContext": "navigating unfamiliar forest, alert for dangers while maintaining forward progress despite fear",
+      "physicalLayer": "Mid-hop, body arched, muscles tense, ears swiveling",
+      "sensoryLayer": "Dark shadows all around, sounds of forest creaking, rough bark visible on nearby trees, filtered sunlight",
+      "symbolicLayer": "Moving through uncertainty, surrounded but not stopped, courage overcoming fear",
+      "cameraAngle": "medium",
+      "cameraReason": "Medium shot captures Luna's nervous body language and oppressive dark surroundings while keeping her as focal point",
+      "panelType": "medium_shot",
+      "transitionType": "action_to_action",
+      "emotionalWeight": 5,
+      "dialogue": "The trees are so tall...",
+      "hasSpeechBubble": true,
+      "speechBubbleStyle": "thought",
+      "speakerName": "Luna",
+      "speakerPosition": "center",
+      "bubblePosition": "top-center",
+      "locationChange": "same"
+    },
+    {
+      "beatNumber": 3,
+      "beat": "Wise owl with enormous round amber eyes perches on thick branch directly above Luna, one wing extended pointing toward rushing river in distance, moonlight catching feathers",
+      "emotion": "cautious",
+      "characterAction": "looking up at owl from below, ears forward in alert listening position, body still, absorbing warning",
+      "actionContext": "receiving crucial warning about danger ahead, processing information to decide how to proceed safely",
+      "physicalLayer": "Head tilted back, eyes locked on owl, paws planted, tail still",
+      "sensoryLayer": "Owl's deep wise voice, river sounds faintly audible in distance, cool breeze rustling leaves",
+      "symbolicLayer": "Wisdom offered to courage, guidance from experience, moment of choice",
+      "cameraAngle": "low_angle",
+      "cameraReason": "Low angle looking up makes owl appear wise and important from Luna's perspective, emphasizes power dynamic and gravity of warning",
+      "panelType": "medium_shot",
+      "transitionType": "subject_to_subject",
+      "emotionalWeight": 6,
+      "dialogue": "Careful of the river, little one",
+      "hasSpeechBubble": true,
+      "speechBubbleStyle": "speech",
+      "speakerName": "Owl",
+      "speakerPosition": "right",
+      "bubblePosition": "top-left",
+      "locationChange": "same"
+    },
+    {
+      "beatNumber": 4,
+      "beat": "Luna crouched low at river's rocky edge, peering down at water rushing over smooth gray stepping stones, mist rising from splashing water, distance between stones looking vast",
+      "emotion": "scared",
+      "characterAction": "crouched with body low to ground, ears flat against head showing fear, eyes calculating distance between stones with visible worry",
+      "actionContext": "confronting the actual challenge warned about, assessing whether courage is enough to attempt crossing",
+      "physicalLayer": "Body compressed, muscles coiled, breathing quick, paws gripping rocks",
+      "sensoryLayer": "Cold mist on face, loud rushing water sounds, stones look slippery and wet, spray dampening fur",
+      "symbolicLayer": "Facing fear directly, the gap between wanting to be brave and taking brave action",
+      "cameraAngle": "high_angle",
+      "cameraReason": "High angle shows Luna looking small and vulnerable facing the challenge, emphasizes danger and her fear",
+      "panelType": "medium_shot",
+      "transitionType": "action_to_action",
+      "emotionalWeight": 7,
+      "dialogue": "It's so far...",
+      "hasSpeechBubble": true,
+      "speechBubbleStyle": "thought",
+      "speakerName": "Luna",
+      "speakerPosition": "center",
+      "bubblePosition": "top-center",
+      "locationChange": "river_edge"
+    },
+    {
+      "beatNumber": 5,
+      "beat": "CLOSE-UP: Luna's face filling frame, eyes squeezed shut for moment, then opening with fierce determination, whiskers trembling, jaw set, visible transformation from scared to resolved",
+      "emotion": "determined",
+      "characterAction": "taking deep breath, steeling nerves, internal shift from fear to courage visible in tightening facial expression",
+      "actionContext": "making the conscious choice to be brave despite fear, the transformation moment where courage wins",
+      "physicalLayer": "Face muscles tighten, eyes go from fearful to determined, breath held then released",
+      "sensoryLayer": "Heart pounding in chest, cold mist on face, sound of rushing water fading as focus narrows",
+      "symbolicLayer": "THE TRANSFORMATION MOMENT - fear acknowledged but overcome, choice to act despite uncertainty",
+      "cameraAngle": "extreme_close_up",
+      "cameraReason": "Extreme close-up on face captures the exact moment of internal transformation, the turning point from fear to courage - Stan Lee principle of showing emotional shifts",
+      "panelType": "reaction_shot",
+      "transitionType": "moment_to_moment",
+      "emotionalWeight": 9,
+      "dialogue": "I can do this!",
+      "hasSpeechBubble": true,
+      "speechBubbleStyle": "speech",
+      "speakerName": "Luna",
+      "speakerPosition": "center",
+      "bubblePosition": "top-center",
+      "locationChange": "same"
+    },
+    {
+      "beatNumber": 6,
+      "beat": "Luna frozen mid-leap between stepping stones, all four legs extended in powerful jump, water splashing dramatically below, body forming perfect arc against sky, face showing intense concentration",
+      "emotion": "determined",
+      "characterAction": "airborne between stones, legs stretched to maximum, eyes locked on target stone, entire body committed to jump",
+      "actionContext": "executing plan to cross river, using newfound courage to overcome fear with decisive action",
+      "physicalLayer": "Full extension mid-air, muscles engaged, claws extended for landing, tail streaming behind",
+      "sensoryLayer": "Wind rushing past ears, spray of water below, sound of water loud, feeling of weightlessness",
+      "symbolicLayer": "Courage in action, the leap of faith, commitment without guarantee",
+      "cameraAngle": "eye_level",
+      "cameraReason": "Eye level captures the dynamic moment of action and determination, reader experiences jump WITH Luna",
+      "panelType": "action_shot",
+      "transitionType": "action_to_action",
+      "emotionalWeight": 8,
+      "dialogue": "",
+      "hasSpeechBubble": false,
+      "locationChange": "same"
+    },
+    {
+      "beatNumber": 7,
+      "beat": "Luna lands safely on far bank, body rising up tall with pride, ears forward in triumph, morning sun breaking through trees illuminating her from behind like spotlight",
+      "emotion": "triumphant",
+      "characterAction": "standing tall on far riverbank, chest puffed out, head held high, moment of victory and self-realization",
+      "actionContext": "recognizing successful completion of challenge, feeling pride in courage that led to achievement",
+      "physicalLayer": "Standing at full height, weight balanced confidently, posture proud",
+      "sensoryLayer": "Warm sunlight on face, ground solid beneath feet, quieter without river noise, victorious feeling",
+      "symbolicLayer": "Courage rewarded, crossing from doubt to confidence, light representing triumph over shadow/fear",
+      "cameraAngle": "low_angle",
+      "cameraReason": "Low angle makes Luna look heroic and powerful, celebrating her triumph - Kirby principle of camera amplifying emotion",
+      "panelType": "reaction_shot",
+      "transitionType": "action_to_action",
+      "emotionalWeight": 8,
+      "dialogue": "I did it!",
+      "hasSpeechBubble": true,
+      "speechBubbleStyle": "speech",
+      "speakerName": "Luna",
+      "speakerPosition": "left",
+      "bubblePosition": "top-right",
+      "locationChange": "far_riverbank"
+    },
+    {
+      "beatNumber": 8,
+      "beat": "Luna frozen in complete awe inside magical garden entrance, mouth open in gasp, eyes huge and sparkling, surrounded by countless glowing blue flowers that mirror her wonder, flowers pulsing with soft light like heartbeat",
+      "emotion": "amazed",
+      "characterAction": "standing perfectly still in overwhelming wonder, every muscle frozen except eyes which are wide with astonishment",
+      "actionContext": "experiencing reward for bravery - the magical discovery that comes from having courage to explore unknown",
+      "physicalLayer": "Body completely still, eyes at maximum width, ears fully forward, breathing stopped mid-breath",
+      "sensoryLayer": "Soft glowing light washing over fur, sweet floral scent, warm peaceful air, gentle humming sound from flowers, magical tingle in air",
+      "symbolicLayer": "Reward for courage = beauty and wonder, glowing flowers represent the light found by being brave, full circle from darkness to light",
+      "cameraAngle": "close_up",
+      "cameraReason": "Close-up on face captures peak emotional moment of wonder and amazement, while flowers visible in background show the reward",
+      "panelType": "reaction_shot",
+      "transitionType": "scene_to_scene",
+      "emotionalWeight": 10,
+      "dialogue": "It's... beautiful!",
+      "hasSpeechBubble": true,
+      "speechBubbleStyle": "speech",
+      "speakerName": "Luna",
+      "speakerPosition": "left",
+      "bubblePosition": "top-right",
+      "locationChange": "magical_garden",
+      "symbolicElements": ["glowing_blue_flowers = reward_for_courage, mirror_Luna's_inner_light"]
+    }
+  ],
+  "validationResults": {
+    "eisnerMomentCapture": 100,
+    "mccloudTransitions": {
+      "actionToAction": 71,
+      "subjectToSubject": 14,
+      "sceneToScene": 14,
+      "momentToMoment": 14
+    },
+    "stanLeeTransformation": 100,
+    "kirbyCameraEmotion": 100,
+    "gaimanLayering": 100,
+    "mooreSymbolism": 100,
+    "spiegelmanWeighting": 100,
+    "continuityGaps": 0,
+    "allChecksPassed": true
+  },
+  "totalPanels": 8,
+  "pagesRequired": 3
 }
 
-DIALOGUE GENERATION (CRITICAL - ${dialogueTarget} of panels MUST have dialogue):
-- Minimum ${minDialoguePanels} panels MUST have hasSpeechBubble: true
-- If story has no dialogue, GENERATE natural speech for emotional moments
-- Dialogue types by emotion:
-  * Wonder/Discovery: "Wow!", "What's this?", "I can't believe it!"
-  * Determination: "I can do this!", "Here goes nothing!", "I won't give up!"
-  * Fear/Concern: "Oh no...", "What if...?", "I'm scared, but..."
-  * Joy/Triumph: "Yes!", "I did it!", "This is amazing!"
-  * Kindness: "Here, take this", "Let me help you", "We're in this together"
-- Keep dialogue SHORT (3-8 words per bubble)
-- Match dialogue to character's age and audience
+VALIDATION NOTES:
+✓ EISNER: 100% - All beats show frozen moments ("mid-hop", "frozen mid-leap", "standing perfectly still")
+✓ McCLOUD: 71% Action-to-Action (beats 2,4,6,7,8), 14% Subject-to-Subject (beat 3), 14% Moment-to-Moment (beat 5), 14% Scene-to-Scene (beat 8)
+✓ STAN LEE: 100% - Emotional jump from scared (beat 4) to determined (beat 6) has transformation beat (beat 5: close-up of internal shift)
+✓ KIRBY: 100% - scared=high-angle, determined=close-up, triumphant=low-angle, amazed=close-up
+✓ GAIMAN: 100% - Every beat has physical + sensory + symbolic layers
+✓ MOORE: 100% - Symbolic elements tracked: shadow (beat 1), light vs darkness theme, glowing flowers (beat 8)
+✓ SPIEGELMAN: 100% - Weight progression: 6→5→6→7→9→8→8→10 (climax at beat 8)
+✓ CONTINUITY: 0 gaps - Complete flow from forest edge → through trees → owl warns → river edge → transformation → leap → far bank → garden
+</few_shot_example>
 
-SPEECH BUBBLE POSITIONING (CRITICAL - PROFESSIONAL COMIC STANDARD):
-When hasSpeechBubble is true, you MUST also provide:
-• speakerName: Which character is speaking this dialogue (use their actual name)
-• speakerPosition: Where the speaker will be in the panel composition:
-  - "left" = speaker on left third of panel
-  - "center" = speaker in middle of panel
-  - "right" = speaker on right third of panel
-• bubblePosition: Place bubble OPPOSITE the speaker (professional comic convention):
-  - Speaker on LEFT → bubblePosition: "top-right"
-  - Speaker on RIGHT → bubblePosition: "top-left"
-  - Speaker in CENTER → bubblePosition: "top-center"
+<output_format>
+Return ONLY valid JSON matching this EXACT schema:
 
-CAMERA ANGLE INTELLIGENCE (CRITICAL - STORY DRIVES VISUALS):
-Choose camera angles based on WHAT IS HAPPENING IN THE STORY, not arbitrary rotation.
+{
+  "storyArchetype": string (REQUIRED),
+  "emotionalArc": string[] (REQUIRED),
+  "thematicElements": string[] (REQUIRED),
+  "symbolicElements": string[] (NEW - recurring symbols/motifs),
+  "storyBeats": [
+    {
+      "beatNumber": number (REQUIRED),
+      "beat": string (REQUIRED - rich multi-layered moment),
+      "emotion": string (REQUIRED),
+      "characterAction": string (REQUIRED - physical + purpose),
+      "actionContext": string (REQUIRED - WHY doing action),
+      "physicalLayer": string (NEW - body doing),
+      "sensoryLayer": string (NEW - character senses),
+      "symbolicLayer": string (NEW - emotional/thematic meaning),
+      "cameraAngle": string (REQUIRED),
+      "cameraReason": string (REQUIRED - why this angle),
+      "panelType": string (REQUIRED),
+      "transitionType": string (REQUIRED),
+      "emotionalWeight": number (NEW - 1-10 for panel sizing),
+      "dialogue": string,
+      "hasSpeechBubble": boolean (REQUIRED),
+      "speechBubbleStyle": string | null,
+      "speakerName": string (if hasSpeechBubble=true),
+      "speakerPosition": string (if hasSpeechBubble=true),
+      "bubblePosition": string (if hasSpeechBubble=true),
+      "locationChange": string (REQUIRED),
+      "visualPriority": string,
+      "panelPurpose": string,
+      "environment": string,
+      "symbolicElements": string[] (if symbols in beat),
+      "charactersPresent": string[] (if multi-character),
+      "primaryCharacter": string (if multi-character),
+      "secondaryCharactersInScene": array (if applicable)
+    }
+  ],
+  "validationResults": {
+    "eisnerMomentCapture": number (0-100, must be ≥70),
+    "mccloudTransitions": {
+      "actionToAction": number,
+      "subjectToSubject": number,
+      "sceneToScene": number,
+      "momentToMoment": number
+    },
+    "stanLeeTransformation": number (0-100, 100 if all jumps have transformation),
+    "kirbyCameraEmotion": number (0-100, must be ≥85),
+    "gaimanLayering": number (0-100, % with all 3 layers),
+    "mooreSymbolism": number (0-100, symbolic consistency),
+    "spiegelmanWeighting": number (0-100, weight distribution),
+    "continuityGaps": number (must be 0),
+    "allChecksPassed": boolean (must be true)
+  },
+  "totalPanels": number,
+  "pagesRequired": number
+}
 
-NARRATIVE-TO-CAMERA MAPPING:
-• Character discovers/examines small object → "close-up" (show detail and wonder)
-• Character enters NEW location for first time → "wide" or "extreme-wide" (establish space)
-• Emotional confrontation or realization → "close-up" (capture emotion)
-• Character performing physical action (running, jumping, climbing) → "low-angle" or "dutch-angle" (dynamic energy)
-• Character feeling small, overwhelmed, or scared → "high-angle" (vulnerability)
-• Character feeling powerful, triumphant → "low-angle" (heroic)
-• Two characters talking → "over-shoulder" or alternating "medium" shots
-• Quiet, intimate moment → "close-up" or "medium" (personal)
-• Danger approaching from distance → "wide" (show threat and character)
-• Character hiding or sneaking → "low-angle" or "over-shoulder" (tension)
-• Story climax/most important moment → "close-up" (maximum emotional impact)
-• Resolution/ending → "medium" or "wide" (closure, context)
+CRITICAL OUTPUT RULES:
+- No markdown code blocks (no \`\`\`json)
+- No preamble or explanation
+- Just pure valid JSON
+- All REQUIRED fields must be present
+- validationResults.allChecksPassed MUST be true
+- NEW fields (physicalLayer, sensoryLayer, symbolicLayer, emotionalWeight) MUST be present
+</output_format>
 
-ENVIRONMENT-DRIVEN ANGLES:
-• Indoor/confined space → prefer "medium" and "close-up" (intimacy)
-• Outdoor/vast space → include "wide" and "extreme-wide" (scope)
-• When locationChange occurs → MUST use "wide" or "extreme-wide" for that panel
+<safety_constraints>
+Content MUST be appropriate for ${audience} audience:
 
-DIVERSITY REQUIREMENT:
-• Minimum 4 unique camera angles across all panels
-• NO two consecutive panels with identical cameraAngle
-• First panel should usually be "wide" (establishing)
-• Climax panel (70-85% through) should be "close-up" or dramatic angle
+CHILDREN (age 4-10):
+- FORBIDDEN: Violence, weapons, scary monsters, death, injury, adult themes, dark imagery
+- REQUIRED: Bright environments, safe situations, positive resolutions, trustworthy adults
+- Challenges exciting NOT terrifying
 
-For each panel, provide cameraReason explaining your choice based on the story moment.
+YOUNG ADULTS (age 11-17):
+- ALLOWED: Mild conflict, disappointment, complex relationships, moral challenges
+- FORBIDDEN: Graphic violence, adult content, nihilistic themes
+- REQUIRED: Character growth, hope, meaningful resolution
 
-GOOD DIALOGUE DISTRIBUTION (8 panels, children):
-Panel 1: hasSpeechBubble: false (establishing shot)
-Panel 2: hasSpeechBubble: true, dialogue: "What's that glow?" (discovery)
-Panel 3: hasSpeechBubble: true, dialogue: "It's... beautiful!" (wonder)
-Panel 4: hasSpeechBubble: false (action shot)
-Panel 5: hasSpeechBubble: true, dialogue: "Can I help you?" (kindness)
-Panel 6: hasSpeechBubble: true, dialogue: "I have an idea!" (determination)
-Panel 7: hasSpeechBubble: true, dialogue: "It's working!" (climax)
-Panel 8: hasSpeechBubble: false (resolution - let art speak)
-= 5/8 panels with dialogue (62%) ✓
+ADULTS (age 18+):
+- ALLOWED: Complex psychology, moral ambiguity, realistic consequences, mature themes
+- REQUIRED: Sophisticated storytelling, thematic depth, intellectual resonance
+- Follow professional comic book standards (not explicit/gratuitous)
+</safety_constraints>
 
-BAD DIALOGUE DISTRIBUTION:
-Panel 1-7: hasSpeechBubble: false
-Panel 8: hasSpeechBubble: true, dialogue: "The end"
-= 1/8 panels with dialogue (12%) ✗ UNACCEPTABLE
-
-GOOD PANEL SEQUENCE (diverse, dynamic):
-Panel 1: { "beat": "Maya discovers glowing seed in backyard", "characterAction": "kneeling, brushing dirt with right hand, eyes wide", "cameraAngle": "medium", "environment": "sunny backyard with fence, tomato plants, terra cotta pots", "dialogue": null, "hasSpeechBubble": false }
-Panel 2: { "beat": "Maya holds the seed up to examine it", "characterAction": "sitting back on heels, seed cupped in both palms, face lit by golden glow", "cameraAngle": "close-up", "environment": "same backyard, seed's glow illuminating face", "dialogue": "What are you, little seed?", "hasSpeechBubble": true }
-Panel 3: { "beat": "Magical beanstalk erupts from soil at night", "characterAction": "stumbling backward, arms raised in surprise, mouth open", "cameraAngle": "low-angle", "environment": "same backyard now moonlit, beanstalk towering, stars visible", "dialogue": "Whoa!", "hasSpeechBubble": true }
-Panel 4: { "beat": "Maya begins climbing the massive beanstalk", "characterAction": "gripping vine with both hands, one foot on leaf, looking up determinedly", "cameraAngle": "wide", "environment": "beanstalk surrounded by clouds, house tiny below", "dialogue": "Here I go!", "hasSpeechBubble": true, "locationChange": "new-climbing beanstalk" }
-
-BAD PANEL SEQUENCE (no dialogue, repetitive - AVOID):
-Panel 1: { "beat": "Maya in garden", "characterAction": "standing", "cameraAngle": "medium", "dialogue": null, "hasSpeechBubble": false }
-Panel 2: { "beat": "Maya sees vegetables", "characterAction": "looking", "cameraAngle": "medium", "dialogue": null, "hasSpeechBubble": false }
-↑ NO DIALOGUE = SILENT COMIC = BORING
-
-PANEL DIVERSITY RULES (CRITICAL):
-1. Panel N+1 must show consequence of Panel N (sequential continuity)
-2. NO two consecutive panels with same cameraAngle
-3. NO two consecutive panels with same characterAction verb (standing→kneeling→climbing→running)
-4. characterAction MUST specify: posture, which limbs doing what, facial expression
-5. environment must have 4+ specific objects/features
-6. If story changes location, set locationChange to new location name
-7. Each panel must be VISUALLY DISTINCT from the previous panel
-8. AT LEAST ${minDialoguePanels} panels MUST have hasSpeechBubble: true with dialogue
-
-CAMERA ANGLE ROTATION (follow this pattern):
-Panel 1: wide (establishing)
-Panel 2: medium or close-up
-Panel 3: low-angle or high-angle
-Panel 4: over-shoulder or wide
-Panel 5: close-up (emotion)
-Panel 6: medium or wide
-Panel 7: dramatic angle (low/high/dutch)
-Panel 8: medium or close-up (resolution)
-
-PANEL DISTRIBUTION:
-- Panel 1: Wide establishing shot (world + tone)
-- Panels 2-${Math.floor(panelCount * 0.3)}: Setup and character introduction
-- Panels ${Math.floor(panelCount * 0.3) + 1}-${Math.floor(panelCount * 0.7)}: Rising action and conflict
-- Panels ${Math.floor(panelCount * 0.7) + 1}-${panelCount - 1}: Climax sequence
-- Panel ${panelCount}: Resolution with emotional payoff
-
-EMOTIONAL ARC: ${emotionalProgression}
-
-Return ONLY valid JSON. No markdown, no explanation.`;
+Now analyze the story and return the validated JSON with all 7 master principles applied.`;
 
       const response = await this.claudeIntegration.analyzeStoryStructure(
         story,
@@ -1952,6 +2475,37 @@ Return ONLY valid JSON. No markdown, no explanation.`;
         
         this.log('info', `✅ Story analysis parsed successfully with ${parsed.storyBeats.length} beats`);
 
+        // Enhanced validation logging for all 7 master principles
+        if (parsed.validationResults) {
+          if (parsed.validationResults.allChecksPassed) {
+            console.log('✅ WORLD-CLASS VALIDATION: All 7 master principles passed', {
+              eisner: `${parsed.validationResults.eisnerMomentCapture}%`,
+              mccloud: `${parsed.validationResults.mccloudTransitions?.actionToAction || 0}% A2A`,
+              stanLee: `${parsed.validationResults.stanLeeTransformation}%`,
+              kirby: `${parsed.validationResults.kirbyCameraEmotion}%`,
+              gaiman: `${parsed.validationResults.gaimanLayering}%`,
+              moore: `${parsed.validationResults.mooreSymbolism}%`,
+              spiegelman: `${parsed.validationResults.spiegelmanWeighting}%`,
+              gaps: parsed.validationResults.continuityGaps
+            });
+          } else {
+            console.warn('⚠️ Some validation checks below threshold:', {
+              eisner: parsed.validationResults.eisnerMomentCapture >= 70 ? '✓' : '✗',
+              mccloud: (parsed.validationResults.mccloudTransitions?.sceneToScene || 0) <= 15 ? '✓' : '✗',
+              stanLee: parsed.validationResults.stanLeeTransformation >= 90 ? '✓' : '✗',
+              kirby: parsed.validationResults.kirbyCameraEmotion >= 85 ? '✓' : '✗',
+              gaiman: parsed.validationResults.gaimanLayering >= 60 ? '✓' : '✗',
+              moore: parsed.validationResults.mooreSymbolism >= 70 ? '✓' : '✗',
+              spiegelman: parsed.validationResults.spiegelmanWeighting >= 80 ? '✓' : '✗'
+            });
+          }
+        }
+
+        // Log symbolic elements if found
+        if (parsed.symbolicElements && parsed.symbolicElements.length > 0) {
+          console.log('🎨 Symbolic elements tracked:', parsed.symbolicElements.join(', '));
+        }
+
         // Add previousBeatContext to each beat for sequential flow
         for (let i = 1; i < parsed.storyBeats.length; i++) {
           parsed.storyBeats[i].previousBeatContext = parsed.storyBeats[i - 1].beat;
@@ -1979,7 +2533,12 @@ Return ONLY valid JSON. No markdown, no explanation.`;
         dialoguePanels: Math.floor(panelCount * 0.4),
         speechBubbleDistribution: { standard: 60, thought: 20, shout: 20 },
         emotionalArc: parsed.emotionalArc || ['curious', 'engaged', 'challenged', 'triumphant'],
-        cinematicQuality: true
+        cinematicQuality: true,
+        // NEW: 7 Master Principles data
+        storyArchetype: parsed.storyArchetype,
+        thematicElements: parsed.thematicElements,
+        symbolicElements: parsed.symbolicElements,
+        validationResults: parsed.validationResults
       };
       
       this.log('info', `✅ Created ${storyAnalysis.storyBeats.length} CINEMATIC story beats with rich visual detail`);

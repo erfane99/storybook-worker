@@ -537,6 +537,17 @@ export interface StoryBeat {
     action?: string;
     position?: string;                // e.g., "left", "right", "background"
   }[];
+  // NEW: Gaiman layered storytelling (7 Master Principles)
+  physicalLayer?: string;             // What character's body is doing
+  sensoryLayer?: string;              // What they see/hear/feel/smell (environment texture)
+  symbolicLayer?: string;             // What it MEANS (internal state, theme)
+  // NEW: Spiegelman emotional weight (7 Master Principles)
+  emotionalWeight?: number;           // 1-10 scale for panel sizing (climax = 10, transitions = 3-5)
+  // NEW: Panel metadata
+  beatNumber?: number;                // Sequential beat number
+  panelType?: string;                 // establishing_shot, medium_shot, reaction_shot, action_shot
+  transitionType?: string;            // action_to_action, subject_to_subject, scene_to_scene, moment_to_moment
+  symbolicElements?: string[];        // Moore symbolic elements present in this beat
   [key: string]: any;
 }
 
@@ -558,6 +569,25 @@ export interface StoryAnalysis {
     characterGrowthIntegrated: boolean;
   };
   cinematicQuality?: boolean;
+  // NEW: Moore symbolism (7 Master Principles)
+  symbolicElements?: string[];        // Recurring symbols/motifs tracked throughout story
+  // NEW: Comprehensive validation from all 7 master principles
+  validationResults?: {
+    eisnerMomentCapture: number;      // 0-100, % of beats showing frozen moments (must be ≥70)
+    mccloudTransitions: {
+      actionToAction: number;         // Target: 60-70%
+      subjectToSubject: number;       // Target: 20-25%
+      sceneToScene: number;           // Target: 10-15% MAX
+      momentToMoment: number;         // Special transformation beats
+    };
+    stanLeeTransformation: number;    // 0-100, 100 if all emotional jumps have transformation beats
+    kirbyCameraEmotion: number;       // 0-100, camera angles amplify emotions (must be ≥85)
+    gaimanLayering: number;           // 0-100, % of beats with all 3 layers
+    mooreSymbolism: number;           // 0-100, symbolic element consistency
+    spiegelmanWeighting: number;      // 0-100, emotional weight distribution quality
+    continuityGaps: number;           // Count of continuity gaps (must be 0)
+    allChecksPassed: boolean;         // True only if all validations pass
+  };
 }
 
 // ===== ENHANCED QUALITY METRICS =====
