@@ -1670,6 +1670,19 @@ async cartoonizeImage(options: CartoonizeOptions): Promise<AsyncResult<Cartooniz
 Create a ${audience} ${genre} story for ${characterProfiles.split('\n')[0] || 'the character'}. The story will become a ${config.minPanels}-${config.maxPanels} panel comic book, so write with visual storytelling and panel-to-panel flow in mind. Embed all 7 master comic creator principles PROACTIVELY into the narrative structure.
 </objective>
 
+<panel_requirement>
+CRITICAL: Create a story that naturally contains ${config.minPanels}-${config.maxPanels} distinct narrative moments.
+Target: ${config.totalPanels} story beats (distinct visual moments).
+
+Structure your story to have EXACTLY this many key events:
+- Children: 10-14 narrative moments (aim for 12)
+- Young Adults: 18-22 narrative moments (aim for 20)  
+- Adults: 24-30 narrative moments (aim for 27)
+
+Each narrative moment = one panel in the comic.
+Plan your story arc to naturally fit this panel budget.
+</panel_requirement>
+
 <genre_framework>
 GENRE: ${genre.toUpperCase()}
 ${genreConfig.structure}
@@ -1792,6 +1805,14 @@ CHILDREN'S STORY SPECIFIC RULES:
   ✓ "From that day on, Leo wasn't scared of the dark. The stars were his friends."
   ✗ "And the magic would always be there" (too abstract)
   ✗ "In that moment, everything changed" (too vague)
+
+PANEL BUDGET AWARENESS:
+You have 10-14 panels to tell this story. Plan accordingly:
+- Setup: 2-3 panels
+- Rising action: 4-6 panels
+- Climax: 1-2 panels
+- Resolution: 2-3 panels
+DO NOT create overly simple stories. Each panel needs a distinct story moment.
 ` : ''}
 </story_structure>
 
@@ -1935,6 +1956,15 @@ ${story}
 
 <instructions>
 Generate story beats following this comprehensive three-step process:
+
+PANEL COUNT FLEXIBILITY:
+Generate ${config.minPanels}-${config.maxPanels} beats based on story's natural complexity.
+- DO NOT force-pad short stories with filler beats
+- DO NOT artificially compress complex stories
+- Let story content determine beat count within the range
+- Aim for ${config.totalPanels} beats if story naturally supports it
+- Accept ${config.minPanels} beats for simpler stories
+- Use up to ${config.maxPanels} beats for complex narratives
 
 ═══ STEP 1: INITIAL BEAT GENERATION WITH 7 MASTER PRINCIPLES ═══
 
@@ -2564,10 +2594,23 @@ private enrichStoryBeats(beats: any[], targetCount: number, audience: AudienceTy
     throw new Error('QUALITY FAILURE: No story beats provided by AI. Cannot proceed without real story analysis. Job must fail.');
   }
   
-  // Validate we have enough beats - NO PADDING with generic content
-  if (beats.length < targetCount) {
-    throw new Error(`QUALITY FAILURE: AI provided ${beats.length} story beats but ${targetCount} are required. AI must provide complete story analysis. Job must fail.`);
+  // Get config for range validation (Design by Contract principle)
+  const config = PROFESSIONAL_AUDIENCE_CONFIG[audience];
+  const minRequired = config.minPanels;
+  const maxAllowed = config.maxPanels;
+
+  // Validate beat count is within acceptable range - NO PADDING with generic content
+  if (beats.length < minRequired) {
+    throw new Error(`QUALITY FAILURE: AI provided ${beats.length} story beats but minimum ${minRequired} are required for ${audience} audience. Story is too simple. AI must create more complex narrative. Job must fail.`);
   }
+
+  if (beats.length > maxAllowed) {
+    console.warn(`⚠️ AI provided ${beats.length} beats, exceeding maximum ${maxAllowed}. Trimming to ${maxAllowed} beats.`);
+    beats = beats.slice(0, maxAllowed);
+  }
+
+  // Update targetCount to actual beat count (within range)
+  targetCount = beats.length;
   
   // Validate and map beats - fail if critical fields are missing
   return beats.slice(0, targetCount).map((beat, index) => {

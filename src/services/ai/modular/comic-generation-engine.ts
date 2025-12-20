@@ -2365,6 +2365,19 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
       throw new Error('QUALITY FAILURE: Story beats array is empty or invalid. AI must provide real story beats. Job must fail.');
     }
 
+    // Design by Contract: Validate beat count is within acceptable range
+    const minRequired = config.minPanels;
+    const maxAllowed = config.maxPanels;
+    
+    if (beats.length < minRequired) {
+      throw new Error(`QUALITY FAILURE: Story has ${beats.length} beats but requires minimum ${minRequired} beats. Story is too simple. AI must create more complex narrative. Job must fail.`);
+    }
+    
+    if (beats.length > maxAllowed) {
+      console.warn(`⚠️ Story has ${beats.length} beats, exceeding maximum ${maxAllowed}. Trimming to ${maxAllowed} beats.`);
+      beats = beats.slice(0, maxAllowed);
+    }
+
     // Validate each beat has required fields - fail if any are missing
     const validatedBeats = beats.map((beat, index) => {
       if (!beat.beat || typeof beat.beat !== 'string' || beat.beat.length < 10) {
