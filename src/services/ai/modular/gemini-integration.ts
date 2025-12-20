@@ -1422,7 +1422,96 @@ this.logger.log('✅ Found image in response part', {
   }
 
   /**
+   * Determine maximum retry attempts based on error type (Design by Contract)
+   * 
+   * Error-specific retry strategy:
+   * - 503 Service Unavailable: 3 total attempts (2 retries) - transient API overload
+   * - Network errors: 2 total attempts (1 retry) - transient connection issues
+   * - All other errors: 1 attempt (0 retries) - fail fast for permanent errors
+   */
+  private getMaxRetriesForError(error: any): number {
+    // 503 Service Unavailable - Gemini API temporarily overloaded
+    // Most common transient error, worth retrying aggressively
+    if (error instanceof AIServiceUnavailableError && error.details?.httpStatus === 503) {
+      return 3; // Total 3 attempts for 503 errors
+    }
+    
+    // Network errors - connection issues, DNS failures, etc.
+    // Usually transient, worth one retry
+    if (error instanceof AINetworkError) {
+      return 2; // Total 2 attempts for network errors
+    }
+    
+    // Rate limit errors - need to wait, but worth retrying
+    if (error instanceof AIRateLimitError) {
+      return 2; // Total 2 attempts for rate limits
+    }
+    
+    // All other errors (auth, content policy, validation, timeout, 400/401/403)
+    // These are permanent errors - fail immediately
+    return 1; // No retries for permanent errors
+  }
+
+  /**
+   * Calculate retry delay with error-specific exponential backoff and jitter
+   * 
+   * Strategy:
+   * - 503 errors: Aggressive backoff (2s, 4s, 8s) - API needs recovery time
+   * - Network errors: Quick retry (2-3s) - transient blips resolve fast
+   * - Rate limits: Longer backoff (3s, 6s) - respect API quotas
+   * - Default: Standard exponential (2s base, max 30s)
+   * 
+   * All delays include 30% random jitter to prevent thundering herd
+   */
+  private calculateRetryDelay(error: any, attempt: number): number {
+    let baseDelay: number;
+    let multiplier: number;
+    let maxDelay: number;
+    
+    // 503 Service Unavailable - aggressive backoff, API is overloaded
+    if (error instanceof AIServiceUnavailableError && error.details?.httpStatus === 503) {
+      baseDelay = 2000;  // Start at 2 seconds
+      multiplier = 2;     // Double each attempt: 2s, 4s, 8s
+      maxDelay = 15000;   // Cap at 15 seconds
+    }
+    // Network errors - quick retry, usually resolves fast
+    else if (error instanceof AINetworkError) {
+      baseDelay = 2000;   // 2 seconds base
+      multiplier = 1.5;   // Slower growth: 2s, 3s
+      maxDelay = 5000;    // Cap at 5 seconds
+    }
+    // Rate limit errors - respect API quotas with longer waits
+    else if (error instanceof AIRateLimitError) {
+      baseDelay = 3000;   // 3 seconds base
+      multiplier = 2;     // Double: 3s, 6s
+      maxDelay = 60000;   // Cap at 60 seconds (rate limits can be long)
+    }
+    // Default exponential backoff
+    else {
+      baseDelay = 2000;
+      multiplier = 2;
+      maxDelay = 30000;
+    }
+    
+    // Calculate delay with exponential growth
+    // attempt is 1-indexed, so attempt-1 gives us 0, 1, 2... for powers
+    const exponentialDelay = baseDelay * Math.pow(multiplier, attempt - 1);
+    let delay = Math.min(exponentialDelay, maxDelay);
+    
+    // Add 30% random jitter to prevent thundering herd
+    const jitter = Math.random() * 0.3 * delay;
+    delay = Math.round(delay + jitter);
+    
+    return delay;
+  }
+
+  /**
    * Generate with retry logic and circuit breaker
+   * 
+   * Uses error-specific retry strategy:
+   * - 503 errors: Up to 3 attempts with aggressive backoff
+   * - Network errors: Up to 2 attempts with quick retry
+   * - Other errors: Fail immediately (no retries)
    */
   private async generateWithRetry<T>(
     request: GeminiRequest,
@@ -1433,7 +1522,11 @@ this.logger.log('✅ Found image in response part', {
     let lastError: any;
     const breaker = this.circuitBreakers.get('generateContent');
     
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // Start with initial maxRetries, will be dynamically adjusted based on error type
+    let currentMaxRetries = maxRetries;
+    let attempt = 1;
+    
+    while (attempt <= currentMaxRetries) {
       try {
         // Check circuit breaker
         if (breaker && breaker.state === 'open') {
@@ -1453,19 +1546,10 @@ this.logger.log('✅ Found image in response part', {
           }
         }
         
-        // Apply retry delay
-        if (attempt > 1) {
-          const baseDelay = 1000;
-          const maxDelay = 30000;
-          let delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
-          const jitter = Math.random() * 0.3 * delay;
-          delay = Math.round(delay + jitter);
-          
-          if (lastError instanceof AIRateLimitError) {
-            delay = Math.min(delay * 2, 60000);
-          }
-          
-          this.logger.warn(`⏳ Retry attempt ${attempt}/${maxRetries} after ${delay}ms delay`);
+        // Apply retry delay (only after first attempt)
+        if (attempt > 1 && lastError) {
+          const delay = this.calculateRetryDelay(lastError, attempt);
+          this.logger.warn(`⏳ Retry attempt ${attempt}/${currentMaxRetries} after ${delay}ms delay (error type: ${lastError.constructor.name})`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
         
@@ -1499,18 +1583,43 @@ this.logger.log('✅ Found image in response part', {
       } catch (error: any) {
         lastError = error;
         
-        const isRetryable = 
-          error instanceof AIRateLimitError ||
-          error instanceof AITimeoutError ||
-          (error instanceof AIServiceUnavailableError && error.details?.httpStatus !== 400);
+        // Determine if error is retryable and get max retries for this error type
+        const errorMaxRetries = this.getMaxRetriesForError(error);
         
-        this.logger.error(`❌ Attempt ${attempt}/${maxRetries} failed:`, {
+        // Update currentMaxRetries to be the maximum of what we have and what this error allows
+        // This allows dynamic retry expansion for transient errors like 503
+        if (errorMaxRetries > currentMaxRetries) {
+          this.logger.log(`🔄 Expanding retry limit from ${currentMaxRetries} to ${errorMaxRetries} for ${error.constructor.name}`);
+          currentMaxRetries = errorMaxRetries;
+        }
+        
+        const isRetryable = errorMaxRetries > 1;
+        const hasMoreAttempts = attempt < currentMaxRetries;
+        
+        this.logger.error(`❌ Attempt ${attempt}/${currentMaxRetries} failed:`, {
           error: error.message,
           errorType: error.constructor.name,
-          isRetryable
+          httpStatus: error.details?.httpStatus,
+          isRetryable,
+          hasMoreAttempts
         });
         
-        if (!isRetryable || attempt === maxRetries) {
+        // Content policy errors should never be retried
+        if (error instanceof AIContentPolicyError) {
+          if (breaker) {
+            breaker.failures++;
+            breaker.lastFailure = Date.now();
+            if (breaker.failures >= breaker.threshold) {
+              breaker.state = 'open';
+              this.logger.error(`🚫 Circuit breaker opened after ${breaker.failures} failures`);
+            }
+          }
+          this.recordOperationMetrics(operationName, Date.now() - startTime, false);
+          throw error;
+        }
+        
+        // If not retryable or out of attempts, fail permanently
+        if (!isRetryable || !hasMoreAttempts) {
           if (breaker) {
             breaker.failures++;
             breaker.lastFailure = Date.now();
@@ -1524,9 +1633,8 @@ this.logger.log('✅ Found image in response part', {
           throw error;
         }
         
-        if (error instanceof AIContentPolicyError) {
-          throw error;
-        }
+        // Will retry - increment attempt counter
+        attempt++;
       }
     }
     
@@ -1535,7 +1643,7 @@ this.logger.log('✅ Found image in response part', {
       {
         service: 'GeminiIntegration',
         operation: operationName,
-        details: { attempts: maxRetries }
+        details: { attempts: currentMaxRetries }
       }
     );
   }

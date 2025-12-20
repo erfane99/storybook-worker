@@ -1156,7 +1156,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     const { plannedTypes, adjustments } = this.planPanelDiversity(pageBeats, audience);
 
     const panels: ComicPanel[] = [];
-    let adaptiveDelay = 300;  // Start with 300ms between panels
+    let adaptiveDelay = 2000;  // Start with 2000ms (2s) between panels to prevent API overload
     let consecutiveSuccesses = 0;
 
     // Generate panels ONE AT A TIME for narrative continuity
@@ -1314,9 +1314,10 @@ COMIC BOOK PROFESSIONAL STANDARDS:
       // ✅ ADAPTIVE DELAY: Adjust based on API performance
       consecutiveSuccesses++;
       
-      // If panels completing quickly (under 30 seconds), reduce delay
-      if (consecutiveSuccesses >= 2 && panelDuration < 30000) {
-        adaptiveDelay = Math.max(100, adaptiveDelay - 50);  // Reduce delay, minimum 100ms
+      // If panels completing quickly (under 30 seconds), reduce delay gradually
+      // Keep minimum at 1000ms (1s) to prevent API overload and 503 errors
+      if (consecutiveSuccesses >= 3 && panelDuration < 30000) {
+        adaptiveDelay = Math.max(1000, adaptiveDelay - 200);  // Reduce delay, minimum 1000ms
       }
 
       // Apply delay between panels (not after last panel)
