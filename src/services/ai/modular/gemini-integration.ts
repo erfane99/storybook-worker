@@ -944,6 +944,19 @@ REQUIREMENTS:
 ${options.feedbackImageEnhancement}`;
     }
 
+    // ⚠️ CRITICAL: NO TEXT OVERLAY RULE - Must be at END of prompt for maximum weight
+    prompt += `
+
+⛔ ABSOLUTE PROHIBITION - NO TEXT IN IMAGE:
+- DO NOT add ANY text, words, letters, or numbers to the image
+- DO NOT add narration boxes, caption boxes, or title cards
+- DO NOT add speech bubbles or dialogue text
+- DO NOT add sound effects text (POW, BOOM, etc.)
+- DO NOT add labels, signs, or written words of any kind
+- The image must be PURE ILLUSTRATION - zero text elements
+- Text/captions will be added separately by the application
+- If you add ANY text to this image, it will be rejected`;
+
     return prompt;
   }
 

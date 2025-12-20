@@ -1858,7 +1858,7 @@ Now write the story.`;
         // FIX 2: Use 'young adults' (with space) not 'young_adults'
         const response = await this.geminiIntegration.generateTextCompletion(storyPrompt, {
           temperature: 0.8,
-          max_output_tokens: audience === 'children' ? 2000 : audience === 'young adults' ? 3000 : 4000
+          max_output_tokens: audience === 'children' ? 6000 : audience === 'young adults' ? 8000 : 10000
         });
 
         // Extract title and story

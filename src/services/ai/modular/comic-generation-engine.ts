@@ -777,6 +777,13 @@ When hasSpeechBubble is true, you MUST also provide:
 
 For multi-character scenes: Position the PRIMARY speaker based on their action/focus in this specific panel.
 
+MANDATORY RULE: If hasSpeechBubble is true, you MUST provide ALL THREE fields:
+- speakerName (required)
+- speakerPosition (required - choose based on natural scene composition)  
+- bubblePosition (required - opposite of speakerPosition)
+If you cannot determine positioning, default to: speakerPosition: "center", bubblePosition: "top-center"
+NEVER leave these fields undefined when hasSpeechBubble is true.
+
 CAMERA ANGLE INTELLIGENCE (CRITICAL - STORY DRIVES VISUALS):
 Choose cameraAngle based on WHAT IS HAPPENING IN THE STORY, not arbitrary rotation.
 
@@ -1504,6 +1511,11 @@ COMIC BOOK PROFESSIONAL STANDARDS:
 
   /**
    * Build audience-specific narration prompt with comprehensive rules
+   * 
+   * COMIC BOOK NARRATION PHILOSOPHY (Will Eisner, Scott McCloud):
+   * - Narration ADD what images CANNOT show: thoughts, time, backstory, emotional stakes
+   * - Narration should NEVER describe what the reader can already see
+   * - "If you can see it, don't say it" - the golden rule of comic narration
    */
   private buildAudienceNarrationPrompt(
     beat: StoryBeat,
@@ -1516,185 +1528,170 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     rules: (typeof NARRATION_RULES)[keyof typeof NARRATION_RULES]
   ): string {
     
+    // Core philosophy that applies to ALL audiences
+    const corePhilosophy = `
+=== COMIC BOOK NARRATION GOLDEN RULE ===
+"If the reader can SEE it in the image, do NOT write it in the narration."
+
+NARRATION MUST ADD what images CANNOT show:
+✓ Character's THOUGHTS and FEELINGS (internal state)
+✓ TIME context (how long, when, before/after)
+✓ BACKSTORY or MEMORY references
+✓ SENSORY details beyond sight (sounds, smells, temperature)
+✓ STAKES and CONSEQUENCES (why this moment matters)
+✓ CONNECTION to the larger story
+
+NARRATION MUST NEVER describe:
+✗ Physical actions visible in the image (standing, walking, reaching)
+✗ Facial expressions the reader can see
+✗ Objects or settings shown in the illustration
+✗ Character poses or positions
+✗ Clothing or appearance details`;
+
     // === CHILDREN'S PROMPT (Ages 4-8) ===
     if (audience === 'children') {
       const resolutionRules = narrativePosition === 'RESOLUTION' ? `
-RESOLUTION PANEL REQUIREMENTS (CRITICAL):
-✓ State what ${characterName} learned in SIMPLE words
-✓ Must be concrete and actionable
-✓ Connect back to the story's problem
-✓ A 5-year-old could explain this to a friend
+RESOLUTION PANEL REQUIREMENTS:
+✓ State what ${characterName} learned or feels NOW
+✓ Simple, concrete, a 5-year-old understands
+✓ Connect emotionally to the story's heart
 
-FORBIDDEN ENDING PATTERNS (will be rejected):
-✗ "And they all lived happily ever after" (cliché)
-✗ "The magic would always be there" (abstract)
-✗ "Wonder lives in..." (philosophical)
-✗ "In that moment, everything changed" (vague)
-✗ Any metaphorical or abstract conclusion
+FORBIDDEN ENDINGS:
+✗ "And they all lived happily ever after"
+✗ Abstract philosophy about magic or wonder` : '';
 
-GOOD CHILDREN'S ENDINGS:
-✓ "${characterName} smiled. Now she knew—helping others made everyone happy, including herself."
-✓ "From that day on, ${characterName} wasn't scared of the dark anymore. The stars were her friends."
-✓ "${characterName} hugged the little bunny. She had found something better than treasure—a new friend."` : '';
+      return `Write 15-25 word narration for children's comic panel ${panelNumber}/${totalPanels}.
+${corePhilosophy}
 
-      return `Write 15-30 word narration for children's comic panel ${panelNumber}/${totalPanels}.
-
-FOR CHILDREN (Ages 4-8) - STRICT VOCABULARY RULES:
-• Use ONLY words a 5-year-old understands
-• Maximum 10-12 words per sentence
-• Simple sentence structure: Subject does action
-• Concrete nouns: butterfly, bed, tree, friend (NOT abstract concepts)
-• Active verbs: ran, jumped, smiled, found (NOT passive voice)
-
-FORBIDDEN WORDS (too complex - NEVER use):
-${NARRATION_RULES.children.forbiddenWords.join(', ')}
+CHILDREN'S VOCABULARY (Ages 4-8):
+- Words a 5-year-old knows
+- Max 10 words per sentence
+- Simple feelings: happy, sad, scared, brave, proud
 
 STORY CONTEXT:
-"${originalStory.substring(0, 400)}"
+"${originalStory.substring(0, 300)}"
 
-THIS MOMENT:
-- Action: ${beat.beat}
-- Emotion: ${beat.emotion}
-- Position: ${narrativePosition}
-${beat.dialogue ? `- Dialogue: "${beat.dialogue}"` : ''}
+THIS PANEL SHOWS: ${beat.beat}
+CHARACTER EMOTION: ${beat.emotion}
+NARRATIVE POSITION: ${narrativePosition}
+${beat.dialogue ? `DIALOGUE IN SPEECH BUBBLE: "${beat.dialogue}"` : ''}
 ${resolutionRules}
 
-GOOD EXAMPLES FOR CHILDREN:
-OPENING: "${characterName} found something special in the garden. It sparkled like a tiny star."
-SETUP: "The little seed needed help. ${characterName} knew just what to do."
-RISING_ACTION: "${characterName} tried and tried. It was hard, but she didn't give up."
-CLIMAX: "This was it! ${characterName} took a deep breath and jumped."
-RESOLUTION: "${characterName} smiled big. She did it! Helping others felt really good."
+=== GOOD vs BAD EXAMPLES ===
 
-AVOID:
-- Abstract language ("wonder," "magic of friendship")
-- Metaphors children won't understand
-- Passive voice ("was found," "was opened")
-- Compound-complex sentences
+❌ BAD (describes visible action):
+"${characterName} walked to the garden. She bent down and picked up the flower."
+→ WRONG: Reader can SEE her walking and picking up the flower!
 
-Write ONLY the narration. Simple words. Short sentences. Concrete details.`;
+✅ GOOD (adds invisible context):
+"${characterName} had waited all morning for this. Her heart beat fast with excitement."
+→ RIGHT: Reader can't see waiting or heartbeat - narration ADDS this!
+
+❌ BAD: "${characterName} smiled big and jumped up and down."
+→ WRONG: The image shows her smiling and jumping!
+
+✅ GOOD: "This was the best day ever. ${characterName} had done it all by herself!"
+→ RIGHT: Internal feeling + accomplishment context the image can't show.
+
+❌ BAD: "${characterName} held the butterfly gently in her hands."
+→ WRONG: We can SEE her holding the butterfly!
+
+✅ GOOD: "So small and delicate. ${characterName} had never been this careful before."
+→ RIGHT: Her thoughts + comparison to past behavior.
+
+NOW WRITE NARRATION that adds INVISIBLE context (thoughts, feelings, time, stakes).
+DO NOT describe what the image shows. Simple words only.`;
     }
     
     // === YOUNG ADULTS PROMPT (Ages 12-17) ===
     if (audience === 'young adults') {
       const resolutionRules = narrativePosition === 'RESOLUTION' ? `
-RESOLUTION REQUIREMENTS FOR YOUNG ADULTS:
-✓ Show character transformation through action or choice
-✓ Avoid neat moral statements - let theme emerge
-✓ Leave room for reader interpretation
-✓ Feel earned, not forced
+RESOLUTION REQUIREMENTS:
+✓ Show transformation through internal realization
+✓ Subtext over statement - trust the reader
+✓ Earned emotional payoff` : '';
 
-FORBIDDEN ENDING PATTERNS:
-✗ Preachy moral lessons ("And so ${characterName} learned that...")
-✗ Adult lecturing tone
-✗ Childish simplification
-✗ Cynicism without hope
+      return `Write 25-40 word narration for young adult comic panel ${panelNumber}/${totalPanels}.
+${corePhilosophy}
 
-GOOD YA ENDINGS (show don't tell):
-✓ "${characterName} walked away from the wreckage. Some things couldn't be fixed—but maybe that was okay."
-✓ "The truth had changed everything. ${characterName} wasn't the same person who'd walked through that door."
-✓ "For the first time, ${characterName} didn't need anyone else's approval. The decision was hers alone."` : '';
-
-      return `Write 25-45 word narration for young adult comic panel ${panelNumber}/${totalPanels}.
-
-FOR YOUNG ADULTS (Ages 12-17):
-• Contemporary, authentic language
-• Emotionally resonant without being melodramatic
-• Can include uncertainty, questioning, internal conflict
-• Respects reader intelligence - show don't tell
-• Varied sentence rhythm and length
-
-TONE GUIDANCE:
-- Authentic internal voice (how teens actually think)
-- Emotional subtext over explicit statements
-- Dynamic and engaging
-- Can use fragments for effect
+YOUNG ADULT VOICE (Ages 12-17):
+- Introspective, relatable internal voice
+- Emotional complexity acknowledged
+- Neither childish nor fully adult
+- Identity, belonging, self-discovery themes
 
 STORY CONTEXT:
-"${originalStory.substring(0, 500)}"
+"${originalStory.substring(0, 400)}"
 
-THIS MOMENT:
-- Action: ${beat.beat}
-- Emotion: ${beat.emotion}
-- Position: ${narrativePosition}
-${beat.dialogue ? `- Dialogue: "${beat.dialogue}"` : ''}
+THIS PANEL SHOWS: ${beat.beat}
+CHARACTER EMOTION: ${beat.emotion}
+NARRATIVE POSITION: ${narrativePosition}
+${beat.dialogue ? `DIALOGUE IN SPEECH BUBBLE: "${beat.dialogue}"` : ''}
 ${resolutionRules}
 
-AVOID FOR YOUNG ADULTS:
-- Preachy moral lessons
-- Adult lecturing tone
-- Childish simplification
-- Cynicism without hope
-- Spelling out emotions ("She felt sad")
+=== GOOD vs BAD EXAMPLES ===
 
-GOOD YA EXAMPLES:
-OPENING: "Everyone said the old lighthouse was haunted. ${characterName} was about to find out if everyone was wrong."
-RISING_ACTION: "The lie had seemed so small at first. Now it was the only thing standing between ${characterName} and everything she wanted."
-CLIMAX: "One choice. One moment. Everything ${characterName} believed about herself came down to this."
+❌ BAD (describes visible action):
+"${characterName} ran through the rain, her feet splashing in puddles as she headed toward the old building."
+→ WRONG: Reader SEES her running through rain!
 
-Write ONLY the narration. Authentic voice. Emotional depth.`;
+✅ GOOD (adds invisible context):
+"Three years since she'd been back. The rain felt the same, but nothing else did."
+→ RIGHT: Time context + emotional comparison the image can't show.
+
+❌ BAD: "${characterName} clenched her fists and stared at him with anger."
+→ WRONG: Her expression and pose are VISIBLE!
+
+✅ GOOD: "She'd promised herself she wouldn't let him see how much it still hurt."
+→ RIGHT: Internal promise + hidden emotion beneath visible anger.
+
+NOW WRITE NARRATION that reveals internal world, time context, or stakes.
+DO NOT describe visible actions, expressions, or settings.`;
     }
     
     // === ADULTS PROMPT (Ages 18+) ===
     const resolutionRules = narrativePosition === 'RESOLUTION' ? `
-RESOLUTION REQUIREMENTS FOR ADULTS:
-✓ Thematic resonance without being preachy
-✓ Allow multiple interpretations
-✓ Emotional or intellectual impact
-✓ Honest to the story's complexity - avoid neat resolutions if unrealistic
-✓ May be tragic, bittersweet, or triumphant - but must be EARNED
-
-FORBIDDEN ENDING PATTERNS:
-✗ Spelling out themes explicitly
-✗ Happy endings that feel unearned
-✗ Simplistic moral conclusions
-✗ Hand-holding the reader
-
-GOOD ADULT ENDINGS (sophisticated, layered):
-✓ "The door closed behind her. In the silence that followed, ${characterName} understood that some choices echo forever."
-✓ "They never spoke of it again. But every spring, when the jasmine bloomed, both knew what the other was remembering."
-✓ "Victory. The word tasted like ash. ${characterName} had gotten exactly what she wanted—and lost everything that mattered."` : '';
+RESOLUTION REQUIREMENTS:
+✓ Thematic resonance through implication
+✓ Trust reader intelligence completely
+✓ Ambiguity can be powerful` : '';
 
     return `Write 30-50 word narration for adult comic panel ${panelNumber}/${totalPanels}.
+${corePhilosophy}
 
-FOR ADULTS (Ages 18+):
-• Sophisticated, precise language
-• Literary devices welcome (metaphor, symbolism, subtext)
-• Psychological depth and nuance
-• Subtext over explicit statement
-• Match genre expectations
-• Treats reader as intellectual equal
-
-NARRATIVE TECHNIQUES:
-- Layered meaning
-- Implication over statement
-- Economy of language - every word earns its place
-- Can break rules intentionally for effect
-- Prose style matches story mood
+ADULT LITERARY VOICE (Ages 18+):
+- Sophisticated, layered prose
+- Subtext and implication
+- Every word earns its place
+- Psychological depth
 
 STORY CONTEXT:
-"${originalStory.substring(0, 600)}"
+"${originalStory.substring(0, 500)}"
 
-THIS MOMENT:
-- Action: ${beat.beat}
-- Emotion: ${beat.emotion}
-- Position: ${narrativePosition}
-${beat.dialogue ? `- Dialogue: "${beat.dialogue}"` : ''}
+THIS PANEL SHOWS: ${beat.beat}
+CHARACTER EMOTION: ${beat.emotion}
+NARRATIVE POSITION: ${narrativePosition}
+${beat.dialogue ? `DIALOGUE IN SPEECH BUBBLE: "${beat.dialogue}"` : ''}
 ${resolutionRules}
 
-AVOID FOR ADULTS:
-- Spelling out themes
-- Unearned resolutions
-- Simplistic conclusions
-- Treating reader as needing guidance
-- Purple prose without substance
+=== GOOD vs BAD EXAMPLES ===
 
-GOOD ADULT EXAMPLES:
-OPENING: "The photograph had survived the fire. ${characterName} wished the memories had been less resilient."
-RISING_ACTION: "Truth, ${characterName} was learning, was rarely a single thing. It shifted with perspective, with time, with the weight of what you needed to believe."
-CLIMAX: "The gun was cold in her hand. Thirty years of running, and it came down to this: one bullet, two choices, and a lifetime of consequences either way."
+❌ BAD (describes visible action):
+"${characterName} stood at the window, looking out at the city lights, a glass of whiskey in her hand."
+→ WRONG: All of this is VISIBLE in the image!
 
-Write ONLY the narration. Sophisticated. Layered. Earned.`;
+✅ GOOD (adds invisible context):
+"Seventeen floors up, the city looked almost peaceful. She'd learned long ago that distance was just another kind of lie."
+→ RIGHT: Her thoughts + life philosophy the image can't show.
+
+❌ BAD: "${characterName} opened the letter, her hands trembling as she read the words."
+→ WRONG: We can SEE her opening and reading!
+
+✅ GOOD: "After twenty years, his handwriting still made her stomach drop. Some doors, once closed, should stay that way."
+→ RIGHT: History + visceral reaction + her philosophy.
+
+NOW WRITE NARRATION with psychological depth and thematic resonance.
+DO NOT describe what the reader can see. Add the invisible layers.`;
   }
 
   /**
