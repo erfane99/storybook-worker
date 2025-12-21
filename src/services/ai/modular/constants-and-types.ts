@@ -172,10 +172,10 @@ export const QUALITY_STANDARDS = {
 // - Spiegelman dramatic pacing: some beats need extended space
 export const PROFESSIONAL_AUDIENCE_CONFIG = {
   children: {
-    totalPanels: 12,          // Changed from 10, now optimal at 12
-    minPanels: 10,            // NEW: minimum for quality with flexibility
-    maxPanels: 14,            // NEW: maximum allowing transformation beats
-    pagesPerStory: 3,         // Changed from 6, now fixed at 3
+    totalPanels: 14,          // Changed from 12, now optimal at 14
+    minPanels: 12,            // NEW: minimum for quality with flexibility
+    maxPanels: 16,            // NEW: maximum allowing transformation beats
+    pagesPerStory: 4,         // Changed from 3, now fixed at 4
     panelsPerPage: 4,
     maxWordsPerPanel: 15,
     complexityLevel: 'simple',
@@ -192,10 +192,10 @@ export const PROFESSIONAL_AUDIENCE_CONFIG = {
     resolutionType: 'positive_clear'
   },
   'young adults': {
-    totalPanels: 20,          // Changed from 12, now optimal at 20
-    minPanels: 18,            // NEW: minimum for quality
-    maxPanels: 22,            // NEW: maximum for complex emotional arcs
-    pagesPerStory: 5,         // Changed from 4, now fixed at 5
+    totalPanels: 28,          // UPGRADED: From 20 to 28 for deeper emotional arcs
+    minPanels: 24,            // UPGRADED: From 18 to 24 minimum
+    maxPanels: 32,            // UPGRADED: From 22 to 32 maximum
+    pagesPerStory: 7,         // UPGRADED: From 5 to 7 pages
     panelsPerPage: 4,
     maxWordsPerPanel: 25,
     complexityLevel: 'moderate',
@@ -212,10 +212,10 @@ export const PROFESSIONAL_AUDIENCE_CONFIG = {
     resolutionType: 'growth_oriented'
   },
   adults: {
-    totalPanels: 27,          // Changed from 16, now optimal at 27
-    minPanels: 24,            // NEW: minimum for sophisticated storytelling
-    maxPanels: 30,            // NEW: maximum for symbolic depth
-    pagesPerStory: 7,         // Changed from 4, now fixed at 7
+    totalPanels: 42,          // UPGRADED: From 27 to 42 for literary depth
+    minPanels: 36,            // UPGRADED: From 24 to 36 minimum
+    maxPanels: 48,            // UPGRADED: From 30 to 48 maximum
+    pagesPerStory: 11,        // UPGRADED: From 7 to 11 pages
     panelsPerPage: 4,
     maxWordsPerPanel: 35,
     complexityLevel: 'sophisticated',
