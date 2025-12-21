@@ -346,6 +346,216 @@ export const NARRATION_RULES = {
 } as const;
 
 /**
+ * ===== NARRATION PHILOSOPHY BY AUDIENCE =====
+ * Controls WHICH panels get narration based on professional comic standards
+ * 
+ * Professional comics use DIFFERENT narration strategies:
+ * - Children (4-8): Minimal narration - only scene-setting, time jumps, conclusion
+ * - Young Adults (12-17): First-person internal monologue with strategic silent panels
+ * - Adults (18+): Literary/poetic narration with moral complexity
+ */
+export const NARRATION_PHILOSOPHY = {
+  children: {
+    maxNarrationRatio: 0.25,              // Only 25% of panels get narration
+    narratedPanelTypes: ['opening', 'time_jump', 'location_change', 'conclusion'],
+    style: 'simple_declarative',
+    maxWords: 15,
+    voice: 'third_person_gentle',
+    examples: [
+      "The next morning, Maya woke up early.",
+      "And from that day on, they were best friends.",
+      "It was a sunny day in the park.",
+      "Maya had an idea!"
+    ],
+    forbidden: ['complex_vocabulary', 'abstract_concepts', 'philosophical'],
+    silentPanelRatio: 0,                  // Children's comics don't use silent panels
+    description: 'Minimal narration - let the pictures tell the story. Only narrate time jumps, location changes, and conclusions.'
+  },
+  
+  'young adults': {
+    maxNarrationRatio: 0.4,               // 40% of panels get narration
+    narratedPanelTypes: ['opening', 'emotional_peak', 'internal_conflict', 'realization', 'conclusion'],
+    style: 'first_person_internal_monologue',
+    maxWords: 25,
+    voice: 'first_person_teen',
+    examples: [
+      "I couldn't believe this was actually happening.",
+      "For the first time, their whispers didn't matter.",
+      "Maybe I'd been wrong about everything.",
+      "Something had shifted. I could feel it."
+    ],
+    silentPanelRatio: 0.15,               // 15% silent panels for emotional impact
+    description: 'Internal monologue style. Narrate emotional peaks and realizations. Use strategic silence for impact.'
+  },
+  
+  adults: {
+    maxNarrationRatio: 0.5,               // 50% of panels get narration
+    narratedPanelTypes: ['any_with_thematic_weight'],
+    style: 'literary_layered',
+    maxWords: 35,
+    voice: 'omniscient_literary',
+    examples: [
+      "Memory is a peculiar thing. It preserves not what happened, but what we needed to believe.",
+      "He understood now why she'd never told him. Some truths were meant to be discovered alone.",
+      "The silence between them held more weight than any words could carry."
+    ],
+    silentPanelRatio: 0.2,                // 20% silent panels for contemplation
+    allowAmbiguity: true,
+    description: 'Literary, layered narration. Can be poetic or philosophical. Embrace complexity and ambiguity.'
+  }
+} as const;
+
+/**
+ * ===== SILENT PANEL CONFIGURATION =====
+ * Professional comics use silent panels to let emotions breathe
+ * 
+ * Silent panel triggers:
+ * - Moment AFTER a major revelation (character processing shock)
+ * - Moment BEFORE a big decision (contemplation)
+ * - Emotional reaction shots (joy, grief, wonder)
+ * - Visual punchlines that need no words
+ */
+export const SILENT_PANEL_CONFIG = {
+  children: {
+    targetCount: { min: 1, max: 2 },          // 1-2 per story
+    triggers: ['wonder', 'big_reveal', 'quiet_moment'],
+    description: 'Use sparingly for big reveals and quiet wonder moments',
+    emotionIndicators: ['awe', 'wonder', 'surprise', 'joy', 'quiet_happiness'],
+    promptEnhancement: 'SILENT PANEL: No text. Let the child\'s expression tell the story. Big eyes, simple emotion.'
+  },
+  'young adults': {
+    targetCount: { min: 3, max: 4 },          // 3-4 per story
+    triggers: ['emotional_reaction', 'before_decision', 'internal_conflict', 'revelation_aftermath'],
+    description: 'Strategic silence for emotional impact and decision moments',
+    emotionIndicators: ['shock', 'contemplation', 'realization', 'grief', 'determination', 'heartbreak'],
+    promptEnhancement: 'SILENT PANEL: No dialogue, no narration. Pure visual emotion. Focus on facial expression, body language, atmosphere.'
+  },
+  adults: {
+    targetCount: { min: 5, max: 6 },          // 5-6 per story
+    triggers: ['emotional_reaction', 'before_decision', 'internal_conflict', 'revelation_aftermath', 'symbolic_moment', 'moral_weight'],
+    description: 'Frequent silence for contemplation, moral complexity, and symbolic weight',
+    emotionIndicators: ['shock', 'contemplation', 'realization', 'grief', 'determination', 'heartbreak', 'resignation', 'acceptance', 'ambiguity'],
+    promptEnhancement: 'SILENT PANEL: Pure visual storytelling. No text. The image carries the full emotional and thematic weight. Cinematic composition.'
+  }
+} as const;
+
+/**
+ * ===== DIALOGUE VOICE RULES BY SPEAKER AGE =====
+ * Controls dialogue length, style, and vocabulary based on WHO is speaking
+ * 
+ * Professional comic standards: Dialogue should match character age/type
+ * - Toddlers: Very short exclamations (1-4 words)
+ * - Children: Curious, direct questions/statements (1-8 words)
+ * - Teens: Casual, authentic, sometimes clipped (1-15 words)
+ * - Adults: Complete, supportive sentences (1-20 words)
+ * - Seniors: Wise, measured, sometimes proverbial (1-25 words)
+ */
+export const DIALOGUE_VOICE_RULES = {
+  toddler: {
+    maxWords: 4,
+    style: 'simple_exclamations',
+    vocabulary: 'baby_talk_simple',
+    patterns: ['exclamations', 'single_words', 'mama_papa_references'],
+    examples: [
+      "Wow!",
+      "I did it!",
+      "Look mama!",
+      "No no!",
+      "Me too!",
+      "Uh oh!",
+      "Yay!"
+    ],
+    forbidden: ['complex_sentences', 'abstract_concepts', 'multi_clause']
+  },
+  
+  child: {
+    maxWords: 8,
+    style: 'curious_direct',
+    vocabulary: 'simple_concrete',
+    patterns: ['questions', 'exclamations', 'direct_statements'],
+    examples: [
+      "Can I try?",
+      "That was so cool!",
+      "Why is it doing that?",
+      "I'm not scared!",
+      "Look what I found!",
+      "Wait for me!",
+      "This is the best day ever!"
+    ],
+    forbidden: ['sarcasm', 'abstract_philosophy', 'complex_vocabulary']
+  },
+  
+  teen: {
+    maxWords: 15,
+    style: 'casual_authentic',
+    vocabulary: 'contemporary_relatable',
+    patterns: ['clipped_phrases', 'emotional_authenticity', 'peer_speak'],
+    examples: [
+      "Whatever.",
+      "This changes everything.",
+      "You don't understand.",
+      "I can handle this myself.",
+      "It's not that simple.",
+      "Just... give me a minute.",
+      "I didn't ask for this."
+    ],
+    forbidden: ['preachy_adult_tone', 'overly_formal', 'childish_simplicity']
+  },
+  
+  adult: {
+    maxWords: 20,
+    style: 'complete_sentences',
+    vocabulary: 'full_range_appropriate',
+    patterns: ['supportive', 'explanatory', 'guiding'],
+    examples: [
+      "You're braver than you think, little one.",
+      "I've seen this before. Trust me.",
+      "Sometimes the hardest path is the right one.",
+      "I believe in you. I always have.",
+      "Let me show you something."
+    ],
+    forbidden: ['talking_down', 'oversimplifying', 'preachy']
+  },
+  
+  senior: {
+    maxWords: 25,
+    style: 'wise_measured',
+    vocabulary: 'traditional_proverbial',
+    patterns: ['wisdom_sharing', 'story_references', 'gentle_guidance'],
+    examples: [
+      "When I was your age, I thought the same thing.",
+      "Patience reveals what haste conceals.",
+      "Some lessons can only be learned the hard way.",
+      "I've waited a long time to see this moment.",
+      "The answer you seek was inside you all along."
+    ],
+    forbidden: ['rushed_speech', 'trendy_slang', 'impatient_tone']
+  }
+} as const;
+
+/**
+ * Map character age categories to dialogue voice rules
+ */
+export function getDialogueVoiceForAge(age: string): keyof typeof DIALOGUE_VOICE_RULES {
+  const ageLower = age?.toLowerCase() || 'child';
+  
+  if (ageLower.includes('toddler') || ageLower.includes('baby') || ageLower.includes('1-3')) {
+    return 'toddler';
+  }
+  if (ageLower.includes('child') || ageLower.includes('kid') || ageLower.includes('4-10') || ageLower.includes('young')) {
+    return 'child';
+  }
+  if (ageLower.includes('teen') || ageLower.includes('adolescent') || ageLower.includes('11-17')) {
+    return 'teen';
+  }
+  if (ageLower.includes('senior') || ageLower.includes('elder') || ageLower.includes('old') || ageLower.includes('grandp')) {
+    return 'senior';
+  }
+  // Default to adult for young-adult, adult, or unknown
+  return 'adult';
+}
+
+/**
  * ===== COMIC GENERATION ENGINE CLASS =====
  * Professional comic book generation with narrative intelligence and visual DNA
  * UPDATED: Now uses Gemini for 95% character consistency through image-based generation
@@ -540,7 +750,9 @@ GOOD: "gripping rope tightly, preparing to pull friend up from the muddy ditch"
       "speechBubbleStyle": "string - bubble type (if applicable)",
       "speakerName": "string - name of character speaking (REQUIRED if hasSpeechBubble is true)",
       "speakerPosition": "left|center|right - where speaker is positioned in panel composition",
-      "bubblePosition": "top-left|top-right|bottom-left|bottom-right|top-center - optimal bubble placement (opposite speaker)"
+      "bubblePosition": "top-left|top-right|bottom-left|bottom-right|top-center - optimal bubble placement (opposite speaker)",
+      "isSilent": "boolean - true if panel has NO text (pure visual storytelling)",
+      "silentReason": "emotional_reaction|contemplation|visual_impact|breathing_room|revelation_aftermath - WHY silent"
     }
   ],
   "storyArchetype": "string",
@@ -551,6 +763,7 @@ GOOD: "gripping rope tightly, preparing to pull friend up from the muddy ditch"
   "totalPanels": number,
   "pagesRequired": number,
   "dialoguePanels": number,
+  "silentPanels": number,
   "speechBubbleDistribution": {"style": count}
 }`;
 
@@ -760,6 +973,26 @@ ENHANCED DIALOGUE ANALYSIS WITH SPEECH INTELLIGENCE:
 11. Ensure dialogue enhances story progression and character development
 12. Apply speech bubble psychology based on emotional states
 
+DIALOGUE LENGTH BY SPEAKER AGE (CRITICAL - MUST FOLLOW):
+Match dialogue length and style to the speaker's age category:
+
+• TODDLER (1-3 years): MAX 4 WORDS. Simple exclamations only.
+  Examples: "Wow!", "I did it!", "Look mama!", "No no!"
+  
+• CHILD (4-10 years): MAX 8 WORDS. Curious, direct questions/statements.
+  Examples: "Can I try?", "That was so cool!", "Why is it doing that?"
+  
+• TEEN (11-17 years): MAX 15 WORDS. Casual, authentic, sometimes clipped.
+  Examples: "Whatever.", "This changes everything.", "You don't understand."
+  
+• ADULT (18-55 years): MAX 20 WORDS. Complete, supportive sentences.
+  Examples: "You're braver than you think.", "I believe in you."
+  
+• SENIOR (55+ years): MAX 25 WORDS. Wise, measured, sometimes proverbial.
+  Examples: "Patience reveals what haste conceals.", "Some lessons are learned the hard way."
+
+When generating dialogue, FIRST identify the speaker's age category, THEN apply the appropriate word limit and style.
+
 SPEECH BUBBLE POSITIONING (CRITICAL - PROFESSIONAL COMIC STANDARD):
 When hasSpeechBubble is true, you MUST also provide:
 
@@ -783,6 +1016,29 @@ MANDATORY RULE: If hasSpeechBubble is true, you MUST provide ALL THREE fields:
 - bubblePosition (required - opposite of speakerPosition)
 If you cannot determine positioning, default to: speakerPosition: "center", bubblePosition: "top-center"
 NEVER leave these fields undefined when hasSpeechBubble is true.
+
+SILENT PANELS (PROFESSIONAL COMIC TECHNIQUE - EMOTIONAL IMPACT):
+Silent panels have NO dialogue, NO narration - pure visual storytelling.
+Mark panels as silent (isSilent: true) for these story moments:
+
+TRIGGERS FOR SILENT PANELS:
+• "emotional_reaction" - Character processing shock, joy, grief, or wonder
+• "contemplation" - Moment BEFORE a big decision 
+• "revelation_aftermath" - Moment AFTER a major reveal (character absorbing impact)
+• "visual_impact" - Visual punchline that needs no words
+• "breathing_room" - Pacing break after intense scene
+
+SILENT PANEL REQUIREMENTS BY AUDIENCE:
+• CHILDREN (${audience === 'children' ? 'THIS STORY' : 'reference'}): 1-2 silent panels (big reveals, quiet wonder)
+• YOUNG ADULTS (${audience === 'young adults' ? 'THIS STORY' : 'reference'}): 3-4 silent panels (emotional reactions, before decisions)  
+• ADULTS (${audience === 'adults' ? 'THIS STORY' : 'reference'}): 5-6 silent panels (all YA reasons plus symbolic moments)
+
+When marking isSilent: true:
+- hasSpeechBubble MUST be false
+- dialogue MUST be undefined/null
+- silentReason MUST be one of: "emotional_reaction", "contemplation", "visual_impact", "breathing_room", "revelation_aftermath"
+- emotion SHOULD be intense (joy, shock, grief, wonder, determination)
+- The image alone must carry the emotional weight
 
 CAMERA ANGLE INTELLIGENCE (CRITICAL - STORY DRIVES VISUALS):
 Choose cameraAngle based on WHAT IS HAPPENING IN THE STORY, not arbitrary rotation.
@@ -1274,8 +1530,19 @@ COMIC BOOK PROFESSIONAL STANDARDS:
               eyeColor: char.eyeColor,
               // Get action/position from the beat's secondary character info if available
               action: beat.secondaryCharactersInScene?.find(sc => sc.name === char.name)?.action,
-              position: beat.secondaryCharactersInScene?.find(sc => sc.name === char.name)?.position
-            }))
+              position: beat.secondaryCharactersInScene?.find(sc => sc.name === char.name)?.position,
+              // NEW: Include reference image URL for 88%+ consistency (generated in PHASE 3.25)
+              referenceImageUrl: char.cartoonImageUrl
+            })),
+            // NEW: Speech bubble support - Gemini renders bubbles directly in image
+            dialogue: beat.isSilent ? undefined : beat.dialogue,
+            hasSpeechBubble: beat.isSilent ? false : beat.hasSpeechBubble,
+            speechBubbleStyle: beat.isSilent ? undefined : (beat.speechBubbleStyle as 'speech' | 'thought' | 'shout' | 'whisper' | undefined),
+            speakerPosition: beat.isSilent ? undefined : beat.speakerPosition,
+            bubblePosition: beat.isSilent ? undefined : beat.bubblePosition,
+            // NEW: Silent panel support - enhanced visual storytelling
+            isSilent: beat.isSilent,
+            silentReason: beat.silentReason
           }
         );
       } else {
@@ -1339,11 +1606,129 @@ COMIC BOOK PROFESSIONAL STANDARDS:
   }
 
   /**
+   * ===== DETERMINE IF PANEL SHOULD HAVE NARRATION =====
+   * Uses NARRATION_PHILOSOPHY to decide based on audience and panel position
+   * 
+   * Professional comics use DIFFERENT narration strategies:
+   * - Children: Only 25% of panels (opening, time jumps, conclusion)
+   * - YA: 40% of panels (emotional peaks, internal conflict)
+   * - Adults: 50% of panels (thematic weight)
+   */
+  private shouldPanelHaveNarration(
+    panelNumber: number,
+    totalPanels: number,
+    audience: AudienceType,
+    beat: StoryBeat
+  ): { shouldNarrate: boolean; reason: string } {
+    // === SILENT PANEL CHECK - NO TEXT AT ALL ===
+    if (beat.isSilent) {
+      return { shouldNarrate: false, reason: `silent_panel_${beat.silentReason || 'emotional_impact'}` };
+    }
+    
+    const philosophy = NARRATION_PHILOSOPHY[audience as keyof typeof NARRATION_PHILOSOPHY] || NARRATION_PHILOSOPHY.children;
+    const position = panelNumber / totalPanels;
+    
+    // Determine panel type based on position and beat properties
+    const isOpening = panelNumber === 1;
+    const isConclusion = panelNumber === totalPanels || panelNumber === totalPanels - 1;
+    const isTimeJump = beat.locationChange === 'new-location-name' || (beat.beat?.toLowerCase().includes('later') || beat.beat?.toLowerCase().includes('next'));
+    const isLocationChange = beat.locationChange && beat.locationChange !== 'same';
+    const isEmotionalPeak = position >= 0.7 && position <= 0.85; // Climax zone
+    const isInternalConflict = beat.emotion?.includes('conflict') || beat.beat?.toLowerCase().includes('thought') || beat.beat?.toLowerCase().includes('realized');
+    const isRealization = beat.beat?.toLowerCase().includes('understood') || beat.beat?.toLowerCase().includes('knew') || beat.beat?.toLowerCase().includes('realized');
+    
+    // === CHILDREN'S COMICS: Minimal narration (25%) ===
+    if (audience === 'children') {
+      // Always narrate opening, conclusion, time jumps, and location changes
+      if (isOpening) return { shouldNarrate: true, reason: 'opening_panel' };
+      if (isConclusion) return { shouldNarrate: true, reason: 'conclusion_panel' };
+      if (isTimeJump) return { shouldNarrate: true, reason: 'time_jump' };
+      if (isLocationChange) return { shouldNarrate: true, reason: 'location_change' };
+      
+      // Only 25% of remaining panels get narration
+      // Use deterministic selection based on panel position
+      const narrationSlots = Math.floor(totalPanels * philosophy.maxNarrationRatio);
+      const alreadyCounted = (isOpening ? 1 : 0) + (isConclusion ? 1 : 0);
+      const remainingSlots = Math.max(0, narrationSlots - alreadyCounted);
+      
+      // Distribute remaining narration to key story moments
+      const narratedPanels = new Set([1, totalPanels]); // Opening and conclusion
+      if (remainingSlots > 0) {
+        // Add midpoint panel
+        narratedPanels.add(Math.floor(totalPanels / 2));
+      }
+      if (remainingSlots > 1) {
+        // Add quarter point
+        narratedPanels.add(Math.floor(totalPanels / 4));
+      }
+      
+      if (narratedPanels.has(panelNumber)) {
+        return { shouldNarrate: true, reason: 'key_story_moment' };
+      }
+      
+      return { shouldNarrate: false, reason: 'children_minimal_narration' };
+    }
+    
+    // === YOUNG ADULT COMICS: Internal monologue (40%) ===
+    if (audience === 'young adults') {
+      // Always narrate: opening, emotional peaks, internal conflict, realization, conclusion
+      if (isOpening) return { shouldNarrate: true, reason: 'opening_panel' };
+      if (isConclusion) return { shouldNarrate: true, reason: 'conclusion_panel' };
+      if (isEmotionalPeak) return { shouldNarrate: true, reason: 'emotional_peak' };
+      if (isInternalConflict) return { shouldNarrate: true, reason: 'internal_conflict' };
+      if (isRealization) return { shouldNarrate: true, reason: 'realization_moment' };
+      
+      // 15% silent panels for emotional impact
+      const silentPanelCount = Math.floor(totalPanels * philosophy.silentPanelRatio);
+      // Make action-heavy panels silent (let images speak)
+      if (beat.characterAction && !beat.dialogue && panelNumber % 4 === 0 && silentPanelCount > 0) {
+        return { shouldNarrate: false, reason: 'strategic_silence' };
+      }
+      
+      // Remaining panels up to 40% get narration
+      const maxNarrated = Math.floor(totalPanels * philosophy.maxNarrationRatio);
+      if (panelNumber <= maxNarrated) {
+        return { shouldNarrate: true, reason: 'within_narration_budget' };
+      }
+      
+      return { shouldNarrate: false, reason: 'ya_strategic_silence' };
+    }
+    
+    // === ADULT COMICS: Literary narration (50%) ===
+    if (audience === 'adults') {
+      // Always narrate: opening, conclusion
+      if (isOpening) return { shouldNarrate: true, reason: 'opening_panel' };
+      if (isConclusion) return { shouldNarrate: true, reason: 'conclusion_panel' };
+      
+      // 20% silent panels for contemplation
+      const silentPanelCount = Math.floor(totalPanels * philosophy.silentPanelRatio);
+      // Make certain panels silent for impact
+      if (panelNumber % 5 === 0 && silentPanelCount > 0) {
+        return { shouldNarrate: false, reason: 'contemplative_silence' };
+      }
+      
+      // Narrate panels with thematic weight (up to 50%)
+      const maxNarrated = Math.floor(totalPanels * philosophy.maxNarrationRatio);
+      if (panelNumber <= maxNarrated) {
+        return { shouldNarrate: true, reason: 'thematic_weight' };
+      }
+      
+      return { shouldNarrate: false, reason: 'adult_strategic_silence' };
+    }
+    
+    // Default: narrate
+    return { shouldNarrate: true, reason: 'default' };
+  }
+
+  /**
    * ===== GENERATE PANEL NARRATION WITH AUDIENCE-SPECIFIC RULES =====
    * Uses NARRATION_RULES to enforce vocabulary, sentence structure, and ending patterns
+   * Uses NARRATION_PHILOSOPHY to determine WHICH panels get narration
    * 
-   * PHILOSOPHY: Narration TELLS THE STORY. Images support the narration.
-   * Professional standard: "narrative function drives visual choices"
+   * PHILOSOPHY: Professional comics use different narration strategies by audience.
+   * Children: Minimal narration (25%), let pictures tell the story
+   * YA: Internal monologue style with strategic silent panels
+   * Adults: Literary narration with contemplative silences
    */
   private async generatePanelNarration(
     beat: StoryBeat,
@@ -1353,6 +1738,18 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     characterName: string,
     originalStory: string
   ): Promise<string> {
+    // === STEP 1: Check if this panel should have narration ===
+    const narrationDecision = this.shouldPanelHaveNarration(panelNumber, totalPanels, audience, beat);
+    
+    if (!narrationDecision.shouldNarrate) {
+      console.log(`📝 Panel ${panelNumber} SILENT (${audience}): ${narrationDecision.reason}`);
+      // Return empty string for panels without narration
+      // The image will tell the story on its own
+      return '';
+    }
+    
+    console.log(`📝 Panel ${panelNumber} NARRATED (${audience}): ${narrationDecision.reason}`);
+    
     // Determine narrative position for pacing
     const position = panelNumber / totalPanels;
     const narrativePosition = position < 0.15 ? 'OPENING' 
@@ -1363,6 +1760,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     
     // Get audience-specific narration rules
     const rules = NARRATION_RULES[audience as keyof typeof NARRATION_RULES] || NARRATION_RULES.children;
+    const philosophy = NARRATION_PHILOSOPHY[audience as keyof typeof NARRATION_PHILOSOPHY] || NARRATION_PHILOSOPHY.children;
     
     // Build audience-specific prompt with comprehensive rules
     const prompt = this.buildAudienceNarrationPrompt(
@@ -1394,14 +1792,22 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     // Apply audience-specific vocabulary checks
     cleaned = this.validateAndCleanNarration(cleaned, audience, narrativePosition, panelNumber);
     
-    const wordCount = cleaned.split(/\s+/).length;
-    if (wordCount < 10) {
-      throw new Error(`QUALITY FAILURE: Narration too short (${wordCount} words) for panel ${panelNumber}. Minimum 10 words required.`);
+    // Enforce max word count from philosophy
+    const maxWords = philosophy.maxWords;
+    const words = cleaned.split(/\s+/);
+    if (words.length > maxWords) {
+      cleaned = words.slice(0, maxWords).join(' ');
+      // Ensure it ends with proper punctuation
+      if (!/[.!?]$/.test(cleaned)) {
+        cleaned += '.';
+      }
+      console.log(`   ⚠️ Truncated to ${maxWords} words (${audience} max)`);
     }
     
+    const wordCount = cleaned.split(/\s+/).length;
+    
     // Log narration quality metrics
-    console.log(`📝 Panel ${panelNumber} Narration (${audience}, ${narrativePosition}):`);
-    console.log(`   Words: ${wordCount}, Avg sentence length: ${this.calculateAvgSentenceLength(cleaned)}`);
+    console.log(`   Words: ${wordCount}/${maxWords}, Avg sentence length: ${this.calculateAvgSentenceLength(cleaned)}`);
     
     return cleaned;
   }
@@ -2388,6 +2794,29 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
         throw new Error(`QUALITY FAILURE: Story beat ${index + 1} has invalid or missing 'characterAction'. Job must fail.`);
       }
       
+      // === DIALOGUE LENGTH VALIDATION BY SPEAKER AGE ===
+      let validatedDialogue = beat.dialogue || undefined;
+      if (validatedDialogue && beat.hasSpeechBubble) {
+        // Try to determine speaker age from speakerName or context
+        const speakerAge = beat.speakerAge || this.inferSpeakerAge(beat.speakerName, beat.beat);
+        const voiceRules = DIALOGUE_VOICE_RULES[getDialogueVoiceForAge(speakerAge)];
+        const dialogueWords = validatedDialogue.split(/\s+/).length;
+        
+        if (dialogueWords > voiceRules.maxWords) {
+          console.log(`⚠️ Beat ${index + 1}: Dialogue too long for ${speakerAge} (${dialogueWords} words, max ${voiceRules.maxWords})`);
+          // Truncate dialogue to max words
+          const words = validatedDialogue.split(/\s+/);
+          validatedDialogue = words.slice(0, voiceRules.maxWords).join(' ');
+          // Ensure it ends with punctuation
+          if (!/[.!?]$/.test(validatedDialogue)) {
+            validatedDialogue += '...';
+          }
+          console.log(`   ✂️ Truncated to: "${validatedDialogue}"`);
+        } else {
+          console.log(`✅ Beat ${index + 1}: Dialogue OK for ${speakerAge} (${dialogueWords}/${voiceRules.maxWords} words)`);
+        }
+      }
+      
       return {
         beat: beat.beat,
         emotion: beat.emotion,
@@ -2397,21 +2826,64 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
         panelPurpose: beat.panelPurpose || 'narrative',
         narrativeFunction: beat.panelPurpose || 'narrative',
         environment: beat.environment || 'story setting',
-        dialogue: beat.dialogue || undefined,
-        hasSpeechBubble: Boolean(beat.hasSpeechBubble),
-        speechBubbleStyle: beat.speechBubbleStyle || undefined,
+        // === SILENT PANEL ENFORCEMENT ===
+        // If panel is silent, force no dialogue and no speech bubble
+        isSilent: Boolean(beat.isSilent),
+        silentReason: beat.silentReason || undefined,
+        dialogue: beat.isSilent ? undefined : validatedDialogue,
+        hasSpeechBubble: beat.isSilent ? false : Boolean(beat.hasSpeechBubble),
+        speechBubbleStyle: beat.isSilent ? undefined : (beat.speechBubbleStyle || undefined),
         // NEW: AI-driven speech bubble positioning
-        speakerName: beat.speakerName || undefined,
-        speakerPosition: beat.speakerPosition || undefined,
-        bubblePosition: beat.bubblePosition || undefined,
+        speakerName: beat.isSilent ? undefined : (beat.speakerName || undefined),
+        speakerPosition: beat.isSilent ? undefined : beat.speakerPosition,
+        bubblePosition: beat.isSilent ? undefined : beat.bubblePosition,
         // NEW: Story-driven camera angles
         cameraAngle: beat.cameraAngle || undefined,
         cameraReason: beat.cameraReason || undefined,
         locationChange: beat.locationChange || undefined
       };
     });
+    
+    // Log silent panel count
+    const silentCount = validatedBeats.filter(b => b.isSilent).length;
+    if (silentCount > 0) {
+      console.log(`🤫 Story has ${silentCount} silent panels for emotional impact`);
+    }
 
     return validatedBeats;
+  }
+
+  /**
+   * Infer speaker age from speaker name or beat context
+   * Used for dialogue length validation when explicit age isn't provided
+   */
+  private inferSpeakerAge(speakerName?: string, beatContext?: string): string {
+    if (!speakerName && !beatContext) return 'adult';
+    
+    const nameLower = (speakerName || '').toLowerCase();
+    const contextLower = (beatContext || '').toLowerCase();
+    const combined = `${nameLower} ${contextLower}`;
+    
+    // Check for age indicators in name or context
+    if (combined.includes('baby') || combined.includes('toddler') || combined.includes('infant')) {
+      return 'toddler';
+    }
+    if (combined.includes('grandma') || combined.includes('grandpa') || 
+        combined.includes('grandmother') || combined.includes('grandfather') ||
+        combined.includes('elder') || combined.includes('old ')) {
+      return 'senior';
+    }
+    if (combined.includes('mom') || combined.includes('dad') || 
+        combined.includes('mother') || combined.includes('father') ||
+        combined.includes('parent') || combined.includes('teacher')) {
+      return 'adult';
+    }
+    if (combined.includes('teen') || combined.includes('teenager')) {
+      return 'teen';
+    }
+    
+    // Default to child for children's stories, adult otherwise
+    return 'child';
   }
 
   private ensureArray(value: any): string[] {

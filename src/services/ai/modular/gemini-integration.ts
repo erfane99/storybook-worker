@@ -151,7 +151,19 @@ export interface PanelOptions {
     eyeColor?: string;
     action?: string;
     position?: string;
+    referenceImageUrl?: string;       // NEW: Cartoon reference image URL for consistency
   }[];
+  // NEW: Map of character name -> reference image URL for all characters in scene
+  characterReferenceImages?: Record<string, string>;
+  // NEW: Speech bubble support - Gemini renders bubbles directly in image
+  dialogue?: string;                  // Dialogue text to render in speech bubble
+  hasSpeechBubble?: boolean;          // Whether to render speech bubble
+  speechBubbleStyle?: 'speech' | 'thought' | 'shout' | 'whisper';
+  speakerPosition?: 'left' | 'center' | 'right';
+  bubblePosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center';
+  // NEW: Silent panel support - pure visual storytelling with no text
+  isSilent?: boolean;                 // If true, panel has NO text at all
+  silentReason?: 'emotional_reaction' | 'contemplation' | 'visual_impact' | 'breathing_room' | 'revelation_aftermath';
 }
 
 // ===== GEMINI INTEGRATION CLASS =====
@@ -340,6 +352,115 @@ const response = await this.generateWithRetry<GeminiResponse>({
   }
 
   /**
+   * Generate cartoon reference image for secondary character from TEXT description
+   * NEW: Used to create consistent reference images for secondary characters who don't have photos
+   * 
+   * @param characterDescription - Text description of the character
+   * @param artStyle - Must match main character's art style for consistency
+   * @param audience - Target audience for age-appropriate rendering
+   * @returns Cloudinary URL of generated cartoon reference image
+   */
+  public async generateSecondaryCharacterCartoon(
+    characterDescription: {
+      name: string;
+      age: string;
+      gender: string;
+      relationship?: string;
+      hairColor?: string;
+      eyeColor?: string;
+      distinctiveFeatures?: string[];
+      clothing?: string;
+    },
+    artStyle: string,
+    audience: string
+  ): Promise<string> {
+    this.logger.log('👤 Generating secondary character cartoon reference...', { 
+      name: characterDescription.name,
+      age: characterDescription.age,
+      gender: characterDescription.gender,
+      artStyle,
+      audience
+    });
+    
+    try {
+      // Build comprehensive character description prompt
+      const ageDescriptions: Record<string, string> = {
+        'toddler': 'toddler (1-3 years old, very small, chubby cheeks, about 1/3 height of adult)',
+        'child': 'child (4-10 years old, small stature, about half height of adult)',
+        'teen': 'teenager (11-17 years old, growing, youthful, slightly shorter than adult)',
+        'young-adult': 'young adult (18-25 years old, full adult height)',
+        'adult': 'adult (26-55 years old, full adult height)',
+        'senior': 'senior (55+ years old, may have gray hair, wrinkles, possibly slightly stooped)'
+      };
+      
+      const ageDesc = ageDescriptions[characterDescription.age] || characterDescription.age;
+      
+      const characterPrompt = `Create a CHARACTER REFERENCE IMAGE for use in comic book panels.
+
+CHARACTER SPECIFICATIONS:
+- Name: ${characterDescription.name}
+- Age: ${ageDesc}
+- Gender: ${characterDescription.gender}
+${characterDescription.hairColor ? `- Hair: ${characterDescription.hairColor}` : ''}
+${characterDescription.eyeColor ? `- Eyes: ${characterDescription.eyeColor}` : ''}
+${characterDescription.relationship ? `- Role: ${characterDescription.relationship}` : ''}
+${characterDescription.distinctiveFeatures?.length ? `- Distinctive Features: ${characterDescription.distinctiveFeatures.join(', ')}` : ''}
+${characterDescription.clothing ? `- Clothing: ${characterDescription.clothing}` : `- Clothing: Age-appropriate ${audience === 'children' ? 'bright, cheerful' : 'casual'} outfit`}
+
+ART STYLE: ${artStyle}
+This character will appear alongside the main character in multiple comic panels.
+
+CRITICAL REQUIREMENTS:
+1. Create a SINGLE, clear character portrait/reference
+2. Front-facing pose showing full face clearly
+3. Simple, non-distracting background (solid color or gradient)
+4. Match the ${artStyle} art style EXACTLY
+5. ${audience === 'children' ? 'Child-friendly, warm, and approachable appearance' : 'Age-appropriate appearance'}
+6. Clear, distinct features that will be RECOGNIZABLE across panels
+7. Professional comic book quality rendering
+
+OUTPUT: Single character reference image, centered composition, suitable for use as visual reference in subsequent comic panels.
+
+DO NOT include:
+- Multiple poses or variations
+- Reference sheets or model sheets
+- Text, labels, or annotations
+- Multiple characters
+- Complex backgrounds`;
+
+      // Call Gemini to generate the character reference image
+      const response = await this.generateWithRetry<GeminiResponse>({
+        contents: [{
+          parts: [{ text: characterPrompt }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          max_output_tokens: 2000,
+          responseModalities: ['TEXT', 'IMAGE'],
+          imageConfig: {
+            aspectRatio: '1:1',                   // Square aspect ratio for character references
+            imageSize: '1K'                       // 1K is sufficient for reference images
+          }
+        }
+      }, 'generateSecondaryCharacterCartoon');
+      
+      // Extract generated image URL (uploads to Cloudinary)
+      const imageUrl = await this.extractImageUrlFromResponse(response);
+      
+      this.logger.log('✅ Secondary character cartoon generated successfully', { 
+        name: characterDescription.name,
+        imageUrl: imageUrl.substring(0, 60) + '...'
+      });
+      
+      return imageUrl;
+      
+    } catch (error) {
+      this.logger.error('❌ Secondary character cartoon generation failed:', error);
+      throw this.handleGeminiError(error, 'generateSecondaryCharacterCartoon');
+    }
+  }
+
+  /**
    * Generate panel with character using image-based reference
    * CRITICAL: Gemini SEES the actual cartoon image for perfect consistency
    * ENHANCED: Now includes environmental DNA enforcement for consistent time/location/lighting
@@ -388,7 +509,7 @@ const response = await this.generateWithRetry<GeminiResponse>({
       );
       parts.push({ text: panelPrompt });
       
-      // Add cartoon character reference image (PRIMARY reference)
+      // Add cartoon character reference image (PRIMARY reference - IMAGE 1)
       parts.push({
         inline_data: {
           mime_type: 'image/jpeg',
@@ -396,7 +517,49 @@ const response = await this.generateWithRetry<GeminiResponse>({
         }
       });
       
-      // SEQUENTIAL CONTEXT: If previous panel exists, add it as SECOND reference image
+      // NEW: Add secondary character reference images (IMAGE 2, 3, 4, etc.)
+      // This enables 88%+ consistency for ALL characters, not just the main character
+      const secondaryCharactersWithImages = options.secondaryCharacters?.filter(char => char.referenceImageUrl) || [];
+      if (secondaryCharactersWithImages.length > 0 || (options.characterReferenceImages && Object.keys(options.characterReferenceImages).length > 0)) {
+        const charRefImages = options.characterReferenceImages || {};
+        
+        // Add reference images for each secondary character that has one
+        let imageIndex = 2; // Start from IMAGE 2 (IMAGE 1 is main character)
+        
+        for (const char of secondaryCharactersWithImages) {
+          if (char.referenceImageUrl) {
+            this.logger.log(`📷 Adding reference image for ${char.name} (IMAGE ${imageIndex})...`);
+            const base64SecondaryChar = await this.fetchImageAsBase64(char.referenceImageUrl, true);
+            parts.push({
+              inline_data: {
+                mime_type: 'image/jpeg',
+                data: base64SecondaryChar
+              }
+            });
+            imageIndex++;
+          }
+        }
+        
+        // Also check characterReferenceImages map for any additional references
+        for (const [charName, refUrl] of Object.entries(charRefImages)) {
+          // Skip if already added via secondaryCharacters array
+          if (!secondaryCharactersWithImages.find(c => c.name === charName) && refUrl) {
+            this.logger.log(`📷 Adding reference image for ${charName} from map (IMAGE ${imageIndex})...`);
+            const base64Ref = await this.fetchImageAsBase64(refUrl, true);
+            parts.push({
+              inline_data: {
+                mime_type: 'image/jpeg',
+                data: base64Ref
+              }
+            });
+            imageIndex++;
+          }
+        }
+        
+        this.logger.log(`✅ Added ${imageIndex - 2} secondary character reference images for consistency`);
+      }
+      
+      // SEQUENTIAL CONTEXT: If previous panel exists, add it as reference image
       if (hasPreviousPanel && options.previousPanelContext?.imageUrl) {
         this.logger.log('📷 Fetching previous panel for continuity reference...');
         const base64PreviousPanel = await this.fetchImageAsBase64(options.previousPanelContext.imageUrl, true);
@@ -842,6 +1005,31 @@ EMOTION: ${emotion} - CHARACTER'S FACE MUST SHOW THIS EMOTION:
 THE FACIAL EXPRESSION IS CRITICAL - MUST MATCH "${emotion}" EXACTLY.
 CAMERA: ${cameraAngle} shot, ${panelType} panel`;
 
+    // === SILENT PANEL ENHANCEMENT ===
+    // When panel is marked silent, emphasize pure visual storytelling
+    if (options.isSilent) {
+      const silentEmphasis = {
+        emotional_reaction: 'Character processing shock/joy/grief. Focus on eyes, face, and body language.',
+        contemplation: 'Moment of deep thought before a decision. Introspective, atmospheric.',
+        visual_impact: 'Pure visual moment. Let the composition tell the story.',
+        breathing_room: 'Quiet pause after intensity. Peaceful, reflective.',
+        revelation_aftermath: 'Character absorbing a major revelation. Wide eyes, frozen posture.'
+      };
+      
+      prompt += `
+
+🤫 SILENT PANEL - PURE VISUAL STORYTELLING
+This is a WORDLESS panel. NO speech bubbles. NO text of any kind.
+The image alone must convey: ${emotion}
+${silentEmphasis[options.silentReason || 'emotional_reaction']}
+
+VISUAL EMPHASIS FOR SILENT PANELS:
+• LARGER facial close-up or expressive body language
+• Atmospheric lighting to enhance mood (${emotion})
+• Composition draws eye to character's emotional state
+• Let the silence speak - every visual element supports the emotion`;
+    }
+
     // Add mandatory physical action requirements if detected
     if (physicalActions.length > 0) {
       prompt += `
@@ -852,7 +1040,11 @@ THE CHARACTER'S BODY MUST SHOW THESE EXACT POSITIONS.`;
     }
 
     // Add secondary characters section with MANDATORY RENDERING + consistency enforcement
+    // NEW: Now references character images (IMAGE 2, 3, 4, etc.) for maximum consistency
     if (hasSecondaryCharacters) {
+      // Calculate image indices for secondary characters with reference images
+      let imageIndex = hasPreviousPanel ? 3 : 2; // IMAGE 1 = main char, IMAGE 2 = prev panel (if exists)
+      
       prompt += `
 
 ===== MANDATORY: RENDER ALL SECONDARY CHARACTERS =====
@@ -870,9 +1062,16 @@ Each secondary character below MUST appear in the final image AND look IDENTICAL
           'adult': 'full adult height',
           'senior': 'full adult height, possibly slightly stooped'
         };
+        
+        // Check if this character has a reference image
+        const hasRefImage = !!char.referenceImageUrl;
+        const charImageRef = hasRefImage ? `IMAGE ${imageIndex}` : 'description below';
+        if (hasRefImage) imageIndex++;
+        
         prompt += `
 
-${char.name.toUpperCase()} (MUST BE CONSISTENT):
+${char.name.toUpperCase()} (MUST BE CONSISTENT${hasRefImage ? ` - Match ${charImageRef} EXACTLY` : ''}):
+${hasRefImage ? `- REFERENCE: Match ${charImageRef} exactly for face, body, clothing, and proportions` : ''}
 - Age: ${char.age || 'child'} (${ageHeight[char.age as keyof typeof ageHeight] || 'proportional to main character'})
 - Gender: ${char.gender || 'child'}
 - Hair: ${char.hairColor || 'brown'} hair - SAME COLOR IN EVERY PANEL
@@ -884,17 +1083,22 @@ ${char.action ? `- Current Action: ${char.action}` : ''}
 CRITICAL: ${char.name} must be INSTANTLY RECOGNIZABLE as the same person in every panel.`;
       });
       
+      // Build checklist with image references where applicable
+      const charsWithImages = options.secondaryCharacters!.filter(c => c.referenceImageUrl);
+      const charsWithoutImages = options.secondaryCharacters!.filter(c => !c.referenceImageUrl);
+      
       prompt += `
 
 MANDATORY RENDERING CHECKLIST (verify BEFORE generating image):
 ✓ ${mainCharName} is in the image? (from reference IMAGE 1)
-${options.secondaryCharacters!.map(char => `✓ ${char.name} is in the image? (matching description above)`).join('\n')}
+${charsWithImages.map((char, i) => `✓ ${char.name} is in the image? (match IMAGE ${hasPreviousPanel ? i + 3 : i + 2} EXACTLY)`).join('\n')}
+${charsWithoutImages.map(char => `✓ ${char.name} is in the image? (matching description above)`).join('\n')}
 ✓ All ${options.secondaryCharacters!.length + 1} characters visible in the composition?
 
 If ANY character is missing from your composition, START OVER and include them.
 
 SECONDARY CHARACTER CONSISTENCY RULES:
-1. SAME face shape, features, hair style in EVERY panel
+1. SAME face shape, features, hair style in EVERY panel${charsWithImages.length > 0 ? ' (match reference images exactly)' : ''}
 2. SAME clothing - do NOT change outfits between panels
 3. SAME height relative to ${mainCharName}
 4. If ${mainCharName} is a toddler and secondary is also toddler, they should be similar size`;
@@ -944,18 +1148,47 @@ REQUIREMENTS:
 ${options.feedbackImageEnhancement}`;
     }
 
-    // ⚠️ CRITICAL: NO TEXT OVERLAY RULE - Must be at END of prompt for maximum weight
+    // Add speech bubble instructions if dialogue is present
+    if (options.hasSpeechBubble && options.dialogue) {
+      const bubbleStyle = options.speechBubbleStyle || 'speech';
+      const bubblePos = options.bubblePosition || 'top-center';
+      const speakerPos = options.speakerPosition || 'center';
+      
+      const bubbleStyleInstructions: Record<string, string> = {
+        'speech': 'classic white speech bubble with black outline and triangular tail',
+        'thought': 'cloud-shaped thought bubble with small floating circles leading to speaker',
+        'shout': 'jagged/spiky speech bubble indicating loud/emphatic speech',
+        'whisper': 'dotted-outline bubble or smaller, lighter bubble indicating quiet speech'
+      };
+
+      prompt += `
+
+===== SPEECH BUBBLE (RENDER IN IMAGE) =====
+CRITICAL: Render a professional comic book speech bubble containing dialogue.
+
+DIALOGUE TEXT: "${options.dialogue}"
+BUBBLE STYLE: ${bubbleStyleInstructions[bubbleStyle] || bubbleStyleInstructions['speech']}
+BUBBLE POSITION: ${bubblePos} of the panel
+SPEAKER POSITION: Speaker is on the ${speakerPos} of the panel
+TAIL DIRECTION: Bubble tail MUST point toward the ${speakerPos} where the speaker is located
+
+REQUIREMENTS:
+- Text MUST be clearly LEGIBLE (appropriate font size for panel)
+- Use clean, comic-book style lettering
+- Bubble should not obscure the character's face
+- Tail should clearly indicate which character is speaking
+- Professional quality matching published comic standards`;
+    }
+
+    // ⚠️ CRITICAL: NO UNAUTHORIZED TEXT RULE - Must be at END of prompt for maximum weight
     prompt += `
 
-⛔ ABSOLUTE PROHIBITION - NO TEXT IN IMAGE:
-- DO NOT add ANY text, words, letters, or numbers to the image
+⛔ TEXT RULES:
 - DO NOT add narration boxes, caption boxes, or title cards
-- DO NOT add speech bubbles or dialogue text
 - DO NOT add sound effects text (POW, BOOM, etc.)
-- DO NOT add labels, signs, or written words of any kind
-- The image must be PURE ILLUSTRATION - zero text elements
-- Text/captions will be added separately by the application
-- If you add ANY text to this image, it will be rejected`;
+- DO NOT add labels, signs, or written words
+${options.hasSpeechBubble && options.dialogue ? '- EXCEPTION: The speech bubble with dialogue above IS required' : '- DO NOT add speech bubbles or dialogue text'}
+- Narration/captions will be added separately by the application`;
 
     return prompt;
   }

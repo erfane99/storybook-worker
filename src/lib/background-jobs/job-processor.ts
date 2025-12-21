@@ -660,6 +660,17 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         this.updateComicGenerationProgress(job.id, { storyAnalyzed: true });
         
         console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} narrative beats for ${audience} audience`);
+        console.log('📊 Story Analysis:', JSON.stringify({
+          storyArchetype: storyAnalysis.storyArchetype,
+          totalPanels: storyAnalysis.totalPanels,
+          emotionalArc: storyAnalysis.emotionalArc,
+          thematicElements: storyAnalysis.thematicElements,
+          beatsPreview: storyAnalysis.storyBeats.slice(0, 3).map((b: any) => ({
+            beat: b.beat?.substring(0, 80) + '...',
+            emotion: b.emotion,
+            hasSpeechBubble: b.hasSpeechBubble
+          }))
+        }, null, 2));
         await jobService.updateJobProgress(job.id, 15, `Story structure complete: ${storyAnalysis.storyBeats.length} narrative moments mapped with ${storyAnalysis.emotionalArc?.length || 3}-stage emotional arc...`);
         
       } catch (storyError) {
@@ -818,6 +829,66 @@ if (resolvedDescription && typeof resolvedDescription === 'string') {
         }
         
         await jobService.updateJobProgress(job.id, 35, 'Character analysis completed (fallback method)');
+      }
+    }
+
+    // PHASE 3.25: SECONDARY CHARACTER CARTOON GENERATION (NEW - for multi-character consistency)
+    // Generate reference images for secondary characters so they look consistent across all panels
+    if (secondaryCharacters.length > 0 && characterDNA?.cartoonImage) {
+      console.log(`👥 PHASE 3.25: Generating reference images for ${secondaryCharacters.length} secondary character(s)...`);
+      await jobService.updateJobProgress(job.id, 37, `Creating reference images for ${secondaryCharacters.length} secondary character(s)...`);
+      
+      try {
+        this.trackServiceUsage(job.id, 'ai');
+        if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
+        
+        // Get Gemini integration for secondary character generation
+        const geminiIntegration = (aiService as any).geminiIntegration;
+        
+        // Generate cartoon reference for each secondary character
+        for (let i = 0; i < secondaryCharacters.length; i++) {
+          const secondaryChar = secondaryCharacters[i];
+          
+          // Skip if character already has a reference image
+          if (secondaryChar.cartoonImageUrl) {
+            console.log(`   ✅ ${secondaryChar.name} already has reference image, skipping...`);
+            continue;
+          }
+          
+          console.log(`   🎨 Generating reference for ${secondaryChar.name} (${i + 1}/${secondaryCharacters.length})...`);
+          
+          try {
+            const secondaryCartoonUrl = await geminiIntegration.generateSecondaryCharacterCartoon(
+              {
+                name: secondaryChar.name,
+                age: secondaryChar.age,
+                gender: secondaryChar.gender,
+                relationship: secondaryChar.relationship,
+                hairColor: secondaryChar.hairColor,
+                eyeColor: secondaryChar.eyeColor
+              },
+              character_art_style,  // Must match main character's art style
+              audience
+            );
+            
+            // Update the character with their reference image URL
+            secondaryChar.cartoonImageUrl = secondaryCartoonUrl;
+            console.log(`   ✅ ${secondaryChar.name} reference image generated: ${secondaryCartoonUrl.substring(0, 50)}...`);
+            
+          } catch (charError) {
+            console.warn(`   ⚠️ Failed to generate reference for ${secondaryChar.name}, will use text description:`, charError);
+            // Continue without reference image - will fall back to text description
+          }
+        }
+        
+        // Count how many got reference images
+        const charsWithImages = secondaryCharacters.filter(c => c.cartoonImageUrl).length;
+        console.log(`✅ Secondary character cartoon generation complete: ${charsWithImages}/${secondaryCharacters.length} have reference images`);
+        await jobService.updateJobProgress(job.id, 40, `${charsWithImages} secondary character reference images ready`);
+        
+      } catch (secondaryError) {
+        console.warn('⚠️ Secondary character cartoon generation failed (non-critical), proceeding with text descriptions:', secondaryError);
+        // Non-critical failure - continue with text descriptions for secondary characters
       }
     }
 
@@ -1784,6 +1855,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
       const resolvedStory = await storyResult.unwrap();
       console.log(`✅ Story: "${resolvedStory.title}" (${resolvedStory.story.split(' ').length} words)`);
+      console.log('📖 Generated Story Text:\n', resolvedStory.story);
       await jobService.updateJobProgress(job.id, 30, `Story created: "${resolvedStory.title}"`);
 
       // PHASE 2: Process as regular storybook (flows through ALL quality systems)

@@ -548,6 +548,9 @@ export interface StoryBeat {
   panelType?: string;                 // establishing_shot, medium_shot, reaction_shot, action_shot
   transitionType?: string;            // action_to_action, subject_to_subject, scene_to_scene, moment_to_moment
   symbolicElements?: string[];        // Moore symbolic elements present in this beat
+  // NEW: Silent panel support (no dialogue, no narration)
+  isSilent?: boolean;                 // If true, panel has no text at all
+  silentReason?: 'emotional_reaction' | 'contemplation' | 'visual_impact' | 'breathing_room' | 'revelation_aftermath';
   [key: string]: any;
 }
 
