@@ -1457,10 +1457,17 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         console.log(`   🔗 Using last panel from previous page for cross-page consistency`);
       }
       
+      // Extract pose from previous panel for diversity enforcement
+      const previousPose = previousPanel ? this.extractPoseFromAction(
+        previousBeat?.characterAction || previousPanel.characterAction || ''
+      ) : undefined;
+      
       const previousPanelContext = previousPanel?.generatedImage ? {
         imageUrl: previousPanel.generatedImage,
         description: previousBeat?.beat || previousPanel.description || 'previous scene',
-        action: previousBeat?.characterAction || previousPanel.characterAction || 'previous action'
+        action: previousBeat?.characterAction || previousPanel.characterAction || 'previous action',
+        // NEW: Track pose for diversity enforcement
+        pose: previousPose
       } : undefined;
 
       // ✅ NARRATION-FIRST ARCHITECTURE: Generate narration FIRST, then use it for image generation
@@ -1519,6 +1526,9 @@ COMIC BOOK PROFESSIONAL STANDARDS:
             },
             // SEQUENTIAL CONTEXT: Pass previous panel for narrative continuity
             previousPanelContext,
+            // NEW (Fix 5): Pass narrative position for visual contrast
+            narrativePosition: this.calculateNarrativePosition(panelNumber, totalPanels),
+            emotionalWeight: beat.emotionalWeight || this.calculateEmotionalWeight(beat, panelNumber, totalPanels),
             // NEW: Multi-character support - pass main character name and secondary characters
             mainCharacterName: characterName || characterDNA?.characterName,
             secondaryCharacters: secondaryCharsInBeat.map(char => ({
@@ -2373,6 +2383,64 @@ DO NOT describe what the reader can see. Add the invisible layers.`;
     
     return Math.round(weight);
   }
+/**
+   * Extract character pose category from action description
+   * Used to prevent repetitive poses in adjacent panels
+   * 
+   * COMIC BOOK BEST PRACTICE (Eisner's Sequential Art):
+   * - Never repeat the same body position in consecutive panels
+   * - Each panel should show progression of movement
+   * - Variety in poses creates visual rhythm
+   * 
+   * @returns Pose category: 'standing' | 'sitting' | 'walking' | 'running' | 'crouching' | 'lying' | 'jumping' | 'reaching' | 'other'
+   */
+private extractPoseFromAction(action: string): string {
+  const actionLower = (action || '').toLowerCase();
+  
+  // Pose detection patterns (order matters - more specific first)
+  const posePatterns: [RegExp, string][] = [
+    [/\b(crawl|crouch|kneel|squat|duck|huddle)\w*\b/, 'crouching'],
+    [/\b(lie|lay|lying|sleeping|asleep|prone|horizontal)\w*\b/, 'lying'],
+    [/\b(jump|leap|hop|bounce|spring|vault)\w*\b/, 'jumping'],
+    [/\b(run|sprint|dash|rush|race|flee)\w*\b/, 'running'],
+    [/\b(walk|step|stroll|wander|pace|march)\w*\b/, 'walking'],
+    [/\b(sit|seated|sat|perch)\w*\b/, 'sitting'],
+    [/\b(reach|stretch|extend|grab|grasp|point)\w*\b/, 'reaching'],
+    [/\b(stand|stood|standing|upright|erect)\w*\b/, 'standing'],
+    [/\b(climb|climbing|scale|ascend)\w*\b/, 'climbing'],
+    [/\b(bend|lean|stoop|bow)\w*\b/, 'bending']
+  ];
+  
+  for (const [pattern, pose] of posePatterns) {
+    if (pattern.test(actionLower)) {
+      return pose;
+    }
+  }
+  
+  return 'other';
+}
+
+/**
+   * Calculate narrative position for visual contrast enhancement
+   * 
+   * COMIC BOOK BEST PRACTICE (Eisner/McCloud):
+   * - Different story positions deserve different visual treatment
+   * - Climax needs dramatic lighting/contrast
+   * - Resolution needs warm, conclusive lighting
+   */
+private calculateNarrativePosition(
+  panelNumber: number,
+  totalPanels: number
+): 'OPENING' | 'SETUP' | 'RISING_ACTION' | 'CLIMAX' | 'RESOLUTION' {
+  const position = panelNumber / totalPanels;
+  
+  if (position < 0.15) return 'OPENING';
+  if (position < 0.3) return 'SETUP';
+  if (position < 0.7) return 'RISING_ACTION';
+  if (position < 0.85) return 'CLIMAX';
+  return 'RESOLUTION';
+}
+
   // ===== STORY STRUCTURE VALIDATION =====
 
   /**

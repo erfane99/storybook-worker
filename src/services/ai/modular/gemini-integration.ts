@@ -123,6 +123,8 @@ export interface PreviousPanelContext {
   imageUrl: string;
   description: string;
   action: string;
+  // NEW: Track pose category to prevent repetitive poses in adjacent panels
+  pose?: string;  // 'standing' | 'sitting' | 'walking' | 'running' | 'crouching' | 'lying' | 'jumping' | 'reaching' | 'climbing' | 'bending' | 'other'
 }
 
 export interface PanelOptions {
@@ -138,6 +140,9 @@ export interface PanelOptions {
     panelNumber?: number;
     totalPanels?: number;
   };
+  // NEW: Narrative position for visual contrast (Fix 5)
+  narrativePosition?: 'OPENING' | 'SETUP' | 'RISING_ACTION' | 'CLIMAX' | 'RESOLUTION';
+  emotionalWeight?: number;  // 1-10 scale for visual intensity
   previousPanelContext?: PreviousPanelContext;
   feedbackImageEnhancement?: string;
   // NEW: Multi-character support
@@ -1005,10 +1010,13 @@ EMOTION: ${emotion} - CHARACTER'S FACE MUST SHOW THIS EMOTION:
 THE FACIAL EXPRESSION IS CRITICAL - MUST MATCH "${emotion}" EXACTLY.
 CAMERA: ${cameraAngle} shot, ${panelType} panel`;
 
-    // === SILENT PANEL ENHANCEMENT ===
-    // When panel is marked silent, emphasize pure visual storytelling
+    // === SILENT PANEL ENHANCEMENT (Fix 6 - Enhanced Composition) ===
+    // When panel is marked silent, apply professional comic composition techniques
     if (options.isSilent) {
-      const silentEmphasis = {
+      const silentReason = options.silentReason || 'emotional_reaction';
+      
+      // Reason-specific visual guidance (what to show)
+      const silentEmphasis: Record<string, string> = {
         emotional_reaction: 'Character processing shock/joy/grief. Focus on eyes, face, and body language.',
         contemplation: 'Moment of deep thought before a decision. Introspective, atmospheric.',
         visual_impact: 'Pure visual moment. Let the composition tell the story.',
@@ -1016,18 +1024,45 @@ CAMERA: ${cameraAngle} shot, ${panelType} panel`;
         revelation_aftermath: 'Character absorbing a major revelation. Wide eyes, frozen posture.'
       };
       
+      // Reason-specific camera recommendations (how to frame it)
+      const silentCameraGuidance: Record<string, string> = {
+        emotional_reaction: 'CLOSE-UP on face (70% of frame). Eyes are the window to the soul.',
+        contemplation: 'MEDIUM shot with negative space. Character small against environment = weight of decision.',
+        visual_impact: 'WIDE or DRAMATIC angle. Let environment/action dominate. Character as part of larger moment.',
+        breathing_room: 'MEDIUM-WIDE with soft focus. Peaceful composition. Character at rest.',
+        revelation_aftermath: 'EXTREME CLOSE-UP on eyes OR pull back to show isolation. Stillness is key.'
+      };
+      
+      // Reason-specific composition techniques
+      const silentComposition: Record<string, string> = {
+        emotional_reaction: 'Rule of thirds - place eyes at upper intersection. Shallow depth of field.',
+        contemplation: 'Off-center framing. Character looking into negative space (future/decision).',
+        visual_impact: 'Dynamic diagonal lines. High contrast. Bold shapes.',
+        breathing_room: 'Centered, symmetrical. Soft edges. Muted colors.',
+        revelation_aftermath: 'Isolated subject. Dark vignette or spotlight effect. Frozen moment.'
+      };
+      
       prompt += `
 
-🤫 SILENT PANEL - PURE VISUAL STORYTELLING
+🤫 SILENT PANEL - PURE VISUAL STORYTELLING (${silentReason.toUpperCase()})
 This is a WORDLESS panel. NO speech bubbles. NO text of any kind.
 The image alone must convey: ${emotion}
-${silentEmphasis[options.silentReason || 'emotional_reaction']}
 
-VISUAL EMPHASIS FOR SILENT PANELS:
-• LARGER facial close-up or expressive body language
-• Atmospheric lighting to enhance mood (${emotion})
-• Composition draws eye to character's emotional state
-• Let the silence speak - every visual element supports the emotion`;
+PURPOSE: ${silentEmphasis[silentReason]}
+
+📷 CAMERA GUIDANCE:
+${silentCameraGuidance[silentReason]}
+
+🎨 COMPOSITION TECHNIQUE:
+${silentComposition[silentReason]}
+
+SILENT PANEL PRINCIPLES (Eisner/McCloud):
+- Silence = emphasis. This moment MATTERS.
+- Every visual element must support the emotion
+- Lighting tells the emotional story (${emotion} mood)
+- Body language speaks louder than words
+- Leave breathing room - don't overcrowd the frame
+- The reader should FEEL what the character feels`;
     }
 
     // Add mandatory physical action requirements if detected
@@ -1104,12 +1139,37 @@ SECONDARY CHARACTER CONSISTENCY RULES:
 4. If ${mainCharName} is a toddler and secondary is also toddler, they should be similar size`;
     }
 
-    // Add previous panel context with DIVERSITY enforcement
+    // Add previous panel context with POSE DIVERSITY enforcement
     if (hasPreviousPanel && options.previousPanelContext) {
+      const previousPose = options.previousPanelContext.pose || 'standing';
+      
+      // Map poses to forbidden poses (what NOT to repeat)
+      const forbiddenPoses: Record<string, string[]> = {
+        'standing': ['standing still', 'upright static pose', 'feet planted'],
+        'sitting': ['seated', 'sitting down', 'on chair/ground'],
+        'walking': ['walking', 'stepping', 'strolling'],
+        'running': ['running', 'sprinting', 'dashing'],
+        'crouching': ['crouching', 'kneeling', 'ducking', 'squatting'],
+        'lying': ['lying down', 'prone', 'horizontal'],
+        'jumping': ['jumping', 'leaping', 'airborne'],
+        'reaching': ['reaching', 'stretching arms', 'grabbing'],
+        'climbing': ['climbing', 'scaling', 'ascending'],
+        'bending': ['bending', 'leaning', 'stooping']
+      };
+      
+      const avoidPoses = forbiddenPoses[previousPose] || [];
+      
       prompt += `
 
-PREVIOUS ACTION: ${options.previousPanelContext.action}
-THIS PANEL: Show what happens NEXT with DIFFERENT pose and angle`;
+PREVIOUS PANEL: ${options.previousPanelContext.action}
+PREVIOUS POSE: ${previousPose}
+
+⚠️ POSE DIVERSITY RULE (CRITICAL):
+- DO NOT repeat "${previousPose}" pose from previous panel
+- Character must be in a DIFFERENT body position
+${avoidPoses.length > 0 ? `- AVOID: ${avoidPoses.join(', ')}` : ''}
+- Show PROGRESSION of movement between panels
+- Each panel should feel like a new moment in time`;
     }
 
     // Add environmental DNA (compressed) with PERSISTENT OBJECT ENFORCEMENT
@@ -1141,7 +1201,20 @@ ${recurringObjects.slice(0, 3).map((obj: string) => `• ${obj}`).join('\n')}`;
       }
     }
 
-    // Add style requirements with DIVERSITY enforcement
+    // === NARRATIVE POSITION VISUAL CONTRAST (Fix 5) ===
+    // Apply dramatic visual differences based on story position
+    const narrativePosition = options.narrativePosition || 'RISING_ACTION';
+    const emotionalWeight = options.emotionalWeight || 5;
+    
+    const visualContrast: Record<string, string> = {
+      'OPENING': 'Soft, inviting lighting. Warm color temperature. Establish mood gently.',
+      'SETUP': 'Clear, balanced lighting. Neutral tones. Focus on clarity.',
+      'RISING_ACTION': 'Building tension through lighting. Slight shadows. Dynamic energy.',
+      'CLIMAX': '🔥 DRAMATIC CONTRAST: High-impact lighting, strong shadows, vivid colors, maximum visual intensity. This is the story\'s peak moment.',
+      'RESOLUTION': '✨ WARM RESOLUTION: Golden hour lighting, soft glows, peaceful atmosphere. Sense of closure and satisfaction.'
+    };
+    
+    // Add style requirements with DIVERSITY enforcement + VISUAL CONTRAST
     prompt += `
 
 REQUIREMENTS:
@@ -1150,7 +1223,10 @@ REQUIREMENTS:
 - ${cameraAngle} camera angle (MUST follow this angle)
 - Character pose must be DIFFERENT from previous panel
 - Dynamic composition, not static
-- ${options.artStyle} style, publication quality`;
+- ${options.artStyle} style, publication quality
+
+🎬 NARRATIVE MOMENT: ${narrativePosition} (weight: ${emotionalWeight}/10)
+${visualContrast[narrativePosition] || visualContrast['RISING_ACTION']}`;
 
     // Add secondary character MANDATORY RENDERING rules if present
     if (hasSecondaryCharacters) {
