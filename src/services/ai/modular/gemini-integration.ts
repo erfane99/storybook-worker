@@ -1112,13 +1112,33 @@ PREVIOUS ACTION: ${options.previousPanelContext.action}
 THIS PANEL: Show what happens NEXT with DIFFERENT pose and angle`;
     }
 
-    // Add environmental DNA (compressed)
+    // Add environmental DNA (compressed) with PERSISTENT OBJECT ENFORCEMENT
     if (hasEnvDNA) {
+      // Extract persistent objects that MUST appear in every panel at this location
+      const persistentObjects = envDNA?.visualContinuity?.persistentObjects || [];
+      const recurringObjects = envDNA?.visualContinuity?.recurringObjects || [];
+      
       prompt += `
 
 ENV: ${timeOfDay} lighting, ${locationName}
 COLORS: ${dominantColors.join(', ') || 'natural palette'}
 FEATURES: ${keyFeatures.join(', ') || 'consistent background'}`;
+
+      // CRITICAL: Enforce persistent objects (story-significant items)
+      if (persistentObjects.length > 0) {
+        prompt += `
+
+⚠️ MANDATORY OBJECTS - MUST APPEAR IN THIS PANEL:
+${persistentObjects.map((obj: string) => `• ${obj} (REQUIRED - same appearance as previous panels)`).join('\n')}
+These objects are STORY-SIGNIFICANT and must be visible in EVERY panel at this location.
+Do NOT omit these objects. Do NOT change their appearance.`;
+      } else if (recurringObjects.length > 0) {
+        // Fallback to recurring objects if no persistent objects defined
+        prompt += `
+
+RECURRING ELEMENTS (maintain consistency):
+${recurringObjects.slice(0, 3).map((obj: string) => `• ${obj}`).join('\n')}`;
+      }
     }
 
     // Add style requirements with DIVERSITY enforcement

@@ -1581,7 +1581,11 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         professionalStandards: true,
         imageGenerated: true,
         characterDNAUsed: !!characterDNA,
-        environmentalDNAUsed: !!environmentalDNA
+        environmentalDNAUsed: !!environmentalDNA,
+        // NEW: Spiegelman emotional weight for dynamic panel sizing
+        emotionalWeight: beat.emotionalWeight || this.calculateEmotionalWeight(beat, panelNumber, totalPanels),
+        // NEW: Silent panel flag for frontend
+        isSilent: beat.isSilent || false
       };
       panels.push(panel);
 
@@ -1789,8 +1793,15 @@ COMIC BOOK PROFESSIONAL STANDARDS:
       .trim();
     
     // === POST-GENERATION VALIDATION ===
-    // Apply audience-specific vocabulary checks
-    cleaned = this.validateAndCleanNarration(cleaned, audience, narrativePosition, panelNumber);
+    // Apply audience-specific vocabulary checks + dialogue/action overlap detection
+    cleaned = this.validateAndCleanNarration(
+      cleaned, 
+      audience, 
+      narrativePosition, 
+      panelNumber,
+      beat.dialogue,        // Pass dialogue to check for overlap
+      beat.characterAction  // Pass action to detect visible action descriptions
+    );
     
     // Enforce max word count from philosophy
     const maxWords = philosophy.maxWords;
@@ -2102,19 +2113,84 @@ DO NOT describe what the reader can see. Add the invisible layers.`;
 
   /**
    * Validate and clean narration based on audience rules
-   * Checks for forbidden words, sentence length, and ending patterns
+   * Checks for forbidden words, sentence length, ending patterns, and dialogue overlap
+   * 
+   * COMIC BOOK BEST PRACTICE: Narration should NEVER:
+   * 1. Repeat dialogue that's already in a speech bubble
+   * 2. Describe visible actions the reader can see
+   * 3. State what the character is feeling when expression shows it
    */
   private validateAndCleanNarration(
     narration: string,
     audience: AudienceType,
     narrativePosition: string,
-    panelNumber: number
+    panelNumber: number,
+    dialogue?: string,
+    characterAction?: string
   ): string {
     let cleaned = narration;
     const warnings: string[] = [];
     
     // Get audience rules
     const rules = NARRATION_RULES[audience as keyof typeof NARRATION_RULES] || NARRATION_RULES.children;
+    
+    // === NEW: DIALOGUE OVERLAP CHECK (CRITICAL) ===
+    // Comic book rule: Never repeat dialogue in narration
+    if (dialogue && dialogue.trim().length > 0) {
+      const dialogueLower = dialogue.toLowerCase().trim();
+      const cleanedLower = cleaned.toLowerCase();
+      
+      // Check for exact dialogue match (with or without quotes)
+      const dialogueEscaped = dialogue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const dialoguePatterns = [
+        new RegExp(`["']${dialogueEscaped}["']`, 'gi'),
+        new RegExp(`${dialogueEscaped}`, 'gi'),
+        // Also catch paraphrased dialogue (same key words)
+        ...this.extractKeyPhrases(dialogue).map(phrase => new RegExp(`\\b${phrase}\\b`, 'gi'))
+      ];
+      
+      for (const pattern of dialoguePatterns) {
+        if (pattern.test(cleaned)) {
+          cleaned = cleaned.replace(pattern, '').trim();
+          warnings.push(`⚠️ Removed dialogue overlap from narration`);
+        }
+      }
+      
+      // Remove dialogue attribution phrases
+      const attributionPatterns = [
+        /,?\s*(she|he|they|it|the \w+)\s+(said|says|shouted|shouts|whispered|whispers|thought|thinks|asked|asks|exclaimed|exclaims|replied|replies|cried|cries|called|calls|yelled|yells|muttered|mutters|declared|declares)\.?\s*/gi,
+        /,?\s*with\s+(a\s+)?(determination|excitement|fear|joy|sadness|concern|hope|wonder|curiosity|confidence|smile|frown|sigh|laugh)\.?\s*/gi
+      ];
+      
+      for (const pattern of attributionPatterns) {
+        if (pattern.test(cleaned)) {
+          cleaned = cleaned.replace(pattern, ' ').trim();
+        }
+      }
+    }
+    
+    // === NEW: VISIBLE ACTION OVERLAP CHECK ===
+    // Comic book rule: Don't describe what the image already shows
+    if (characterAction && characterAction.trim().length > 0) {
+      const visibleActionPatterns = [
+        // Direct action descriptions that are visible
+        /\b(walks|walked|walking|runs|ran|running|stands|stood|standing|sits|sat|sitting)\s+(to|toward|towards|into|from|away|up|down)\b/gi,
+        /\b(picks up|picked up|picking up|puts down|put down|putting down)\b/gi,
+        /\b(opens|opened|opening|closes|closed|closing)\s+(the|a|her|his|their)\b/gi,
+        /\b(looks at|looked at|looking at|stares at|stared at|staring at)\b/gi,
+        /\b(smiles|smiled|smiling|frowns|frowned|frowning|laughs|laughed|laughing|cries|cried|crying)\b/gi
+      ];
+      
+      let hasVisibleActionWarning = false;
+      for (const pattern of visibleActionPatterns) {
+        if (pattern.test(cleaned)) {
+          if (!hasVisibleActionWarning) {
+            warnings.push(`⚠️ Narration describes visible action - should add invisible context instead`);
+            hasVisibleActionWarning = true;
+          }
+        }
+      }
+    }
     
     // === CHILDREN'S VOCABULARY CHECK ===
     if (audience === 'children') {
@@ -2125,7 +2201,6 @@ DO NOT describe what the reader can see. Add the invisible layers.`;
         const regex = new RegExp(`\\b${word}\\b`, 'gi');
         if (regex.test(cleaned)) {
           foundForbidden.push(word);
-          // Replace with simpler alternative or remove
           cleaned = cleaned.replace(regex, '');
         }
       }
@@ -2162,7 +2237,6 @@ DO NOT describe what the reader can see. Add the invisible layers.`;
     
     // === YOUNG ADULT CHECKS ===
     if (audience === 'young adults') {
-      // Check for preachy patterns
       const preachyPatterns = [
         /and so .* learned that/i,
         /the moral of/i,
@@ -2179,7 +2253,6 @@ DO NOT describe what the reader can see. Add the invisible layers.`;
     
     // === ADULT CHECKS ===
     if (audience === 'adults') {
-      // Check for oversimplification
       const simplePatterns = [
         /and they all/i,
         /happily ever/i,
@@ -2200,10 +2273,39 @@ DO NOT describe what the reader can see. Add the invisible layers.`;
       warnings.forEach(w => console.log(`   ${w}`));
     }
     
-    // Clean up any double spaces from word removal
-    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    // Clean up any double spaces, orphaned punctuation from word removal
+    cleaned = cleaned
+      .replace(/\s+/g, ' ')
+      .replace(/^\s*[.,!?]\s*/g, '')
+      .replace(/\s*[.,!?]\s*[.,!?]/g, '.')
+      .trim();
+    
+    // Ensure narration isn't empty after cleaning
+    if (cleaned.length < 5) {
+      console.log(`⚠️ Narration too short after cleaning, panel ${panelNumber} may need silent treatment`);
+      return '';
+    }
     
     return cleaned;
+  }
+
+  /**
+   * Extract key phrases from dialogue for overlap detection
+   * Returns 2-3 word phrases that would indicate duplication
+   */
+  private extractKeyPhrases(dialogue: string): string[] {
+    const phrases: string[] = [];
+    const words = dialogue.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(w => w.length > 3);
+    
+    // Extract meaningful 2-word combinations (skip common words)
+    const skipWords = ['the', 'and', 'but', 'that', 'this', 'with', 'have', 'from', 'they', 'been', 'were', 'said', 'each', 'which'];
+    const meaningfulWords = words.filter(w => !skipWords.includes(w));
+    
+    for (let i = 0; i < meaningfulWords.length - 1; i++) {
+      phrases.push(`${meaningfulWords[i]}\\s+${meaningfulWords[i + 1]}`);
+    }
+    
+    return phrases.slice(0, 3); // Limit to prevent over-matching
   }
 
   /**
@@ -2217,6 +2319,60 @@ DO NOT describe what the reader can see. Add the invisible layers.`;
     return Math.round(totalWords / sentences.length);
   }
 
+  /**
+   * Calculate emotional weight for panel sizing (Spiegelman principle)
+   * Scale: 1-10 where 10 = full-width climax panel, 1-3 = small transition
+   * 
+   * COMIC BOOK BEST PRACTICE:
+   * - Climax panels (70-85% through) should be largest
+   * - Opening/establishing shots should be prominent
+   * - Resolution panels deserve emphasis
+   * - Transitions can be smaller
+   */
+  private calculateEmotionalWeight(
+    beat: StoryBeat,
+    panelNumber: number,
+    totalPanels: number
+  ): number {
+    const position = panelNumber / totalPanels;
+    let weight = 5; // Default medium weight
+    
+    // Position-based weight
+    if (position < 0.1) {
+      // Opening - needs establishment
+      weight = 7;
+    } else if (position >= 0.7 && position <= 0.85) {
+      // Climax zone - maximum weight
+      weight = 9;
+    } else if (position > 0.9) {
+      // Resolution - important closure
+      weight = 7;
+    }
+    
+    // Emotion-based adjustment
+    const highEmotionKeywords = ['triumph', 'devastat', 'shock', 'terror', 'ecstat', 'furious', 'heartbreak'];
+    const lowEmotionKeywords = ['calm', 'peaceful', 'quiet', 'still', 'neutral'];
+    
+    const emotionLower = (beat.emotion || '').toLowerCase();
+    
+    if (highEmotionKeywords.some(kw => emotionLower.includes(kw))) {
+      weight = Math.min(10, weight + 2);
+    } else if (lowEmotionKeywords.some(kw => emotionLower.includes(kw))) {
+      weight = Math.max(3, weight - 1);
+    }
+    
+    // Panel type adjustment
+    if (beat.panelType === 'establishing_shot' || beat.panelPurpose === 'establish') {
+      weight = Math.max(weight, 7);
+    }
+    
+    // Silent panels often carry heavy visual weight
+    if (beat.isSilent && beat.silentReason === 'visual_impact') {
+      weight = Math.min(10, weight + 2);
+    }
+    
+    return Math.round(weight);
+  }
   // ===== STORY STRUCTURE VALIDATION =====
 
   /**

@@ -1000,6 +1000,8 @@ Respond with valid JSON only - no markdown, no explanations, just the JSON objec
       visualContinuity = {
         backgroundElements: this.extractBackgroundElements(gpt4Analysis.recurringVisualElements || []),
         recurringObjects: gpt4Analysis.recurringVisualElements || [],
+        // NEW: Extract story-significant objects that MUST persist across panels
+        persistentObjects: this.extractPersistentObjects(story || '', storyBeats, gpt4Analysis),
         colorConsistency: {
           dominantColors: gpt4Analysis.colorConsistency?.dominantColors || [],
           accentColors: gpt4Analysis.colorConsistency?.accentColors || [],
@@ -2014,5 +2016,71 @@ Respond with valid JSON only - no markdown, no explanations, just the JSON objec
 
   private createSpatialRelationships(environments: string[]): string {
     return `consistent_spatial_layout_across_${environments.length}_environments`;
+  }
+
+  /**
+   * Extract story-significant objects that MUST persist across all panels in same location
+   * 
+   * COMIC BOOK BEST PRACTICE (Moore's Visual Symbolism):
+   * - Objects mentioned multiple times in story are significant
+   * - Objects with adjectives (glowing, broken, magical) are plot-relevant
+   * - Objects characters interact with must remain visible
+   * 
+   * @returns Array of persistent object descriptions (max 5 for prompt efficiency)
+   */
+  private extractPersistentObjects(
+    story: string,
+    storyBeats: StoryBeat[],
+    gpt4Analysis: any
+  ): string[] {
+    const persistentObjects: string[] = [];
+    const storyLower = story.toLowerCase();
+    
+    // 1. Check GPT-4 analysis for significant objects
+    if (gpt4Analysis?.significantObjects) {
+      persistentObjects.push(...gpt4Analysis.significantObjects.slice(0, 3));
+    }
+    
+    // 2. Extract objects with descriptive adjectives (story-significant)
+    const significantPatterns = [
+      /(?:the |a |an )?(glowing|magical|ancient|broken|golden|silver|mysterious|enchanted|special|precious|beloved|old|worn|bright|shimmering)\s+(\w+(?:\s+\w+)?)/gi,
+      /(?:the |a |an )?(red|blue|green|yellow|purple|pink|orange|white|black|colorful)\s+(flower|balloon|book|box|key|door|window|lamp|lantern|crystal|gem|stone|ring|necklace|hat|scarf|toy|teddy|doll|ball)/gi
+    ];
+    
+    for (const pattern of significantPatterns) {
+      let match;
+      while ((match = pattern.exec(storyLower)) !== null) {
+        const objectDesc = `${match[1]} ${match[2]}`.trim();
+        if (!persistentObjects.includes(objectDesc) && persistentObjects.length < 5) {
+          persistentObjects.push(objectDesc);
+        }
+      }
+    }
+    
+    // 3. Extract objects mentioned in multiple story beats (recurring = important)
+    const beatObjects: Record<string, number> = {};
+    for (const beat of storyBeats) {
+      const beatText = `${beat.beat || ''} ${beat.characterAction || ''} ${beat.environment || ''}`.toLowerCase();
+      
+      // Common story objects
+      const objectKeywords = ['flower', 'book', 'key', 'door', 'window', 'tree', 'lamp', 'chair', 'table', 'bed', 'mirror', 'clock', 'painting', 'toy', 'ball', 'box', 'letter', 'photo', 'candle', 'crystal', 'stone', 'ring', 'crown', 'sword', 'wand', 'staff', 'potion', 'map', 'compass', 'lantern', 'basket', 'blanket'];
+      
+      for (const obj of objectKeywords) {
+        if (beatText.includes(obj)) {
+          beatObjects[obj] = (beatObjects[obj] || 0) + 1;
+        }
+      }
+    }
+    
+    // Add objects mentioned 2+ times
+    for (const [obj, count] of Object.entries(beatObjects)) {
+      if (count >= 2 && !persistentObjects.some(p => p.includes(obj)) && persistentObjects.length < 5) {
+        persistentObjects.push(obj);
+      }
+    }
+    
+    console.log(`📦 Extracted ${persistentObjects.length} persistent objects:`, persistentObjects);
+    
+    return persistentObjects;
   }
 }

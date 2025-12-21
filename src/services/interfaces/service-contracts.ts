@@ -150,6 +150,10 @@ export interface ComicPanel {
   imageGenerationError?: string;
   characterConsistency?: number;
   environmentalConsistency?: number;
+  // NEW: Spiegelman emotional weight for dynamic panel sizing (1-10 scale)
+  emotionalWeight?: number;
+  // NEW: Silent panel support - panel has no text (pure visual storytelling)
+  isSilent?: boolean;
 }
 
 export interface GenerationMetadata {
@@ -434,6 +438,9 @@ export interface EnvironmentalDNA {
   visualContinuity: {
     backgroundElements: string[];
     recurringObjects?: string[];
+    // NEW: Objects that MUST appear in EVERY panel at this location
+    // These are story-significant items (e.g., "glowing flower", "broken clock", "red balloon")
+    persistentObjects?: string[];
     colorConsistency: {
       dominantColors: string[];
       accentColors: string[];
