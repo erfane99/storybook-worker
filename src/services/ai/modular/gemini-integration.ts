@@ -143,6 +143,8 @@ export interface PanelOptions {
   // NEW: Narrative position for visual contrast (Fix 5)
   narrativePosition?: 'OPENING' | 'SETUP' | 'RISING_ACTION' | 'CLIMAX' | 'RESOLUTION';
   emotionalWeight?: number;  // 1-10 scale for visual intensity
+  // NEW: McCloud panel transition type for reading flow
+  transitionType?: 'action_to_action' | 'subject_to_subject' | 'scene_to_scene' | 'moment_to_moment' | 'aspect_to_aspect';
   previousPanelContext?: PreviousPanelContext;
   feedbackImageEnhancement?: string;
   // NEW: Multi-character support
@@ -466,6 +468,160 @@ DO NOT include:
   }
 
   /**
+   * Generate a professional book cover for a storybook
+   * Creates cover art with title treatment, main character in iconic pose, and genre-appropriate visuals
+   * 
+   * @param options - Cover generation options
+   * @returns Cloudinary URL of generated cover image
+   */
+  public async generateBookCover(options: {
+    title: string;
+    characterDNA?: any;
+    cartoonImageUrl?: string;
+    genre?: string;
+    audience: string;
+    artStyle: string;
+    thematicElements?: string[];
+  }): Promise<string> {
+    const { title, characterDNA, cartoonImageUrl, genre, audience, artStyle, thematicElements } = options;
+    
+    this.logger.log('📕 Generating book cover...', {
+      title,
+      genre,
+      audience,
+      artStyle,
+      hasCharacterDNA: !!characterDNA,
+      hasCartoonImage: !!cartoonImageUrl
+    });
+
+    try {
+      // Build title treatment style based on art style
+      const titleTreatments: Record<string, string> = {
+        'storybook': 'whimsical, hand-drawn lettering with subtle sparkles or swirls, warm and inviting fonts like a fairy tale book',
+        'comic-book': 'bold, dynamic 3D block letters with dramatic shadows and comic book pop style, action-packed feel',
+        'anime': 'dynamic Japanese-inspired typography with speed lines and energy effects, vibrant and eye-catching',
+        'semi-realistic': 'elegant serif typography with subtle embossing effect, sophisticated and refined',
+        'cartoon': 'fun, bouncy bubble letters with playful colors and cartoon-style outlines',
+        'flat-illustration': 'clean, modern sans-serif typography with geometric shapes and minimalist design'
+      };
+
+      // Build genre-appropriate visual cues
+      const genreVisuals: Record<string, string> = {
+        'adventure': 'action poses, exploration elements, treasure maps, distant mountains, compass symbols',
+        'fantasy': 'magical sparkles, mystical creatures, castles, enchanted forests, floating orbs of light',
+        'mystery': 'dramatic shadows, magnifying glass, mysterious fog, detective elements, clues',
+        'comedy': 'exaggerated expressions, bright colors, funny situations, playful chaos',
+        'friendship': 'warm group scenes, linked hands, heart motifs, sunrise/sunset backgrounds',
+        'courage': 'heroic poses, triumphant lighting, overcoming obstacles, brave stance',
+        'nature': 'lush landscapes, animals, trees, flowers, natural elements, earth tones',
+        'creativity': 'art supplies, colorful splashes, imagination bubbles, creative tools',
+        'sports': 'dynamic action, sports equipment, stadium lights, victory poses',
+        'siblings': 'two characters together, playful interactions, family bonding moments',
+        'bedtime': 'starry night sky, moon, cozy scenes, soft lighting, dreamy atmosphere',
+        'history': 'historical elements, period costumes, maps, old books, monuments'
+      };
+
+      // Build audience-specific styling
+      const audienceStyles: Record<string, string> = {
+        'children': 'bright, cheerful colors, rounded shapes, large friendly eyes, safe and warm atmosphere, playful composition',
+        'young adults': 'dynamic composition, emotional depth, relatable characters, contemporary feel, subtle complexity',
+        'adults': 'sophisticated composition, nuanced emotions, artistic lighting, mature themes, cinematic quality'
+      };
+
+      const titleStyle = titleTreatments[artStyle] || titleTreatments['storybook'];
+      const genreVisual = genre ? (genreVisuals[genre] || 'engaging scene with main character') : 'engaging scene with main character';
+      const audienceStyle = audienceStyles[audience] || audienceStyles['children'];
+
+      // Build the cover generation prompt
+      const coverPrompt = `Create a PROFESSIONAL BOOK COVER for a storybook titled "${title}".
+
+COVER REQUIREMENTS:
+1. TITLE TREATMENT: "${title}" - ${titleStyle}
+   - Title should be prominently displayed, readable, and integrated into the design
+   - Position the title at the TOP or CENTER-TOP of the cover
+
+2. MAIN CHARACTER:
+   - Feature the main character in an ICONIC, HEROIC POSE that captures their personality
+   - Character should be the focal point, taking up 40-60% of the cover
+   - Show the character in a dynamic, engaging stance (not static or boring)
+${characterDNA?.description ? `   - Character description: ${characterDNA.description}` : ''}
+
+3. GENRE VISUALS: ${genreVisual}
+   - Incorporate visual elements that hint at the story's genre and themes
+${thematicElements?.length ? `   - Thematic elements: ${thematicElements.join(', ')}` : ''}
+
+4. ART STYLE: ${artStyle}
+   - Match the interior art style for consistency
+   - Professional book cover quality with polished finish
+
+5. AUDIENCE STYLING: ${audienceStyle}
+
+6. COMPOSITION:
+   - Standard book cover aspect ratio (portrait orientation, approximately 3:4)
+   - Leave subtle space at bottom for "A StoryCanvas Creation" attribution
+   - Background should complement but not overwhelm the character
+   - Create depth with foreground and background elements
+
+7. QUALITY:
+   - High resolution, professional quality
+   - Rich colors and sharp details
+   - Appealing to the target audience
+   - Ready for print or digital display
+
+OUTPUT: A single, complete book cover image with title integrated into the design.
+
+DO NOT include:
+- Multiple versions or variations
+- Reference sheets or layout guides
+- Text other than the title
+- Busy or cluttered compositions that distract from the main character`;
+
+      // Build request parts
+      const parts: (GeminiTextPart | GeminiImagePart)[] = [{ text: coverPrompt }];
+
+      // If we have a cartoon image reference, include it for character consistency
+      if (cartoonImageUrl) {
+        this.logger.log('📷 Including character reference for cover generation...');
+        const base64Cartoon = await this.fetchImageAsBase64(cartoonImageUrl, true);
+        parts.push({
+          inline_data: {
+            mime_type: 'image/jpeg',
+            data: base64Cartoon
+          }
+        });
+      }
+
+      // Call Gemini to generate the cover
+      const response = await this.generateWithRetry<GeminiResponse>({
+        contents: [{ parts }],
+        generationConfig: {
+          temperature: 0.8, // Slightly higher for creative cover design
+          max_output_tokens: 2000,
+          responseModalities: ['TEXT', 'IMAGE'],
+          imageConfig: {
+            aspectRatio: '3:4', // Standard book cover aspect ratio
+            imageSize: '2K'    // Higher quality for cover
+          }
+        }
+      }, 'generateBookCover');
+
+      // Extract generated image URL (uploads to Cloudinary)
+      const coverUrl = await this.extractImageUrlFromResponse(response);
+
+      this.logger.log('✅ Book cover generated successfully', {
+        title,
+        coverUrl: coverUrl.substring(0, 60) + '...'
+      });
+
+      return coverUrl;
+
+    } catch (error) {
+      this.logger.error('❌ Book cover generation failed:', error);
+      throw this.handleGeminiError(error, 'generateBookCover');
+    }
+  }
+
+  /**
    * Generate panel with character using image-based reference
    * CRITICAL: Gemini SEES the actual cartoon image for perfect consistency
    * ENHANCED: Now includes environmental DNA enforcement for consistent time/location/lighting
@@ -769,6 +925,21 @@ COLOR PALETTE: ${dominantColors.slice(0, 4).join(', ') || 'colors matching the s
       });
     }
 
+    // Add McCloud transition guidance for panel-to-panel flow
+    if (options.transitionType) {
+      const transitionGuidance: Record<string, string> = {
+        'action_to_action': 'CONTINUITY: Show next moment of same action. Character position should flow from previous panel.',
+        'subject_to_subject': 'FOCUS SHIFT: Same scene, different subject. Maintain background consistency.',
+        'scene_to_scene': 'NEW SCENE: Establish new location clearly. Use wider framing.',
+        'moment_to_moment': 'SUBTLE CHANGE: Minimal movement from previous. Focus on expression shift.',
+        'aspect_to_aspect': 'FROZEN MOMENT: Same instant, different viewpoint. No time passes.'
+      };
+      prompt += `
+PANEL TRANSITION (McCLOUD): ${options.transitionType}
+${transitionGuidance[options.transitionType] || ''}
+`;
+    }
+
     prompt += `
 
 ${options.artStyle.toUpperCase()} QUALITY STANDARDS:
@@ -788,6 +959,13 @@ ${options.artStyle.toUpperCase()} QUALITY STANDARDS:
     prompt += `
 
 MANDATORY: Address ALL issues listed in CRITICAL FIXES REQUIRED section above.
+
+READING FLOW (Professional Comics Standard):
+- Character's gaze/action should guide eye toward next panel's entry point
+- If character faces LEFT, they're looking toward PAST (previous panel)
+- If character faces RIGHT, they're looking toward FUTURE (next panel)
+- Action lines and motion should flow left-to-right (Western reading direction)
+- Key focal point should be in right third of panel to lead eye forward
 
 Create a compelling comic panel that fixes the previous validation failures while maintaining design consistency in ${options.artStyle} style.`;
 

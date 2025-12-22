@@ -1420,11 +1420,46 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
     const overallScore = Math.round((characterConsistencyScore + storyCoherenceScore + environmentalConsistencyScore + 88 + 85 + 90) / 6);
 
-    await jobService.updateJobProgress(job.id, 95, `✅ All quality checks passed - Character: ${characterConsistencyScore}%, Environmental: ${environmentalConsistencyScore}%, Overall: ${overallScore}%`);
+    await jobService.updateJobProgress(job.id, 93, `✅ All quality checks passed - Character: ${characterConsistencyScore}%, Environmental: ${environmentalConsistencyScore}%, Overall: ${overallScore}%`);
+
+    // PHASE 6.5: BOOK COVER GENERATION
+    console.log('📕 PHASE 6.5: Generating professional book cover...');
+    let coverImageUrl: string | null = null;
+    
+    try {
+      await jobService.updateJobProgress(job.id, 95, 'Generating book cover...');
+      
+      this.trackServiceUsage(job.id, 'ai');
+      if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
+      
+      // Get Gemini integration for cover generation
+      const geminiIntegration = (aiService as any).geminiIntegration;
+      
+      if (geminiIntegration && typeof geminiIntegration.generateBookCover === 'function') {
+        coverImageUrl = await geminiIntegration.generateBookCover({
+          title: title,
+          characterDNA: characterDNA,
+          cartoonImageUrl: characterDNA?.cartoonImage || character_image,
+          genre: storyAnalysis?.storyArchetype || 'adventure',
+          audience: audience,
+          artStyle: character_art_style,
+          thematicElements: storyAnalysis?.thematicElements || []
+        });
+        
+        console.log(`✅ Book cover generated successfully: ${coverImageUrl?.substring(0, 60)}...`);
+        await jobService.updateJobProgress(job.id, 97, '✅ Book cover generated successfully');
+      } else {
+        console.warn('⚠️ Gemini integration not available for cover generation, skipping...');
+      }
+    } catch (coverError: any) {
+      // Cover generation failure is non-critical - continue with storybook creation
+      console.warn('⚠️ Book cover generation failed (non-critical):', coverError?.message || coverError);
+      await jobService.updateJobProgress(job.id, 97, 'Book cover generation skipped');
+    }
 
     // PHASE 7: SAVE WITH ENHANCED QUALITY METRICS
     this.trackServiceUsage(job.id, 'database');
-    servicesUsed.push('database');
+    if (!servicesUsed.includes('database')) servicesUsed.push('database');
 
     // Recalculate final averages with actual scores
     averageConsistency = totalScenes > 0 ? totalCharacterConsistencyScore / totalScenes : 0;
@@ -1437,6 +1472,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       user_id: job.user_id,
       audience,
       character_description: characterDescriptionToUse,
+      cover_image: coverImageUrl || undefined,
       has_errors: false,
     });
 

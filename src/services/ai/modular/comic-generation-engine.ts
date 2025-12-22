@@ -1550,6 +1550,8 @@ COMIC BOOK PROFESSIONAL STANDARDS:
             speechBubbleStyle: beat.isSilent ? undefined : (beat.speechBubbleStyle as 'speech' | 'thought' | 'shout' | 'whisper' | undefined),
             speakerPosition: beat.isSilent ? undefined : beat.speakerPosition,
             bubblePosition: beat.isSilent ? undefined : beat.bubblePosition,
+            // McCloud transition type for panel-to-panel flow
+            transitionType: beat.transitionType as 'action_to_action' | 'subject_to_subject' | 'scene_to_scene' | 'moment_to_moment' | 'aspect_to_aspect' | undefined,
             // NEW: Silent panel support - enhanced visual storytelling
             isSilent: beat.isSilent,
             silentReason: beat.silentReason

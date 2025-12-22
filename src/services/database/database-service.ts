@@ -499,18 +499,25 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
     const result = await this.executeQuery<StorybookEntry>(
       'Save storybook entry',
       async (supabase) => {
+        const insertData: any = {
+          title: data.title,
+          story: data.story,
+          pages: data.pages,
+          user_id: data.user_id || null,
+          audience: data.audience,
+          character_description: data.character_description,
+          has_errors: data.has_errors,
+          created_at: new Date().toISOString(),
+        };
+        
+        // Add cover_image if provided
+        if (data.cover_image) {
+          insertData.cover_image = data.cover_image;
+        }
+        
         const response = await supabase
           .from('storybook_entries')
-          .insert({
-            title: data.title,
-            story: data.story,
-            pages: data.pages,
-            user_id: data.user_id || null,
-            audience: data.audience,
-            character_description: data.character_description,
-            has_errors: data.has_errors,
-            created_at: new Date().toISOString(),
-          })
+          .insert(insertData)
           .select()
           .single();
         return { data: response.data, error: response.error };

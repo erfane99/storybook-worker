@@ -1525,6 +1525,7 @@ export interface StorybookEntryData {
   user_id?: string;
   audience: string;
   character_description: string;
+  cover_image?: string;
   has_errors: boolean;
 }
 
@@ -1536,6 +1537,7 @@ export interface StorybookEntry {
   user_id?: string;
   audience: string;
   character_description: string;
+  cover_image?: string;
   has_errors: boolean;
   created_at: string;
   updated_at: string;
