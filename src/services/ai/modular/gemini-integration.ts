@@ -942,12 +942,14 @@ ${transitionGuidance[options.transitionType] || ''}
 
     prompt += `
 
-${options.artStyle.toUpperCase()} QUALITY STANDARDS:
-- Professional comic book illustration
-- Clean, expressive line work
-- Vibrant, publication-ready colors
-- Visual consistency with established character design
-- Engaging composition that advances the narrative`;
+    ${options.artStyle.toUpperCase()} QUALITY STANDARDS:
+    - Professional comic book illustration
+    - Clean, expressive line work
+    - Vibrant, publication-ready colors
+    - Visual consistency with established character design
+    - Engaging composition that advances the narrative
+    - Clear foreground/midground/background separation
+    - Strong focal point with supporting visual hierarchy`;
 
     if (hasSecondaryCharacters) {
       prompt += `
@@ -1178,6 +1180,14 @@ Create a compelling comic panel that fixes the previous validation failures whil
     let prompt = `${options.artStyle} comic panel. CHARACTER 1 (${mainCharName}): Match IMAGE 1 exactly.${hasPreviousPanel ? ' CONTINUITY: Follow from IMAGE 2 but CHANGE composition.' : ''}
 
 SCENE: ${sceneDescription}
+
+VISUAL HIERARCHY (Professional Comics Standard):
+- FOREGROUND (closest): Main action/character - sharp focus, highest detail
+- MIDGROUND (middle): Supporting elements - clear but less detailed
+- BACKGROUND (furthest): Environment context - softer, atmospheric
+- FOCAL POINT: Place primary action at rule-of-thirds intersection
+- DEPTH: Use size difference, overlap, and atmospheric perspective to create 3D space
+
 EMOTION: ${emotion} - CHARACTER'S FACE MUST SHOW THIS EMOTION:
 - happy/excited = big smile, raised cheeks, bright eyes
 - sad = downturned mouth, droopy eyes, slumped posture
