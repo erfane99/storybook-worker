@@ -2542,6 +2542,72 @@ Now analyze the story and return the validated JSON with all 7 master principles
           parsed.storyBeats[i].previousBeatSummary = parsed.storyBeats[i - 1].beat;
         }
         this.log('info', `✅ Added sequential context to ${parsed.storyBeats.length - 1} beats`);
+
+        // ===== ASPECT-TO-ASPECT STRATEGIC INSERTION =====
+        // After emotional peaks (weight 9-10), consider inserting frozen-moment panels
+        // This creates manga-style emotional depth by showing multiple viewpoints of key moments
+        const aspectToAspectConfig = {
+          children: { maxInsertions: 1, minWeightTrigger: 10 },
+          'young adults': { maxInsertions: 2, minWeightTrigger: 9 },
+          adults: { maxInsertions: 3, minWeightTrigger: 9 }
+        };
+        
+        const aspectConfig = aspectToAspectConfig[audience as keyof typeof aspectToAspectConfig] || aspectToAspectConfig.children;
+        let aspectInsertions = 0;
+        
+        // Scan for high-weight beats that could benefit from aspect-to-aspect
+        for (let i = parsed.storyBeats.length - 1; i >= 0 && aspectInsertions < aspectConfig.maxInsertions; i--) {
+          const beat = parsed.storyBeats[i];
+          const weight = beat.emotionalWeight || 5;
+          
+          // Only insert after climax-level beats, not at the very end
+          if (weight >= aspectConfig.minWeightTrigger && i < parsed.storyBeats.length - 2) {
+            // Check if next beat is NOT already aspect-to-aspect
+            const nextBeat = parsed.storyBeats[i + 1];
+            if (nextBeat?.transitionType !== 'aspect_to_aspect') {
+              // Create aspect-to-aspect beat showing environment's reaction to the emotional moment
+              const aspectBeat = {
+                beatNumber: beat.beatNumber + 0.5,
+                beat: `[FROZEN MOMENT] The ${beat.environment || 'scene'} itself seems to hold its breath - ${beat.symbolicLayer || 'the weight of the moment suspended in time'}`,
+                emotion: beat.emotion,
+                characterAction: 'frozen in the emotional moment, world paused around them',
+                actionContext: 'environment reflects internal emotional state',
+                physicalLayer: beat.physicalLayer,
+                sensoryLayer: `Time seems to stop. ${beat.sensoryLayer || 'Every detail crystallized.'}`,
+                symbolicLayer: `The world mirrors the character's ${beat.emotion} - a breath between heartbeats`,
+                cameraAngle: 'wide',
+                cameraReason: 'Wide angle to show environment echoing emotional state (aspect-to-aspect)',
+                panelType: 'establishing_shot',
+                transitionType: 'aspect_to_aspect',
+                emotionalWeight: Math.max(7, weight - 1),
+                dialogue: undefined,
+                hasSpeechBubble: false,
+                isSilent: true,
+                silentReason: 'visual_impact' as const,
+                locationChange: 'same',
+                environment: beat.environment,
+                visualPriority: 'environment',
+                panelPurpose: 'emotional_echo',
+                previousBeatContext: beat.beat,
+                previousBeatSummary: beat.beat
+              };
+              
+              // Insert after the high-weight beat
+              parsed.storyBeats.splice(i + 1, 0, aspectBeat as any);
+              aspectInsertions++;
+              this.log('info', `🎭 Inserted aspect-to-aspect panel after beat ${beat.beatNumber} (weight: ${weight})`);
+            }
+          }
+        }
+        
+        // Renumber beats if insertions were made
+        if (aspectInsertions > 0) {
+          parsed.storyBeats.forEach((beat: StoryBeat, idx: number) => {
+            beat.beatNumber = idx + 1;
+          });
+          parsed.totalPanels = parsed.storyBeats.length;
+          this.log('info', `✅ Inserted ${aspectInsertions} aspect-to-aspect panels. New total: ${parsed.totalPanels}`);
+        }
       } catch (e: any) {
         // Log the actual error and response for debugging
         this.log('error', `Failed to parse story analysis: ${e.message}`);

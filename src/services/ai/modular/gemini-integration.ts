@@ -134,6 +134,8 @@ export interface PanelOptions {
   panelType?: string;
   backgroundComplexity?: string;
   temperature?: number;
+  // NEW: Panel border style for visual storytelling (McCloud/Eisner principle)
+  borderStyle?: 'clean' | 'jagged' | 'wavy' | 'broken' | 'soft' | 'none';
   environmentalContext?: {
     characterDNA?: any;
     environmentalDNA?: any;
@@ -928,15 +930,55 @@ COLOR PALETTE: ${dominantColors.slice(0, 4).join(', ') || 'colors matching the s
     // Add McCloud transition guidance for panel-to-panel flow
     if (options.transitionType) {
       const transitionGuidance: Record<string, string> = {
-        'action_to_action': 'CONTINUITY: Show next moment of same action. Character position should flow from previous panel.',
-        'subject_to_subject': 'FOCUS SHIFT: Same scene, different subject. Maintain background consistency.',
-        'scene_to_scene': 'NEW SCENE: Establish new location clearly. Use wider framing.',
-        'moment_to_moment': 'SUBTLE CHANGE: Minimal movement from previous. Focus on expression shift.',
-        'aspect_to_aspect': 'FROZEN MOMENT: Same instant, different viewpoint. No time passes.'
+        'action_to_action': `CONTINUITY RULES (MANDATORY):
+- Character position MUST flow from previous panel (if left side, stay left or move naturally right)
+- Motion trajectory continues - no teleporting or position jumps
+- Same clothing, same lighting, same background elements visible
+- Show the NEXT moment, not a random new pose
+- If previous panel showed arm raised, this panel shows arm mid-swing or completing motion`,
+        'subject_to_subject': `FOCUS SHIFT RULES (MANDATORY):
+- SAME SCENE, different subject - background elements MUST match previous panel
+- If previous panel showed a room, this panel shows same room from different angle
+- Maintain consistent lighting direction and color temperature
+- New subject should have been visible or implied in previous panel
+- Spatial relationship to previous subject must be logical`,
+        'scene_to_scene': `NEW SCENE RULES (MANDATORY):
+- ESTABLISH new location clearly with wider framing
+- This is a time/space jump - make the new location immediately recognizable
+- Include establishing environmental details (architecture, nature, lighting)
+- Character should be shown entering or present in new space
+- Clear visual break from previous scene (different color palette, lighting mood)`,
+        'moment_to_moment': `MICRO-CHANGE RULES (MANDATORY):
+- SAME FRAMING as previous panel (camera position nearly identical)
+- Only change: subtle expression shift OR tiny movement
+- Background EXACTLY the same (copy-level consistency)
+- Used for: blink, slight smile, tear forming, realization dawning
+- Time elapsed: less than 1 second`,
+        'aspect_to_aspect': `FROZEN TIME RULES (MANDATORY):
+- NO TIME PASSES between this panel and previous
+- Same instant, different viewpoint (like multiple cameras capturing one moment)
+- If previous panel showed character's face, this might show their hands or the environment
+- Lighting IDENTICAL (same moment = same light)
+- Used for: building tension, showing scope of moment, environmental mood`
       };
       prompt += `
 PANEL TRANSITION (McCLOUD): ${options.transitionType}
 ${transitionGuidance[options.transitionType] || ''}
+`;
+    }
+
+    // Add panel border style guidance (Eisner visual storytelling)
+    if (options.borderStyle) {
+      const borderGuidance: Record<string, string> = {
+        'clean': 'BORDER: Clean, straight edges. Professional, controlled moment.',
+        'jagged': 'BORDER: Jagged, sharp edges suggesting chaos, action, or danger. Energy bursting from frame.',
+        'wavy': 'BORDER: Wavy, fluid edges for dreams, memories, or underwater scenes. Ethereal quality.',
+        'broken': 'BORDER: Broken/shattered edges for impact moments, breaking barriers, or emotional breakthroughs.',
+        'soft': 'BORDER: Soft, faded edges for flashbacks, gentle moments, or fading consciousness.',
+        'none': 'BORDER: Borderless panel - image bleeds to edge for immersive, expansive moments.'
+      };
+      prompt += `
+${borderGuidance[options.borderStyle] || ''}
 `;
     }
 

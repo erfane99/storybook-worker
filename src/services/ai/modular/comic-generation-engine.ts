@@ -1552,6 +1552,8 @@ COMIC BOOK PROFESSIONAL STANDARDS:
             bubblePosition: beat.isSilent ? undefined : beat.bubblePosition,
             // McCloud transition type for panel-to-panel flow
             transitionType: beat.transitionType as 'action_to_action' | 'subject_to_subject' | 'scene_to_scene' | 'moment_to_moment' | 'aspect_to_aspect' | undefined,
+            // NEW: Panel border style based on emotion/action (Eisner principle)
+            borderStyle: this.determineBorderStyle(beat, panelNumber, totalPanels),
             // NEW: Silent panel support - enhanced visual storytelling
             isSilent: beat.isSilent,
             silentReason: beat.silentReason
@@ -2385,6 +2387,66 @@ DO NOT describe what the reader can see. Add the invisible layers.`;
     
     return Math.round(weight);
   }
+
+/**
+   * Determine panel border style based on emotion and action (Eisner principle)
+   * Border style communicates mood before the reader processes content
+   * 
+   * COMIC BOOK BEST PRACTICE:
+   * - Action/danger: Jagged edges convey energy and chaos
+   * - Dreams/memories: Wavy edges signal non-reality
+   * - Impact moments: Broken edges for breakthrough moments
+   * - Calm scenes: Clean edges for stability
+   * - Immersive moments: No border for expansive feeling
+   */
+private determineBorderStyle(
+  beat: StoryBeat,
+  panelNumber: number,
+  totalPanels: number
+): 'clean' | 'jagged' | 'wavy' | 'broken' | 'soft' | 'none' {
+  const emotion = (beat.emotion || '').toLowerCase();
+  const action = (beat.characterAction || '').toLowerCase();
+  const panelType = (beat.panelType || '').toLowerCase();
+  
+  // Action/danger emotions get jagged borders
+  const actionEmotions = ['angry', 'furious', 'scared', 'terrified', 'shocked', 'panicked'];
+  if (actionEmotions.some(e => emotion.includes(e))) {
+    return 'jagged';
+  }
+  
+  // Action verbs get jagged borders
+  const actionVerbs = ['run', 'jump', 'fight', 'crash', 'explode', 'chase', 'attack', 'flee'];
+  if (actionVerbs.some(v => action.includes(v))) {
+    return 'jagged';
+  }
+  
+  // Dream/memory/flashback get wavy borders
+  const dreamIndicators = ['dream', 'remember', 'memory', 'imagine', 'vision', 'flashback'];
+  if (dreamIndicators.some(d => beat.beat?.toLowerCase().includes(d) || action.includes(d))) {
+    return 'wavy';
+  }
+  
+  // High emotional weight climax moments get broken borders
+  const weight = beat.emotionalWeight || 5;
+  if (weight >= 9 && panelNumber !== 1 && panelNumber !== totalPanels) {
+    return 'broken';
+  }
+  
+  // Establishing shots and splash panels get no border for immersion
+  if (panelType.includes('establishing') || panelType.includes('splash')) {
+    return 'none';
+  }
+  
+  // Soft emotions get soft borders
+  const softEmotions = ['peaceful', 'calm', 'gentle', 'sleepy', 'tender', 'nostalgic'];
+  if (softEmotions.some(e => emotion.includes(e))) {
+    return 'soft';
+  }
+  
+  // Default: clean professional borders
+  return 'clean';
+}
+
 /**
    * Extract character pose category from action description
    * Used to prevent repetitive poses in adjacent panels
