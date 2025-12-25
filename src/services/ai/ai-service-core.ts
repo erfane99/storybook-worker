@@ -55,6 +55,15 @@ import {
 // FIXED: Import ErrorCategory from the correct path (error-types.ts) to resolve enum conflicts
 import { ErrorCategory } from '../errors/error-types.js';
 
+// ===== AUDIENCE KEY NORMALIZER =====
+/**
+ * Normalize audience key from frontend format (young_adults) to config format (young adults)
+ * This ensures consistent key lookup across all audience configurations
+ */
+function normalizeAudienceKey(audience: string): string {
+  return audience.replace(/_/g, ' ');
+}
+
 // ===== WORLD-CLASS STORY PROMPTS WITH AUDIENCE-SPECIFIC STRUCTURE =====
 const WORLD_CLASS_STORY_PROMPTS = {
   systemPrompt: (audience: string, genre: string) => 
@@ -1661,7 +1670,7 @@ async cartoonizeImage(options: CartoonizeOptions): Promise<AsyncResult<Cartooniz
         }
 
         const audienceConfig = WORLD_CLASS_STORY_PROMPTS.audienceRequirements[audience as keyof typeof WORLD_CLASS_STORY_PROMPTS.audienceRequirements];
-        const config = PROFESSIONAL_AUDIENCE_CONFIG[audience as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
+        const config = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
 
         // Build comprehensive prompt with 7 master comic creator principles
         const storyPrompt = `You are a master storyteller combining the principles of Will Eisner (sequential art), Scott McCloud (panel transitions), Stan Lee (emotional authenticity), Jack Kirby (visual power), Neil Gaiman (layered storytelling), Alan Moore (thematic depth), and Art Spiegelman (dramatic pacing).
