@@ -564,6 +564,9 @@ export class ComicGenerationEngine {
   private geminiIntegration: GeminiIntegration;
   private errorHandler: ErrorHandlingSystem;
   private claudeIntegration: ClaudeIntegration;
+  
+  // Track previous panel's narration state for consecutive silent prevention
+  private lastPanelWasSilent: boolean = false;
 
   constructor(
     geminiIntegration: GeminiIntegration,
@@ -598,6 +601,9 @@ export class ComicGenerationEngine {
       }
 
       console.log(`Generating professional comic book layout for ${audience} audience...`);
+      
+      // Reset silent panel tracker for new storybook generation
+      this.lastPanelWasSilent = false;
 
       // Step 1: USE STORY ANALYSIS FROM ENHANCED CONTEXT (Already analyzed by Claude in PHASE 1)
       // This eliminates duplicate API calls and uses Claude (more reliable) instead of Gemini for text analysis
@@ -1638,8 +1644,30 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     audience: AudienceType,
     beat: StoryBeat
   ): { shouldNarrate: boolean; reason: string } {
-    // === SILENT PANEL CHECK - NO TEXT AT ALL ===
+    // === CRITICAL DIALOGUE CHECK (HIGHEST PRIORITY) ===
+    // Panels with meaningful dialogue must NEVER be silent - dialogue advances the story
+    if (beat.dialogue && beat.dialogue.trim().length > 0) {
+      const dialogue = beat.dialogue.trim();
+      // Only skip single-word exclamations (e.g., "Wow!", "No!", "Yes!")
+      const isSingleWordExclamation = /^[A-Za-z]+[!?]*$/.test(dialogue) && dialogue.length < 8;
+      if (!isSingleWordExclamation) {
+        console.log(`📝 Panel ${panelNumber} FORCED NARRATED: has critical dialogue "${dialogue.substring(0, 30)}..."`);
+        this.lastPanelWasSilent = false;
+        return { shouldNarrate: true, reason: 'panel_has_critical_dialogue' };
+      }
+    }
+    
+    // === CONSECUTIVE SILENT PREVENTION ===
+    // Never allow more than one silent panel in a row - creates narrative gaps
+    if (this.lastPanelWasSilent && beat.isSilent) {
+      console.log(`📝 Panel ${panelNumber} FORCED NARRATED: preventing consecutive silent panels`);
+      this.lastPanelWasSilent = false;
+      return { shouldNarrate: true, reason: 'consecutive_silent_prevention' };
+    }
+    
+    // === SILENT PANEL CHECK ===
     if (beat.isSilent) {
+      this.lastPanelWasSilent = true;
       return { shouldNarrate: false, reason: `silent_panel_${beat.silentReason || 'emotional_impact'}` };
     }
     
@@ -1817,22 +1845,41 @@ COMIC BOOK PROFESSIONAL STANDARDS:
       beat.characterAction  // Pass action to detect visible action descriptions
     );
     
-    // Enforce max word count from philosophy
+    // Enforce max word count from philosophy - TRUNCATE AT SENTENCE BOUNDARY
     const maxWords = philosophy.maxWords;
     const words = cleaned.split(/\s+/);
     if (words.length > maxWords) {
-      cleaned = words.slice(0, maxWords).join(' ');
-      // Ensure it ends with proper punctuation
-      if (!/[.!?]$/.test(cleaned)) {
-        cleaned += '.';
+      // Find complete sentences within the narration
+      const sentences = cleaned.match(/[^.!?]+[.!?]+/g) || [cleaned];
+      let truncated = '';
+      let wordCount = 0;
+      
+      for (const sentence of sentences) {
+        const sentenceWords = sentence.trim().split(/\s+/).length;
+        if (wordCount + sentenceWords <= maxWords) {
+          truncated += sentence;
+          wordCount += sentenceWords;
+        } else {
+          // Stop before exceeding word limit
+          break;
+        }
       }
-      console.log(`   ⚠️ Truncated to ${maxWords} words (${audience} max)`);
+      
+      // If no complete sentence fits, use first sentence anyway (coherence > word count)
+      if (!truncated.trim() && sentences.length > 0) {
+        truncated = sentences[0];
+        console.log(`   ⚠️ First sentence exceeds ${maxWords} words - using anyway for coherence`);
+      } else if (truncated) {
+        console.log(`   ⚠️ Truncated at sentence boundary: ${wordCount} words (${audience} max: ${maxWords})`);
+      }
+      
+      cleaned = truncated.trim();
     }
     
-    const wordCount = cleaned.split(/\s+/).length;
+    const finalWordCount = cleaned.split(/\s+/).length;
     
     // Log narration quality metrics
-    console.log(`   Words: ${wordCount}/${maxWords}, Avg sentence length: ${this.calculateAvgSentenceLength(cleaned)}`);
+    console.log(`   Words: ${finalWordCount}/${maxWords}, Avg sentence length: ${this.calculateAvgSentenceLength(cleaned)}`);
     
     return cleaned;
   }

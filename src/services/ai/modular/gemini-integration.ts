@@ -1219,7 +1219,7 @@ Create a compelling comic panel that fixes the previous validation failures whil
     const physicalActions = this.extractMandatoryPhysicalActions(sceneDescription);
 
     // Build compressed prompt - essential info only
-    let prompt = `${options.artStyle} comic panel. CHARACTER 1 (${mainCharName}): Match IMAGE 1 exactly.${hasPreviousPanel ? ' CONTINUITY: Follow from IMAGE 2 but CHANGE composition.' : ''}
+    let prompt = `${options.artStyle} comic panel. CHARACTER 1 (${mainCharName}): Match IMAGE 1 EXACTLY - same face, same body, SAME CLOTHING. The character's outfit must be IDENTICAL to the reference image.${hasPreviousPanel ? ' CONTINUITY: Follow from IMAGE 2 but CHANGE composition.' : ''}
 
 SCENE: ${sceneDescription}
 
@@ -1239,6 +1239,28 @@ EMOTION: ${emotion} - CHARACTER'S FACE MUST SHOW THIS EMOTION:
 - curious = tilted head, raised eyebrow, slight smile
 THE FACIAL EXPRESSION IS CRITICAL - MUST MATCH "${emotion}" EXACTLY.
 CAMERA: ${cameraAngle} shot, ${panelType} panel`;
+
+    // === MANDATORY CLOTHING CONSISTENCY ===
+    if (options.environmentalContext?.characterDNA) {
+      const charDNA = options.environmentalContext.characterDNA;
+      const clothingDesc = charDNA.visualDNA?.clothing 
+        || charDNA.description?.match(/clothing[:\s]+([^.]+)/i)?.[1]
+        || charDNA.description?.match(/wearing[:\s]+([^.]+)/i)?.[1]
+        || charDNA.description?.match(/outfit[:\s]+([^.]+)/i)?.[1];
+      
+      if (clothingDesc) {
+        prompt += `
+
+⚠️ MANDATORY CLOTHING - ZERO VARIATION ALLOWED:
+EXACT OUTFIT: ${typeof clothingDesc === 'string' ? clothingDesc : JSON.stringify(clothingDesc)}
+- DO NOT change any clothing items from the reference
+- DO NOT add accessories not shown in IMAGE 1
+- DO NOT change colors, patterns, or style
+- Character MUST wear EXACTLY this outfit in EVERY panel
+- Clothing consistency is as important as facial consistency
+ANY CLOTHING DEVIATION = FAILED PANEL`;
+      }
+    }
 
     // === SILENT PANEL ENHANCEMENT (Fix 6 - Enhanced Composition) ===
     // When panel is marked silent, apply professional comic composition techniques
