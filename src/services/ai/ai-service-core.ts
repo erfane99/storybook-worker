@@ -1669,7 +1669,7 @@ async cartoonizeImage(options: CartoonizeOptions): Promise<AsyncResult<Cartooniz
           throw new Error(`Unsupported genre: ${genre}`);
         }
 
-        const audienceConfig = WORLD_CLASS_STORY_PROMPTS.audienceRequirements[audience as keyof typeof WORLD_CLASS_STORY_PROMPTS.audienceRequirements];
+        const audienceConfig = WORLD_CLASS_STORY_PROMPTS.audienceRequirements[normalizeAudienceKey(audience) as keyof typeof WORLD_CLASS_STORY_PROMPTS.audienceRequirements];
         const config = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
 
         // Build comprehensive prompt with 7 master comic creator principles
@@ -1924,7 +1924,7 @@ Now write the story.`;
     async () => {
       this.log('info', `📖 Analyzing story structure for ${audience} audience using Claude API with 7 Master Principles...`);
       
-      const config = PROFESSIONAL_AUDIENCE_CONFIG[audience];
+      const config = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
       const panelCount = config.totalPanels;
       
       // Narrative intelligence for archetype detection
@@ -2634,7 +2634,7 @@ Now analyze the story and return the validated JSON with all 7 master principles
         characterArc: ['introduction', 'development', 'challenge', 'resolution'],
         visualFlow: parsed.visualThemes || ['establishing', 'rising action', 'climax', 'resolution'],
         totalPanels: panelCount,
-        pagesRequired: PROFESSIONAL_AUDIENCE_CONFIG[audience].pagesPerStory,
+        pagesRequired: PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG].pagesPerStory,
         dialoguePanels: Math.floor(panelCount * 0.4),
         speechBubbleDistribution: { standard: 60, thought: 20, shout: 20 },
         emotionalArc: parsed.emotionalArc || ['curious', 'engaged', 'challenged', 'triumphant'],
@@ -2670,7 +2670,7 @@ private enrichStoryBeats(beats: any[], targetCount: number, audience: AudienceTy
   }
   
   // Get config for range validation (Design by Contract principle)
-  const config = PROFESSIONAL_AUDIENCE_CONFIG[audience];
+  const config = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
   const minRequired = config.minPanels;
   const maxAllowed = config.maxPanels;
 

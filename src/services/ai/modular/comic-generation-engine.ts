@@ -46,6 +46,15 @@ import {
   AIContentPolicyError 
 } from './error-handling-system.js';
 
+/**
+ * Normalizes audience key from frontend format (underscores) to config format (spaces)
+ * Frontend sends: young_adults, middle_grade, early_readers
+ * Config expects: young adults, middle grade, early readers
+ */
+function normalizeAudienceKey(audience: string): string {
+  return audience.replace(/_/g, ' ');
+}
+
 // GEMINI MIGRATION: Switched to Gemini for image-based panel generation
 // import { OpenAIIntegration, STYLE_SPECIFIC_PANEL_CALIBRATION } from './openai-integration.js';
 import { GeminiIntegration } from './gemini-integration.js';
@@ -648,7 +657,7 @@ export class ComicGenerationEngine {
       }
 
       // Step 4: Generate professional comic book pages with optimized prompts (FROM BOTH FILES)
-      const config = PROFESSIONAL_AUDIENCE_CONFIG[audience as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
+      const config = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
       const pages = await this.generateOptimizedComicBookPages(
         storyAnalysis, 
         characterDNA, 
@@ -712,7 +721,7 @@ export class ComicGenerationEngine {
    */
   private async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
     try {
-      const config = PROFESSIONAL_AUDIENCE_CONFIG[audience as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
+      const config = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
       
       // Determine story archetype based on content analysis (FROM AISERVNOW.TXT)
       const narrativeIntel = await this.determineNarrativeIntelligence(story, audience);
