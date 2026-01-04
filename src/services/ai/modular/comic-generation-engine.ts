@@ -1487,17 +1487,26 @@ COMIC BOOK PROFESSIONAL STANDARDS:
 
       // ✅ NARRATION-FIRST ARCHITECTURE: Generate narration FIRST, then use it for image generation
       // This ensures images match exactly what narration describes (no more "crawling" in text but "standing" in image)
-      console.log(`📝 Generating narration FIRST for panel ${panelNumber}/${totalPanels}...`);
       
-      // STEP 1: Generate rich narration text (20-40 words) from beat FIRST
-      const narration = await this.generatePanelNarration(
-        beat,
-        panelNumber,
-        totalPanels,
-        audience,
-        characterName || 'the character',
-        story
-      );
+      // OPTION C CHECK: Use pre-generated narration from comic script if available
+      let narration: string;
+      
+      if (beat.preGeneratedNarration !== undefined) {
+        // Option C: Use narration from single-pass comic script - NO GENERATION NEEDED
+        narration = beat.preGeneratedNarration || '';
+        console.log(`✅ Using PRE-GENERATED narration for panel ${panelNumber}/${totalPanels}: "${narration.substring(0, 50)}..."`);
+      } else {
+        // Legacy path: Generate narration via Claude
+        console.log(`📝 Generating narration for panel ${panelNumber}/${totalPanels}...`);
+        narration = await this.generatePanelNarration(
+          beat,
+          panelNumber,
+          totalPanels,
+          audience,
+          characterName || 'the character',
+          story
+        );
+      }
       
       // STEP 2: Build visual description FROM narration (narration becomes source of truth for image)
       const visualDescription = this.buildVisualDescriptionFromNarration(narration, beat);

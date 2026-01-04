@@ -416,7 +416,7 @@ import {
 // GEMINI MIGRATION: Switched from OpenAI to Gemini for 95% character consistency
 // import { OpenAIIntegration, STYLE_SPECIFIC_PANEL_CALIBRATION } from './modular/openai-integration.js';
 import { GeminiIntegration } from './modular/gemini-integration.js';
-import { ClaudeIntegration } from './modular/claude-integration.js';
+import { ClaudeIntegration, ComicScript, ComicScriptPanel, ComicScriptOptions } from './modular/claude-integration.js';
 import { STYLE_SPECIFIC_PANEL_CALIBRATION } from './modular/openai-integration.js';
 import { ComicGenerationEngine } from './modular/comic-generation-engine.js';
 import { NarrativeIntelligenceEngine } from './modular/narrative-intelligence.js';
@@ -2657,6 +2657,152 @@ Now analyze the story and return the validated JSON with all 7 master principles
   } else {
     throw result.error;
   }
+}
+
+// ===== OPTION C: SINGLE-PASS COMIC SCRIPT GENERATION =====
+
+/**
+ * Generate comic script and convert to story analysis in a single Claude API call
+ * This replaces 17+ text API calls with 1 structured call (Option C)
+ * 
+ * @param genre - Story genre
+ * @param audience - Target audience
+ * @param characterDescription - Character description
+ * @returns StoryAnalysis with pre-generated narration in story beats
+ */
+async generateComicScriptAnalysis(
+  genre: string,
+  audience: AudienceType,
+  characterDescription: string
+): Promise<{ storyAnalysis: StoryAnalysis; title: string; story: string }> {
+  const config = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
+  const panelCount = config.totalPanels;
+  
+  this.log('info', `🎬 OPTION C: Generating complete comic script (${panelCount} panels for ${audience})...`);
+  
+  // Generate complete comic script with Claude
+  const comicScript = await this.claudeIntegration.generateComicScript({
+    genre,
+    audience,
+    characterDescription,
+    panelCount
+  });
+  
+  this.log('info', `✅ Comic script generated: "${comicScript.title}" with ${comicScript.panels.length} panels`);
+  
+  // Convert comic script panels to story beats with pre-generated narration
+  const storyBeats: StoryBeat[] = comicScript.panels.map((panel, index) => {
+    // Determine panel type from camera angle
+    const panelType = this.mapCameraAngleToPanelType(panel.cameraAngle);
+    
+    // Determine if panel is silent
+    const isSilent = panel.narration === null && (panel.dialogue === null || panel.dialogue.length === 0);
+    
+    // Get dialogue info
+    const hasDialogue = !!(panel.dialogue && panel.dialogue.length > 0);
+    const primaryDialogue = hasDialogue ? panel.dialogue![0] : null;
+    
+    return {
+      beat: panel.visualDirection,
+      emotion: panel.emotion,
+      visualPriority: 'character',
+      panelPurpose: panel.narrativePhase.toLowerCase(),
+      narrativeFunction: panel.narrativePhase.toLowerCase(),
+      characterAction: panel.visualDirection,
+      actionContext: panel.visualDirection,
+      environment: 'story setting',
+      dialogue: primaryDialogue?.text,
+      hasSpeechBubble: hasDialogue,  // Now guaranteed to be boolean
+      speechBubbleStyle: primaryDialogue?.type || 'speech',
+      speakerName: primaryDialogue?.speaker || comicScript.characterName,
+      speakerPosition: 'center' as const,
+      bubblePosition: 'top-center' as const,
+      cameraAngle: panel.cameraAngle,
+      cameraReason: `${panel.narrativePhase} panel`,
+      panelType,
+      transitionType: this.determineTransitionType(index, comicScript.panels.length),
+      beatNumber: panel.panelNumber,
+      // NEW (Option C): Pre-generated narration - NO REGENERATION NEEDED
+      preGeneratedNarration: panel.narration,
+      isSilent,
+      silentReason: isSilent ? 'visual_impact' as const : undefined,
+      // Spiegelman emotional weight based on narrative phase
+      emotionalWeight: this.calculateEmotionalWeightFromPhase(panel.narrativePhase, index, comicScript.panels.length)
+    };
+  });
+  
+  // Build story analysis
+  const storyAnalysis: StoryAnalysis = {
+    storyBeats,
+    characterArc: ['introduction', 'development', 'challenge', 'resolution'],
+    visualFlow: ['establishing', 'rising action', 'climax', 'resolution'],
+    totalPanels: storyBeats.length,
+    pagesRequired: config.pagesPerStory,
+    dialoguePanels: storyBeats.filter(b => b.hasSpeechBubble).length,
+    speechBubbleDistribution: { standard: 60, thought: 20, shout: 20 },
+    emotionalArc: this.extractEmotionalArc(storyBeats),
+    cinematicQuality: true,
+    storyArchetype: genre
+  };
+  
+  this.log('info', `✅ OPTION C: Created ${storyAnalysis.storyBeats.length} story beats with PRE-GENERATED narration`);
+  this.log('info', `   📝 Silent panels: ${storyBeats.filter(b => b.isSilent).length}`);
+  this.log('info', `   💬 Dialogue panels: ${storyAnalysis.dialoguePanels}`);
+  
+  // Reconstruct story summary for compatibility
+  const story = `${comicScript.storySummary}\n\n${comicScript.panels.map(p => p.visualDirection).join('\n\n')}`;
+  
+  return {
+    storyAnalysis,
+    title: comicScript.title,
+    story
+  };
+}
+
+/**
+ * Map camera angle to panel type
+ */
+private mapCameraAngleToPanelType(cameraAngle: string): string {
+  switch (cameraAngle) {
+    case 'wide': return 'establishing_shot';
+    case 'close-up': return 'close_up';
+    case 'dramatic': return 'dramatic_angle';
+    case 'medium':
+    default: return 'medium_shot';
+  }
+}
+
+/**
+ * Determine McCloud transition type based on panel position
+ */
+private determineTransitionType(index: number, totalPanels: number): string {
+  if (index === 0) return 'scene_to_scene';
+  const position = index / totalPanels;
+  if (position < 0.7) return 'action_to_action';
+  if (position < 0.85) return 'moment_to_moment';
+  return 'scene_to_scene';
+}
+
+/**
+ * Calculate emotional weight from narrative phase
+ */
+private calculateEmotionalWeightFromPhase(phase: string, index: number, total: number): number {
+  switch (phase) {
+    case 'CLIMAX': return 10;
+    case 'RESOLUTION': return 7;
+    case 'RISING_ACTION': return 5 + Math.floor((index / total) * 3);
+    case 'SETUP': return 5;
+    case 'OPENING': return 6;
+    default: return 5;
+  }
+}
+
+/**
+ * Extract emotional arc from story beats
+ */
+private extractEmotionalArc(beats: StoryBeat[]): string[] {
+  const emotions = beats.map(b => b.emotion).filter((e, i, arr) => arr.indexOf(e) === i);
+  return emotions.slice(0, 5);
 }
 
 /**

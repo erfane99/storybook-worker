@@ -646,16 +646,34 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
     await jobService.updateJobProgress(job.id, 5, 'Analyzing your story structure and creating narrative blueprint...');
 
     // PHASE 1: STORY ANALYSIS (Story-First Approach)
+    // OPTION C: Check for pre-generated story analysis from single-pass comic script generation
     console.log('📖 PHASE 1: Story Structure Analysis (Story-First Approach)...');
     let storyAnalysis: any = null;
     let pages = initialPages || [];
     
-    if (!pages || pages.length === 0) {
+    // Check for pre-generated story analysis from Option C (single-pass comic script)
+    const preGeneratedAnalysis = (job as any).preGeneratedStoryAnalysis;
+    
+    if (preGeneratedAnalysis && preGeneratedAnalysis.storyBeats?.length > 0) {
+      // OPTION C: Use pre-generated story analysis - SKIP story analysis API call
+      console.log('✅ OPTION C: Using PRE-GENERATED story analysis from single-pass comic script');
+      console.log(`   📝 ${preGeneratedAnalysis.storyBeats.length} beats with pre-generated narration`);
+      
+      storyAnalysis = preGeneratedAnalysis;
+      this.updateComicGenerationProgress(job.id, { storyAnalyzed: true });
+      
+      const preGenNarrationCount = preGeneratedAnalysis.storyBeats.filter((b: any) => b.preGeneratedNarration !== undefined).length;
+      console.log(`   📊 Beats with pre-generated narration: ${preGenNarrationCount}/${preGeneratedAnalysis.storyBeats.length}`);
+      
+      await jobService.updateJobProgress(job.id, 15, `Story analysis ready: ${storyAnalysis.storyBeats.length} panels with pre-generated narration`);
+      
+    } else if (!pages || pages.length === 0) {
       try {
         this.trackServiceUsage(job.id, 'ai');
         if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
         
-        // Enhanced story analysis with environmental awareness
+        // Enhanced story analysis with environmental awareness (legacy path)
+        console.log('📝 Legacy path: Generating story analysis via Claude...');
         storyAnalysis = await aiService.analyzeStoryStructure(story, audience);
         this.updateComicGenerationProgress(job.id, { storyAnalyzed: true });
         
@@ -1879,29 +1897,35 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     servicesUsed.push('job', 'ai');
 
     try {
-      // PHASE 1: Generate story using AI with multi-character support
-      await jobService.updateJobProgress(job.id, 10, `Creating ${job.genre} story with ${characterCount} character(s)...`);
+      // ===== OPTION C: SINGLE-PASS COMIC SCRIPT GENERATION =====
+      // Generate complete comic script (story + analysis + narration) in ONE Claude API call
+      // This replaces 17+ text API calls with 1 structured call
       
-      const storyResult = await aiService.generateStoryWithOptions({
-        genre: job.genre,
-        characterDescription: job.character_description,
-        audience: job.audience,
-        characters: characters  // NEW: Pass characters array for multi-character stories
-      });
+      await jobService.updateJobProgress(job.id, 10, `Creating ${job.genre} story with ${characterCount} character(s) using single-pass generation...`);
+      
+      console.log('🎬 OPTION C: Using single-pass comic script generation...');
+      
+      // Use generateComicScriptAnalysis for single-pass generation
+      const scriptResult = await (aiService as any).generateComicScriptAnalysis(
+        job.genre,
+        job.audience,
+        job.character_description
+      );
+      
+      console.log(`✅ Story: "${scriptResult.title}" (${scriptResult.story.split(' ').length} words)`);
+      console.log(`✅ Story beats with PRE-GENERATED narration: ${scriptResult.storyAnalysis.storyBeats.length}`);
+      console.log('📖 Comic Script Summary:', scriptResult.story.substring(0, 200) + '...');
+      await jobService.updateJobProgress(job.id, 30, `Story created: "${scriptResult.title}" with ${scriptResult.storyAnalysis.storyBeats.length} panels ready`);
 
-      const resolvedStory = await storyResult.unwrap();
-      console.log(`✅ Story: "${resolvedStory.title}" (${resolvedStory.story.split(' ').length} words)`);
-      console.log('📖 Generated Story Text:\n', resolvedStory.story);
-      await jobService.updateJobProgress(job.id, 30, `Story created: "${resolvedStory.title}"`);
-
-      // PHASE 2: Process as regular storybook (flows through ALL quality systems)
-      console.log('📊 Converting to comic book with full quality verification...');
+      // PHASE 2: Process as regular storybook with PRE-GENERATED story analysis
+      // This skips PHASE 1 story analysis since we already have it
+      console.log('📊 Converting to comic book with pre-generated story analysis...');
       
       return await this.processStorybookJobWithServices({
         ...job,
         type: 'storybook',
-        title: resolvedStory.title || `${job.genre.charAt(0).toUpperCase() + job.genre.slice(1)} Adventure`,
-        story: resolvedStory.story,
+        title: scriptResult.title || `${job.genre.charAt(0).toUpperCase() + job.genre.slice(1)} Adventure`,
+        story: scriptResult.story,
         character_image: job.cartoon_image_url,
         pages: [], // System generates panels from story
         audience: job.audience,
@@ -1909,7 +1933,9 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
         character_description: job.character_description,
         character_art_style: job.character_art_style,
         layout_type: job.layout_type,
-        characters: characters  // NEW: Pass characters through to storybook processing
+        characters: characters,  // NEW: Pass characters through to storybook processing
+        // OPTION C: Pass pre-generated story analysis to skip PHASE 1
+        preGeneratedStoryAnalysis: scriptResult.storyAnalysis
       } as StorybookJobData, servicesUsed);
 
     } catch (error) {

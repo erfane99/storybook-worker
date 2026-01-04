@@ -558,6 +558,8 @@ export interface StoryBeat {
   // NEW: Silent panel support (no dialogue, no narration)
   isSilent?: boolean;                 // If true, panel has no text at all
   silentReason?: 'emotional_reaction' | 'contemplation' | 'visual_impact' | 'breathing_room' | 'revelation_aftermath';
+  // NEW (Option C): Pre-generated narration from single-pass comic script
+  preGeneratedNarration?: string | null;  // If set, skip narration generation - use this directly
   [key: string]: any;
 }
 
