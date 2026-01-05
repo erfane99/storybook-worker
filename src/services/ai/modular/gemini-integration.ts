@@ -1531,12 +1531,15 @@ REQUIREMENTS:
     // ⚠️ CRITICAL: NO UNAUTHORIZED TEXT RULE - Must be at END of prompt for maximum weight
     prompt += `
 
-⛔ TEXT RULES:
-- DO NOT add narration boxes, caption boxes, or title cards
-- DO NOT add sound effects text (POW, BOOM, etc.)
-- DO NOT add labels, signs, or written words
-${options.hasSpeechBubble && options.dialogue ? '- EXCEPTION: The speech bubble with dialogue above IS required' : '- DO NOT add speech bubbles or dialogue text'}
-- Narration/captions will be added separately by the application`;
+⛔ ABSOLUTE TEXT PROHIBITION:
+- ZERO text anywhere in the image
+- NO narration boxes, caption boxes, title cards, or yellow text boxes
+- NO sound effects (POW, BOOM, WHOOSH, etc.)
+- NO labels, signs, banners, or written words of any kind
+- NO speech bubbles unless specifically instructed below
+${options.hasSpeechBubble && options.dialogue ? `- EXCEPTION: Include ONE speech bubble with: "${options.dialogue}"` : '- NO speech bubbles'}
+- The image must be PURELY VISUAL - all text is added by the application afterward
+- ANY text rendered in the image is a CRITICAL FAILURE`;
 
     return prompt;
   }
