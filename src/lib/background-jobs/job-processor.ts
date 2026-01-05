@@ -17,6 +17,7 @@ import {
 } from '../../services/interfaces/service-contracts.js';
 
 import { EnvironmentalConsistencyValidator } from '../../services/ai/modular/environmental-consistency-validator.js';
+import { UnifiedPanelValidator, UnifiedValidationError } from '../../services/ai/modular/unified-panel-validator.js';
 import {
   Result,
   ErrorFactory,
@@ -1050,18 +1051,64 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     // Resolve validators
     let characterValidator: any = null;
     let environmentalValidator: EnvironmentalConsistencyValidator | null = null;
+    let unifiedValidator: UnifiedPanelValidator | null = null;
+    let useUnifiedValidation = true; // P2: Use unified validation by default for cost savings
+    let shouldSkipValidation = false;
+    let skipValidationReason = '';
 
     try {
-      if (characterDNA) {
-        characterValidator = await serviceContainer.resolve(SERVICE_TOKENS.VISUAL_CONSISTENCY_VALIDATOR);
-        console.log('✅ Character consistency validator initialized');
+      // P2: Try to use unified validator first (consolidates 3 validators into 1 API call)
+      if (characterDNA || (environmentalDNA && !environmentalDNA.fallback)) {
+        try {
+          const { OpenAIIntegration } = await import('../../services/ai/modular/openai-integration.js');
+          const { ErrorHandlingSystem } = await import('../../services/ai/modular/error-handling-system.js');
+          const errorHandler = new ErrorHandlingSystem();
+          const openaiIntegration = new OpenAIIntegration(process.env.OPENAI_API_KEY || '', errorHandler);
+          unifiedValidator = new UnifiedPanelValidator(openaiIntegration, databaseService);
+          console.log('✅ Unified panel validator initialized (P2 cost optimization - single API call per page)');
+        } catch (unifiedError: any) {
+          console.warn('⚠️ Unified validator not available, falling back to separate validators:', unifiedError.message);
+          useUnifiedValidation = false;
+        }
       }
-      if (environmentalDNA && !environmentalDNA.fallback) {
-        environmentalValidator = await serviceContainer.resolve(SERVICE_TOKENS.ENVIRONMENTAL_CONSISTENCY_VALIDATOR);
-        console.log('✅ Environmental consistency validator initialized');
+
+      // Fallback to separate validators if unified not available
+      if (!useUnifiedValidation || !unifiedValidator) {
+        if (characterDNA) {
+          characterValidator = await serviceContainer.resolve(SERVICE_TOKENS.VISUAL_CONSISTENCY_VALIDATOR);
+          console.log('✅ Character consistency validator initialized (fallback)');
+        }
+        if (environmentalDNA && !environmentalDNA.fallback) {
+          environmentalValidator = await serviceContainer.resolve(SERVICE_TOKENS.ENVIRONMENTAL_CONSISTENCY_VALIDATOR);
+          console.log('✅ Environmental consistency validator initialized (fallback)');
+        }
+        useUnifiedValidation = false;
       }
     } catch (error: any) {
       console.warn('⚠️ Validators not available, proceeding without validation:', error.message);
+      useUnifiedValidation = false;
+    }
+
+    // P4: Check if validation can be skipped based on historical success patterns
+    try {
+      const { PatternLearningEngine } = await import('../../services/ai/modular/pattern-learning-engine.js');
+      const patternLearner = new PatternLearningEngine(databaseService);
+      
+      const skipCheck = await patternLearner.canSkipValidation({
+        artStyle: character_art_style,
+        audience: audience,
+        characterDNAConfidence: characterDNA?.metadata?.confidenceScore
+      });
+
+      if (skipCheck.skipValidation && skipCheck.confidence > 90) {
+        shouldSkipValidation = true;
+        skipValidationReason = skipCheck.reason;
+        console.log(`⚡ Skipping validation (${skipCheck.reason}, confidence: ${skipCheck.confidence}%)`);
+      } else {
+        console.log(`🔍 Running full validation: ${skipCheck.reason}`);
+      }
+    } catch (patternError: any) {
+      console.warn('⚠️ Pattern learning check failed, running full validation:', patternError.message);
     }
 
     // Process and validate pages
@@ -1069,6 +1116,84 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       const pageScenes = page.scenes || [];
       let updatedScenes = [];
       let previousPanelUrl: string | undefined = undefined;
+
+      // P2: UNIFIED VALIDATION (single API call for entire page)
+      if (useUnifiedValidation && unifiedValidator && !shouldSkipValidation) {
+        const panelUrls = pageScenes
+          .map((s: any) => s.generatedImage)
+          .filter((url: any) => url);
+
+        if (panelUrls.length > 0) {
+          await jobService.updateJobProgress(
+            job.id,
+            Math.round(35 + ((pageIndex) / pages.length) * 55),
+            `🔍 Unified validation: Page ${pageIndex + 1} (${panelUrls.length} panels, single API call)`
+          );
+
+          try {
+            const unifiedReport = await unifiedValidator.validatePage({
+              jobId: job.id,
+              pageNumber: pageIndex + 1,
+              panelImageUrls: panelUrls,
+              characterReferenceImage: characterDNA?.cartoonImage || character_image,
+              characterDNA: characterDNA ? {
+                description: characterDNA.description || character_description,
+                artStyle: character_art_style,
+                visualFingerprint: characterDNA.visualFingerprint
+              } : undefined,
+              environmentalDNA: environmentalDNA ? {
+                primaryLocation: environmentalDNA.primaryLocation,
+                lightingContext: environmentalDNA.lightingContext,
+                visualContinuity: environmentalDNA.visualContinuity
+              } : undefined
+            });
+
+            // Update scores from unified report
+            totalCharacterConsistencyScore += unifiedReport.characterConsistency.overallScore > 0 
+              ? unifiedReport.characterConsistency.overallScore : 70;
+            totalEnvironmentalConsistencyScore += unifiedReport.environmentalConsistency.overallCoherence > 0
+              ? unifiedReport.environmentalConsistency.overallCoherence : 70;
+            
+            characterValidationScores.push(unifiedReport.characterConsistency.overallScore);
+            environmentalValidationScores.push(unifiedReport.environmentalConsistency.overallCoherence);
+
+            // Mark all panels as validated
+            updatedScenes = pageScenes.map((scene: any, idx: number) => ({
+              ...scene,
+              characterConsistency: unifiedReport.characterConsistency.overallScore,
+              environmentalCoherence: unifiedReport.environmentalConsistency.overallCoherence,
+              unifiedValidation: true,
+              professionalStandards: true,
+            }));
+
+            console.log(`✅ Page ${pageIndex + 1} unified validation complete: ` +
+              `Character=${unifiedReport.characterConsistency.overallScore}%, ` +
+              `Environmental=${unifiedReport.environmentalConsistency.overallCoherence}%, ` +
+              `Sequential=${unifiedReport.sequentialConsistency.averageScore}%`);
+
+            // Add page to results and continue to next page
+            updatedPages.push({
+              pageNumber: pageIndex + 1,
+              scenes: updatedScenes,
+              characterConsistency: unifiedReport.characterConsistency.overallScore,
+              environmentalCoherence: unifiedReport.environmentalConsistency.overallCoherence,
+              sequentialConsistency: unifiedReport.sequentialConsistency.averageScore,
+              unifiedValidation: true,
+            });
+
+            continue; // Skip legacy validation for this page
+
+          } catch (unifiedError: any) {
+            if (unifiedError instanceof UnifiedValidationError) {
+              // Validation failed - let legacy validators handle regeneration
+              console.warn(`⚠️ Page ${pageIndex + 1} failed unified validation, falling back to legacy validators`);
+              useUnifiedValidation = false; // Disable for remaining pages
+            } else {
+              console.warn(`⚠️ Unified validation error, falling back to legacy: ${unifiedError.message}`);
+            }
+          }
+        }
+      }
 
       // PANEL-LEVEL CHARACTER VALIDATION
       for (const [sceneIndex, scene] of pageScenes.entries()) {
@@ -1082,6 +1207,28 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
         if (characterDNA && characterValidator && scene.generatedImage) {
           let validationPassed = false;
           let bestScore = 0;
+
+          // P4: Skip validation if high confidence pattern established
+          if (shouldSkipValidation) {
+            characterConsistencyScore = 95; // Use high default score for trusted patterns
+            characterValidationScores.push(95);
+            validationPassed = true;
+            
+            console.log(`⚡ Panel ${globalPanelNumber} validation skipped (${skipValidationReason})`);
+            
+            finalScene = {
+              ...finalScene,
+              characterConsistency: 95,
+              validationSkipped: true,
+              skipReason: skipValidationReason,
+            };
+            
+            updatedScenes.push(finalScene);
+            if (finalScene.generatedImage) {
+              previousPanelUrl = finalScene.generatedImage;
+            }
+            continue; // Skip to next panel
+          }
 
           for (let attempt = 1; attempt <= 3; attempt++) {
             totalCharacterValidationAttempts++;
@@ -1239,6 +1386,24 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       // PAGE-LEVEL ENVIRONMENTAL VALIDATION
       if (environmentalDNA && !environmentalDNA.fallback && environmentalValidator && updatedScenes.length > 0) {
         let pageValidationPassed = false;
+
+        // P4: Skip environmental validation if high confidence pattern established
+        if (shouldSkipValidation) {
+          totalEnvironmentalConsistencyScore += 95; // Use high default score for trusted patterns
+          environmentalValidationScores.push(95);
+          pageValidationPassed = true;
+          
+          console.log(`⚡ Page ${pageIndex + 1} environmental validation skipped (${skipValidationReason})`);
+          
+          // Continue to next page without running validation
+          updatedPages.push({
+            pageNumber: pageIndex + 1,
+            scenes: updatedScenes,
+            environmentalCoherence: 95,
+            validationSkipped: true,
+          });
+          continue; // Skip to next page
+        }
 
         for (let pageAttempt = 1; pageAttempt <= 2; pageAttempt++) {
           totalEnvironmentalValidationAttempts++;

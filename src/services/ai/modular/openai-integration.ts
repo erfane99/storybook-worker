@@ -1247,7 +1247,7 @@ export class OpenAIIntegration {
           content: content // Array with text + images
         }
       ],
-      max_tokens: options.max_tokens || 1500,
+      max_tokens: options.max_tokens || 800,
       temperature: options.temperature !== undefined ? 
         options.temperature : 0.3,
       top_p: options.top_p || 0.9,

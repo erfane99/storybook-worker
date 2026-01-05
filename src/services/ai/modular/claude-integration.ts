@@ -78,7 +78,13 @@ Return JSON:
       const message = await this.client.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1024,
-        system: systemInstruction,
+        system: [
+          {
+            type: 'text',
+            text: systemInstruction,
+            cache_control: { type: 'ephemeral' }
+          }
+        ],
         messages: [{
           role: 'user',
           content: analysisPrompt
@@ -211,7 +217,7 @@ Return JSON:
       
       const message = await this.client.messages.create({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 16000,
+        max_tokens: 8000,
         temperature: 0.3,
         messages: [{
           role: 'user',
@@ -250,7 +256,7 @@ Return JSON:
     try {
       const message = await this.client.messages.create({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 150,
+        max_tokens: 100,
         temperature: 0.7,
         messages: [{
           role: 'user',
@@ -376,17 +382,23 @@ ${fewShotExample}
 
 Generate the complete comic script now. Return ONLY valid JSON.`;
 
-    try {
-      const message = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 8000,
-        temperature: 0.7,
-        system: systemPrompt,
-        messages: [{
-          role: 'user',
-          content: userPrompt
-        }]
-      });
+try {
+  const message = await this.client.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 8000,
+    temperature: 0.7,
+    system: [
+      {
+        type: 'text',
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' }
+      }
+    ],
+    messages: [{
+      role: 'user',
+      content: userPrompt
+    }]
+  });
 
       const responseText = message.content[0].type === 'text' 
         ? message.content[0].text 

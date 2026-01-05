@@ -88,6 +88,15 @@ export interface SuccessCriteria {
   combinedThreshold: number;
 }
 
+/**
+ * Result of validation skip check
+ */
+export interface ValidationSkipResult {
+  skipValidation: boolean;
+  reason: string;
+  confidence: number;
+}
+
 export class PatternLearningEngine {
   private databaseService: IDatabaseService;
 
@@ -99,9 +108,122 @@ export class PatternLearningEngine {
     combinedThreshold: 70
   };
 
+  // Skip validation thresholds
+  private readonly SKIP_VALIDATION_THRESHOLDS = {
+    minSuccessRate: 90,           // 90% historical success rate required
+    minCharacterDNAConfidence: 85, // 85% character DNA confidence required
+    minHistoricalGenerations: 10,  // At least 10 successful generations
+    qualityAssuranceSampleRate: 0.10 // Still validate 10% randomly
+  };
+
   constructor(databaseService: IDatabaseService) {
     this.databaseService = databaseService;
     console.log('📚 Pattern Learning Engine initialized');
+  }
+
+  /**
+   * P4: Check if validation can be skipped based on historical success patterns
+   * 
+   * This reduces API costs by ~30-40% by skipping expensive Vision API validation
+   * when we have high confidence based on historical data.
+   * 
+   * @param options - Art style, audience, and character DNA confidence
+   * @returns Whether validation can be skipped, reason, and confidence level
+   */
+  async canSkipValidation(options: {
+    artStyle: string;
+    audience: string;
+    characterDNAConfidence?: number;
+  }): Promise<ValidationSkipResult> {
+    try {
+      // NEVER skip for first-time combinations or low confidence
+      if (!options.artStyle || !options.audience) {
+        return {
+          skipValidation: false,
+          reason: 'Missing art style or audience - validation required',
+          confidence: 0
+        };
+      }
+
+      // Check character DNA confidence threshold
+      const dnaConfidence = options.characterDNAConfidence ?? 0;
+      if (dnaConfidence < this.SKIP_VALIDATION_THRESHOLDS.minCharacterDNAConfidence) {
+        return {
+          skipValidation: false,
+          reason: `Character DNA confidence (${dnaConfidence}%) below threshold (${this.SKIP_VALIDATION_THRESHOLDS.minCharacterDNAConfidence}%)`,
+          confidence: dnaConfidence
+        };
+      }
+
+      // Query historical patterns for this art style + audience combination
+      const relevantPatterns = await this.databaseService.getSuccessPatterns(
+        {
+          artStyle: options.artStyle,
+          audience: options.audience
+        },
+        100 // Get up to 100 patterns to calculate success rate
+      );
+
+      // Check minimum historical generations
+      if (relevantPatterns.length < this.SKIP_VALIDATION_THRESHOLDS.minHistoricalGenerations) {
+        return {
+          skipValidation: false,
+          reason: `Insufficient history (${relevantPatterns.length} generations, need ${this.SKIP_VALIDATION_THRESHOLDS.minHistoricalGenerations})`,
+          confidence: relevantPatterns.length * 10
+        };
+      }
+
+      // Calculate success rate from patterns
+      const successfulPatterns = relevantPatterns.filter(p => 
+        p.successRate >= this.SKIP_VALIDATION_THRESHOLDS.minSuccessRate &&
+        p.effectivenessScore >= 80
+      );
+      const successRate = (successfulPatterns.length / relevantPatterns.length) * 100;
+
+      if (successRate < this.SKIP_VALIDATION_THRESHOLDS.minSuccessRate) {
+        return {
+          skipValidation: false,
+          reason: `Success rate (${successRate.toFixed(1)}%) below threshold (${this.SKIP_VALIDATION_THRESHOLDS.minSuccessRate}%)`,
+          confidence: successRate
+        };
+      }
+
+      // Quality assurance: Still validate 10% of skippable panels randomly
+      const randomSample = Math.random();
+      if (randomSample < this.SKIP_VALIDATION_THRESHOLDS.qualityAssuranceSampleRate) {
+        return {
+          skipValidation: false,
+          reason: `Quality assurance random sample (${(randomSample * 100).toFixed(1)}% < ${this.SKIP_VALIDATION_THRESHOLDS.qualityAssuranceSampleRate * 100}%)`,
+          confidence: successRate
+        };
+      }
+
+      // All checks passed - validation can be skipped
+      const combinedConfidence = Math.round(
+        (successRate * 0.5) + 
+        (dnaConfidence * 0.3) + 
+        (Math.min(relevantPatterns.length, 50) * 0.4) // Cap at 50 patterns for calculation
+      );
+
+      console.log(`⚡ Validation skip approved: ${options.artStyle}/${options.audience} ` +
+        `(success rate: ${successRate.toFixed(1)}%, DNA confidence: ${dnaConfidence}%, ` +
+        `history: ${relevantPatterns.length} generations, combined confidence: ${combinedConfidence}%)`);
+
+      return {
+        skipValidation: true,
+        reason: `High confidence pattern: ${successRate.toFixed(1)}% success rate, ${dnaConfidence}% DNA confidence, ${relevantPatterns.length} historical generations`,
+        confidence: combinedConfidence
+      };
+
+    } catch (error: any) {
+      console.error('❌ Error checking validation skip:', error.message);
+      // On error, always run validation (safe default)
+      return {
+        skipValidation: false,
+        reason: `Error checking patterns: ${error.message}`,
+        confidence: 0
+      };
+    }
   }
 
   async recordSuccessPattern(

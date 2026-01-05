@@ -485,7 +485,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
           body: JSON.stringify({
             model: 'gpt-4o',
             messages: messages,
-            max_tokens: 1500,
+            max_tokens: 800,
             temperature: 0.3
           }),
           signal: controller.signal

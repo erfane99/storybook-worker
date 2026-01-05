@@ -485,7 +485,7 @@ export class EnvironmentalConsistencyValidator {
           body: JSON.stringify({
             model: 'gpt-4o',
             messages: messages,
-            max_tokens: 1800,
+            max_tokens: 1000,
             temperature: 0.3
           }),
           signal: controller.signal
