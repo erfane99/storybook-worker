@@ -339,19 +339,65 @@ NARRATION MUST NEVER describe:
 ✗ Facial expressions the reader can see
 ✗ Objects or settings shown in illustration
 ✗ Character poses or positions
+
+NARRATION FOR EMOTIONAL TRANSITIONS:
+When character's emotion changes, narration MUST include the REASON:
+✓ "Maybe he was just lonely." (explains why Maya's anger turned to understanding)
+✓ "She realized some things are better shared." (explains why she decided to forgive)
+✗ "Maya felt happy now." (NO - doesn't explain WHY she's happy)
 </comic_narration_philosophy>
 
 <panel_distribution_rules>
 - Panels 1-2: OPENING - Set scene with narration (who, where, initial state)
 - Panels 3-${midpoint}: RISING ACTION - Primarily dialogue (60%+ should have speech)
 - Panel ${climax}: CLIMAX - Most intense moment, can be silent or short impactful narration
-- Panels ${end - 1}-${end}: RESOLUTION - Conclude with narration showing growth/lesson
+- Panel ${climax + 1}: TRANSITION - Character processes what happened (realization/understanding)
+- Panels ${end - 1}-${end}: RESOLUTION - Conclude ONLY AFTER transition panel explains the emotional shift
 
 SILENT PANELS (narration = null):
 - Use for emotional reaction moments
 - Maximum 2 silent panels for children, 3 for YA, 4 for adults
 - Never 2 silent panels in a row
 </panel_distribution_rules>
+
+<emotional_transition_rules>
+CRITICAL - Emotional Arc Coherence:
+
+FORBIDDEN TRANSITIONS (will cause story to feel broken):
+✗ Character sad in panel N, suddenly happy in panel N+1 without explanation
+✗ Character angry in panel N, suddenly calm in panel N+1 without resolution
+✗ Major emotional shift with no CAUSE shown or narrated
+✗ Resolution panel with positive emotion when previous panel showed unresolved conflict
+
+REQUIRED TRANSITION PATTERN:
+For any emotional shift (e.g., sad→happy, scared→brave, angry→calm):
+1. Panel N: Show the initial emotional state
+2. Panel N+1: Show the REASON for change (realization, action, discovery)
+3. Panel N+2: Show the new emotional state
+
+NARRATION MUST BRIDGE EMOTIONS:
+When emotion changes between panels, the narration MUST explain WHY:
+- BAD: Panel shows Maya sad, next panel shows Maya happy. Narration: "Maya smiled."
+- GOOD: Panel shows Maya sad, next panel shows Maya understanding. Narration: "Maybe Teddy was just lonely too."
+
+CLIMAX-TO-RESOLUTION BRIDGE:
+The panel IMMEDIATELY after the climax must be a TRANSITION panel that:
+- Shows the character's realization or decision
+- Narration explains what the character UNDERSTOOD or DECIDED
+- Emotion should be: "understanding", "realization", "acceptance", "determination"
+- This panel bridges the conflict to the happy resolution
+
+Example valid emotional arc (mystery genre, children):
+Panel 10: emotion="shocked" (discovers teddy took cookies)
+Panel 11: emotion="understanding" (realizes teddy was lonely) ← REQUIRED BRIDGE
+Panel 12: emotion="compassionate" (hugs teddy, narration explains forgiveness)
+Panel 13: emotion="happy" (shares cookies)
+Panel 14: emotion="content" (lesson learned)
+
+Example INVALID emotional arc (what we want to prevent):
+Panel 10: emotion="shocked" (discovers teddy took cookies)
+Panel 11: emotion="happy" (shares cookies) ← BROKEN - skipped understanding!
+</emotional_transition_rules>
 
 <narration_variety_rules>
 CRITICAL - Avoid repetition:
@@ -474,7 +520,33 @@ try {
 - Dialogue: Can include age-appropriate slang, authentic teen voice
 - Story: Internal AND external conflict, identity themes
 - Ending: Growth-oriented, can be bittersweet, room for interpretation
-- Tone: Emotionally resonant, respects intelligence, authentic`,
+- Tone: Emotionally resonant, respects intelligence, authentic
+
+EMOTIONAL TRANSITION RULES (YOUNG ADULTS):
+Young adult readers are sophisticated - they'll notice broken emotional logic.
+
+FORBIDDEN TRANSITIONS:
+✗ Brooding/angry in panel N, suddenly cheerful in N+1 without catalyst
+✗ Heartbroken in panel N, moved on in N+1 without processing
+✗ Internal conflict unresolved, then sudden confidence
+✗ Relationship tension, then instant reconciliation
+
+REQUIRED PATTERN FOR EMOTIONAL SHIFTS:
+1. Panel N: Establish the emotional state (internal monologue style)
+2. Panel N+1: The CATALYST or REALIZATION (this is the bridge)
+3. Panel N+2: The new emotional state with EARNED transformation
+
+NARRATION MUST SHOW INTERNAL PROCESSING:
+YA readers connect through internal monologue. When emotions shift:
+- BAD: "She felt better now." (tells, doesn't show the journey)
+- GOOD: "Maybe I'd been looking at this all wrong." (shows the realization)
+- GOOD: "For the first time, the silence didn't feel heavy." (implies the shift)
+
+CLIMAX-TO-RESOLUTION BRIDGE:
+After the story's peak moment, include a PROCESSING panel:
+- emotion: "reflective", "uncertain-hopeful", "quietly-determined", "accepting"
+- Narration shows the character making sense of what happened
+- This earns the resolution that follows`,
 
       'adults': `ADULT COMIC RULES (ages 18+):
 - Vocabulary: Full range, literary devices welcome
@@ -482,7 +554,35 @@ try {
 - Dialogue: Complex, layered, reveals character through what's NOT said
 - Story: Moral complexity, nuanced motivations, realistic consequences
 - Ending: Thematic resonance, multiple interpretations possible
-- Tone: Sophisticated, treats reader as equal, earned emotional payoffs`
+- Tone: Sophisticated, treats reader as equal, earned emotional payoffs
+
+EMOTIONAL TRANSITION RULES (ADULTS):
+Adult readers demand narrative integrity. Emotional shortcuts destroy immersion.
+
+FORBIDDEN TRANSITIONS:
+✗ Despair to hope without the turning point shown
+✗ Conflict to resolution without the difficult choice
+✗ Betrayal to forgiveness without the reckoning
+✗ Any emotional 180° without narrative justification
+
+REQUIRED PATTERN FOR EMOTIONAL SHIFTS:
+Adult comics earn emotional transitions through:
+1. Panel N: The weight of the current state (subtext-heavy)
+2. Panel N+1: The moment of shift - often quiet, often small (the bridge)
+3. Panel N+2: The new reality, shown through action or implication
+
+NARRATION PHILOSOPHY FOR TRANSITIONS:
+Adult narration works through implication and subtext:
+- BAD: "He finally understood and felt at peace." (on-the-nose, amateur)
+- GOOD: "Some doors, once opened, change the shape of every room." (thematic)
+- GOOD: "It wasn't forgiveness. Not yet. But it was a start." (nuanced, earned)
+
+CLIMAX-TO-RESOLUTION BRIDGE:
+The moment AFTER the climax is often the most important panel:
+- emotion: "resigned-acceptance", "bittersweet", "quiet-resolve", "weary-hope"
+- Narration should resonate thematically, not explain literally
+- Trust the reader to feel the shift through implication
+- Ambiguity can be powerful - not everything needs resolution`
     };
     
     // Normalize audience key (young_adults -> young adults)
@@ -573,40 +673,148 @@ try {
       "visualDirection": "Close-up of a tiny star character with big worried eyes, sitting in the grass. It glows softly gold. Rose petals around it.",
       "emotion": "discovery",
       "cameraAngle": "close-up"
+    },
+    {
+      "panelNumber": 4,
+      "narrativePhase": "RISING_ACTION",
+      "narration": null,
+      "dialogue": [{"speaker": "Star", "text": "I fell down. I'm too scared to fly back.", "type": "speech"}],
+      "visualDirection": "Medium shot of Lily kneeling beside the small star. The star's glow flickers dimly. Lily looks concerned.",
+      "emotion": "worried",
+      "cameraAngle": "medium"
+    },
+    {
+      "panelNumber": 5,
+      "narrativePhase": "CLIMAX",
+      "narration": "Lily thought about times she felt scared too.",
+      "dialogue": null,
+      "visualDirection": "Close-up of Lily's face, eyes looking up thoughtfully at the dark sky. The star watches her hopefully.",
+      "emotion": "thoughtful",
+      "cameraAngle": "close-up"
+    },
+    {
+      "panelNumber": 6,
+      "narrativePhase": "RISING_ACTION",
+      "narration": "Maybe being brave didn't mean not being scared at all.",
+      "dialogue": null,
+      "visualDirection": "Medium shot of Lily having a realization, her expression softening with understanding. She looks at the star with gentle eyes.",
+      "emotion": "understanding",
+      "cameraAngle": "medium"
+    },
+    {
+      "panelNumber": 7,
+      "narrativePhase": "RESOLUTION",
+      "narration": null,
+      "dialogue": [{"speaker": "Lily", "text": "Being brave means trying even when scared!", "type": "speech"}],
+      "visualDirection": "Lily holding the star gently in her cupped hands, speaking encouragingly. The star's glow begins to brighten.",
+      "emotion": "encouraging",
+      "cameraAngle": "medium"
+    },
+    {
+      "panelNumber": 8,
+      "narrativePhase": "RESOLUTION",
+      "narration": "Lily learned that she could be brave too.",
+      "dialogue": null,
+      "visualDirection": "Wide shot of Lily waving as the star flies upward, leaving a trail of sparkles. The star glows brightly now. Lily smiles warmly.",
+      "emotion": "proud",
+      "cameraAngle": "wide"
     }
   ]
 }`;
     } else if (normalizedAudience === 'young adults') {
       return `{
-  "title": "The Weight of Unread Messages",
-  "storySummary": "Alex keeps ignoring texts from their former best friend Sam after a falling out. When they accidentally run into each other, Alex must choose between protecting their pride or admitting they miss the friendship. They learn that reaching out takes courage, but some connections are worth the vulnerability.",
+  "title": "The Unfollow",
+  "storySummary": "After discovering her best friend's secret social media account mocking her, Alex must decide whether to confront her or walk away, learning that some friendships aren't worth saving.",
   "characterName": "Alex",
   "panels": [
     {
       "panelNumber": 1,
       "narrativePhase": "OPENING",
-      "narration": "Fourteen unread messages. Each one a tiny weight I pretended not to feel.",
+      "narration": "Three years of friendship. Two thousand shared posts. One screenshot that changed everything.",
       "dialogue": null,
-      "visualDirection": "Close-up of a phone screen showing message notifications from 'Sam' with timestamps spanning weeks. The phone sits on a messy desk next to homework.",
-      "emotion": "avoidant",
+      "visualDirection": "Close-up of Alex's phone screen showing a cruel mocking post, her reflection visible in the dark glass",
+      "emotion": "shocked",
       "cameraAngle": "close-up"
     },
     {
       "panelNumber": 2,
       "narrativePhase": "SETUP",
-      "narration": "Three months since everything fell apart.",
-      "dialogue": null,
-      "visualDirection": "Alex at their locker, headphones in, deliberately not looking at the crowded hallway. Other students blur past.",
-      "emotion": "isolated",
+      "narration": null,
+      "dialogue": [{"speaker": "Alex", "text": "This can't be real.", "type": "whisper"}],
+      "visualDirection": "Alex sitting on her bed, phone in trembling hands, room feeling suddenly smaller",
+      "emotion": "denial",
       "cameraAngle": "medium"
     },
     {
       "panelNumber": 3,
-      "narrativePhase": "SETUP",
+      "narrativePhase": "RISING_ACTION",
+      "narration": "Every inside joke we'd shared. She'd turned them all into punchlines.",
+      "dialogue": null,
+      "visualDirection": "Alex scrolling through multiple posts, each one a different betrayal, tears forming",
+      "emotion": "hurt",
+      "cameraAngle": "close-up"
+    },
+    {
+      "panelNumber": 4,
+      "narrativePhase": "RISING_ACTION",
       "narration": null,
-      "dialogue": [{"speaker": "Alex", "text": "They're probably just guilt texts anyway.", "type": "thought"}],
-      "visualDirection": "Alex walking through school courtyard, phone gripped tightly in hand. Eyes fixed forward, jaw set.",
-      "emotion": "defensive",
+      "dialogue": [{"speaker": "Alex", "text": "I defended you. Every single time.", "type": "thought"}],
+      "visualDirection": "Alex staring at a framed photo of her and Mia, anger mixing with the hurt",
+      "emotion": "angry",
+      "cameraAngle": "medium"
+    },
+    {
+      "panelNumber": 5,
+      "narrativePhase": "RISING_ACTION",
+      "narration": "Part of me wanted to screenshot everything. Expose her like she'd exposed me.",
+      "dialogue": null,
+      "visualDirection": "Alex's finger hovering over the share button, face conflicted",
+      "emotion": "conflicted",
+      "cameraAngle": "close-up"
+    },
+    {
+      "panelNumber": 6,
+      "narrativePhase": "CLIMAX",
+      "narration": null,
+      "dialogue": [{"speaker": "Alex", "text": "But then I'd just be her.", "type": "thought"}],
+      "visualDirection": "Alex lowering her phone, staring at her own reflection in the dark screen",
+      "emotion": "realization",
+      "cameraAngle": "dramatic"
+    },
+    {
+      "panelNumber": 7,
+      "narrativePhase": "RISING_ACTION",
+      "narration": "Revenge would feel good for a minute. Then I'd have to live with being that person.",
+      "dialogue": null,
+      "visualDirection": "Alex standing up, setting the phone face-down on her desk deliberately",
+      "emotion": "resolved",
+      "cameraAngle": "medium"
+    },
+    {
+      "panelNumber": 8,
+      "narrativePhase": "RESOLUTION",
+      "narration": null,
+      "dialogue": [{"speaker": "Alex", "text": "You don't get to make me smaller.", "type": "speech"}],
+      "visualDirection": "Alex pressing the unfollow button, her expression calm but final",
+      "emotion": "empowered",
+      "cameraAngle": "close-up"
+    },
+    {
+      "panelNumber": 9,
+      "narrativePhase": "RESOLUTION",
+      "narration": "Some friendships end with explosions. Ours ended with a click.",
+      "dialogue": null,
+      "visualDirection": "Wide shot of Alex's room, phone on desk, her walking toward the window and light",
+      "emotion": "bittersweet",
+      "cameraAngle": "wide"
+    },
+    {
+      "panelNumber": 10,
+      "narrativePhase": "RESOLUTION",
+      "narration": "I'd find people who laughed with me, not at me. And maybe that was the real unfollow.",
+      "dialogue": null,
+      "visualDirection": "Alex looking out the window at the city, small smile forming, future ahead",
+      "emotion": "hopeful",
       "cameraAngle": "medium"
     }
   ]
@@ -614,26 +822,116 @@ try {
     } else {
       // Adults
       return `{
-  "title": "The Last Light in the Window",
-  "storySummary": "An aging father waits each night for his estranged daughter to call. When she finally appears at his door, both must confront years of silence and the words they were too proud to say. Through one difficult conversation, they begin to understand that forgiveness isn't about the past—it's about choosing a future together.",
-  "characterName": "Robert",
+  "title": "The Last Letter",
+  "storySummary": "Twenty years after leaving without explanation, David returns to his hometown for his father's funeral, where an undelivered letter reveals the sacrifice that defined both their lives.",
+  "characterName": "David",
   "panels": [
     {
       "panelNumber": 1,
       "narrativePhase": "OPENING",
-      "narration": "The phone hadn't rung in three years. But Robert still checked the line every morning, just to hear the dial tone.",
+      "narration": "The town hadn't changed. That was the worst part.",
       "dialogue": null,
-      "visualDirection": "An elderly man's weathered hand rests on an old landline phone in a dimly lit kitchen. Morning light filters through dusty curtains. A single coffee cup on the counter.",
-      "emotion": "longing",
-      "cameraAngle": "close-up"
+      "visualDirection": "David's car entering the small town, everything exactly as he left it twenty years ago, afternoon light casting long shadows",
+      "emotion": "apprehensive",
+      "cameraAngle": "wide"
     },
     {
       "panelNumber": 2,
       "narrativePhase": "SETUP",
-      "narration": "Some silences are louder than any argument.",
+      "narration": "Three days. Funeral, estate, gone. That was the plan.",
       "dialogue": null,
-      "visualDirection": "Wide shot of Robert sitting alone at a large dining table with six chairs. Only one place is set. Family photos line the wall behind him, faces frozen in happier times.",
-      "emotion": "melancholy",
+      "visualDirection": "David standing outside his childhood home, hand hesitating on the gate he once slammed shut",
+      "emotion": "guarded",
+      "cameraAngle": "medium"
+    },
+    {
+      "panelNumber": 3,
+      "narrativePhase": "RISING_ACTION",
+      "narration": null,
+      "dialogue": [{"speaker": "David", "text": "Just boxes. Just things.", "type": "thought"}],
+      "visualDirection": "David sorting through his father's study, deliberately avoiding the photographs",
+      "emotion": "detached",
+      "cameraAngle": "medium"
+    },
+    {
+      "panelNumber": 4,
+      "narrativePhase": "RISING_ACTION",
+      "narration": "We'd spoken six times in twenty years. Five were about money. One was a wrong number.",
+      "dialogue": null,
+      "visualDirection": "David finding a drawer full of letters, all addressed to him, all marked 'Return to Sender'",
+      "emotion": "confused",
+      "cameraAngle": "close-up"
+    },
+    {
+      "panelNumber": 5,
+      "narrativePhase": "RISING_ACTION",
+      "narration": null,
+      "dialogue": [{"speaker": "David", "text": "What is this?", "type": "whisper"}],
+      "visualDirection": "David holding one envelope, recognizing his own handwriting - letters he'd sent that were never opened",
+      "emotion": "unsettled",
+      "cameraAngle": "close-up"
+    },
+    {
+      "panelNumber": 6,
+      "narrativePhase": "RISING_ACTION",
+      "narration": "At the bottom. Different handwriting. His handwriting. Addressed to me. Never sent.",
+      "dialogue": null,
+      "visualDirection": "David finding a thick envelope at the bottom of the drawer, his father's handwriting, unsealed",
+      "emotion": "stunned",
+      "cameraAngle": "close-up"
+    },
+    {
+      "panelNumber": 7,
+      "narrativePhase": "CLIMAX",
+      "narration": "'I told you to leave because the factory was poisoning people. I knew you'd try to expose it. They would have destroyed you. I chose to be the villain in your story so you could have a story at all.'",
+      "dialogue": null,
+      "visualDirection": "The letter filling the panel, key phrases visible, David's hands trembling at the edges",
+      "emotion": "devastated",
+      "cameraAngle": "dramatic"
+    },
+    {
+      "panelNumber": 8,
+      "narrativePhase": "RISING_ACTION",
+      "narration": null,
+      "dialogue": null,
+      "visualDirection": "David slumped against the desk, letter fallen to the floor, twenty years of anger collapsing",
+      "emotion": "shattered",
+      "cameraAngle": "wide"
+    },
+    {
+      "panelNumber": 9,
+      "narrativePhase": "RISING_ACTION",
+      "narration": "He'd carried this alone. Every cold phone call. Every returned letter. He'd let me hate him.",
+      "dialogue": null,
+      "visualDirection": "David picking up the letter again, reading it in the fading light, seeing his father differently",
+      "emotion": "understanding",
+      "cameraAngle": "medium"
+    },
+    {
+      "panelNumber": 10,
+      "narrativePhase": "RESOLUTION",
+      "narration": "Some sacrifices don't ask for gratitude. They can't.",
+      "dialogue": null,
+      "visualDirection": "David at the window, holding the letter, watching the sun set over the factory that still stands",
+      "emotion": "grief",
+      "cameraAngle": "medium"
+    },
+    {
+      "panelNumber": 11,
+      "narrativePhase": "RESOLUTION",
+      "narration": null,
+      "dialogue": [{"speaker": "David", "text": "I'm sorry I never asked why.", "type": "whisper"}],
+      "visualDirection": "David at the graveside, alone, placing the letter on the fresh earth",
+      "emotion": "remorse",
+      "cameraAngle": "wide"
+    },
+    {
+      "panelNumber": 12,
+      "narrativePhase": "RESOLUTION",
+      "narration": "I'd come to bury a stranger. I left knowing my father for the first time.",
+      "dialogue": null,
+      "visualDirection": "David walking away from the cemetery, the letter staying behind, carrying something heavier and lighter",
+      "emotion": "bittersweet-acceptance",
       "cameraAngle": "wide"
     }
   ]
