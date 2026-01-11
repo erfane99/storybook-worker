@@ -514,6 +514,21 @@ export class DatabaseService extends EnhancedBaseService implements IDatabaseSer
         if (data.cover_image) {
           insertData.cover_image = data.cover_image;
         }
+
+        // Add character_dna if provided
+        if (data.character_dna) {
+          insertData.character_dna = data.character_dna;
+        }
+
+        // Add visual_consistency_data if provided
+        if (data.visual_consistency_data) {
+          insertData.visual_consistency_data = data.visual_consistency_data;
+        }
+
+        // Add story_coherence_score if provided
+        if (data.story_coherence_score !== undefined) {
+          insertData.story_coherence_score = data.story_coherence_score;
+        }
         
         const response = await supabase
           .from('storybook_entries')

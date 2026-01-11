@@ -1013,6 +1013,23 @@ READING FLOW (Professional Comics Standard):
 
 Create a compelling comic panel that fixes the previous validation failures while maintaining design consistency in ${options.artStyle} style.`;
 
+    // Extract and enforce spatial relationships for regeneration
+    const spatialRelationships = this.extractSpatialRelationships(sceneDescription);
+    if (spatialRelationships.length > 0) {
+      prompt += `
+
+⚠️ SPATIAL ACCURACY REQUIREMENTS (REGENERATION - MUST FIX):
+The narration describes specific spatial positions that may have been INCORRECT in the previous failed image.
+You MUST render these EXACTLY as described:
+${spatialRelationships.map((rel, i) => `${i + 1}. ${rel}`).join('\n')}
+
+THE PREVIOUS IMAGE MAY HAVE HAD INCORRECT SPATIAL POSITIONING.
+THIS REGENERATION MUST SHOW CORRECT SPATIAL RELATIONSHIPS.
+- If narration says "under" → object MUST be BELOW, not beside or above
+- If narration says "trapped" → character MUST appear CONSTRAINED
+- If narration says "flying above" → character MUST be IN THE AIR`;
+    }
+
     return prompt;
   }
 

@@ -1,6 +1,11 @@
 import { createHash } from 'crypto';
 import { IDatabaseService } from '../../interfaces/service-contracts.js';
 
+// ===== FEATURE FLAG: PATTERN LEARNING SYSTEM =====
+// Set to true when ready to enable the learning system
+// When false: patterns are NOT recorded, NOT retrieved, NOT applied
+const ENABLE_PATTERN_LEARNING = false;
+
 export interface SuccessPatternRecordingData {
   comicData: {
     pages: any[];
@@ -231,6 +236,17 @@ export class PatternLearningEngine {
     qualityMetrics: SuccessPatternRecordingData['qualityMetrics'],
     jobContext: SuccessPatternRecordingData['jobContext']
   ): Promise<PatternRecordingResult> {
+    // Feature flag check - skip if learning is disabled
+    if (!ENABLE_PATTERN_LEARNING) {
+      console.log('📚 Pattern learning disabled - skipping pattern recording');
+      return {
+        success: false,
+        contextSignature: '',
+        effectivenessScore: 0,
+        patternType: 'disabled'
+      };
+    }
+
     try {
       console.log(`📚 Recording success pattern: ${jobContext.audience} audience with ${jobContext.artStyle} style`);
 
@@ -399,12 +415,12 @@ export class PatternLearningEngine {
   }
 
   private generateContextSignature(jobContext: SuccessPatternRecordingData['jobContext']): string {
+    // SIMPLIFIED: Only use audience + artStyle for better pattern matching
+    // This allows patterns to be reused across different genres/settings
+    // while still maintaining audience-appropriate and style-consistent learning
     const signatureString = [
       jobContext.audience || '',
-      jobContext.genre || '',
-      jobContext.artStyle || '',
-      jobContext.setting || '',
-      jobContext.characterType || ''
+      jobContext.artStyle || ''
     ].join('|');
 
     return createHash('md5').update(signatureString).digest('hex');
@@ -764,6 +780,12 @@ export class PatternLearningEngine {
     context: PatternRetrievalContext,
     limit: number = 5
   ): Promise<RetrievedPattern[]> {
+    // Feature flag check - skip if learning is disabled
+    if (!ENABLE_PATTERN_LEARNING) {
+      console.log('📚 Pattern learning disabled - skipping pattern retrieval');
+      return [];
+    }
+
     try {
       const contextSignature = this.generateContextSignature({
         audience: context.audience,
@@ -790,9 +812,9 @@ export class PatternLearningEngine {
       );
 
       const filteredPatterns = allPatterns.filter(p => {
-        const meetsEffectiveness = p.effectivenessScore >= 80;
-        const meetsUsage = p.usageCount >= 3;
-        const meetsSuccessRate = p.successRate >= 75;
+        const meetsEffectiveness = p.effectivenessScore >= 70;  // Lowered from 80
+        const meetsUsage = p.usageCount >= 1;  // Lowered from 3 (allow first-time patterns)
+        const meetsSuccessRate = p.successRate >= 60;  // Lowered from 75
         const lastUsedDate = new Date(p.lastUsedAt);
         const meetsRecency = lastUsedDate >= cutoffDate;
 

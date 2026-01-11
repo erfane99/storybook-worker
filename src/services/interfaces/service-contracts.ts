@@ -1528,6 +1528,9 @@ export interface StorybookEntryData {
   audience: string;
   character_description: string;
   cover_image?: string;
+  character_dna?: any;
+  visual_consistency_data?: any;
+  story_coherence_score?: number;
   has_errors: boolean;
 }
 
