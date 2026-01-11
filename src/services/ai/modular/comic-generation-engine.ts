@@ -1382,9 +1382,29 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         console.log(`   📝 Narration: Avg ${validationResult.structureMetrics.narrationQuality.avgSentenceLength} words/sentence, vocabulary: ${validationResult.structureMetrics.narrationQuality.vocabularyLevel}`);
         
         if (validationResult.warnings.length > 0) {
-          console.log(`   ⚠️ ${validationResult.warnings.length} warnings (generation continues, logged for monitoring)`);
+          console.log(`   ⚠️ ${validationResult.warnings.length} warnings detected:`);
+          validationResult.warnings.forEach(w => console.log(`      ${w}`));
+          
+          // Analyze warning severity for quality monitoring
+          const hasRepetitionIssue = validationResult.warnings.some(w => w.includes('consecutive') || w.includes('Repetition'));
+          const hasDiversityIssue = validationResult.warnings.some(w => w.includes('Diversity') || w.includes('unique shot types'));
+          const hasCompositionIssue = validationResult.warnings.some(w => w.includes('Composition') || w.includes('First and last'));
+          
+          // Log quality impact assessment
+          if (hasRepetitionIssue) {
+            console.log(`   📊 Quality Impact: Repetitive panels may reduce visual engagement`);
+          }
+          if (hasDiversityIssue) {
+            console.log(`   📊 Quality Impact: Limited shot variety may feel monotonous`);
+          }
+          if (hasCompositionIssue) {
+            console.log(`   📊 Quality Impact: Similar opening/closing may lack narrative bookending`);
+          }
+          
+          // Note: Generation continues but quality metrics are recorded for pattern learning
+          console.log(`   ℹ️ Generation continues - warnings logged for quality pattern analysis`);
         } else {
-          console.log(`   ✅ All quality requirements met!`);
+          console.log(`   ✅ All diversity requirements met!`);
         }
       }
       
@@ -3373,9 +3393,38 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
       }
     });
     
-    // Step 3: Check for consecutive same-type violations and fix them
+    // Step 3: Check for consecutive same-type AND visually similar violations and fix them
+    // ENHANCED: Not just same type, but visually similar types that would look repetitive
+    const visuallySimilarGroups: Record<string, string[]> = {
+      'medium_shot': ['medium_shot', 'action_shot'],  // Both show full/partial body, similar framing
+      'action_shot': ['medium_shot', 'action_shot'],
+      'close_up': ['close_up', 'dramatic_angle'],     // Both focus on face/details
+      'dramatic_angle': ['close_up', 'dramatic_angle'],
+      'wide_establishing': ['wide_establishing'],      // Only similar to itself
+      'pov_over_shoulder': ['pov_over_shoulder', 'medium_shot'],
+      'symbolic_artistic': ['symbolic_artistic']
+    };
+    
+    // Visually distinct alternatives for each type (types that look DIFFERENT)
+    const visuallyDistinctAlternatives: Record<string, string[]> = {
+      'medium_shot': ['close_up', 'wide_establishing', 'dramatic_angle'],
+      'action_shot': ['close_up', 'wide_establishing', 'dramatic_angle'],
+      'close_up': ['medium_shot', 'wide_establishing', 'action_shot'],
+      'dramatic_angle': ['medium_shot', 'wide_establishing', 'action_shot'],
+      'wide_establishing': ['close_up', 'medium_shot', 'dramatic_angle'],
+      'pov_over_shoulder': ['close_up', 'wide_establishing', 'dramatic_angle'],
+      'symbolic_artistic': ['medium_shot', 'close_up', 'wide_establishing']
+    };
+    
     for (let i = 1; i < plannedTypes.length; i++) {
-      if (plannedTypes[i] === plannedTypes[i - 1]) {
+      const currentType = plannedTypes[i];
+      const previousType = plannedTypes[i - 1];
+      
+      // Check if types are the same OR visually similar
+      const isSameType = currentType === previousType;
+      const isTooSimilar = visuallySimilarGroups[previousType]?.includes(currentType) || false;
+      
+      if (isSameType || isTooSimilar) {
         const beat = beats[i];
         const isStoryCritical = 
           i === 0 || 
@@ -3384,12 +3433,12 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
           (beat.cameraReason && beat.cameraReason.length > 0);
         
         if (!isStoryCritical) {
-          // Find an alternative type
-          const alternatives = ['medium_shot', 'close_up', 'action_shot', 'wide_establishing', 'dramatic_angle']
-            .filter(t => t !== plannedTypes[i] && t !== plannedTypes[i - 1]);
+          // Find a VISUALLY DISTINCT alternative (not just different name)
+          const alternatives = visuallyDistinctAlternatives[previousType] || ['close_up', 'medium_shot', 'wide_establishing'];
           const newType = alternatives[i % alternatives.length];
           
-          adjustments.push(`Panel ${i + 1}: Changed '${plannedTypes[i]}' → '${newType}' (avoid consecutive same type)`);
+          const reason = isSameType ? 'avoid consecutive same type' : 'avoid visually similar adjacent panels';
+          adjustments.push(`Panel ${i + 1}: Changed '${currentType}' → '${newType}' (${reason})`);
           plannedTypes[i] = newType;
         }
       }

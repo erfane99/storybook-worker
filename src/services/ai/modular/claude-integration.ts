@@ -510,17 +510,49 @@ try {
 - Narration: Maximum 15 words per panel
 - Dialogue: Maximum 8 words per bubble
 - Story: ONE clear problem, ONE clear solution
-- Ending: MUST state lesson explicitly ("Maya learned that...")
+- Tone: Warm, safe, educational, wonder-filled
+
+GRAMMAR RULES (CRITICAL - CHILDREN):
+- ALL dialogue MUST use complete, grammatically correct sentences
+- NEVER drop auxiliary verbs: WRONG "I hungry" → CORRECT "I'm hungry"
+- NEVER drop articles: WRONG "Want cookie" → CORRECT "I want a cookie"
+- Children's books use SIMPLE grammar, not BROKEN grammar
+- CORRECT examples: "I can help!", "Let's go!", "I'm scared.", "Thank you!", "Can I try?"
+- WRONG examples: "Me help", "I hungry", "Want go", "Me scared"
+
+ENDING RULES (CRITICAL - EXACTLY ONE LESSON):
+- The FINAL panel must contain EXACTLY ONE simple lesson
+- Format: "[Character name] learned that [concrete lesson]."
+- The lesson must be CONCRETE and ACTIONABLE
+- GOOD lessons: "sharing makes friends happy", "trying new things can be fun", "asking for help is okay"
+- BAD lessons: "magic lives in our hearts", "wonder is everywhere", "the adventure never ends"
+- FORBIDDEN: Multiple lesson statements across different panels
 - FORBIDDEN endings: "The magic would always be there" / "In that moment, everything changed"
-- Tone: Warm, safe, educational, wonder-filled`,
+- Only the LAST panel states the lesson - previous panels show the OUTCOME/CELEBRATION`,
 
       'young adults': `YOUNG ADULT COMIC RULES (ages 12-17):
 - Vocabulary: Grade 6-9 level, contemporary tone
 - Narration: Maximum 25 words per panel, first-person internal voice encouraged
 - Dialogue: Can include age-appropriate slang, authentic teen voice
 - Story: Internal AND external conflict, identity themes
-- Ending: Growth-oriented, can be bittersweet, room for interpretation
 - Tone: Emotionally resonant, respects intelligence, authentic
+
+DIALOGUE AUTHENTICITY (CRITICAL - YOUNG ADULTS):
+- Dialogue must sound like real teenagers, not adults writing teenagers
+- Slang is okay but don't overdo it - teens speak normally most of the time
+- Contractions are natural: "I'm", "don't", "can't", "won't"
+- Avoid formal speech patterns that no teen would use
+- GOOD: "Wait, seriously?", "I didn't mean for this to happen", "Just... give me a sec"
+- BAD: "I am most distressed by this situation", "One must consider the consequences"
+
+ENDING RULES (CRITICAL - NO PREACHING):
+- Show transformation through ACTION and CHOICE, not stated lessons
+- The character demonstrates growth - readers infer the meaning
+- FORBIDDEN: "And so [character] learned that...", "The moral of the story...", "This taught [character] that..."
+- GOOD endings: Character makes a different choice than they would have at the start
+- GOOD endings: Quiet moment showing the character has changed
+- Can be bittersweet - not everything needs to be perfectly resolved
+- ONE resolution moment, not multiple philosophical statements
 
 EMOTIONAL TRANSITION RULES (YOUNG ADULTS):
 Young adult readers are sophisticated - they'll notice broken emotional logic.
@@ -536,12 +568,6 @@ REQUIRED PATTERN FOR EMOTIONAL SHIFTS:
 2. Panel N+1: The CATALYST or REALIZATION (this is the bridge)
 3. Panel N+2: The new emotional state with EARNED transformation
 
-NARRATION MUST SHOW INTERNAL PROCESSING:
-YA readers connect through internal monologue. When emotions shift:
-- BAD: "She felt better now." (tells, doesn't show the journey)
-- GOOD: "Maybe I'd been looking at this all wrong." (shows the realization)
-- GOOD: "For the first time, the silence didn't feel heavy." (implies the shift)
-
 CLIMAX-TO-RESOLUTION BRIDGE:
 After the story's peak moment, include a PROCESSING panel:
 - emotion: "reflective", "uncertain-hopeful", "quietly-determined", "accepting"
@@ -553,8 +579,25 @@ After the story's peak moment, include a PROCESSING panel:
 - Narration: Maximum 40 words, psychological depth, subtext over explicit
 - Dialogue: Complex, layered, reveals character through what's NOT said
 - Story: Moral complexity, nuanced motivations, realistic consequences
-- Ending: Thematic resonance, multiple interpretations possible
 - Tone: Sophisticated, treats reader as equal, earned emotional payoffs
+
+DIALOGUE SOPHISTICATION (CRITICAL - ADULTS):
+- Dialogue reveals character through subtext and what's left unsaid
+- People rarely say exactly what they mean - show this
+- Interruptions, trailing off, subject changes are realistic
+- Each character has a distinct voice based on background
+- GOOD: "I'm fine." (when clearly not fine - reader sees the gap)
+- BAD: "I am feeling sad because of what happened earlier and I wish things were different"
+
+ENDING RULES (CRITICAL - NO OVERSIMPLIFICATION):
+- Endings should resonate thematically, not state themes explicitly
+- Trust readers to understand without being told
+- FORBIDDEN: "And they all lived happily ever after", "[Character] finally understood that..."
+- FORBIDDEN: Neat resolutions that ignore complexity established earlier
+- GOOD endings: Ambiguity that invites reflection
+- GOOD endings: Bittersweet moments that honor the story's complexity
+- ONE thematic resolution moment - not multiple concluding statements
+- The ending should feel inevitable yet surprising
 
 EMOTIONAL TRANSITION RULES (ADULTS):
 Adult readers demand narrative integrity. Emotional shortcuts destroy immersion.
@@ -599,37 +642,115 @@ The moment AFTER the climax is often the most important panel:
 - Start with a call to action or discovery
 - Include physical journey or quest elements
 - Build to exciting climax with problem-solving
-- End with return home or new beginning`,
+- End with return home or new beginning
+
+OBSTACLE PLAUSIBILITY (CRITICAL FOR ALL AUDIENCES):
+Obstacles MUST be genuinely challenging for the character's abilities:
+- For toddlers/young children: reaching high places, crossing small gaps, finding hidden things, helping creatures stuck in places they can't reach
+- For teens: social challenges, moral dilemmas, proving themselves, navigating complex relationships
+- For adults: psychological barriers, systemic obstacles, conflicting loyalties, meaningful sacrifices
+BAD OBSTACLES (too trivial): lifting a leaf, opening an unlocked door, walking a short distance
+GOOD OBSTACLES require genuine effort, courage, cleverness, or sacrifice to overcome
+Ask: "Would this character actually struggle with this?" If no, make it harder.`,
 
       'fantasy': `FANTASY GENRE:
 - Establish magical elements early
 - Create wonder through impossible elements
 - Magic should have consistent rules
-- Resolution can use magic but character growth is key`,
+- Resolution can use magic but character growth is key
+
+OBSTACLE PLAUSIBILITY (CRITICAL FOR ALL AUDIENCES):
+Even in fantasy, obstacles must feel genuinely challenging:
+- Magic should have COSTS or LIMITATIONS that create real stakes
+- The character's non-magical qualities (courage, kindness, cleverness) should matter
+- For children: magical creatures need help only the character can provide, magical items are hard to reach/earn
+- For teens/adults: magical power comes with moral weight, easy solutions have consequences
+BAD: Magic solves everything effortlessly
+GOOD: Magic creates as many problems as it solves, requiring character growth`,
 
       'mystery': `MYSTERY GENRE:
 - Open with a puzzle or question
 - Plant clues throughout panels
 - Build suspense through discovery
-- Reveal solution through character's deduction`,
+- Reveal solution through character's deduction
+
+OBSTACLE PLAUSIBILITY (CRITICAL FOR ALL AUDIENCES):
+The mystery must be appropriately challenging:
+- For children: clues should be findable but not obvious, solution requires connecting 2-3 observations
+- For teens: red herrings, social dynamics complicate investigation, personal stakes
+- For adults: layered mysteries, unreliable information, moral complexity in the truth
+BAD: Mystery solved by accident or single obvious clue
+GOOD: Character must actively investigate, make mistakes, and piece things together`,
 
       'friendship': `FRIENDSHIP GENRE:
 - Show initial connection or conflict
 - Develop relationship through shared experience
 - Test the friendship with a challenge
-- Resolve with strengthened bond`,
+- Resolve with strengthened bond
+
+OBSTACLE PLAUSIBILITY (CRITICAL FOR ALL AUDIENCES):
+Friendship challenges must feel real:
+- For children: misunderstandings, sharing conflicts, different preferences, being left out
+- For teens: loyalty tests, peer pressure, jealousy, growing apart, betrayal and forgiveness
+- For adults: life changes, distance, competing priorities, deep-seated patterns
+BAD: Trivial disagreement instantly resolved with "sorry"
+GOOD: Conflict reveals something true about the characters that must be worked through`,
 
       'family': `FAMILY GENRE:
 - Establish family dynamics
 - Create situation that tests family bonds
 - Show characters learning about each other
-- End with appreciation or understanding`,
+- End with appreciation or understanding
+
+OBSTACLE PLAUSIBILITY (CRITICAL FOR ALL AUDIENCES):
+Family challenges must have real emotional weight:
+- For children: new sibling adjustment, parent attention, feeling different, family rules
+- For teens: independence vs. connection, family expectations, generational gaps, family secrets
+- For adults: caregiving, inheritance, long-held resentments, family patterns repeating
+BAD: Surface-level disagreement with easy reconciliation
+GOOD: Challenge reveals deeper family dynamics that characters must navigate`,
 
       'nature': `NATURE/ANIMAL GENRE:
 - Showcase natural world beauty
 - Include factual elements (age-appropriate)
 - Character learns from or with nature
-- Environmental awareness without preaching`
+- Environmental awareness without preaching
+
+OBSTACLE PLAUSIBILITY (CRITICAL FOR ALL AUDIENCES):
+Nature-based challenges must respect natural world realities:
+- For children: weather changes, animal needs differ from human needs, nature requires patience
+- For teens: human impact on nature, survival challenges, connection vs. exploitation
+- For adults: ecological complexity, competing needs, long-term consequences
+BAD: Nature instantly cooperates with human wishes
+GOOD: Character must adapt to nature's rhythms and rules, not the other way around`,
+
+      'courage': `COURAGE GENRE:
+- Character faces a fear or daunting challenge
+- Show the internal struggle alongside external obstacles
+- Build to a moment requiring brave action
+- Resolution shows growth, not just success
+
+OBSTACLE PLAUSIBILITY (CRITICAL FOR ALL AUDIENCES):
+The fear or challenge must be proportionally significant:
+- For children: age-appropriate fears (dark, new situations, performing), real emotional stakes
+- For teens: social fears, standing up for beliefs, risking rejection
+- For adults: existential fears, moral courage, sacrificing comfort for principle
+BAD: Fear is trivial or overcome instantly
+GOOD: Courage is hard-won and the fear was genuinely threatening`,
+
+      'creativity': `CREATIVITY GENRE:
+- Character has a creative vision or problem needing creative solution
+- Show the creative process with setbacks
+- Climax involves breakthrough or artistic expression
+- Resolution celebrates unique perspective
+
+OBSTACLE PLAUSIBILITY (CRITICAL FOR ALL AUDIENCES):
+Creative challenges must feel genuinely difficult:
+- For children: materials don't work as expected, others don't understand the vision, self-doubt
+- For teens: creative block, criticism, balancing originality with acceptance
+- For adults: artistic integrity vs. commercial pressure, creative exhaustion, finding authentic voice
+BAD: Perfect creation emerges effortlessly
+GOOD: Creation requires iteration, failure, and persistence`
     };
     
     return frameworks[genre.toLowerCase()] || frameworks['adventure'];

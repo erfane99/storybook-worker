@@ -1326,6 +1326,22 @@ ${physicalActions.map(action => `• ${action}`).join('\n')}
 THE CHARACTER'S BODY MUST SHOW THESE EXACT POSITIONS.`;
     }
 
+    // Extract and add spatial relationship requirements
+    const spatialRelationships = this.extractSpatialRelationships(sceneDescription);
+    if (spatialRelationships.length > 0) {
+      prompt += `
+
+⚠️ MANDATORY SPATIAL RELATIONSHIPS (CRITICAL - MUST MATCH NARRATION EXACTLY):
+The narration describes specific spatial positions. You MUST render these EXACTLY as described:
+${spatialRelationships.map((rel, i) => `${i + 1}. ${rel}`).join('\n')}
+
+SPATIAL ACCURACY IS NON-NEGOTIABLE:
+- If narration says "under the leaf" → character MUST be BELOW the leaf, NOT beside or above
+- If narration says "trapped" → character MUST appear CONSTRAINED, not free
+- If narration says "flying above" → character MUST be IN THE AIR, not on ground
+- FAILURE TO MATCH SPATIAL DESCRIPTION = IMAGE DOES NOT MATCH STORY`;
+    }
+
     // Add secondary characters section with MANDATORY RENDERING + consistency enforcement
     // NEW: Now references character images (IMAGE 2, 3, 4, etc.) for maximum consistency
     if (hasSecondaryCharacters) {
@@ -1628,6 +1644,96 @@ ${options.hasSpeechBubble && options.dialogue ? `- EXCEPTION: Include ONE speech
     
     // Remove duplicates and return
     return [...new Set(physicalActions)];
+  }
+
+  /**
+   * ===== EXTRACT SPATIAL RELATIONSHIPS =====
+   * NARRATION-FIRST: Scans scene description for spatial/positional keywords
+   * and returns explicit visual requirements to ensure Gemini renders correct spatial positions.
+   * 
+   * This fixes the "fairy under leaf but shown flying above" problem by enforcing
+   * that spatial words in the narration become mandatory visual constraints.
+   * 
+   * @param sceneDescription - The scene description (derived from narration)
+   * @returns Array of mandatory spatial relationship requirements
+   */
+  private extractSpatialRelationships(sceneDescription: string): string[] {
+    const spatialRequirements: string[] = [];
+    const textLower = sceneDescription.toLowerCase();
+    
+    // SPATIAL RELATIONSHIP MAPPINGS
+    // Maps spatial/positional words to explicit visual requirements Gemini MUST follow
+    const spatialMappings: [RegExp, string][] = [
+      // Under/Below relationships
+      [/\bunder\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be BELOW/UNDERNEATH the $1 - spatially LOWER in the frame'],
+      [/\bbeneath\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be BENEATH the $1 - covered or lower position'],
+      [/\bbelow\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be BELOW the $1 - lower in vertical space'],
+      
+      // Above/Over relationships
+      [/\babove\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be ABOVE the $1 - spatially HIGHER in the frame'],
+      [/\bover\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be OVER the $1 - higher position or covering'],
+      [/\bon top of\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be ON TOP OF the $1 - resting on surface'],
+      
+      // Behind/In front relationships
+      [/\bbehind\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be BEHIND the $1 - partially obscured or in background'],
+      [/\bin front of\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be IN FRONT OF the $1 - foreground, closer to viewer'],
+      
+      // Inside/Containment relationships
+      [/\binside\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be INSIDE the $1 - visually contained within'],
+      [/\bwithin\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be WITHIN the $1 - enclosed or surrounded'],
+      [/\bin(?:to)?\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be IN the $1 - positioned inside'],
+      
+      // Beside/Next to relationships
+      [/\bbeside\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be BESIDE the $1 - same vertical level, horizontally adjacent'],
+      [/\bnext to\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be NEXT TO the $1 - immediately adjacent'],
+      [/\bbetween\s+(?:the\s+)?(\w+)/gi, 'Object/character MUST be BETWEEN objects - positioned in the middle'],
+      
+      // Trapped/Stuck/Pinned (critical for story conflict visualization)
+      [/\btrapped\s+(?:under|beneath)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be visually TRAPPED UNDER the $1 - show physical constraint, object pressing down, character unable to escape'],
+      [/\btrapped\s+(?:in|inside)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be visually TRAPPED INSIDE the $1 - enclosed, confined, unable to exit'],
+      [/\bstuck\s+(?:in|inside|under)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be visually STUCK - show immobility, character straining or unable to move freely'],
+      [/\bpinned\s+(?:under|by|beneath)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be PINNED DOWN by the $1 - show weight/pressure holding character in place'],
+      [/\bcaught\s+(?:in|under|by)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be CAUGHT by the $1 - show entanglement or constraint'],
+      
+      // Reaching/Extending relationships
+      [/\breaching\s+(?:for|toward|towards)\s+(?:the\s+)?(\w+)/gi, 'Character MUST have arm/hand EXTENDED TOWARD the $1 - show stretching motion'],
+      [/\bpointing\s+(?:at|to|toward)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be POINTING AT the $1 - finger/arm directed at target'],
+      [/\blooking\s+(?:at|toward)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be LOOKING AT the $1 - eyes and face directed at target'],
+      
+      // Flying/Floating (important for fairy stories)
+      [/\bflying\s+(?:above|over)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be FLYING ABOVE the $1 - airborne, wings visible if applicable, elevated position'],
+      [/\bfloating\s+(?:above|over)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be FLOATING ABOVE the $1 - suspended in air, no ground contact'],
+      [/\bhovering\s+(?:above|over|near)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be HOVERING - suspended in mid-air near the $1'],
+      
+      // Hiding relationships
+      [/\bhiding\s+(?:behind|under|in)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be HIDING - partially or fully concealed by the $1'],
+      [/\bhidden\s+(?:behind|under|in)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be HIDDEN - not fully visible, obscured by the $1'],
+      
+      // Climbing/Hanging relationships
+      [/\bclimbing\s+(?:up|on|over)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be CLIMBING the $1 - hands/feet gripping, body on vertical surface'],
+      [/\bhanging\s+(?:from|on)\s+(?:the\s+)?(\w+)/gi, 'Character MUST be HANGING FROM the $1 - suspended, holding on, feet not on ground'],
+    ];
+    
+    // Process each spatial pattern
+    for (const [pattern, template] of spatialMappings) {
+      // Reset regex lastIndex for global patterns
+      pattern.lastIndex = 0;
+      
+      let match;
+      while ((match = pattern.exec(textLower)) !== null) {
+        // Extract the object name from the capture group
+        const objectName = match[1] || 'object';
+        // Create the requirement by replacing $1 with the actual object
+        const requirement = template.replace(/\$1/g, objectName.toUpperCase());
+        
+        // Avoid duplicates
+        if (!spatialRequirements.some(r => r.includes(objectName.toUpperCase()))) {
+          spatialRequirements.push(requirement);
+        }
+      }
+    }
+    
+    return spatialRequirements;
   }
 
   // ===== HELPER METHODS =====
