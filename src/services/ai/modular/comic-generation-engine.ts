@@ -3019,8 +3019,8 @@ private calculateNarrativePosition(
     artStyle: string,
     panelContext: { panelNumber: number; totalPanels: number; pageNumber: number }
   ): string {
-    // Determine camera angle for this beat
-    const cameraAngle = this.determineCameraAngle(beat);
+    // Determine camera angle for this beat (pass panel context for position-aware decisions)
+    const cameraAngle = this.determineCameraAngle(beat, panelContext.panelNumber, panelContext.totalPanels);
 
     // Core story moment (~300 chars) - Include action context for purposeful illustrations
     const actionDescription = beat.actionContext 
@@ -3696,14 +3696,136 @@ QUALITY: High-resolution, detailed, ${config.complexityLevel} composition`;
     };
   }
 
-  private determineCameraAngle(beat: StoryBeat): string {
-    const emotion = beat.emotion.toLowerCase();
-
-    if (emotion.includes('happy') || emotion.includes('triumphant')) return 'low_angle';
-    if (emotion.includes('sad') || emotion.includes('defeated')) return 'high_angle';
-    if (emotion.includes('mysterious') || emotion.includes('confused')) return 'dutch_angle';
-
-    return 'straight_on';
+  /**
+   * Determine camera angle based on story beat, emotion, and narrative position
+   * 
+   * PROFESSIONAL COMIC PRINCIPLES (Kirby, Eisner, McCloud):
+   * - Camera angles AMPLIFY emotion, not just document action
+   * - Different story phases require different visual approaches
+   * - Climax moments need dramatic close-ups for maximum impact
+   * - Variety prevents visual monotony
+   */
+  private determineCameraAngle(beat: StoryBeat, panelNumber?: number, totalPanels?: number): string {
+    const emotion = (beat.emotion || '').toLowerCase();
+    const action = (beat.characterAction || '').toLowerCase();
+    const beatDescription = (beat.beat || '').toLowerCase();
+    const narrativePhase = (beat.panelPurpose || beat.narrativeFunction || '').toLowerCase();
+    
+    // Calculate story position (0.0 to 1.0)
+    const position = (panelNumber && totalPanels) ? panelNumber / totalPanels : 0.5;
+    
+    // ═══════════════════════════════════════════════════════════════
+    // PRIORITY 1: STORY POSITION (most important for visual variety)
+    // ═══════════════════════════════════════════════════════════════
+    
+    // OPENING (first 15%): Wide establishing shot - show the world
+    if (position <= 0.15 || narrativePhase.includes('opening') || narrativePhase.includes('establish')) {
+      console.log(`📐 Camera: 'wide' - Opening/establishing shot (position: ${(position * 100).toFixed(0)}%)`);
+      return 'wide';
+    }
+    
+    // CLIMAX (70-85%): Close-up for maximum emotional impact
+    if ((position >= 0.70 && position <= 0.85) || narrativePhase.includes('climax')) {
+      console.log(`📐 Camera: 'close-up' - Climax moment (position: ${(position * 100).toFixed(0)}%)`);
+      return 'close-up';
+    }
+    
+    // RESOLUTION (final 15%): Medium or wide for closure
+    if (position >= 0.85 || narrativePhase.includes('resolution') || narrativePhase.includes('resolve')) {
+      // Last panel should be wide for sense of completion
+      if (panelNumber === totalPanels) {
+        console.log(`📐 Camera: 'wide' - Final resolution shot`);
+        return 'wide';
+      }
+      console.log(`📐 Camera: 'medium' - Resolution section`);
+      return 'medium';
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // PRIORITY 2: EMOTIONAL INTENSITY (Kirby principle)
+    // ═══════════════════════════════════════════════════════════════
+    
+    // HIGH EMOTION → Close-up (capture the feeling)
+    const highEmotionWords = ['shocked', 'devastated', 'terrified', 'ecstatic', 'heartbroken', 
+                              'furious', 'amazed', 'horrified', 'overjoyed', 'desperate',
+                              'realization', 'discovery', 'revelation', 'epiphany'];
+    if (highEmotionWords.some(word => emotion.includes(word) || beatDescription.includes(word))) {
+      console.log(`📐 Camera: 'close-up' - High emotion moment (${emotion})`);
+      return 'close-up';
+    }
+    
+    // TRIUMPH/POWER → Low angle (character looks heroic)
+    const triumphWords = ['triumphant', 'victorious', 'proud', 'confident', 'brave', 'determined', 'powerful'];
+    if (triumphWords.some(word => emotion.includes(word))) {
+      console.log(`📐 Camera: 'low-angle' - Triumph/power moment (${emotion})`);
+      return 'low-angle';
+    }
+    
+    // DEFEAT/VULNERABILITY → High angle (character looks small)
+    const vulnerableWords = ['sad', 'defeated', 'scared', 'small', 'overwhelmed', 'helpless', 'lost', 'alone'];
+    if (vulnerableWords.some(word => emotion.includes(word))) {
+      console.log(`📐 Camera: 'high-angle' - Vulnerability moment (${emotion})`);
+      return 'high-angle';
+    }
+    
+    // CONFUSION/TENSION → Dutch angle (visual unease)
+    const tensionWords = ['mysterious', 'confused', 'suspicious', 'uncertain', 'conflicted', 'uneasy'];
+    if (tensionWords.some(word => emotion.includes(word))) {
+      console.log(`📐 Camera: 'dutch-angle' - Tension/confusion moment (${emotion})`);
+      return 'dutch-angle';
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // PRIORITY 3: ACTION TYPE
+    // ═══════════════════════════════════════════════════════════════
+    
+    // DYNAMIC ACTION → Low angle or action shot
+    const dynamicActions = ['running', 'jumping', 'flying', 'fighting', 'chasing', 'climbing', 'leaping'];
+    if (dynamicActions.some(word => action.includes(word) || beatDescription.includes(word))) {
+      console.log(`📐 Camera: 'low-angle' - Dynamic action`);
+      return 'low-angle';
+    }
+    
+    // DISCOVERY/EXAMINING → Close-up (show detail)
+    const discoveryActions = ['finding', 'discovering', 'examining', 'looking at', 'noticing', 'seeing'];
+    if (discoveryActions.some(word => action.includes(word) || beatDescription.includes(word))) {
+      console.log(`📐 Camera: 'close-up' - Discovery/examination moment`);
+      return 'close-up';
+    }
+    
+    // CONVERSATION → Over-shoulder or medium
+    const conversationIndicators = ['talking', 'speaking', 'asking', 'telling', 'says', 'replied'];
+    if (conversationIndicators.some(word => action.includes(word) || beatDescription.includes(word))) {
+      // Alternate between medium and over-shoulder for conversations
+      if (panelNumber && panelNumber % 2 === 0) {
+        console.log(`📐 Camera: 'over-shoulder' - Conversation (alternating)`);
+        return 'over-shoulder';
+      }
+      console.log(`📐 Camera: 'medium' - Conversation`);
+      return 'medium';
+    }
+    
+    // LOCATION CHANGE → Wide (establish new setting)
+    if (beat.locationChange && beat.locationChange !== 'same') {
+      console.log(`📐 Camera: 'wide' - Location change`);
+      return 'wide';
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // PRIORITY 4: VARIETY FALLBACK (prevent repetition)
+    // ═══════════════════════════════════════════════════════════════
+    
+    // Use panel number to cycle through angles for variety
+    if (panelNumber) {
+      const varietyAngles = ['medium', 'close-up', 'medium', 'wide', 'medium', 'close-up', 'low-angle', 'medium'];
+      const selectedAngle = varietyAngles[panelNumber % varietyAngles.length];
+      console.log(`📐 Camera: '${selectedAngle}' - Variety fallback (panel ${panelNumber})`);
+      return selectedAngle;
+    }
+    
+    // Default to medium shot
+    console.log(`📐 Camera: 'medium' - Default`);
+    return 'medium';
   }
 
   private optimizePromptLength(prompt: string, maxLength: number): string {

@@ -23,6 +23,19 @@ export interface ComicScript {
   storySummary: string;
   characterName: string;
   panels: ComicScriptPanel[];
+  // NEW: Story-introduced characters that need visual consistency
+  storyCharacters?: StoryIntroducedCharacter[];
+}
+
+// NEW: Characters introduced by the story (animals, creatures, supporting characters)
+export interface StoryIntroducedCharacter {
+  name: string;                    // e.g., "Bella the Butterfly", "Wise Owl"
+  type: 'animal' | 'creature' | 'person' | 'magical';  // Category for rendering
+  species?: string;                // e.g., "butterfly", "owl", "fox"
+  visualDescription: string;       // Detailed visual description for consistency
+  colorScheme: string[];           // e.g., ["orange", "black", "white spots"]
+  distinctiveFeatures: string[];   // e.g., ["large blue wings", "friendly eyes"]
+  panelsAppearingIn: number[];     // Which panels this character appears in
 }
 
 export interface ComicScriptOptions {
@@ -310,6 +323,17 @@ You MUST return valid JSON matching this exact structure:
   "title": "string (3-6 words)",
   "storySummary": "string (50 words - complete story arc)",
   "characterName": "string (extracted or created from description)",
+  "storyCharacters": [
+    {
+      "name": "string (character name, e.g., 'Bella the Butterfly')",
+      "type": "animal|creature|person|magical",
+      "species": "string (e.g., 'butterfly', 'owl', 'fox') OR null for persons",
+      "visualDescription": "string (30-50 words - DETAILED visual description for AI image consistency)",
+      "colorScheme": ["color1", "color2"],
+      "distinctiveFeatures": ["feature1", "feature2"],
+      "panelsAppearingIn": [1, 3, 5, 7]
+    }
+  ],
   "panels": [
     {
       "panelNumber": 1-${panelCount},
@@ -318,33 +342,156 @@ You MUST return valid JSON matching this exact structure:
       "dialogue": [{"speaker": "name", "text": "3-8 words", "type": "speech|thought|shout"}] OR null,
       "visualDirection": "string (50-100 words - what to illustrate)",
       "emotion": "string (character's emotional state)",
-      "cameraAngle": "wide|medium|close-up|dramatic"
+      "cameraAngle": "wide|medium|close-up|low-angle|high-angle|over-shoulder|dramatic"
     }
   ]
 }
 </output_schema>
 
+<story_characters_extraction>
+🦋 CRITICAL: EXTRACT ALL NON-MAIN CHARACTERS FOR VISUAL CONSISTENCY
+
+Any animal, creature, magical being, or supporting person you introduce in your story MUST be added to the "storyCharacters" array so they can be rendered IDENTICALLY in every panel.
+
+FOR EACH CHARACTER, PROVIDE:
+1. "name": A memorable name (e.g., "Sunny the Butterfly", "Oliver the Owl", "Grandma Rose")
+2. "type": Category - "animal" | "creature" | "person" | "magical"
+3. "species": Specific type (butterfly, owl, fox, fairy) OR null for human persons
+4. "visualDescription": DETAILED 30-50 word description the AI can use to draw them IDENTICALLY every time:
+   - Exact body shape and size relative to main character
+   - Specific colors (NOT "colorful" → "bright orange with black stripes")
+   - Facial features and expression style
+   - Any clothing, accessories, or distinguishing marks
+5. "colorScheme": Array of 2-4 specific colors that define this character
+6. "distinctiveFeatures": 2-3 unique visual traits that make them instantly recognizable
+7. "panelsAppearingIn": Array of panel numbers where this character appears
+
+EXAMPLE (butterfly):
+{
+  "name": "Sunny the Butterfly",
+  "type": "animal",
+  "species": "monarch butterfly",
+  "visualDescription": "A friendly monarch butterfly with bright orange wings featuring bold black vein patterns and delicate white spots along the wing edges. Has large, expressive sky-blue eyes with long eyelashes, small curled antennae with round golden tips, and a warm welcoming smile. Body is fuzzy black with orange stripes. About the size of the main character's open palm.",
+  "colorScheme": ["bright orange", "black", "white spots", "sky-blue eyes", "golden antenna tips"],
+  "distinctiveFeatures": ["white spots along wing edges", "large sky-blue eyes with lashes", "golden-tipped curled antennae"],
+  "panelsAppearingIn": [2, 3, 4, 5, 6, 7, 8]
+}
+
+EXAMPLE (supporting person):
+{
+  "name": "Grandma Rose",
+  "type": "person",
+  "species": null,
+  "visualDescription": "A warm, elderly woman with soft wrinkled skin, silver-gray hair in a neat bun, and kind hazel eyes behind round gold-rimmed glasses. Wears a lavender cardigan over a cream blouse with a small rose brooch. Has a gentle, knowing smile and slightly stooped posture. About twice the height of the main child character.",
+  "colorScheme": ["silver-gray hair", "lavender cardigan", "cream blouse", "gold glasses"],
+  "distinctiveFeatures": ["round gold-rimmed glasses", "rose brooch", "silver hair in bun"],
+  "panelsAppearingIn": [1, 8, 12, 14]
+}
+
+IF NO ADDITIONAL CHARACTERS (solo story): Return empty array → "storyCharacters": []
+</story_characters_extraction>
+
+<camera_angle_rules>
+🎥 MANDATORY CAMERA ANGLE VARIETY (Professional Comic Standard):
+
+STORY POSITION DETERMINES CAMERA:
+- Panel 1 (OPENING): MUST be "wide" - establish the world
+- Panels 2-3 (SETUP): Mix of "medium" and "close-up"  
+- Climax panel (~panel ${Math.ceil(panelCount * 0.75)}): MUST be "close-up" - maximum emotion
+- Final panel: MUST be "wide" or "medium" - sense of closure
+
+EMOTION DETERMINES CAMERA:
+- Triumph/pride/brave → "low-angle" (character looks heroic)
+- Sad/scared/overwhelmed → "high-angle" (character looks small)
+- Shock/realization/discovery → "close-up" (capture the feeling)
+- Confusion/tension → "dramatic" (visual unease)
+- Conversation → "medium" or "over-shoulder"
+
+VARIETY REQUIREMENTS:
+- NEVER use the same cameraAngle for 3+ consecutive panels
+- Must use at least 4 different camera angles across all panels
+- Opening and climax panels must have DIFFERENT angles
+
+FORBIDDEN PATTERNS:
+✗ All medium shots (boring, no visual variety)
+✗ Same angle repeated 3+ times in a row
+✗ Opening panel NOT being "wide"
+✗ Climax panel NOT being "close-up" or "dramatic"
+</camera_angle_rules>
+
 <comic_narration_philosophy>
-GOLDEN RULE: "If the reader can SEE it, don't WRITE it."
+🚨 CRITICAL NARRATION RULE - READ BEFORE EVERY PANEL 🚨
 
-NARRATION MUST ADD what images cannot show:
-✓ Character's internal THOUGHTS and FEELINGS
-✓ TIME context (how long, when, before/after)
-✓ BACKSTORY or MEMORY references  
-✓ SENSORY details beyond sight (sounds, smells)
-✓ STAKES and CONSEQUENCES
+THE #1 RULE: "If the reader can SEE it in the image, do NOT write it in narration."
 
-NARRATION MUST NEVER describe:
-✗ Physical actions visible in the image
-✗ Facial expressions the reader can see
-✗ Objects or settings shown in illustration
-✗ Character poses or positions
+BEFORE writing each narration, ask yourself: "Can the reader see this in the picture?"
+- If YES → DO NOT WRITE IT (the image already shows it)
+- If NO → This is GOOD narration material (adds invisible context)
 
-NARRATION FOR EMOTIONAL TRANSITIONS:
-When character's emotion changes, narration MUST include the REASON:
-✓ "Maybe he was just lonely." (explains why Maya's anger turned to understanding)
-✓ "She realized some things are better shared." (explains why she decided to forgive)
-✗ "Maya felt happy now." (NO - doesn't explain WHY she's happy)
+═══════════════════════════════════════════════════════════════
+EXAMPLES OF BAD vs GOOD NARRATION (STUDY CAREFULLY):
+═══════════════════════════════════════════════════════════════
+
+❌ BAD: "Maya played in the sunny garden."
+   WHY BAD: Reader can SEE the garden and SEE Maya playing!
+✅ GOOD: "Every morning brought new wonders to discover."
+   WHY GOOD: Reader cannot see "every morning" or Maya's sense of wonder - narration ADDS this!
+
+❌ BAD: "She bent down to look at the flower."
+   WHY BAD: Reader can SEE her bending down!
+✅ GOOD: "Her heart beat faster. Would it fly away?"
+   WHY GOOD: Reader cannot see heartbeat or internal question - narration ADDS this!
+
+❌ BAD: "The butterfly landed on her hand."
+   WHY BAD: Reader can SEE the butterfly on her hand!
+✅ GOOD: "She had never been this gentle before."
+   WHY GOOD: Reader cannot see comparison to past behavior - narration ADDS this!
+
+❌ BAD: "Maya smiled and jumped up and down."
+   WHY BAD: Reader can SEE smiling and jumping!
+✅ GOOD: "This was the best day ever!"
+   WHY GOOD: Reader cannot see Maya's internal evaluation - narration ADDS this!
+
+❌ BAD: "She walked toward the other children."
+   WHY BAD: Reader can SEE her walking!
+✅ GOOD: "Maybe they would want to be friends too."
+   WHY GOOD: Reader cannot see Maya's hope/thought - narration ADDS this!
+
+═══════════════════════════════════════════════════════════════
+WHAT NARRATION MUST ADD (invisible to the reader):
+═══════════════════════════════════════════════════════════════
+✓ Character's THOUGHTS: "Maybe this could work."
+✓ Character's FEELINGS: "Her heart swelled with pride."
+✓ Character's HOPES/FEARS: "What if they said no?"
+✓ TIME context: "Every morning..." / "For the first time..."
+✓ MEMORY/BACKSTORY: "She had never tried this before."
+✓ SENSORY beyond sight: "The flowers smelled so sweet."
+✓ STAKES: "This was her only chance."
+✓ INTERNAL CHANGE: "Something felt different now."
+
+═══════════════════════════════════════════════════════════════
+WHAT NARRATION MUST NEVER DESCRIBE (visible to the reader):
+═══════════════════════════════════════════════════════════════
+✗ Physical actions: walking, running, sitting, standing, reaching
+✗ Facial expressions: smiling, frowning, crying
+✗ Body positions: bending, kneeling, jumping
+✗ Setting descriptions: sunny garden, tall trees, blue sky
+✗ Object descriptions: pretty flower, colorful butterfly
+✗ What characters are wearing or holding
+
+═══════════════════════════════════════════════════════════════
+SELF-CHECK FOR EVERY NARRATION:
+═══════════════════════════════════════════════════════════════
+Before finalizing each narration, verify:
+□ Does this describe something the image will show? → REWRITE
+□ Does this add thoughts, feelings, time, or stakes? → GOOD
+□ Would removing this lose important invisible context? → KEEP IT
+
+EMOTIONAL TRANSITIONS:
+When character's emotion changes, narration MUST explain WHY:
+✓ "Maybe he was just lonely too." (explains shift from fear to understanding)
+✓ "She realized friends help each other." (explains shift from hesitant to brave)
+✗ "Maya felt happy now." (NO - doesn't explain WHY)
 </comic_narration_philosophy>
 
 <panel_distribution_rules>
@@ -755,308 +902,308 @@ GOOD: Creation requires iteration, failure, and persistence`
     
     return frameworks[genre.toLowerCase()] || frameworks['adventure'];
   }
-
-  /**
+/**
    * Get few-shot example for the specified audience
+   * IMPROVED: All narrations now demonstrate "invisible context" principle
    */
-  private getFewShotExample(audience: AudienceType): string {
-    const normalizedAudience = audience.replace(/_/g, ' ');
-    
-    if (normalizedAudience === 'children') {
-      return `{
-  "title": "Lily and the Brave Little Star",
-  "storySummary": "Lily finds a fallen star who is scared to fly back to the sky. By showing the star that being brave means trying even when scared, Lily helps her new friend find courage, learning that she too can be brave.",
-  "characterName": "Lily",
-  "panels": [
-    {
-      "panelNumber": 1,
-      "narrativePhase": "OPENING",
-      "narration": "The night sky sparkled above Lily's backyard.",
-      "dialogue": null,
-      "visualDirection": "Wide shot of a backyard at night. A young girl (Lily) in pajamas looks up at a starry sky. Warm light from house windows. Fireflies dot the grass.",
-      "emotion": "wonder",
-      "cameraAngle": "wide"
-    },
-    {
-      "panelNumber": 2,
-      "narrativePhase": "SETUP",
-      "narration": null,
-      "dialogue": [{"speaker": "Lily", "text": "Oh! What's that glow?", "type": "speech"}],
-      "visualDirection": "Medium shot of Lily noticing a soft golden glow behind a bush. Her eyes are wide with curiosity. She's taking a step toward it.",
-      "emotion": "curious",
-      "cameraAngle": "medium"
-    },
-    {
-      "panelNumber": 3,
-      "narrativePhase": "SETUP",
-      "narration": "Behind the roses, she found something magical.",
-      "dialogue": null,
-      "visualDirection": "Close-up of a tiny star character with big worried eyes, sitting in the grass. It glows softly gold. Rose petals around it.",
-      "emotion": "discovery",
-      "cameraAngle": "close-up"
-    },
-    {
-      "panelNumber": 4,
-      "narrativePhase": "RISING_ACTION",
-      "narration": null,
-      "dialogue": [{"speaker": "Star", "text": "I fell down. I'm too scared to fly back.", "type": "speech"}],
-      "visualDirection": "Medium shot of Lily kneeling beside the small star. The star's glow flickers dimly. Lily looks concerned.",
-      "emotion": "worried",
-      "cameraAngle": "medium"
-    },
-    {
-      "panelNumber": 5,
-      "narrativePhase": "CLIMAX",
-      "narration": "Lily thought about times she felt scared too.",
-      "dialogue": null,
-      "visualDirection": "Close-up of Lily's face, eyes looking up thoughtfully at the dark sky. The star watches her hopefully.",
-      "emotion": "thoughtful",
-      "cameraAngle": "close-up"
-    },
-    {
-      "panelNumber": 6,
-      "narrativePhase": "RISING_ACTION",
-      "narration": "Maybe being brave didn't mean not being scared at all.",
-      "dialogue": null,
-      "visualDirection": "Medium shot of Lily having a realization, her expression softening with understanding. She looks at the star with gentle eyes.",
-      "emotion": "understanding",
-      "cameraAngle": "medium"
-    },
-    {
-      "panelNumber": 7,
-      "narrativePhase": "RESOLUTION",
-      "narration": null,
-      "dialogue": [{"speaker": "Lily", "text": "Being brave means trying even when scared!", "type": "speech"}],
-      "visualDirection": "Lily holding the star gently in her cupped hands, speaking encouragingly. The star's glow begins to brighten.",
-      "emotion": "encouraging",
-      "cameraAngle": "medium"
-    },
-    {
-      "panelNumber": 8,
-      "narrativePhase": "RESOLUTION",
-      "narration": "Lily learned that she could be brave too.",
-      "dialogue": null,
-      "visualDirection": "Wide shot of Lily waving as the star flies upward, leaving a trail of sparkles. The star glows brightly now. Lily smiles warmly.",
-      "emotion": "proud",
-      "cameraAngle": "wide"
-    }
-  ]
-}`;
-    } else if (normalizedAudience === 'young adults') {
-      return `{
-  "title": "The Unfollow",
-  "storySummary": "After discovering her best friend's secret social media account mocking her, Alex must decide whether to confront her or walk away, learning that some friendships aren't worth saving.",
-  "characterName": "Alex",
-  "panels": [
-    {
-      "panelNumber": 1,
-      "narrativePhase": "OPENING",
-      "narration": "Three years of friendship. Two thousand shared posts. One screenshot that changed everything.",
-      "dialogue": null,
-      "visualDirection": "Close-up of Alex's phone screen showing a cruel mocking post, her reflection visible in the dark glass",
-      "emotion": "shocked",
-      "cameraAngle": "close-up"
-    },
-    {
-      "panelNumber": 2,
-      "narrativePhase": "SETUP",
-      "narration": null,
-      "dialogue": [{"speaker": "Alex", "text": "This can't be real.", "type": "whisper"}],
-      "visualDirection": "Alex sitting on her bed, phone in trembling hands, room feeling suddenly smaller",
-      "emotion": "denial",
-      "cameraAngle": "medium"
-    },
-    {
-      "panelNumber": 3,
-      "narrativePhase": "RISING_ACTION",
-      "narration": "Every inside joke we'd shared. She'd turned them all into punchlines.",
-      "dialogue": null,
-      "visualDirection": "Alex scrolling through multiple posts, each one a different betrayal, tears forming",
-      "emotion": "hurt",
-      "cameraAngle": "close-up"
-    },
-    {
-      "panelNumber": 4,
-      "narrativePhase": "RISING_ACTION",
-      "narration": null,
-      "dialogue": [{"speaker": "Alex", "text": "I defended you. Every single time.", "type": "thought"}],
-      "visualDirection": "Alex staring at a framed photo of her and Mia, anger mixing with the hurt",
-      "emotion": "angry",
-      "cameraAngle": "medium"
-    },
-    {
-      "panelNumber": 5,
-      "narrativePhase": "RISING_ACTION",
-      "narration": "Part of me wanted to screenshot everything. Expose her like she'd exposed me.",
-      "dialogue": null,
-      "visualDirection": "Alex's finger hovering over the share button, face conflicted",
-      "emotion": "conflicted",
-      "cameraAngle": "close-up"
-    },
-    {
-      "panelNumber": 6,
-      "narrativePhase": "CLIMAX",
-      "narration": null,
-      "dialogue": [{"speaker": "Alex", "text": "But then I'd just be her.", "type": "thought"}],
-      "visualDirection": "Alex lowering her phone, staring at her own reflection in the dark screen",
-      "emotion": "realization",
-      "cameraAngle": "dramatic"
-    },
-    {
-      "panelNumber": 7,
-      "narrativePhase": "RISING_ACTION",
-      "narration": "Revenge would feel good for a minute. Then I'd have to live with being that person.",
-      "dialogue": null,
-      "visualDirection": "Alex standing up, setting the phone face-down on her desk deliberately",
-      "emotion": "resolved",
-      "cameraAngle": "medium"
-    },
-    {
-      "panelNumber": 8,
-      "narrativePhase": "RESOLUTION",
-      "narration": null,
-      "dialogue": [{"speaker": "Alex", "text": "You don't get to make me smaller.", "type": "speech"}],
-      "visualDirection": "Alex pressing the unfollow button, her expression calm but final",
-      "emotion": "empowered",
-      "cameraAngle": "close-up"
-    },
-    {
-      "panelNumber": 9,
-      "narrativePhase": "RESOLUTION",
-      "narration": "Some friendships end with explosions. Ours ended with a click.",
-      "dialogue": null,
-      "visualDirection": "Wide shot of Alex's room, phone on desk, her walking toward the window and light",
-      "emotion": "bittersweet",
-      "cameraAngle": "wide"
-    },
-    {
-      "panelNumber": 10,
-      "narrativePhase": "RESOLUTION",
-      "narration": "I'd find people who laughed with me, not at me. And maybe that was the real unfollow.",
-      "dialogue": null,
-      "visualDirection": "Alex looking out the window at the city, small smile forming, future ahead",
-      "emotion": "hopeful",
-      "cameraAngle": "medium"
-    }
-  ]
-}`;
-    } else {
-      // Adults
-      return `{
-  "title": "The Last Letter",
-  "storySummary": "Twenty years after leaving without explanation, David returns to his hometown for his father's funeral, where an undelivered letter reveals the sacrifice that defined both their lives.",
-  "characterName": "David",
-  "panels": [
-    {
-      "panelNumber": 1,
-      "narrativePhase": "OPENING",
-      "narration": "The town hadn't changed. That was the worst part.",
-      "dialogue": null,
-      "visualDirection": "David's car entering the small town, everything exactly as he left it twenty years ago, afternoon light casting long shadows",
-      "emotion": "apprehensive",
-      "cameraAngle": "wide"
-    },
-    {
-      "panelNumber": 2,
-      "narrativePhase": "SETUP",
-      "narration": "Three days. Funeral, estate, gone. That was the plan.",
-      "dialogue": null,
-      "visualDirection": "David standing outside his childhood home, hand hesitating on the gate he once slammed shut",
-      "emotion": "guarded",
-      "cameraAngle": "medium"
-    },
-    {
-      "panelNumber": 3,
-      "narrativePhase": "RISING_ACTION",
-      "narration": null,
-      "dialogue": [{"speaker": "David", "text": "Just boxes. Just things.", "type": "thought"}],
-      "visualDirection": "David sorting through his father's study, deliberately avoiding the photographs",
-      "emotion": "detached",
-      "cameraAngle": "medium"
-    },
-    {
-      "panelNumber": 4,
-      "narrativePhase": "RISING_ACTION",
-      "narration": "We'd spoken six times in twenty years. Five were about money. One was a wrong number.",
-      "dialogue": null,
-      "visualDirection": "David finding a drawer full of letters, all addressed to him, all marked 'Return to Sender'",
-      "emotion": "confused",
-      "cameraAngle": "close-up"
-    },
-    {
-      "panelNumber": 5,
-      "narrativePhase": "RISING_ACTION",
-      "narration": null,
-      "dialogue": [{"speaker": "David", "text": "What is this?", "type": "whisper"}],
-      "visualDirection": "David holding one envelope, recognizing his own handwriting - letters he'd sent that were never opened",
-      "emotion": "unsettled",
-      "cameraAngle": "close-up"
-    },
-    {
-      "panelNumber": 6,
-      "narrativePhase": "RISING_ACTION",
-      "narration": "At the bottom. Different handwriting. His handwriting. Addressed to me. Never sent.",
-      "dialogue": null,
-      "visualDirection": "David finding a thick envelope at the bottom of the drawer, his father's handwriting, unsealed",
-      "emotion": "stunned",
-      "cameraAngle": "close-up"
-    },
-    {
-      "panelNumber": 7,
-      "narrativePhase": "CLIMAX",
-      "narration": "'I told you to leave because the factory was poisoning people. I knew you'd try to expose it. They would have destroyed you. I chose to be the villain in your story so you could have a story at all.'",
-      "dialogue": null,
-      "visualDirection": "The letter filling the panel, key phrases visible, David's hands trembling at the edges",
-      "emotion": "devastated",
-      "cameraAngle": "dramatic"
-    },
-    {
-      "panelNumber": 8,
-      "narrativePhase": "RISING_ACTION",
-      "narration": null,
-      "dialogue": null,
-      "visualDirection": "David slumped against the desk, letter fallen to the floor, twenty years of anger collapsing",
-      "emotion": "shattered",
-      "cameraAngle": "wide"
-    },
-    {
-      "panelNumber": 9,
-      "narrativePhase": "RISING_ACTION",
-      "narration": "He'd carried this alone. Every cold phone call. Every returned letter. He'd let me hate him.",
-      "dialogue": null,
-      "visualDirection": "David picking up the letter again, reading it in the fading light, seeing his father differently",
-      "emotion": "understanding",
-      "cameraAngle": "medium"
-    },
-    {
-      "panelNumber": 10,
-      "narrativePhase": "RESOLUTION",
-      "narration": "Some sacrifices don't ask for gratitude. They can't.",
-      "dialogue": null,
-      "visualDirection": "David at the window, holding the letter, watching the sun set over the factory that still stands",
-      "emotion": "grief",
-      "cameraAngle": "medium"
-    },
-    {
-      "panelNumber": 11,
-      "narrativePhase": "RESOLUTION",
-      "narration": null,
-      "dialogue": [{"speaker": "David", "text": "I'm sorry I never asked why.", "type": "whisper"}],
-      "visualDirection": "David at the graveside, alone, placing the letter on the fresh earth",
-      "emotion": "remorse",
-      "cameraAngle": "wide"
-    },
-    {
-      "panelNumber": 12,
-      "narrativePhase": "RESOLUTION",
-      "narration": "I'd come to bury a stranger. I left knowing my father for the first time.",
-      "dialogue": null,
-      "visualDirection": "David walking away from the cemetery, the letter staying behind, carrying something heavier and lighter",
-      "emotion": "bittersweet-acceptance",
-      "cameraAngle": "wide"
-    }
-  ]
-}`;
-    }
+private getFewShotExample(audience: AudienceType): string {
+  const normalizedAudience = audience.replace(/_/g, ' ');
+  
+  if (normalizedAudience === 'children') {
+    return `{
+"title": "Lily and the Brave Little Star",
+"storySummary": "Lily finds a fallen star who is scared to fly back to the sky. By showing the star that being brave means trying even when scared, Lily helps her new friend find courage, learning that she too can be brave.",
+"characterName": "Lily",
+"panels": [
+  {
+    "panelNumber": 1,
+    "narrativePhase": "OPENING",
+    "narration": "Every night, Lily hoped to find something magical.",
+    "dialogue": null,
+    "visualDirection": "Wide shot of a backyard at night. A young girl (Lily) in pajamas looks up at a starry sky. Warm light from house windows. Fireflies dot the grass.",
+    "emotion": "wonder",
+    "cameraAngle": "wide"
+  },
+  {
+    "panelNumber": 2,
+    "narrativePhase": "SETUP",
+    "narration": null,
+    "dialogue": [{"speaker": "Lily", "text": "Oh! What's that glow?", "type": "speech"}],
+    "visualDirection": "Medium shot of Lily noticing a soft golden glow behind a bush. Her eyes are wide with curiosity. She's taking a step toward it.",
+    "emotion": "curious",
+    "cameraAngle": "medium"
+  },
+  {
+    "panelNumber": 3,
+    "narrativePhase": "SETUP",
+    "narration": "Her heart beat fast. Could this really be...?",
+    "dialogue": null,
+    "visualDirection": "Close-up of a tiny star character with big worried eyes, sitting in the grass. It glows softly gold. Rose petals around it.",
+    "emotion": "discovery",
+    "cameraAngle": "close-up"
+  },
+  {
+    "panelNumber": 4,
+    "narrativePhase": "RISING_ACTION",
+    "narration": null,
+    "dialogue": [{"speaker": "Star", "text": "I fell down. I'm too scared to fly back.", "type": "speech"}],
+    "visualDirection": "Medium shot of Lily kneeling beside the small star. The star's glow flickers dimly. Lily looks concerned.",
+    "emotion": "worried",
+    "cameraAngle": "medium"
+  },
+  {
+    "panelNumber": 5,
+    "narrativePhase": "CLIMAX",
+    "narration": "Lily remembered feeling scared too, sometimes.",
+    "dialogue": null,
+    "visualDirection": "Close-up of Lily's face, eyes looking up thoughtfully at the dark sky. The star watches her hopefully.",
+    "emotion": "thoughtful",
+    "cameraAngle": "close-up"
+  },
+  {
+    "panelNumber": 6,
+    "narrativePhase": "RISING_ACTION",
+    "narration": "Maybe being brave meant trying anyway.",
+    "dialogue": null,
+    "visualDirection": "Medium shot of Lily having a realization, her expression softening with understanding. She looks at the star with gentle eyes.",
+    "emotion": "understanding",
+    "cameraAngle": "medium"
+  },
+  {
+    "panelNumber": 7,
+    "narrativePhase": "RESOLUTION",
+    "narration": null,
+    "dialogue": [{"speaker": "Lily", "text": "You can do it! I believe in you!", "type": "speech"}],
+    "visualDirection": "Lily holding the star gently in her cupped hands, speaking encouragingly. The star's glow begins to brighten.",
+    "emotion": "encouraging",
+    "cameraAngle": "medium"
+  },
+  {
+    "panelNumber": 8,
+    "narrativePhase": "RESOLUTION",
+    "narration": "Lily learned that she could be brave too.",
+    "dialogue": null,
+    "visualDirection": "Wide shot of Lily waving as the star flies upward, leaving a trail of sparkles. The star glows brightly now. Lily smiles warmly.",
+    "emotion": "proud",
+    "cameraAngle": "wide"
   }
+]
+}`;
+  } else if (normalizedAudience === 'young adults') {
+    return `{
+"title": "The Unfollow",
+"storySummary": "After discovering her best friend's secret social media account mocking her, Alex must decide whether to confront her or walk away, learning that some friendships aren't worth saving.",
+"characterName": "Alex",
+"panels": [
+  {
+    "panelNumber": 1,
+    "narrativePhase": "OPENING",
+    "narration": "Three years of friendship. Two thousand shared posts. One screenshot that changed everything.",
+    "dialogue": null,
+    "visualDirection": "Close-up of Alex's phone screen showing a cruel mocking post, her reflection visible in the dark glass",
+    "emotion": "shocked",
+    "cameraAngle": "close-up"
+  },
+  {
+    "panelNumber": 2,
+    "narrativePhase": "SETUP",
+    "narration": null,
+    "dialogue": [{"speaker": "Alex", "text": "This can't be real.", "type": "whisper"}],
+    "visualDirection": "Alex sitting on her bed, phone in trembling hands, room feeling suddenly smaller",
+    "emotion": "denial",
+    "cameraAngle": "medium"
+  },
+  {
+    "panelNumber": 3,
+    "narrativePhase": "RISING_ACTION",
+    "narration": "Every inside joke we'd shared—she'd turned them all into punchlines for strangers.",
+    "dialogue": null,
+    "visualDirection": "Alex scrolling through multiple posts, each one a different betrayal, tears forming",
+    "emotion": "hurt",
+    "cameraAngle": "close-up"
+  },
+  {
+    "panelNumber": 4,
+    "narrativePhase": "RISING_ACTION",
+    "narration": null,
+    "dialogue": [{"speaker": "Alex", "text": "I defended you. Every single time.", "type": "thought"}],
+    "visualDirection": "Alex staring at a framed photo of her and Mia, anger mixing with the hurt",
+    "emotion": "angry",
+    "cameraAngle": "medium"
+  },
+  {
+    "panelNumber": 5,
+    "narrativePhase": "RISING_ACTION",
+    "narration": "Part of me wanted to screenshot everything. Make her feel exactly what I felt.",
+    "dialogue": null,
+    "visualDirection": "Alex's finger hovering over the share button, face conflicted",
+    "emotion": "conflicted",
+    "cameraAngle": "close-up"
+  },
+  {
+    "panelNumber": 6,
+    "narrativePhase": "CLIMAX",
+    "narration": null,
+    "dialogue": [{"speaker": "Alex", "text": "But then I'd just be her.", "type": "thought"}],
+    "visualDirection": "Alex lowering her phone, staring at her own reflection in the dark screen",
+    "emotion": "realization",
+    "cameraAngle": "dramatic"
+  },
+  {
+    "panelNumber": 7,
+    "narrativePhase": "RISING_ACTION",
+    "narration": "Revenge would taste sweet for a minute. Then I'd have to live with being that person forever.",
+    "dialogue": null,
+    "visualDirection": "Alex standing up, setting the phone face-down on her desk deliberately",
+    "emotion": "resolved",
+    "cameraAngle": "medium"
+  },
+  {
+    "panelNumber": 8,
+    "narrativePhase": "RESOLUTION",
+    "narration": null,
+    "dialogue": [{"speaker": "Alex", "text": "You don't get to make me smaller.", "type": "speech"}],
+    "visualDirection": "Alex pressing the unfollow button, her expression calm but final",
+    "emotion": "empowered",
+    "cameraAngle": "close-up"
+  },
+  {
+    "panelNumber": 9,
+    "narrativePhase": "RESOLUTION",
+    "narration": "Some friendships end with explosions. This one ended with a single click.",
+    "dialogue": null,
+    "visualDirection": "Wide shot of Alex's room, phone on desk, her walking toward the window and light",
+    "emotion": "bittersweet",
+    "cameraAngle": "wide"
+  },
+  {
+    "panelNumber": 10,
+    "narrativePhase": "RESOLUTION",
+    "narration": "Somewhere out there were people who'd laugh with me, not at me. And that was worth finding.",
+    "dialogue": null,
+    "visualDirection": "Alex looking out the window at the city, small smile forming, future ahead",
+    "emotion": "hopeful",
+    "cameraAngle": "medium"
+  }
+]
+}`;
+  } else {
+    // Adults
+    return `{
+"title": "The Last Letter",
+"storySummary": "Twenty years after leaving without explanation, David returns to his hometown for his father's funeral, where an undelivered letter reveals the sacrifice that defined both their lives.",
+"characterName": "David",
+"panels": [
+  {
+    "panelNumber": 1,
+    "narrativePhase": "OPENING",
+    "narration": "Twenty years, and the town hadn't changed. That was the cruelest part.",
+    "dialogue": null,
+    "visualDirection": "David's car entering the small town, everything exactly as he left it twenty years ago, afternoon light casting long shadows",
+    "emotion": "apprehensive",
+    "cameraAngle": "wide"
+  },
+  {
+    "panelNumber": 2,
+    "narrativePhase": "SETUP",
+    "narration": "Three days. Funeral, estate, gone. That was the plan. Plans are what we make when we think we're still in control.",
+    "dialogue": null,
+    "visualDirection": "David standing outside his childhood home, hand hesitating on the gate he once slammed shut",
+    "emotion": "guarded",
+    "cameraAngle": "medium"
+  },
+  {
+    "panelNumber": 3,
+    "narrativePhase": "RISING_ACTION",
+    "narration": null,
+    "dialogue": [{"speaker": "David", "text": "Just boxes. Just things.", "type": "thought"}],
+    "visualDirection": "David sorting through his father's study, deliberately avoiding the photographs",
+    "emotion": "detached",
+    "cameraAngle": "medium"
+  },
+  {
+    "panelNumber": 4,
+    "narrativePhase": "RISING_ACTION",
+    "narration": "Six phone calls in twenty years. Five about money. One was a wrong number he'd pretended was intentional.",
+    "dialogue": null,
+    "visualDirection": "David finding a drawer full of letters, all addressed to him, all marked 'Return to Sender'",
+    "emotion": "confused",
+    "cameraAngle": "close-up"
+  },
+  {
+    "panelNumber": 5,
+    "narrativePhase": "RISING_ACTION",
+    "narration": null,
+    "dialogue": [{"speaker": "David", "text": "What is this?", "type": "whisper"}],
+    "visualDirection": "David holding one envelope, recognizing his own handwriting - letters he'd sent that were never opened",
+    "emotion": "unsettled",
+    "cameraAngle": "close-up"
+  },
+  {
+    "panelNumber": 6,
+    "narrativePhase": "RISING_ACTION",
+    "narration": "His handwriting. The same scrawl that had signed every cold birthday card. But this one had never been sent.",
+    "dialogue": null,
+    "visualDirection": "David finding a thick envelope at the bottom of the drawer, his father's handwriting, unsealed",
+    "emotion": "stunned",
+    "cameraAngle": "close-up"
+  },
+  {
+    "panelNumber": 7,
+    "narrativePhase": "CLIMAX",
+    "narration": "'I told you to leave because the factory was poisoning people. I knew you'd try to expose it. They would have destroyed you. I chose to be the villain in your story so you could have a story at all.'",
+    "dialogue": null,
+    "visualDirection": "The letter filling the panel, key phrases visible, David's hands trembling at the edges",
+    "emotion": "devastated",
+    "cameraAngle": "dramatic"
+  },
+  {
+    "panelNumber": 8,
+    "narrativePhase": "RISING_ACTION",
+    "narration": null,
+    "dialogue": null,
+    "visualDirection": "David slumped against the desk, letter fallen to the floor, twenty years of anger collapsing",
+    "emotion": "shattered",
+    "cameraAngle": "wide"
+  },
+  {
+    "panelNumber": 9,
+    "narrativePhase": "RISING_ACTION",
+    "narration": "Every cold silence. Every returned letter. Every birthday ignored. He'd made himself the monster so David could escape.",
+    "dialogue": null,
+    "visualDirection": "David picking up the letter again, reading it in the fading light, seeing his father differently",
+    "emotion": "understanding",
+    "cameraAngle": "medium"
+  },
+  {
+    "panelNumber": 10,
+    "narrativePhase": "RESOLUTION",
+    "narration": "Some sacrifices don't ask for gratitude. They can't afford to.",
+    "dialogue": null,
+    "visualDirection": "David at the window, holding the letter, watching the sun set over the factory that still stands",
+    "emotion": "grief",
+    "cameraAngle": "medium"
+  },
+  {
+    "panelNumber": 11,
+    "narrativePhase": "RESOLUTION",
+    "narration": null,
+    "dialogue": [{"speaker": "David", "text": "I'm sorry I never asked why.", "type": "whisper"}],
+    "visualDirection": "David at the graveside, alone, placing the letter on the fresh earth",
+    "emotion": "remorse",
+    "cameraAngle": "wide"
+  },
+  {
+    "panelNumber": 12,
+    "narrativePhase": "RESOLUTION",
+    "narration": "He'd come to bury a stranger. He left knowing his father for the first time.",
+    "dialogue": null,
+    "visualDirection": "David walking away from the cemetery, the letter staying behind, carrying something heavier and lighter",
+    "emotion": "bittersweet-acceptance",
+    "cameraAngle": "wide"
+  }
+]
+}`;
+  }
+}
 }

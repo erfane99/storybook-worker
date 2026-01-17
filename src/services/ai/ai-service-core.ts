@@ -2674,7 +2674,7 @@ async generateComicScriptAnalysis(
   genre: string,
   audience: AudienceType,
   characterDescription: string
-): Promise<{ storyAnalysis: StoryAnalysis; title: string; story: string }> {
+): Promise<{ storyAnalysis: StoryAnalysis; title: string; story: string; storyIntroducedCharacters?: any[] }> {
   const config = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
   const panelCount = config.totalPanels;
   
@@ -2687,8 +2687,39 @@ async generateComicScriptAnalysis(
     characterDescription,
     panelCount
   });
+
+  
   
   this.log('info', `✅ Comic script generated: "${comicScript.title}" with ${comicScript.panels.length} panels`);
+  
+  // NEW: Extract story-introduced characters for consistency tracking (Priority 4 fix)
+  const storyIntroducedCharacters: any[] = [];
+  if (comicScript.storyCharacters && comicScript.storyCharacters.length > 0) {
+    this.log('info', `🦋 Found ${comicScript.storyCharacters.length} story-introduced character(s) for consistency tracking`);
+    
+    for (const storyChar of comicScript.storyCharacters) {
+      // Convert StoryIntroducedCharacter to StoryCharacter format for consistency system
+      const convertedChar = {
+        id: `story-char-${storyChar.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+        name: storyChar.name,
+        age: 'child' as const,  // Default for non-human characters
+        role: 'secondary' as const,
+        gender: 'non-binary' as const,  // Neutral for animals/creatures
+        // Store visual details for rendering
+        characterDescription: storyChar.visualDescription,
+        // Custom fields for story characters
+        isStoryIntroduced: true,
+        characterType: storyChar.type,
+        species: storyChar.species,
+        colorScheme: storyChar.colorScheme,
+        distinctiveFeatures: storyChar.distinctiveFeatures,
+        panelsAppearingIn: storyChar.panelsAppearingIn
+      };
+      
+      storyIntroducedCharacters.push(convertedChar);
+      this.log('info', `   🎨 ${storyChar.name} (${storyChar.type}): appears in panels ${storyChar.panelsAppearingIn?.join(', ') || 'multiple'}`);
+    }
+  }
   
   // Convert comic script panels to story beats with pre-generated narration
   const storyBeats: StoryBeat[] = comicScript.panels.map((panel, index) => {
@@ -2755,7 +2786,9 @@ async generateComicScriptAnalysis(
   return {
     storyAnalysis,
     title: comicScript.title,
-    story
+    story,
+    // NEW: Include story-introduced characters for reference image generation (Priority 4 fix)
+    storyIntroducedCharacters: storyIntroducedCharacters.length > 0 ? storyIntroducedCharacters : undefined
   };
 }
 

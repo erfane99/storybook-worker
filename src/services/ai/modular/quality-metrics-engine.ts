@@ -289,6 +289,7 @@ export class QualityMetricsEngine {
 
   /**
    * Measure narrative coherence and story flow
+   * ENHANCED: Now validates "show don't tell" principle and narration quality
    * FIXED: All TypeScript errors resolved
    */
   private async measureNarrativeCoherence(panels: ComicPanel[], storyAnalysis?: StoryAnalysis): Promise<number> {
@@ -298,21 +299,142 @@ export class QualityMetricsEngine {
 
     // Story archetype alignment bonus (FROM AISERVNOW.TXT)
     if (storyAnalysis.storyBeats && storyAnalysis.storyBeats.length > 0) {
-      coherenceScore += 10;
+      coherenceScore += 5;
     }
 
     // Visual flow progression (FROM BOTH FILES)
     if (storyAnalysis.visualFlow && storyAnalysis.visualFlow.length > 3) {
-      coherenceScore += 5;
+      coherenceScore += 3;
     }
 
     // Panel purpose clarity
     const panelsWithClearPurpose = panels.filter(p => p.narrativePurpose && p.narrativePurpose !== 'narrative');
     if (panelsWithClearPurpose.length / panels.length > 0.8) {
-      coherenceScore += 5;
+      coherenceScore += 2;
     }
 
-    return Math.min(100, coherenceScore);
+    // ===== NEW: "SHOW DON'T TELL" VALIDATION =====
+    // Check if narration describes visible actions (BAD) vs invisible context (GOOD)
+    const narrationQualityScore = this.validateNarrationQuality(panels);
+    coherenceScore += narrationQualityScore; // Can add up to +10 or subtract up to -15
+
+    return Math.min(100, Math.max(0, coherenceScore));
+  }
+
+  /**
+   * NEW: Validate narration follows "show don't tell" principle
+   * Checks for:
+   * 1. Forbidden action verbs (visible actions that images show)
+   * 2. Narration variety (no repetitive starts)
+   * 3. Internal state language (thoughts, feelings, time)
+   */
+  private validateNarrationQuality(panels: ComicPanel[]): number {
+    let qualityAdjustment = 0;
+    
+    // Get all narrations from panels
+    const narrations = panels
+      .map(p => (p as any).narration || '')
+      .filter(n => n && n.length > 0);
+    
+    if (narrations.length === 0) {
+      return 0; // No narrations to evaluate
+    }
+
+    // ===== CHECK 1: Forbidden "visible action" phrases =====
+    // These describe what the reader can SEE in the image (BAD)
+    const forbiddenActionPatterns = [
+      /\b(walked|walks|walking)\s+(to|toward|into|through)/i,
+      /\b(ran|runs|running)\s+(to|toward|into|through)/i,
+      /\b(stood|stands|standing)\s+(up|in|at|by)/i,
+      /\b(sat|sits|sitting)\s+(down|on|in|at)/i,
+      /\b(bent|bends|bending)\s+(down|over)/i,
+      /\b(reached|reaches|reaching)\s+(for|out|up)/i,
+      /\b(picked|picks|picking)\s+up/i,
+      /\b(put|puts|putting)\s+(down|on|in)/i,
+      /\b(looked|looks|looking)\s+(at|toward|up|down)/i,
+      /\b(smiled|smiles|smiling)\s*(at|and|with)?/i,
+      /\b(frowned|frowns|frowning)/i,
+      /\b(jumped|jumps|jumping)\s*(up|down|over)?/i,
+      /\b(played|plays|playing)\s+(in|with|at)/i,
+      /\b(held|holds|holding)\s+(the|a|his|her)/i,
+      /\bwas\s+(standing|sitting|walking|running|playing|holding|looking)/i,
+    ];
+    
+    let visibleActionViolations = 0;
+    for (const narration of narrations) {
+      for (const pattern of forbiddenActionPatterns) {
+        if (pattern.test(narration)) {
+          visibleActionViolations++;
+          break; // Only count once per narration
+        }
+      }
+    }
+    
+    const violationRate = visibleActionViolations / narrations.length;
+    if (violationRate > 0.5) {
+      qualityAdjustment -= 15; // Major penalty: over half describe visible actions
+      console.log(`   ⚠️ Narration quality: ${Math.round(violationRate * 100)}% describe visible actions (BAD)`);
+    } else if (violationRate > 0.25) {
+      qualityAdjustment -= 8; // Moderate penalty
+      console.log(`   ⚠️ Narration quality: ${Math.round(violationRate * 100)}% describe visible actions (needs improvement)`);
+    } else if (violationRate < 0.1) {
+      qualityAdjustment += 5; // Bonus for good narration
+      console.log(`   ✅ Narration quality: Excellent - follows "show don't tell" principle`);
+    }
+
+    // ===== CHECK 2: Narration variety (no repetitive starts) =====
+    const narrationStarts = narrations.map(n => {
+      const words = n.trim().split(/\s+/);
+      return words.slice(0, 2).join(' ').toLowerCase();
+    });
+    
+    const startCounts = new Map<string, number>();
+    for (const start of narrationStarts) {
+      startCounts.set(start, (startCounts.get(start) || 0) + 1);
+    }
+    
+    let repetitiveStarts = 0;
+    for (const count of startCounts.values()) {
+      if (count > 1) {
+        repetitiveStarts += count - 1;
+      }
+    }
+    
+    if (repetitiveStarts > 2) {
+      qualityAdjustment -= 5; // Penalty for repetitive narration starts
+      console.log(`   ⚠️ Narration variety: ${repetitiveStarts} panels start with same words`);
+    } else if (repetitiveStarts === 0) {
+      qualityAdjustment += 3; // Bonus for variety
+    }
+
+    // ===== CHECK 3: Good narration indicators (thoughts, feelings, time) =====
+    const goodNarrationPatterns = [
+      /\b(heart|felt|feeling|wondered|thought|hoped|wished|dreamed|realized|understood)/i,
+      /\b(maybe|perhaps|what if|could this|would they)/i,
+      /\b(every|never|always|first time|for the first|finally|at last)/i,
+      /\b(inside|within|deep down|secretly)/i,
+      /\b(remembered|forgot|knew|didn't know|couldn't believe)/i,
+    ];
+    
+    let goodNarrationCount = 0;
+    for (const narration of narrations) {
+      for (const pattern of goodNarrationPatterns) {
+        if (pattern.test(narration)) {
+          goodNarrationCount++;
+          break;
+        }
+      }
+    }
+    
+    const goodNarrationRate = goodNarrationCount / narrations.length;
+    if (goodNarrationRate > 0.6) {
+      qualityAdjustment += 5; // Bonus for rich internal narration
+      console.log(`   ✅ Narration depth: ${Math.round(goodNarrationRate * 100)}% include thoughts/feelings/time`);
+    } else if (goodNarrationRate < 0.3) {
+      qualityAdjustment -= 3; // Minor penalty for shallow narration
+    }
+
+    return qualityAdjustment;
   }
 
   /**
