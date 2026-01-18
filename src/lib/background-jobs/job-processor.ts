@@ -917,11 +917,34 @@ if (resolvedDescription && typeof resolvedDescription === 'string') {
             }
             
             // Update the character with their reference image URL
-            secondaryChar.cartoonImageUrl = secondaryCartoonUrl;
-            console.log(`   ✅ ${secondaryChar.name} reference image generated: ${secondaryCartoonUrl.substring(0, 50)}...`);
+            if (secondaryCartoonUrl && secondaryCartoonUrl.startsWith('http')) {
+              secondaryChar.cartoonImageUrl = secondaryCartoonUrl;
+              console.log(`   ✅ ${secondaryChar.name} reference image generated: ${secondaryCartoonUrl.substring(0, 50)}...`);
+            } else {
+              console.warn(`   ⚠️ ${secondaryChar.name}: Invalid reference image URL returned, will use text description`);
+            }
             
-          } catch (charError) {
-            console.warn(`   ⚠️ Failed to generate reference for ${secondaryChar.name}, will use text description:`, charError);
+          } catch (charError: any) {
+            // FIX 3: Enhanced error handling with specific error categorization
+            const errorMessage = charError?.message || String(charError);
+            const isRateLimit = errorMessage.includes('rate') || errorMessage.includes('429');
+            const isContentPolicy = errorMessage.includes('policy') || errorMessage.includes('blocked');
+            const isTimeout = errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT');
+            
+            if (isRateLimit) {
+              console.warn(`   ⚠️ ${secondaryChar.name}: Rate limited - waiting 5s before continuing...`);
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            } else if (isContentPolicy) {
+              console.warn(`   ⚠️ ${secondaryChar.name}: Content policy issue - character description may need adjustment`);
+              console.warn(`      Description: ${(secondaryChar as any).characterDescription?.substring(0, 100) || 'N/A'}...`);
+            } else if (isTimeout) {
+              console.warn(`   ⚠️ ${secondaryChar.name}: Generation timed out - will use text description`);
+            } else {
+              console.warn(`   ⚠️ ${secondaryChar.name}: Unexpected error - ${errorMessage.substring(0, 100)}`);
+            }
+            
+            // Log for monitoring - helps identify patterns in failures
+            console.log(`   📊 SECONDARY_CHAR_FAILURE: name=${secondaryChar.name}, type=${(secondaryChar as any).characterType || 'human'}, error=${isRateLimit ? 'rate_limit' : isContentPolicy ? 'content_policy' : isTimeout ? 'timeout' : 'unknown'}`);
             // Continue without reference image - will fall back to text description
           }
         }

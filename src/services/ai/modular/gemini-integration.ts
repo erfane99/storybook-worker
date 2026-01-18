@@ -1304,6 +1304,15 @@ EMOTION: ${emotion} - CHARACTER'S FACE MUST SHOW THIS EMOTION:
 - surprised = wide eyes, raised eyebrows, open mouth
 - curious = tilted head, raised eyebrow, slight smile
 THE FACIAL EXPRESSION IS CRITICAL - MUST MATCH "${emotion}" EXACTLY.
+${options.emotionalWeight && options.emotionalWeight >= 7 ? `
+⚡ HIGH EMOTIONAL WEIGHT PANEL (${options.emotionalWeight}/10):
+- This is a KEY STORY MOMENT - give it visual emphasis
+- Use dramatic lighting and composition
+- Character expression should be INTENSE and READABLE` : ''}${options.narrativePosition ? `
+📍 NARRATIVE POSITION: ${options.narrativePosition}${options.narrativePosition === 'OPENING' ? `
+- ESTABLISHING SHOT: Show character AND environment clearly` : ''}${options.narrativePosition === 'CLIMAX' ? `
+- DRAMATIC PEAK: Maximum visual impact, dynamic angle, intense emotion` : ''}${options.narrativePosition === 'RESOLUTION' ? `
+- CALMING DOWN: Softer lighting, settled composition, reflective mood` : ''}` : ''}
 CAMERA: ${cameraAngle} shot, ${panelType} panel`;
 
     // === MANDATORY CLOTHING CONSISTENCY ===
@@ -1608,6 +1617,48 @@ REQUIREMENTS:
 - Bubble should not obscure the character's face
 - Tail should clearly indicate which character is speaking
 - Professional quality matching published comic standards`;
+    }
+
+    // FIX 4: McCloud Panel Transition Guidance (Zero Cost - Prompt Enhancement)
+    // Helps Gemini understand the relationship between this panel and adjacent panels
+    if (options.transitionType) {
+      const transitionGuidance: Record<string, string> = {
+        'action_to_action': `
+TRANSITION TYPE: ACTION-TO-ACTION (McCloud Type 1)
+- This panel shows the NEXT ACTION in a sequence
+- Character should be in a DIFFERENT POSE than the previous panel
+- Maintain same location/background
+- Time elapsed: Seconds`,
+        'subject_to_subject': `
+TRANSITION TYPE: SUBJECT-TO-SUBJECT (McCloud Type 2)
+- This panel shifts focus to a DIFFERENT SUBJECT in the same scene
+- Camera angle should change significantly
+- Same time and place as previous panel
+- Creates dialogue/interaction rhythm`,
+        'scene_to_scene': `
+TRANSITION TYPE: SCENE-TO-SCENE (McCloud Type 3)
+- This panel is a NEW LOCATION or TIME
+- Use ESTABLISHING SHOT composition (wider angle, more environment)
+- Character should be clearly placed in the new environment
+- Significant time/space jump from previous panel`,
+        'moment_to_moment': `
+TRANSITION TYPE: MOMENT-TO-MOMENT (McCloud Type 4)
+- This panel shows a TINY increment of time
+- Minimal change from previous panel
+- Focus on subtle expression or movement change
+- Creates dramatic tension or slow-motion effect`,
+        'aspect_to_aspect': `
+TRANSITION TYPE: ASPECT-TO-ASPECT (McCloud Type 5)
+- This panel shows a DIFFERENT ASPECT of the same scene/moment
+- Can be environment detail, object close-up, or mood element
+- Same moment in time, different viewpoint
+- Creates atmosphere and world-building`,
+      };
+      
+      const guidance = transitionGuidance[options.transitionType];
+      if (guidance) {
+        prompt += guidance;
+      }
     }
 
     // ⚠️ CRITICAL: NO UNAUTHORIZED TEXT RULE - Must be at END of prompt for maximum weight

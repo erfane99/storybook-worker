@@ -1515,6 +1515,40 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         // Option C: Use narration from single-pass comic script - NO GENERATION NEEDED
         narration = beat.preGeneratedNarration || '';
         console.log(`✅ Using PRE-GENERATED narration for panel ${panelNumber}/${totalPanels}: "${narration.substring(0, 50)}..."`);
+        
+        // FIX 1: Log visible action violations for monitoring (Option B - Log Only)
+        // This helps identify how often Claude generates narration that describes visible actions
+        if (narration.length > 0) {
+          const visibleActionPatterns = [
+            { pattern: /\b(walked|walks|walking)\s+(to|toward|into|through|across)/i, action: 'walking' },
+            { pattern: /\b(ran|runs|running)\s+(to|toward|into|through)/i, action: 'running' },
+            { pattern: /\b(stood|stands|standing)\s+(up|there|still|in)/i, action: 'standing' },
+            { pattern: /\b(sat|sits|sitting)\s+(down|on|in)/i, action: 'sitting' },
+            { pattern: /\b(smiled|smiles|smiling)\s+(at|warmly|brightly)/i, action: 'smiling' },
+            { pattern: /\b(frowned|frowns|frowning)/i, action: 'frowning' },
+            { pattern: /\b(nodded|nods|nodding)/i, action: 'nodding' },
+            { pattern: /\b(looked|looks|looking)\s+(at|toward|up|down)/i, action: 'looking' },
+            { pattern: /\b(reached|reaches|reaching)\s+(for|out|toward)/i, action: 'reaching' },
+            { pattern: /\b(picked|picks|picking)\s+up/i, action: 'picking up' },
+            { pattern: /\b(bent|bends|bending)\s+(down|over)/i, action: 'bending' },
+            { pattern: /\b(jumped|jumps|jumping)/i, action: 'jumping' },
+            { pattern: /\b(opened|opens|opening)\s+(the|her|his)/i, action: 'opening' },
+            { pattern: /\b(closed|closes|closing)\s+(the|her|his)/i, action: 'closing' },
+          ];
+          
+          const violations: string[] = [];
+          for (const { pattern, action } of visibleActionPatterns) {
+            if (pattern.test(narration)) {
+              violations.push(action);
+            }
+          }
+          
+          if (violations.length > 0) {
+            console.log(`⚠️ NARRATION QUALITY: Panel ${panelNumber} describes visible actions: [${violations.join(', ')}]`);
+            console.log(`   📝 Narration: "${narration.substring(0, 100)}..."`);
+            console.log(`   💡 Ideal narration should add thoughts, feelings, time context, or stakes - not describe what reader can see`);
+          }
+        }
       } else {
         // Legacy path: Generate narration via Claude
         console.log(`📝 Generating narration for panel ${panelNumber}/${totalPanels}...`);

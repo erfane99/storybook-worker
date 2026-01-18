@@ -2780,6 +2780,38 @@ async generateComicScriptAnalysis(
   this.log('info', `   📝 Silent panels: ${storyBeats.filter(b => b.isSilent).length}`);
   this.log('info', `   💬 Dialogue panels: ${storyAnalysis.dialoguePanels}`);
   
+  // FIX 2: Emotional Jump Validation (Zero Cost - Local Logic Only)
+  // Detects abrupt emotional transitions that may confuse readers
+  const emotionalJumpPairs: [string, string][] = [
+    ['shocked', 'happy'], ['scared', 'happy'], ['sad', 'excited'], ['angry', 'happy'],
+    ['crying', 'laughing'], ['terrified', 'joyful'], ['devastated', 'cheerful'],
+    ['furious', 'content'], ['panicked', 'calm'], ['heartbroken', 'delighted']
+  ];
+  
+  const emotions = storyBeats.map(b => b.emotion?.toLowerCase() || '');
+  const emotionalJumps: { fromPanel: number; toPanel: number; from: string; to: string }[] = [];
+  
+  for (let i = 1; i < emotions.length; i++) {
+    const prevEmotion = emotions[i - 1];
+    const currEmotion = emotions[i];
+    
+    for (const [from, to] of emotionalJumpPairs) {
+      if (prevEmotion.includes(from) && currEmotion.includes(to)) {
+        emotionalJumps.push({ fromPanel: i, toPanel: i + 1, from: prevEmotion, to: currEmotion });
+      }
+    }
+  }
+  
+  if (emotionalJumps.length > 0) {
+    this.log('warn', `⚠️ EMOTIONAL CONTINUITY: Found ${emotionalJumps.length} potential emotional jump(s):`);
+    for (const jump of emotionalJumps) {
+      this.log('warn', `   Panel ${jump.fromPanel} (${jump.from}) → Panel ${jump.toPanel} (${jump.to})`);
+      this.log('warn', `   💡 Consider adding a bridge panel with "understanding", "realization", or "acceptance" emotion`);
+    }
+  } else {
+    this.log('info', `   ✅ Emotional continuity: No abrupt jumps detected`);
+  }
+  
   // Reconstruct story summary for compatibility
   const story = `${comicScript.storySummary}\n\n${comicScript.panels.map(p => p.visualDirection).join('\n\n')}`;
   
