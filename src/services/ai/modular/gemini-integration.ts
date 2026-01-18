@@ -392,19 +392,67 @@ const response = await this.generateWithRetry<GeminiResponse>({
     });
     
     try {
-      // Build comprehensive character description prompt
-      const ageDescriptions: Record<string, string> = {
-        'toddler': 'toddler (1-3 years old, very small, chubby cheeks, about 1/3 height of adult)',
-        'child': 'child (4-10 years old, small stature, about half height of adult)',
-        'teen': 'teenager (11-17 years old, growing, youthful, slightly shorter than adult)',
-        'young-adult': 'young adult (18-25 years old, full adult height)',
-        'adult': 'adult (26-55 years old, full adult height)',
-        'senior': 'senior (55+ years old, may have gray hair, wrinkles, possibly slightly stooped)'
-      };
+      // FIX B: Handle story-introduced characters (animals, creatures) with their rich visual descriptions
+      const isStoryIntroduced = !!(characterDescription as any).characterType || !!(characterDescription as any).species;
       
-      const ageDesc = ageDescriptions[characterDescription.age] || characterDescription.age;
+      let characterPrompt: string;
       
-      const characterPrompt = `Create a CHARACTER REFERENCE IMAGE for use in comic book panels.
+      if (isStoryIntroduced) {
+        // Story-introduced character (butterfly, owl, magical creature, etc.)
+        const charType = (characterDescription as any).characterType || 'creature';
+        const species = (characterDescription as any).species || charType;
+        const visualDesc = (characterDescription as any).characterDescription || '';
+        const colorScheme = (characterDescription as any).colorScheme || [];
+        const distinctiveFeatures = (characterDescription as any).distinctiveFeatures || [];
+        
+        this.logger.log(`🦋 Generating story-introduced character: ${characterDescription.name} (${species})`);
+        
+        characterPrompt = `Create a CHARACTER REFERENCE IMAGE for a ${species} character in a comic book.
+
+CHARACTER: ${characterDescription.name}
+TYPE: ${charType} (${species})
+
+VISUAL DESCRIPTION (MATCH EXACTLY):
+${visualDesc}
+
+COLOR SCHEME (USE THESE EXACT COLORS):
+${colorScheme.length > 0 ? colorScheme.join(', ') : 'Use colors from the visual description'}
+
+DISTINCTIVE FEATURES (MUST BE VISIBLE):
+${distinctiveFeatures.length > 0 ? distinctiveFeatures.map((f: string) => `• ${f}`).join('\n') : 'Follow the visual description'}
+
+ART STYLE: Professional ${artStyle} style, matching the main character's art style exactly
+AUDIENCE: ${audience} (age-appropriate rendering)
+
+REQUIREMENTS:
+- Character centered in frame with clear visibility
+- Simple, clean background (white or soft gradient)
+- Expression: Friendly and approachable
+- This image will be used as a REFERENCE for consistent rendering across all panels
+- The character must look IDENTICAL every time it appears in the comic
+
+OUTPUT: Single character portrait, publication-ready quality, suitable as master reference image.
+
+DO NOT include:
+- Multiple poses or variations
+- Reference sheets or model sheets
+- Text, labels, or annotations
+- Multiple characters
+- Complex backgrounds`;
+      } else {
+        // User-defined secondary character (human) - use standard generation
+        const ageDescriptions: Record<string, string> = {
+          'toddler': 'toddler (1-3 years old, very small, chubby cheeks, about 1/3 height of adult)',
+          'child': 'child (4-10 years old, small stature, about half height of adult)',
+          'teen': 'teenager (11-17 years old, growing, youthful, slightly shorter than adult)',
+          'young-adult': 'young adult (18-25 years old, full adult height)',
+          'adult': 'adult (26-55 years old, full adult height)',
+          'senior': 'senior (55+ years old, may have gray hair, wrinkles, possibly slightly stooped)'
+        };
+        
+        const ageDesc = ageDescriptions[characterDescription.age] || characterDescription.age;
+        
+        characterPrompt = `Create a CHARACTER REFERENCE IMAGE for use in comic book panels.
 
 CHARACTER SPECIFICATIONS:
 - Name: ${characterDescription.name}
@@ -436,6 +484,7 @@ DO NOT include:
 - Text, labels, or annotations
 - Multiple characters
 - Complex backgrounds`;
+      }
 
       // Call Gemini to generate the character reference image
       const response = await this.generateWithRetry<GeminiResponse>({

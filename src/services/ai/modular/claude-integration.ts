@@ -492,6 +492,36 @@ When character's emotion changes, narration MUST explain WHY:
 ✓ "Maybe he was just lonely too." (explains shift from fear to understanding)
 ✓ "She realized friends help each other." (explains shift from hesitant to brave)
 ✗ "Maya felt happy now." (NO - doesn't explain WHY)
+
+<failure_examples>
+🚫 THESE ARE ACTUAL FAILURES FROM PREVIOUS GENERATIONS - DO NOT REPEAT THESE MISTAKES:
+
+❌ FAILURE 1: "Together, they walked toward the other children."
+   WHY FAILED: Describes visible walking action the reader can see
+   ✅ CORRECT: "Maybe they would want to be friends too."
+
+❌ FAILURE 2: "Maya bent down to look at the flower."
+   WHY FAILED: Describes visible bending action
+   ✅ CORRECT: "She had never seen petals shimmer like that before."
+
+❌ FAILURE 3: "The butterfly landed on her hand."
+   WHY FAILED: Describes visible landing action
+   ✅ CORRECT: "Her heart fluttered—it had chosen her."
+
+❌ FAILURE 4: "She smiled at her new friend."
+   WHY FAILED: Describes visible facial expression
+   ✅ CORRECT: "This was the start of something magical."
+
+❌ FAILURE 5: "He ran through the forest."
+   WHY FAILED: Describes visible running action
+   ✅ CORRECT: "The trees seemed to whisper secrets as he passed."
+
+❌ FAILURE 6: "She picked up the glowing stone."
+   WHY FAILED: Describes visible picking up action
+   ✅ CORRECT: "It felt warm, like it had been waiting just for her."
+
+REMEMBER: If the image SHOWS the action, the narration must ADD something the image CANNOT show (thoughts, feelings, time, stakes, backstory).
+</failure_examples>
 </comic_narration_philosophy>
 
 <panel_distribution_rules>

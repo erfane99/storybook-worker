@@ -877,18 +877,44 @@ if (resolvedDescription && typeof resolvedDescription === 'string') {
           console.log(`   🎨 Generating reference for ${secondaryChar.name} (${i + 1}/${secondaryCharacters.length})...`);
           
           try {
-            const secondaryCartoonUrl = await geminiIntegration.generateSecondaryCharacterCartoon(
-              {
-                name: secondaryChar.name,
-                age: secondaryChar.age,
-                gender: secondaryChar.gender,
-                relationship: secondaryChar.relationship,
-                hairColor: secondaryChar.hairColor,
-                eyeColor: secondaryChar.eyeColor
-              },
-              character_art_style,  // Must match main character's art style
-              audience
-            );
+            // FIX A3: Handle story-introduced characters (animals, creatures) differently
+            const isStoryIntroduced = (secondaryChar as any).isStoryIntroduced === true;
+            
+            let secondaryCartoonUrl: string;
+            
+            if (isStoryIntroduced) {
+              // Story-introduced character (butterfly, owl, etc.) - use detailed visual description
+              console.log(`   🦋 Story-introduced character: ${secondaryChar.name} (${(secondaryChar as any).characterType || 'creature'})`);
+              secondaryCartoonUrl = await geminiIntegration.generateSecondaryCharacterCartoon(
+                {
+                  name: secondaryChar.name,
+                  age: 'child',  // Default for creatures
+                  gender: 'non-binary',
+                  // Use the rich visual description from Claude's extraction
+                  characterDescription: (secondaryChar as any).characterDescription,
+                  characterType: (secondaryChar as any).characterType,
+                  species: (secondaryChar as any).species,
+                  colorScheme: (secondaryChar as any).colorScheme,
+                  distinctiveFeatures: (secondaryChar as any).distinctiveFeatures
+                },
+                character_art_style,
+                audience
+              );
+            } else {
+              // User-defined secondary character (human) - use standard generation
+              secondaryCartoonUrl = await geminiIntegration.generateSecondaryCharacterCartoon(
+                {
+                  name: secondaryChar.name,
+                  age: secondaryChar.age,
+                  gender: secondaryChar.gender,
+                  relationship: secondaryChar.relationship,
+                  hairColor: secondaryChar.hairColor,
+                  eyeColor: secondaryChar.eyeColor
+                },
+                character_art_style,
+                audience
+              );
+            }
             
             // Update the character with their reference image URL
             secondaryChar.cartoonImageUrl = secondaryCartoonUrl;
@@ -2136,6 +2162,39 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       console.log(`✅ Story: "${scriptResult.title}" (${scriptResult.story.split(' ').length} words)`);
       console.log(`✅ Story beats with PRE-GENERATED narration: ${scriptResult.storyAnalysis.storyBeats.length}`);
       console.log('📖 Comic Script Summary:', scriptResult.story.substring(0, 200) + '...');
+      
+      // FIX A: Merge story-introduced characters (butterflies, owls, etc.) into characters array
+      // This ensures they get reference images in PHASE 3.25 for visual consistency
+      let mergedCharacters = [...characters];
+      if (scriptResult.storyIntroducedCharacters && scriptResult.storyIntroducedCharacters.length > 0) {
+        console.log(`🦋 Found ${scriptResult.storyIntroducedCharacters.length} story-introduced character(s) for consistency tracking`);
+        
+        for (const storyChar of scriptResult.storyIntroducedCharacters) {
+          // Convert to StoryCharacter format compatible with PHASE 3.25
+          const convertedChar = {
+            id: storyChar.id || `story-char-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: storyChar.name,
+            age: 'child' as const,  // Default for animals/creatures
+            role: 'secondary' as const,
+            gender: 'non-binary' as const,  // Neutral for animals
+            // Store visual details for reference image generation
+            characterDescription: storyChar.characterDescription || storyChar.visualDescription,
+            // Mark as story-introduced for special handling
+            isStoryIntroduced: true,
+            characterType: storyChar.characterType || storyChar.type,
+            species: storyChar.species,
+            colorScheme: storyChar.colorScheme,
+            distinctiveFeatures: storyChar.distinctiveFeatures,
+            panelsAppearingIn: storyChar.panelsAppearingIn
+          };
+          
+          mergedCharacters.push(convertedChar as any);
+          console.log(`   🎨 Added ${storyChar.name} (${storyChar.characterType || storyChar.type}): appears in panels ${storyChar.panelsAppearingIn?.join(', ') || 'multiple'}`);
+        }
+        
+        console.log(`✅ Total characters for consistency: ${mergedCharacters.length} (${characters.length} user-defined + ${scriptResult.storyIntroducedCharacters.length} story-introduced)`);
+      }
+      
       await jobService.updateJobProgress(job.id, 30, `Story created: "${scriptResult.title}" with ${scriptResult.storyAnalysis.storyBeats.length} panels ready`);
 
       // PHASE 2: Process as regular storybook with PRE-GENERATED story analysis
@@ -2154,7 +2213,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
         character_description: job.character_description,
         character_art_style: job.character_art_style,
         layout_type: job.layout_type,
-        characters: characters,  // NEW: Pass characters through to storybook processing
+        characters: mergedCharacters,  // FIX A: Use merged characters (includes story-introduced)
         // OPTION C: Pass pre-generated story analysis to skip PHASE 1
         preGeneratedStoryAnalysis: scriptResult.storyAnalysis
       } as StorybookJobData, servicesUsed);
