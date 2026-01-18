@@ -1634,7 +1634,10 @@ COMIC BOOK PROFESSIONAL STANDARDS:
             borderStyle: this.determineBorderStyle(beat, panelNumber, totalPanels),
             // NEW: Silent panel support - enhanced visual storytelling
             isSilent: beat.isSilent,
-            silentReason: beat.silentReason
+            silentReason: beat.silentReason,
+            // FIX 4: Pass symbolic elements for Moore Principle visual consistency
+            // Access from beat (each beat can contain symbolicElements from story analysis)
+            symbolicElements: beat.symbolicElements
           }
         );
       } else {

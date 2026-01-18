@@ -173,6 +173,8 @@ export interface PanelOptions {
   // NEW: Silent panel support - pure visual storytelling with no text
   isSilent?: boolean;                 // If true, panel has NO text at all
   silentReason?: 'emotional_reaction' | 'contemplation' | 'visual_impact' | 'breathing_room' | 'revelation_aftermath';
+  // FIX 2: Symbolic elements from story analysis (Moore Principle)
+  symbolicElements?: string[];        // Recurring thematic visual elements (e.g., "blue bunny = safety", "shadows = fear")
 }
 
 // ===== GEMINI INTEGRATION CLASS =====
@@ -737,18 +739,31 @@ DO NOT include:
         
         // Add reference images for each secondary character that has one
         let imageIndex = 2; // Start from IMAGE 2 (IMAGE 1 is main character)
+        let successfullyAdded = 0;
         
+        // FIX 1: Error handling for secondary character reference images
+        // If one character's image fails, continue with others instead of failing entire panel
         for (const char of secondaryCharactersWithImages) {
           if (char.referenceImageUrl) {
-            this.logger.log(`📷 Adding reference image for ${char.name} (IMAGE ${imageIndex})...`);
-            const base64SecondaryChar = await this.fetchImageAsBase64(char.referenceImageUrl, true);
-            parts.push({
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64SecondaryChar
-              }
-            });
-            imageIndex++;
+            try {
+              this.logger.log(`📷 Adding reference image for ${char.name} (IMAGE ${imageIndex})...`);
+              const base64SecondaryChar = await this.fetchImageAsBase64(char.referenceImageUrl, true);
+              parts.push({
+                inline_data: {
+                  mime_type: 'image/jpeg',
+                  data: base64SecondaryChar
+                }
+              });
+              imageIndex++;
+              successfullyAdded++;
+            } catch (charImageError) {
+              this.logger.warn(`⚠️ Failed to fetch reference image for ${char.name}, falling back to description-only consistency`, { 
+                error: charImageError instanceof Error ? charImageError.message : String(charImageError),
+                characterName: char.name,
+                referenceUrl: char.referenceImageUrl?.substring(0, 50) + '...'
+              });
+              // Continue without this character's reference image - Gemini will use text description
+            }
           }
         }
         
@@ -756,19 +771,28 @@ DO NOT include:
         for (const [charName, refUrl] of Object.entries(charRefImages)) {
           // Skip if already added via secondaryCharacters array
           if (!secondaryCharactersWithImages.find(c => c.name === charName) && refUrl) {
-            this.logger.log(`📷 Adding reference image for ${charName} from map (IMAGE ${imageIndex})...`);
-            const base64Ref = await this.fetchImageAsBase64(refUrl, true);
-            parts.push({
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64Ref
-              }
-            });
-            imageIndex++;
+            try {
+              this.logger.log(`📷 Adding reference image for ${charName} from map (IMAGE ${imageIndex})...`);
+              const base64Ref = await this.fetchImageAsBase64(refUrl, true);
+              parts.push({
+                inline_data: {
+                  mime_type: 'image/jpeg',
+                  data: base64Ref
+                }
+              });
+              imageIndex++;
+              successfullyAdded++;
+            } catch (mapImageError) {
+              this.logger.warn(`⚠️ Failed to fetch reference image for ${charName} from map, falling back to description-only`, { 
+                error: mapImageError instanceof Error ? mapImageError.message : String(mapImageError),
+                characterName: charName
+              });
+              // Continue without this character's reference image
+            }
           }
         }
         
-        this.logger.log(`✅ Added ${imageIndex - 2} secondary character reference images for consistency`);
+        this.logger.log(`✅ Added ${successfullyAdded} secondary character reference images for consistency (${imageIndex - 2 - successfullyAdded} failed, using text descriptions)`);
       }
       
       // SEQUENTIAL CONTEXT: If previous panel exists, add it as reference image
@@ -1578,6 +1602,19 @@ ${visualContrast[narrativePosition] || visualContrast['RISING_ACTION']}`;
 - Secondary characters must be CONSISTENT with descriptions above
 - Show age-appropriate size differences between characters
 - Each secondary character must have DISTINCT appearance from main character`;
+    }
+
+    // FIX 2: Pass symbolic elements to image prompt (Moore Principle)
+    // These are thematic visual elements that should recur throughout the story
+    if ((options as any).symbolicElements && (options as any).symbolicElements.length > 0) {
+      const symbolics = (options as any).symbolicElements as string[];
+      prompt += `
+
+🎭 RECURRING SYMBOLIC ELEMENTS (Moore Principle - Thematic Consistency):
+These elements carry thematic meaning and should appear when narratively appropriate:
+${symbolics.slice(0, 3).map((s: string) => `• ${s}`).join('\n')}
+If this scene's location/moment naturally includes these symbols, render them subtly but consistently.
+Do NOT force symbols where they don't fit - only include when narratively appropriate.`;
     }
 
     // Add feedback-driven image enhancements if available
