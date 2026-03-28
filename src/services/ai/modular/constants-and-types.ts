@@ -166,10 +166,7 @@ export const QUALITY_STANDARDS = {
 } as const;
 
 // ===== PROFESSIONAL AUDIENCE CONFIGURATION =====
-// UPGRADED: Panel counts increased to accommodate all 7 master comic creator principles
-// - Stan Lee transformation beats: +2-4 panels per story
-// - Moore symbolic callbacks: +1-3 panels
-// - Spiegelman dramatic pacing: some beats need extended space
+// SINGLE SOURCE OF TRUTH for panel counts (StoryCanvas worker + frontend must match).
 export const PROFESSIONAL_AUDIENCE_CONFIG = {
   children: {
     totalPanels: 14,          // Changed from 12, now optimal at 14
@@ -192,10 +189,10 @@ export const PROFESSIONAL_AUDIENCE_CONFIG = {
     resolutionType: 'positive_clear'
   },
   'young adults': {
-    totalPanels: 28,          // UPGRADED: From 20 to 28 for deeper emotional arcs
-    minPanels: 24,            // UPGRADED: From 18 to 24 minimum
-    maxPanels: 32,            // UPGRADED: From 22 to 32 maximum
-    pagesPerStory: 7,         // UPGRADED: From 5 to 7 pages
+    totalPanels: 20,
+    minPanels: 18,
+    maxPanels: 22,
+    pagesPerStory: 5,
     panelsPerPage: 4,
     maxWordsPerPanel: 25,
     complexityLevel: 'moderate',
@@ -212,10 +209,10 @@ export const PROFESSIONAL_AUDIENCE_CONFIG = {
     resolutionType: 'growth_oriented'
   },
   adults: {
-    totalPanels: 42,          // UPGRADED: From 27 to 42 for literary depth
-    minPanels: 36,            // UPGRADED: From 24 to 36 minimum
-    maxPanels: 48,            // UPGRADED: From 30 to 48 maximum
-    pagesPerStory: 11,        // UPGRADED: From 7 to 11 pages
+    totalPanels: 28,
+    minPanels: 24,
+    maxPanels: 32,
+    pagesPerStory: 7,
     panelsPerPage: 4,
     maxWordsPerPanel: 35,
     complexityLevel: 'sophisticated',

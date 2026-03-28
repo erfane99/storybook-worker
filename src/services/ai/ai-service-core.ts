@@ -80,17 +80,17 @@ ${WORLD_CLASS_STORY_PROMPTS.getAudienceStoryStructure(audience)}`,
   getAudienceStoryStructure: (audience: string): string => {
     const structures: Record<string, string> = {
       children: `
-STORY STRUCTURE FOR CHILDREN (8 panels, Ages 4-8):
+STORY STRUCTURE FOR CHILDREN (12-16 panels, target 14, Ages 4-8):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Story Complexity: Simple, linear narrative with ONE clear problem and ONE clear solution
 
 REQUIRED STORY BEATS:
-• SETUP (panels 1-2): Establish character, setting, and initial situation
-• GOAL INTRODUCTION (panel 2-3): What does the character want or need?
-• OBSTACLE (panel 3-4): What prevents them from getting it?
-• RISING ACTION (panels 4-6): Character attempts to overcome obstacle
-• CLIMAX (panel 7): Critical moment of confrontation or decision
-• RESOLUTION (panel 8): Outcome and transformation
+• SETUP (panels 1-3): Establish character, setting, and initial situation
+• GOAL INTRODUCTION (panels 3-4): What does the character want or need?
+• OBSTACLE (panels 4-5): What prevents them from getting it?
+• RISING ACTION (panels 5-10): Character attempts to overcome obstacle
+• CLIMAX (panels 10-12): Critical moment of confrontation or decision
+• RESOLUTION (panels 13-14): Outcome and transformation
 
 ACCEPTABLE GOAL TYPES (concrete, relatable):
 ✓ Find something lost (toy, pet, friend)
@@ -108,7 +108,7 @@ ACCEPTABLE OBSTACLE TYPES (age-appropriate, NOT scary):
 RESOLUTION REQUIREMENTS:
 ✓ Character MUST take action (not passive)
 ✓ Clear cause-and-effect (because X did Y, Z happened)
-✓ Explicit lesson stated simply ("Maya learned that...")
+✓ Growth shown through action, feeling, or a short realization — NOT "[Name] learned that..." moralizing
 ✓ Emotionally satisfying (happy, hopeful, or peaceful ending)
 
 FORBIDDEN FOR CHILDREN:
@@ -121,19 +121,19 @@ FORBIDDEN FOR CHILDREN:
 ✗ Endings like "In that moment, everything changed" (too vague)`,
 
       'young adults': `
-STORY STRUCTURE FOR YOUNG ADULTS (15 panels, Ages 12-17):
+STORY STRUCTURE FOR YOUNG ADULTS (18-22 panels, target 20, Ages 12-17):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Story Complexity: Multi-layered narrative with internal AND external conflicts
 
 REQUIRED STORY BEATS:
 • SETUP (panels 1-3): Establish world, relationships, and status quo
-• GOAL INTRODUCTION (panels 2-4): Internal or external desire revealed
+• GOAL INTRODUCTION (panels 3-4): Internal or external desire revealed
 • FIRST OBSTACLE (panels 4-6): Initial challenge or complication
-• RISING ACTION (panels 6-10): Escalating stakes, multiple attempts
-• MIDPOINT SHIFT (panels 7-9): New information changes everything
-• DARK MOMENT (panels 10-12): All seems lost, internal conflict peaks
-• CLIMAX (panels 12-14): Character makes defining choice
-• RESOLUTION (panel 15): Consequences shown, transformation evident
+• RISING ACTION (panels 6-12): Escalating stakes, multiple attempts
+• MIDPOINT SHIFT (panels 9-11): New information changes everything
+• DARK MOMENT (panels 13-15): All seems lost, internal conflict peaks
+• CLIMAX (panels 16-18): Character makes defining choice
+• RESOLUTION (panels 19-20): Consequences shown, transformation evident
 
 ACCEPTABLE GOAL TYPES (identity and relationship focused):
 ✓ Prove oneself / earn respect
@@ -171,21 +171,21 @@ FORBIDDEN FOR YOUNG ADULTS:
 ✗ Neat moral statements in resolution`,
 
       adults: `
-STORY STRUCTURE FOR ADULTS (24 panels, Ages 18+):
+STORY STRUCTURE FOR ADULTS (24-32 panels, target 28, Ages 18+):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Story Complexity: Sophisticated narrative with subtext, moral ambiguity, nuanced psychology
 
 REQUIRED STORY BEATS:
 • OPENING IMAGE (panel 1): Visual thesis statement
-• SETUP (panels 1-4): World, character psychology, hidden tensions
-• INCITING INCIDENT (panels 3-5): Event that disrupts equilibrium
-• FIRST ACT TURN (panels 5-7): Point of no return
-• RISING COMPLICATIONS (panels 7-14): Layered obstacles, relationships tested
-• MIDPOINT REVELATION (panels 11-13): Truth changes perspective
-• ALL IS LOST (panels 16-18): Consequences of choices crystallize
-• DARK NIGHT (panels 18-20): Internal reckoning
-• CLIMAX (panels 20-22): Moment of truth, defining action
-• RESOLUTION (panels 23-24): New equilibrium, thematic resonance
+• SETUP (panels 2-5): World, character psychology, hidden tensions
+• INCITING INCIDENT (panels 5-7): Event that disrupts equilibrium
+• FIRST ACT TURN (panels 7-9): Point of no return
+• RISING COMPLICATIONS (panels 9-17): Layered obstacles, relationships tested
+• MIDPOINT REVELATION (panels 13-15): Truth changes perspective
+• ALL IS LOST (panels 18-21): Consequences of choices crystallize
+• DARK NIGHT (panels 21-23): Internal reckoning
+• CLIMAX (panels 23-25): Moment of truth, defining action
+• RESOLUTION (panels 26-28): New equilibrium, thematic resonance
 
 ACCEPTABLE GOAL TYPES (existential and consequential):
 ✓ Reconcile with past decisions
@@ -352,19 +352,19 @@ ACT 3 (Panels 10-12): Unexpected solution, everyone laughs together, character e
     children: {
       vocabulary: 'Grade 2-5 reading level. Simple adjectives. Explain complex words.',
       safetyRules: ['NO violence/weapons', 'NO scary monsters', 'NO death/injury', 'NO adult themes', 'Challenges exciting NOT terrifying', 'Clear positive solutions', 'Trustworthy authority figures'],
-      panelCount: '8-12 panels',
+      panelCount: '12-16 panels (target 14)',
       wordTarget: '800-1200 words'
     },
     'young adults': {
       vocabulary: 'Grade 6-9 reading level. Contemporary language. Literary devices ok.',
       maturityLevel: 'Can handle: conflict, failure, disappointment, complex relationships, moral ambiguity (with resolution)',
-      panelCount: '15-18 panels',
+      panelCount: '18-22 panels (target 20)',
       wordTarget: '1200-1600 words'
     },
     adults: {
       vocabulary: 'Full range. Literary language. Sophisticated metaphors.',
       maturityLevel: 'Complex psychology, moral complexity, realistic consequences, nuanced relationships, bittersweet endings ok',
-      panelCount: '20-24 panels',
+      panelCount: '24-32 panels (target 28)',
       wordTarget: '1600-2000 words'
     }
   },
@@ -597,7 +597,11 @@ class AIService extends ErrorAwareBaseService implements IAIService {
       this.log('info', '✅ Claude Integration initialized for environmental analysis');
 
       // 3. Visual DNA System (using adapter) - NOW USES GEMINI
-      this.visualDNASystem = new VisualDNASystem(this.geminiIntegration, this.errorHandlerAdapter as any);
+      this.visualDNASystem = new VisualDNASystem(
+        this.geminiIntegration,
+        this.claudeIntegration,
+        this.errorHandlerAdapter as any
+      );
       this.log('info', '✅ Visual DNA System initialized with Gemini image-based generation');
 
       // 4. Narrative Intelligence Engine (still needs text completion)
@@ -1684,9 +1688,9 @@ CRITICAL: Create a story that naturally contains ${config.minPanels}-${config.ma
 Target: ${config.totalPanels} story beats (distinct visual moments).
 
 Structure your story to have EXACTLY this many key events:
-- Children: 10-14 narrative moments (aim for 12)
+- Children: 12-16 narrative moments (aim for 14)
 - Young Adults: 18-22 narrative moments (aim for 20)  
-- Adults: 24-30 narrative moments (aim for 27)
+- Adults: 24-32 narrative moments (aim for 28)
 
 Each narrative moment = one panel in the comic.
 Plan your story arc to naturally fit this panel budget.
@@ -1806,17 +1810,18 @@ ACT 3 - CLIMAX & RESOLUTION (Final 25% of panels):
 ${audience === 'children' ? `
 CHILDREN'S STORY SPECIFIC RULES:
 - Problem and solution must be CONCRETE (not abstract)
-- Lesson must be EXPLICIT and SIMPLE: "${characterProfiles.match(/Name: ([^\n]+)/)?.[1] || 'Character'} learned that..."
+- Ending: use ACTION, EMOTIONAL, or REFLECTION close — never spell the moral with "learned that..."
 - Ending must be POSITIVE and CLEAR
 - NO ambiguous or philosophical conclusions
 - Examples of good endings:
-  ✓ "Now Maya knew—asking for help was brave, not weak."
-  ✓ "From that day on, Leo wasn't scared of the dark. The stars were his friends."
+  ✓ "Maya left the biggest cookie for Teddy." (action shows sharing)
+  ✓ "For the first time, Leo wasn't scared of the dark." (emotional growth)
+  ✓ "Maybe being brave wasn't so hard after all." (simple realization)
   ✗ "And the magic would always be there" (too abstract)
   ✗ "In that moment, everything changed" (too vague)
 
 PANEL BUDGET AWARENESS:
-You have 10-14 panels to tell this story. Plan accordingly:
+You have 12-16 panels (target 14). Plan accordingly:
 - Setup: 2-3 panels
 - Rising action: 4-6 panels
 - Climax: 1-2 panels
@@ -1863,11 +1868,12 @@ ${audience === 'children' ? '✓ Age-appropriate, safe, educational content ONLY
 
 Now write the story.`;
 
-        // Call Gemini
-        // FIX 2: Use 'young adults' (with space) not 'young_adults'
-        const response = await this.geminiIntegration.generateTextCompletion(storyPrompt, {
-          temperature: 0.8,
-          max_output_tokens: audience === 'children' ? 6000 : audience === 'young adults' ? 8000 : 10000
+        const audienceKey = normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG;
+        const maxTokens =
+          audienceKey === 'children' ? 4000 : audienceKey === 'young adults' ? 6000 : 8000;
+        const response = await this.claudeIntegration.completeTextWithSonnet(storyPrompt, {
+          temperature: 0.75,
+          max_tokens: maxTokens
         });
 
         // Extract title and story
@@ -1919,6 +1925,10 @@ Now write the story.`;
     return this.generateChatCompletion(options);
   }
 
+  /**
+   * Legacy JSON beat analysis path (7 Master Principles cinematic beats).
+   * Prefer `analyzeUserStoryAsComicScript` for user-provided stories (Option C–quality narration).
+   */
   async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
   const result = await this.withErrorHandling(
     async () => {
@@ -2070,7 +2080,7 @@ For each consecutive pair, verify: "Can reader understand how we got from Beat N
 
 COMMON GAP PATTERN (MUST FIX):
 ❌ Beat 8: "Helper approaches"
-❌ Beat 9: "Character learned lesson"
+❌ Beat 9: Narration spells the moral instead of showing the moment
 MISSING: The actual helping action!
 
 ✅ CORRECT: Insert Beat showing helper's hands lifting character, working together.
@@ -2171,11 +2181,15 @@ SHORT (3-8 words), age-appropriate.
 Examples: "What's this?", "I can do this!", "Oh no...", "Yes!"
 </critical_requirements>
 
+⚠️ NOTE: The example below shows only 8 panels for brevity. Your output MUST contain 12-16 panels (target 14) as specified in the panel count requirements above. Do NOT use the example's panel count as your target.
+
+The sample ends at beatNumber 8 only because it is abbreviated; your full JSON must include every beat through the required panel count.
+
 <few_shot_example>
 INPUT:
 Story: "Luna the brave rabbit decided to explore the dark forest. She hopped through tall trees nervously. A wise owl perched above warned her about the river ahead. Luna carefully approached the water's edge and saw stepping stones. She took a deep breath, gathered her courage, then leaped between stones with determination. On the far side, Luna discovered a magical garden full of glowing flowers and gasped in wonder, realizing her bravery had led to something beautiful."
 Audience: children
-Panels: 10-14 (optimal 12)
+Panels: 12-16 (optimal 14)
 
 OUTPUT:
 {
@@ -2372,7 +2386,7 @@ OUTPUT:
     "allChecksPassed": true
   },
   "totalPanels": 8,
-  "pagesRequired": 3
+  "pagesRequired": 4
 }
 
 VALIDATION NOTES:
@@ -2677,10 +2691,9 @@ async generateComicScriptAnalysis(
 ): Promise<{ storyAnalysis: StoryAnalysis; title: string; story: string; storyIntroducedCharacters?: any[] }> {
   const config = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
   const panelCount = config.totalPanels;
-  
+
   this.log('info', `🎬 OPTION C: Generating complete comic script (${panelCount} panels for ${audience})...`);
-  
-  // Generate complete comic script with Claude
+
   const comicScript = await this.claudeIntegration.generateComicScript({
     genre,
     audience,
@@ -2688,141 +2701,158 @@ async generateComicScriptAnalysis(
     panelCount
   });
 
-  
-  
   this.log('info', `✅ Comic script generated: "${comicScript.title}" with ${comicScript.panels.length} panels`);
-  
-  // NEW: Extract story-introduced characters for consistency tracking (Priority 4 fix)
-  const storyIntroducedCharacters: any[] = [];
-  if (comicScript.storyCharacters && comicScript.storyCharacters.length > 0) {
-    this.log('info', `🦋 Found ${comicScript.storyCharacters.length} story-introduced character(s) for consistency tracking`);
-    
-    for (const storyChar of comicScript.storyCharacters) {
-      // Convert StoryIntroducedCharacter to StoryCharacter format for consistency system
-      const convertedChar = {
-        id: `story-char-${storyChar.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-        name: storyChar.name,
-        age: 'child' as const,  // Default for non-human characters
-        role: 'secondary' as const,
-        gender: 'non-binary' as const,  // Neutral for animals/creatures
-        // Store visual details for rendering
-        characterDescription: storyChar.visualDescription,
-        // Custom fields for story characters
-        isStoryIntroduced: true,
-        characterType: storyChar.type,
-        species: storyChar.species,
-        colorScheme: storyChar.colorScheme,
-        distinctiveFeatures: storyChar.distinctiveFeatures,
-        panelsAppearingIn: storyChar.panelsAppearingIn
-      };
-      
-      storyIntroducedCharacters.push(convertedChar);
-      this.log('info', `   🎨 ${storyChar.name} (${storyChar.type}): appears in panels ${storyChar.panelsAppearingIn?.join(', ') || 'multiple'}`);
-    }
+
+  const story = `${comicScript.storySummary}\n\n${comicScript.panels.map(p => p.visualDirection).join('\n\n')}`;
+  return this.buildOptionCResultFromComicScript(comicScript, audience, genre, story);
+}
+
+  /**
+   * User-provided story → same Option C pipeline (Claude adaptation), original story text preserved for the job.
+   */
+  async analyzeUserStoryAsComicScript(
+    story: string,
+    audience: AudienceType,
+    characterDescription: string
+  ): Promise<{ storyAnalysis: StoryAnalysis; title: string; story: string; storyIntroducedCharacters?: any[] }> {
+    const config = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
+    const panelCount = config.totalPanels;
+    const desc = characterDescription?.trim() || 'the main character';
+
+    this.log('info', `🎬 User story → comic script adaptation (${panelCount} panels, ${audience})...`);
+
+    const comicScript = await this.claudeIntegration.analyzeStoryAsComicScript(
+      story,
+      audience,
+      desc,
+      panelCount
+    );
+
+    this.log('info', `✅ Adapted comic script: "${comicScript.title}" with ${comicScript.panels.length} panels`);
+
+    return this.buildOptionCResultFromComicScript(comicScript, audience, 'adapted_user_story', story);
   }
-  
-  // Convert comic script panels to story beats with pre-generated narration
-  const storyBeats: StoryBeat[] = comicScript.panels.map((panel, index) => {
-    // Determine panel type from camera angle
-    const panelType = this.mapCameraAngleToPanelType(panel.cameraAngle);
-    
-    // Determine if panel is silent
-    const isSilent = panel.narration === null && (panel.dialogue === null || panel.dialogue.length === 0);
-    
-    // Get dialogue info
-    const hasDialogue = !!(panel.dialogue && panel.dialogue.length > 0);
-    const primaryDialogue = hasDialogue ? panel.dialogue![0] : null;
-    
-    return {
-      beat: panel.visualDirection,
-      emotion: panel.emotion,
-      visualPriority: 'character',
-      panelPurpose: panel.narrativePhase.toLowerCase(),
-      narrativeFunction: panel.narrativePhase.toLowerCase(),
-      characterAction: panel.visualDirection,
-      actionContext: panel.visualDirection,
-      environment: 'story setting',
-      dialogue: primaryDialogue?.text,
-      hasSpeechBubble: hasDialogue,  // Now guaranteed to be boolean
-      speechBubbleStyle: primaryDialogue?.type || 'speech',
-      speakerName: primaryDialogue?.speaker || comicScript.characterName,
-      speakerPosition: 'center' as const,
-      bubblePosition: 'top-center' as const,
-      cameraAngle: panel.cameraAngle,
-      cameraReason: `${panel.narrativePhase} panel`,
-      panelType,
-      transitionType: this.determineTransitionType(index, comicScript.panels.length),
-      beatNumber: panel.panelNumber,
-      // NEW (Option C): Pre-generated narration - NO REGENERATION NEEDED
-      preGeneratedNarration: panel.narration,
-      isSilent,
-      silentReason: isSilent ? 'visual_impact' as const : undefined,
-      // Spiegelman emotional weight based on narrative phase
-      emotionalWeight: this.calculateEmotionalWeightFromPhase(panel.narrativePhase, index, comicScript.panels.length)
-    };
-  });
-  
-  // Build story analysis
-  const storyAnalysis: StoryAnalysis = {
-    storyBeats,
-    characterArc: ['introduction', 'development', 'challenge', 'resolution'],
-    visualFlow: ['establishing', 'rising action', 'climax', 'resolution'],
-    totalPanels: storyBeats.length,
-    pagesRequired: config.pagesPerStory,
-    dialoguePanels: storyBeats.filter(b => b.hasSpeechBubble).length,
-    speechBubbleDistribution: { standard: 60, thought: 20, shout: 20 },
-    emotionalArc: this.extractEmotionalArc(storyBeats),
-    cinematicQuality: true,
-    storyArchetype: genre
-  };
-  
-  this.log('info', `✅ OPTION C: Created ${storyAnalysis.storyBeats.length} story beats with PRE-GENERATED narration`);
-  this.log('info', `   📝 Silent panels: ${storyBeats.filter(b => b.isSilent).length}`);
-  this.log('info', `   💬 Dialogue panels: ${storyAnalysis.dialoguePanels}`);
-  
-  // FIX 2: Emotional Jump Validation (Zero Cost - Local Logic Only)
-  // Detects abrupt emotional transitions that may confuse readers
-  const emotionalJumpPairs: [string, string][] = [
-    ['shocked', 'happy'], ['scared', 'happy'], ['sad', 'excited'], ['angry', 'happy'],
-    ['crying', 'laughing'], ['terrified', 'joyful'], ['devastated', 'cheerful'],
-    ['furious', 'content'], ['panicked', 'calm'], ['heartbroken', 'delighted']
-  ];
-  
-  const emotions = storyBeats.map(b => b.emotion?.toLowerCase() || '');
-  const emotionalJumps: { fromPanel: number; toPanel: number; from: string; to: string }[] = [];
-  
-  for (let i = 1; i < emotions.length; i++) {
-    const prevEmotion = emotions[i - 1];
-    const currEmotion = emotions[i];
-    
-    for (const [from, to] of emotionalJumpPairs) {
-      if (prevEmotion.includes(from) && currEmotion.includes(to)) {
-        emotionalJumps.push({ fromPanel: i, toPanel: i + 1, from: prevEmotion, to: currEmotion });
+
+  private buildOptionCResultFromComicScript(
+    comicScript: ComicScript,
+    audience: AudienceType,
+    storyArchetype: string,
+    storyTextForJob: string
+  ): { storyAnalysis: StoryAnalysis; title: string; story: string; storyIntroducedCharacters?: any[] } {
+    const config = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKey(audience) as keyof typeof PROFESSIONAL_AUDIENCE_CONFIG];
+
+    const storyIntroducedCharacters: any[] = [];
+    if (comicScript.storyCharacters && comicScript.storyCharacters.length > 0) {
+      this.log('info', `🦋 Found ${comicScript.storyCharacters.length} story-introduced character(s) for consistency tracking`);
+
+      for (const storyChar of comicScript.storyCharacters) {
+        const convertedChar = {
+          id: `story-char-${storyChar.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+          name: storyChar.name,
+          age: 'child' as const,
+          role: 'secondary' as const,
+          gender: 'non-binary' as const,
+          characterDescription: storyChar.visualDescription,
+          isStoryIntroduced: true,
+          characterType: storyChar.type,
+          species: storyChar.species,
+          colorScheme: storyChar.colorScheme,
+          distinctiveFeatures: storyChar.distinctiveFeatures,
+          panelsAppearingIn: storyChar.panelsAppearingIn
+        };
+
+        storyIntroducedCharacters.push(convertedChar);
+        this.log('info', `   🎨 ${storyChar.name} (${storyChar.type}): appears in panels ${storyChar.panelsAppearingIn?.join(', ') || 'multiple'}`);
       }
     }
-  }
-  
-  if (emotionalJumps.length > 0) {
-    this.log('warn', `⚠️ EMOTIONAL CONTINUITY: Found ${emotionalJumps.length} potential emotional jump(s):`);
-    for (const jump of emotionalJumps) {
-      this.log('warn', `   Panel ${jump.fromPanel} (${jump.from}) → Panel ${jump.toPanel} (${jump.to})`);
-      this.log('warn', `   💡 Consider adding a bridge panel with "understanding", "realization", or "acceptance" emotion`);
+
+    const storyBeats: StoryBeat[] = comicScript.panels.map((panel, index) => {
+      const panelType = this.mapCameraAngleToPanelType(panel.cameraAngle);
+      const isSilent = panel.narration === null && (panel.dialogue === null || panel.dialogue.length === 0);
+      const hasDialogue = !!(panel.dialogue && panel.dialogue.length > 0);
+      const primaryDialogue = hasDialogue ? panel.dialogue![0] : null;
+
+      return {
+        beat: panel.visualDirection,
+        emotion: panel.emotion,
+        visualPriority: 'character',
+        panelPurpose: panel.narrativePhase.toLowerCase(),
+        narrativeFunction: panel.narrativePhase.toLowerCase(),
+        characterAction: panel.visualDirection,
+        actionContext: panel.visualDirection,
+        environment: 'story setting',
+        dialogue: primaryDialogue?.text,
+        hasSpeechBubble: hasDialogue,
+        speechBubbleStyle: primaryDialogue?.type || 'speech',
+        speakerName: primaryDialogue?.speaker || comicScript.characterName,
+        speakerPosition: 'center' as const,
+        bubblePosition: 'top-center' as const,
+        cameraAngle: panel.cameraAngle,
+        cameraReason: `${panel.narrativePhase} panel`,
+        panelType,
+        transitionType: this.determineTransitionType(index, comicScript.panels.length),
+        beatNumber: panel.panelNumber,
+        preGeneratedNarration: panel.narration,
+        isSilent,
+        silentReason: isSilent ? ('visual_impact' as const) : undefined,
+        emotionalWeight: this.calculateEmotionalWeightFromPhase(panel.narrativePhase, index, comicScript.panels.length)
+      };
+    });
+
+    const storyAnalysis: StoryAnalysis = {
+      storyBeats,
+      characterArc: ['introduction', 'development', 'challenge', 'resolution'],
+      visualFlow: ['establishing', 'rising action', 'climax', 'resolution'],
+      totalPanels: storyBeats.length,
+      pagesRequired: config.pagesPerStory,
+      dialoguePanels: storyBeats.filter(b => b.hasSpeechBubble).length,
+      speechBubbleDistribution: { standard: 60, thought: 20, shout: 20 },
+      emotionalArc: this.extractEmotionalArc(storyBeats),
+      cinematicQuality: true,
+      storyArchetype
+    };
+
+    this.log('info', `✅ OPTION C: Created ${storyAnalysis.storyBeats.length} story beats with PRE-GENERATED narration`);
+    this.log('info', `   📝 Silent panels: ${storyBeats.filter(b => b.isSilent).length}`);
+    this.log('info', `   💬 Dialogue panels: ${storyAnalysis.dialoguePanels}`);
+
+    const emotionalJumpPairs: [string, string][] = [
+      ['shocked', 'happy'], ['scared', 'happy'], ['sad', 'excited'], ['angry', 'happy'],
+      ['crying', 'laughing'], ['terrified', 'joyful'], ['devastated', 'cheerful'],
+      ['furious', 'content'], ['panicked', 'calm'], ['heartbroken', 'delighted']
+    ];
+
+    const emotions = storyBeats.map(b => b.emotion?.toLowerCase() || '');
+    const emotionalJumps: { fromPanel: number; toPanel: number; from: string; to: string }[] = [];
+
+    for (let i = 1; i < emotions.length; i++) {
+      const prevEmotion = emotions[i - 1];
+      const currEmotion = emotions[i];
+
+      for (const [from, to] of emotionalJumpPairs) {
+        if (prevEmotion.includes(from) && currEmotion.includes(to)) {
+          emotionalJumps.push({ fromPanel: i, toPanel: i + 1, from: prevEmotion, to: currEmotion });
+        }
+      }
     }
-  } else {
-    this.log('info', `   ✅ Emotional continuity: No abrupt jumps detected`);
+
+    if (emotionalJumps.length > 0) {
+      this.log('warn', `⚠️ EMOTIONAL CONTINUITY: Found ${emotionalJumps.length} potential emotional jump(s):`);
+      for (const jump of emotionalJumps) {
+        this.log('warn', `   Panel ${jump.fromPanel} (${jump.from}) → Panel ${jump.toPanel} (${jump.to})`);
+        this.log('warn', `   💡 Consider adding a bridge panel with "understanding", "realization", or "acceptance" emotion`);
+      }
+    } else {
+      this.log('info', `   ✅ Emotional continuity: No abrupt jumps detected`);
+    }
+
+    return {
+      storyAnalysis,
+      title: comicScript.title,
+      story: storyTextForJob,
+      storyIntroducedCharacters: storyIntroducedCharacters.length > 0 ? storyIntroducedCharacters : undefined
+    };
   }
-  
-  // Reconstruct story summary for compatibility
-  const story = `${comicScript.storySummary}\n\n${comicScript.panels.map(p => p.visualDirection).join('\n\n')}`;
-  
-  return {
-    storyAnalysis,
-    title: comicScript.title,
-    story,
-    // NEW: Include story-introduced characters for reference image generation (Priority 4 fix)
-    storyIntroducedCharacters: storyIntroducedCharacters.length > 0 ? storyIntroducedCharacters : undefined
-  };
-}
 
 /**
  * Map camera angle to panel type

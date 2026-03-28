@@ -26,6 +26,7 @@ import {
 // GEMINI MIGRATION: Switched from OpenAI to Gemini for image-based generation
 // import { OpenAIIntegration } from './openai-integration.js';
 import { GeminiIntegration } from './gemini-integration.js';
+import { ClaudeIntegration } from './claude-integration.js';
 
 // Enhanced interface definitions
 interface DNAExtractionResult {
@@ -155,6 +156,7 @@ The scene action is secondary to maintaining perfect visual consistency.`
 export class VisualDNASystem {
   // GEMINI MIGRATION: Changed from OpenAI to Gemini for 95% character consistency
   private geminiIntegration: GeminiIntegration;
+  private claudeIntegration: ClaudeIntegration;
   private errorHandler: ErrorHandlingSystem;
   private config: VisualDNAConfig;
   private visualDNACache: Map<string, VisualFingerprint> = new Map();
@@ -164,10 +166,12 @@ export class VisualDNASystem {
 
   constructor(
     geminiIntegration: GeminiIntegration,
+    claudeIntegration: ClaudeIntegration,
     errorHandler: ErrorHandlingSystem,
     config?: VisualDNAConfig
   ) {
     this.geminiIntegration = geminiIntegration;
+    this.claudeIntegration = claudeIntegration;
     this.errorHandler = errorHandler;
     this.config = config || {
       enableFingerprinting: true,
@@ -838,17 +842,17 @@ Return your response as a JSON object with these exact fields.`;
     return `${consistencyPrompt}\n\n${scenePrompt}`;
   }
 /**
- * Use GPT-4 to perform deep environmental analysis
- * Extracts ultra-specific environmental characteristics
+ * Claude Sonnet: deep environmental analysis (text only — no image model).
+ * Extracts ultra-specific environmental characteristics.
  */
-private async analyzeEnvironmentWithGPT4(
+private async analyzeEnvironmentWithClaude(
   story: string,
   storyBeats: StoryBeat[],
   audience: AudienceType,
   artStyle: string
 ): Promise<any> {
   try {
-    console.log('Performing GPT-4 deep environmental analysis...');
+    console.log('Performing Claude deep environmental analysis...');
 
     const storyBeatsText = storyBeats
       .map((beat, i) => `Beat ${i + 1}: ${beat.description || beat.text}`)
@@ -911,24 +915,18 @@ Return as valid JSON matching this structure exactly.
 
 Respond with valid JSON only - no markdown, no explanations, just the JSON object.`;
 
-    const response = await this.geminiIntegration.generateTextCompletion(
-  prompt,
-  {
-    temperature: 0.2,
-    max_output_tokens: 1500,
-    top_p: 0.9,
-    // model: // Gemini doesn't use model parameter in generation config 'gpt-4o'
-  }
-);
+    const responseText = await this.claudeIntegration.completeTextWithSonnet(prompt, {
+      temperature: 0.2,
+      max_tokens: 1500
+    });
 
-    // Parse and validate response
-    const parsed = JSON.parse(response);
-    
-    console.log('GPT-4 environmental analysis complete');
+    const parsed = JSON.parse(responseText);
+
+    console.log('Claude environmental analysis complete');
     return parsed;
 
   } catch (error: any) {
-    console.error('❌ GPT-4 environmental analysis failed:', error.message);
+    console.error('❌ Claude environmental analysis failed:', error.message);
     return null;
   }
 }
@@ -956,12 +954,12 @@ Respond with valid JSON only - no markdown, no explanations, just the JSON objec
   story?: string  // NEW PARAMETER
 ): Promise<EnvironmentalDNA> {
   try {
-    console.log('Creating ENHANCED Environmental DNA with GPT-4 analysis...');
+    console.log('Creating ENHANCED Environmental DNA with Claude text analysis...');
 
-    // STEP 1: Try GPT-4 deep analysis first (if story provided)
+    // STEP 1: Try Claude deep analysis first (if story provided)
     let gpt4Analysis: any = null;
     if (story && story.length > 50) {
-      gpt4Analysis = await this.analyzeEnvironmentWithGPT4(
+      gpt4Analysis = await this.analyzeEnvironmentWithClaude(
         story,
         storyBeats,
         audience,
@@ -969,7 +967,7 @@ Respond with valid JSON only - no markdown, no explanations, just the JSON objec
       );
     }
 
-    // STEP 2: Use GPT-4 results if available, otherwise fall back to keyword extraction
+    // STEP 2: Use Claude analysis results if available, otherwise fall back to keyword extraction
     let primaryLocation: any;
     let lightingContext: any;
     let visualContinuity: any;
@@ -977,8 +975,7 @@ Respond with valid JSON only - no markdown, no explanations, just the JSON objec
     let panelTransitions: any;
 
     if (gpt4Analysis && gpt4Analysis.primaryLocation) {
-      // Use GPT-4 analysis results
-      console.log('Using GPT-4 environmental analysis');
+      console.log('Using Claude environmental analysis');
       
       primaryLocation = {
         name: gpt4Analysis.primaryLocation.name || 'story setting',
@@ -1025,7 +1022,7 @@ Respond with valid JSON only - no markdown, no explanations, just the JSON objec
 
     } else {
       // Fall back to keyword extraction (EXISTING CODE)
-      console.log('⚠️ GPT-4 analysis unavailable, using keyword extraction fallback');
+      console.log('⚠️ Claude environmental analysis unavailable, using keyword extraction fallback');
       
       const environments = storyBeats.map(beat => beat.environment).filter(Boolean);
       const uniqueEnvironments = [...new Set(environments)];

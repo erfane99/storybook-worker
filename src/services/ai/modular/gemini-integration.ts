@@ -1273,13 +1273,50 @@ THIS REGENERATION MUST SHOW CORRECT SPATIAL RELATIONSHIPS.
   OUTPUT: A professional ${artStyle} cartoon character design that captures the essence of the reference while serving as the foundation for consistent sequential art across all comic panels.`;
   }
 
+  /** Emotion → color grading hint; defaults to environmental DNA palette string. */
+  private getColorMoodLine(emotion: string, dominantColorsStr: string): string {
+    const e = (emotion || '').toLowerCase();
+    const d = dominantColorsStr.trim();
+    if (/\b(happy|excited|joy|delight|wonder|gleeful|cheerful)\b/.test(e)) {
+      return 'COLOR MOOD: warm golden tones, saturated colors';
+    }
+    if (/\b(sad|lonely|melanchol|sorrow|grief)\b/.test(e)) {
+      return 'COLOR MOOD: cool blue-gray, slightly desaturated';
+    }
+    if (/\b(scared|tense|nervous|afraid|fear|terrified|anxious)\b/.test(e)) {
+      return 'COLOR MOOD: dark shadows, muted colors, high contrast';
+    }
+    if (/\b(angry|frustrat|rage|furious|mad)\b/.test(e)) {
+      return 'COLOR MOOD: warm reds and deep shadows, high contrast';
+    }
+    if (/\b(peaceful|content|resolved|calm|serene|relieved)\b/.test(e)) {
+      return 'COLOR MOOD: soft warm light, gentle pastel tones';
+    }
+    if (/\b(shock|surpris|astonish|stunned|amazed)\b/.test(e)) {
+      return 'COLOR MOOD: vivid, sharp contrast, bright highlights';
+    }
+    if (/\b(neutral|calm)\b/.test(e) && d) {
+      return `COLOR MOOD: ${d}`;
+    }
+    return d ? `COLOR MOOD: ${d}` : 'COLOR MOOD: natural palette from setting';
+  }
+
+  /** One-line McCloud transition (compressed; full type name for model context). */
+  private getMcCloudTransitionOneLiner(transitionType?: string): string {
+    const key = (transitionType || '').toLowerCase().replace(/-/g, '_');
+    const map: Record<string, string> = {
+      action_to_action: 'TRANSITION: ACTION-TO-ACTION — next action in sequence, different pose, same location.',
+      scene_to_scene: 'TRANSITION: SCENE-TO-SCENE — new location/time, show establishing context.',
+      moment_to_moment: 'TRANSITION: MOMENT-TO-MOMENT — tiny time increment, minimal change, focus on expression shift.',
+      subject_to_subject: 'TRANSITION: SUBJECT-TO-SUBJECT — same scene, shift focus to different character/element.',
+      aspect_to_aspect: 'TRANSITION: ASPECT-TO-ASPECT — different aspect of same moment, mood or detail.'
+    };
+    return map[key] || '';
+  }
+
   /**
    * Build compressed panel generation prompt
-   * 2025 BEST PRACTICE: Concise prompts (~500 chars) outperform verbose prompts
-   * Gemini processes image references first, so text prompt is supplementary guidance
-   * 
-   * FIX A: Added camera angle enforcement to prevent repetitive compositions
-   * ENHANCED: Multi-character support with secondary character descriptions
+   * Gemini processes reference images first; text is supplementary (~500–700 chars for core).
    */
   private buildPanelGenerationPrompt(
     sceneDescription: string,
@@ -1293,51 +1330,28 @@ THIS REGENERATION MUST SHOW CORRECT SPATIAL RELATIONSHIPS.
     // Extract environmental DNA values (if present)
     const envDNA = options.environmentalContext?.environmentalDNA;
     const timeOfDay = envDNA?.lightingContext?.timeOfDay || 'afternoon';
-    const lightingMood = envDNA?.lightingContext?.lightingMood || 'natural';
     const locationName = envDNA?.primaryLocation?.name || 'setting';
     const keyFeatures = envDNA?.primaryLocation?.keyFeatures?.slice(0, 2) || [];
     const dominantColors = envDNA?.visualContinuity?.colorConsistency?.dominantColors?.slice(0, 3) || [];
+    const dominantColorsStr = dominantColors.join(', ');
 
-    // Determine camera angle with enforcement
     const cameraAngle = options.cameraAngle || 'medium';
-    const panelType = options.panelType || 'standard';
-    
-    // Main character name
     const mainCharName = options.mainCharacterName || 'the main character';
-    
-    // NARRATION-FIRST: Extract mandatory physical actions from scene description
     const physicalActions = this.extractMandatoryPhysicalActions(sceneDescription);
 
-    // Build compressed prompt - essential info only
-    let prompt = `${options.artStyle} comic panel. CHARACTER 1 (${mainCharName}): Match IMAGE 1 EXACTLY - same face, same body, SAME CLOTHING. The character's outfit must be IDENTICAL to the reference image.${hasPreviousPanel ? ' CONTINUITY: Follow from IMAGE 2 but CHANGE composition.' : ''}
+    const colorMoodLine = this.getColorMoodLine(emotion, dominantColorsStr);
+    const transitionLine = this.getMcCloudTransitionOneLiner(options.transitionType);
+    const featuresStr = keyFeatures.length > 0 ? keyFeatures.join(', ') : 'key setting details';
+    const envColorsTail = dominantColorsStr || 'consistent with setting';
+
+    let prompt = `${options.artStyle} comic panel. CHARACTER: Match IMAGE 1 exactly—same face, body, clothing.${hasPreviousPanel ? ' Use IMAGE 2 for continuity; change pose/composition.' : ''}
 
 SCENE: ${sceneDescription}
 
-VISUAL HIERARCHY (Professional Comics Standard):
-- FOREGROUND (closest): Main action/character - sharp focus, highest detail
-- MIDGROUND (middle): Supporting elements - clear but less detailed
-- BACKGROUND (furthest): Environment context - softer, atmospheric
-- FOCAL POINT: Place primary action at rule-of-thirds intersection
-- DEPTH: Use size difference, overlap, and atmospheric perspective to create 3D space
-
-EMOTION: ${emotion} - CHARACTER'S FACE MUST SHOW THIS EMOTION:
-- happy/excited = big smile, raised cheeks, bright eyes
-- sad = downturned mouth, droopy eyes, slumped posture
-- angry/determined = furrowed brows, tight jaw, intense eyes
-- scared = wide eyes, open mouth, raised eyebrows
-- surprised = wide eyes, raised eyebrows, open mouth
-- curious = tilted head, raised eyebrow, slight smile
-THE FACIAL EXPRESSION IS CRITICAL - MUST MATCH "${emotion}" EXACTLY.
-${options.emotionalWeight && options.emotionalWeight >= 7 ? `
-⚡ HIGH EMOTIONAL WEIGHT PANEL (${options.emotionalWeight}/10):
-- This is a KEY STORY MOMENT - give it visual emphasis
-- Use dramatic lighting and composition
-- Character expression should be INTENSE and READABLE` : ''}${options.narrativePosition ? `
-📍 NARRATIVE POSITION: ${options.narrativePosition}${options.narrativePosition === 'OPENING' ? `
-- ESTABLISHING SHOT: Show character AND environment clearly` : ''}${options.narrativePosition === 'CLIMAX' ? `
-- DRAMATIC PEAK: Maximum visual impact, dynamic angle, intense emotion` : ''}${options.narrativePosition === 'RESOLUTION' ? `
-- CALMING DOWN: Softer lighting, settled composition, reflective mood` : ''}` : ''}
-CAMERA: ${cameraAngle} shot, ${panelType} panel`;
+EMOTION: ${emotion}—character's face MUST clearly show this emotion.
+CAMERA: ${cameraAngle} angle.
+${colorMoodLine}
+${transitionLine ? `${transitionLine}\n` : ''}ENVIRONMENT: ${timeOfDay} lighting, ${locationName}. ${featuresStr}. ${envColorsTail}.`;
 
     // === MANDATORY CLOTHING CONSISTENCY ===
     if (options.environmentalContext?.characterDNA) {
@@ -1506,11 +1520,9 @@ SECONDARY CHARACTER CONSISTENCY RULES:
 4. If ${mainCharName} is a toddler and secondary is also toddler, they should be similar size`;
     }
 
-    // Add previous panel context with POSE DIVERSITY enforcement
+    // Previous panel: pose diversity (compressed)
     if (hasPreviousPanel && options.previousPanelContext) {
       const previousPose = options.previousPanelContext.pose || 'standing';
-      
-      // Map poses to forbidden poses (what NOT to repeat)
       const forbiddenPoses: Record<string, string[]> = {
         'standing': ['standing still', 'upright static pose', 'feet planted'],
         'sitting': ['seated', 'sitting down', 'on chair/ground'],
@@ -1523,98 +1535,25 @@ SECONDARY CHARACTER CONSISTENCY RULES:
         'climbing': ['climbing', 'scaling', 'ascending'],
         'bending': ['bending', 'leaning', 'stooping']
       };
-      
       const avoidPoses = forbiddenPoses[previousPose] || [];
-      
       prompt += `
 
-PREVIOUS PANEL: ${options.previousPanelContext.action}
-PREVIOUS POSE: ${previousPose}
-
-⚠️ POSE DIVERSITY RULE (CRITICAL):
-- DO NOT repeat "${previousPose}" pose from previous panel
-- Character must be in a DIFFERENT body position
-${avoidPoses.length > 0 ? `- AVOID: ${avoidPoses.join(', ')}` : ''}
-- Show PROGRESSION of movement between panels
-- Each panel should feel like a new moment in time`;
+PREV PANEL: ${options.previousPanelContext.action} | prior pose: ${previousPose}. Use a DIFFERENT pose; do not repeat ${previousPose}.${avoidPoses.length > 0 ? ` Avoid: ${avoidPoses.slice(0, 4).join(', ')}.` : ''}`;
     }
 
-    // Add environmental DNA (compressed) with PERSISTENT OBJECT ENFORCEMENT
+    // Story-significant objects only (base ENVIRONMENT is in core prompt)
     if (hasEnvDNA) {
-      // Extract persistent objects that MUST appear in every panel at this location
       const persistentObjects = envDNA?.visualContinuity?.persistentObjects || [];
       const recurringObjects = envDNA?.visualContinuity?.recurringObjects || [];
-      
-      prompt += `
-
-ENV: ${timeOfDay} lighting, ${locationName}
-COLORS: ${dominantColors.join(', ') || 'natural palette'}
-FEATURES: ${keyFeatures.join(', ') || 'consistent background'}`;
-
-      // CRITICAL: Enforce persistent objects (story-significant items)
       if (persistentObjects.length > 0) {
         prompt += `
 
-⚠️ MANDATORY OBJECTS - MUST APPEAR IN THIS PANEL:
-${persistentObjects.map((obj: string) => `• ${obj} (REQUIRED - same appearance as previous panels)`).join('\n')}
-These objects are STORY-SIGNIFICANT and must be visible in EVERY panel at this location.
-Do NOT omit these objects. Do NOT change their appearance.`;
+⚠️ MANDATORY OBJECTS: ${persistentObjects.join('; ')} — same appearance as prior panels.`;
       } else if (recurringObjects.length > 0) {
-        // Fallback to recurring objects if no persistent objects defined
         prompt += `
 
-RECURRING ELEMENTS (maintain consistency):
-${recurringObjects.slice(0, 3).map((obj: string) => `• ${obj}`).join('\n')}`;
+RECURRING: ${recurringObjects.slice(0, 3).join('; ')}`;
       }
-    }
-
-    // === NARRATIVE POSITION VISUAL CONTRAST (Fix 5) ===
-    // Apply dramatic visual differences based on story position
-    const narrativePosition = options.narrativePosition || 'RISING_ACTION';
-    const emotionalWeight = options.emotionalWeight || 5;
-    
-    const visualContrast: Record<string, string> = {
-      'OPENING': 'Soft, inviting lighting. Warm color temperature. Establish mood gently.',
-      'SETUP': 'Clear, balanced lighting. Neutral tones. Focus on clarity.',
-      'RISING_ACTION': 'Building tension through lighting. Slight shadows. Dynamic energy.',
-      'CLIMAX': '🔥 DRAMATIC CONTRAST: High-impact lighting, strong shadows, vivid colors, maximum visual intensity. This is the story\'s peak moment.',
-      'RESOLUTION': '✨ WARM RESOLUTION: Golden hour lighting, soft glows, peaceful atmosphere. Sense of closure and satisfaction.'
-    };
-    
-    // Add style requirements with DIVERSITY enforcement + VISUAL CONTRAST
-    prompt += `
-
-REQUIREMENTS:
-- Match ${mainCharName} from reference image exactly
-- ${timeOfDay} lighting throughout
-- ${cameraAngle} camera angle (MUST follow this angle)
-- Character pose must be DIFFERENT from previous panel
-- Dynamic composition, not static
-- ${options.artStyle} style, publication quality
-
-🎬 NARRATIVE MOMENT: ${narrativePosition} (weight: ${emotionalWeight}/10)
-${visualContrast[narrativePosition] || visualContrast['RISING_ACTION']}`;
-
-    // Add secondary character MANDATORY RENDERING rules if present
-    if (hasSecondaryCharacters) {
-      prompt += `
-- MANDATORY: All ${options.secondaryCharacters!.length} secondary character(s) MUST be visible in the image (${options.secondaryCharacters!.map(c => c.name).join(', ')})
-- Secondary characters must be CONSISTENT with descriptions above
-- Show age-appropriate size differences between characters
-- Each secondary character must have DISTINCT appearance from main character`;
-    }
-
-    // FIX 2: Pass symbolic elements to image prompt (Moore Principle)
-    // These are thematic visual elements that should recur throughout the story
-    if ((options as any).symbolicElements && (options as any).symbolicElements.length > 0) {
-      const symbolics = (options as any).symbolicElements as string[];
-      prompt += `
-
-🎭 RECURRING SYMBOLIC ELEMENTS (Moore Principle - Thematic Consistency):
-These elements carry thematic meaning and should appear when narratively appropriate:
-${symbolics.slice(0, 3).map((s: string) => `• ${s}`).join('\n')}
-If this scene's location/moment naturally includes these symbols, render them subtly but consistently.
-Do NOT force symbols where they don't fit - only include when narratively appropriate.`;
     }
 
     // Add feedback-driven image enhancements if available
@@ -1656,47 +1595,16 @@ REQUIREMENTS:
 - Professional quality matching published comic standards`;
     }
 
-    // FIX 4: McCloud Panel Transition Guidance (Zero Cost - Prompt Enhancement)
-    // Helps Gemini understand the relationship between this panel and adjacent panels
-    if (options.transitionType) {
-      const transitionGuidance: Record<string, string> = {
-        'action_to_action': `
-TRANSITION TYPE: ACTION-TO-ACTION (McCloud Type 1)
-- This panel shows the NEXT ACTION in a sequence
-- Character should be in a DIFFERENT POSE than the previous panel
-- Maintain same location/background
-- Time elapsed: Seconds`,
-        'subject_to_subject': `
-TRANSITION TYPE: SUBJECT-TO-SUBJECT (McCloud Type 2)
-- This panel shifts focus to a DIFFERENT SUBJECT in the same scene
-- Camera angle should change significantly
-- Same time and place as previous panel
-- Creates dialogue/interaction rhythm`,
-        'scene_to_scene': `
-TRANSITION TYPE: SCENE-TO-SCENE (McCloud Type 3)
-- This panel is a NEW LOCATION or TIME
-- Use ESTABLISHING SHOT composition (wider angle, more environment)
-- Character should be clearly placed in the new environment
-- Significant time/space jump from previous panel`,
-        'moment_to_moment': `
-TRANSITION TYPE: MOMENT-TO-MOMENT (McCloud Type 4)
-- This panel shows a TINY increment of time
-- Minimal change from previous panel
-- Focus on subtle expression or movement change
-- Creates dramatic tension or slow-motion effect`,
-        'aspect_to_aspect': `
-TRANSITION TYPE: ASPECT-TO-ASPECT (McCloud Type 5)
-- This panel shows a DIFFERENT ASPECT of the same scene/moment
-- Can be environment detail, object close-up, or mood element
-- Same moment in time, different viewpoint
-- Creates atmosphere and world-building`,
-      };
-      
-      const guidance = transitionGuidance[options.transitionType];
-      if (guidance) {
-        prompt += guidance;
-      }
+    if ((options as any).symbolicElements && (options as any).symbolicElements.length > 0) {
+      const symbolics = (options as any).symbolicElements as string[];
+      prompt += `
+
+SYMBOLIC (include only if natural): ${symbolics.slice(0, 3).join('; ')}`;
     }
+
+    prompt += `
+
+REQUIREMENTS: Professional ${options.artStyle}, publication quality. Match character from reference exactly.${hasPreviousPanel ? ' Different pose than previous panel.' : ''}`;
 
     // ⚠️ CRITICAL: NO UNAUTHORIZED TEXT RULE - Must be at END of prompt for maximum weight
     prompt += `

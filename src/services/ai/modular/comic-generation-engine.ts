@@ -68,39 +68,41 @@ import { ClaudeIntegration } from './claude-integration.js';
  */
 export const PANEL_DIVERSITY_CONFIG = {
   /**
-   * CHILDREN (8 panels) - Clear, varied visual storytelling
+   * CHILDREN (14 panels) — aligned with PROFESSIONAL_AUDIENCE_CONFIG
    */
   children: {
-    totalPanels: 8,
+    totalPanels: 14,
     
-    // Required panel type distribution
     panelDistribution: {
-      wide_establishing: { min: 1, max: 2, panels: [1] },        // Panel 1
-      medium_shot: { min: 2, max: 3, panels: [2, 5] },           // Panels 2, 5
-      close_up: { min: 2, max: 2, panels: [3, 6] },              // Panels 3, 6 (emotions)
-      action_shot: { min: 2, max: 2, panels: [4, 7] },           // Panels 4, 7
+      wide_establishing: { min: 1, max: 2, panels: [1] },
+      medium_shot: { min: 4, max: 6, panels: [2, 5, 8, 11, 14] },
+      close_up: { min: 3, max: 5, panels: [3, 6, 9] },
+      action_shot: { min: 3, max: 5, panels: [4, 7, 10, 13] },
+      dramatic_angle: { min: 1, max: 1, panels: [12] },
     },
     
-    // Recommended sequence for children
     recommendedSequence: [
-      { panel: 1, type: 'wide_establishing', purpose: 'Establish world and character' },
-      { panel: 2, type: 'medium_shot', purpose: 'Show character with goal visible' },
-      { panel: 3, type: 'close_up', purpose: 'Emotional reaction to obstacle' },
-      { panel: 4, type: 'action_shot', purpose: 'Character attempts solution' },
-      { panel: 5, type: 'medium_shot', purpose: 'Show consequence of attempt' },
-      { panel: 6, type: 'close_up', purpose: 'Emotional turning point' },
-      { panel: 7, type: 'action_shot', purpose: 'Final effort/climax' },
-      { panel: 8, type: 'medium_shot', purpose: 'Resolution with satisfaction' },
+      { panel: 1, type: 'wide_establishing', purpose: 'Set the world' },
+      { panel: 2, type: 'medium_shot', purpose: 'Introduce character in context' },
+      { panel: 3, type: 'close_up', purpose: 'Character focus / emotion' },
+      { panel: 4, type: 'action_shot', purpose: 'Rising action' },
+      { panel: 5, type: 'medium_shot', purpose: 'Story beat / consequence' },
+      { panel: 6, type: 'close_up', purpose: 'Emotional beat' },
+      { panel: 7, type: 'action_shot', purpose: 'Escalation' },
+      { panel: 8, type: 'medium_shot', purpose: 'Rising action' },
+      { panel: 9, type: 'close_up', purpose: 'Tension / reaction' },
+      { panel: 10, type: 'action_shot', purpose: 'Build toward climax' },
+      { panel: 11, type: 'medium_shot', purpose: 'Pre-climax beat' },
+      { panel: 12, type: 'dramatic_angle', purpose: 'Climax emphasis' },
+      { panel: 13, type: 'action_shot', purpose: 'Climax action' },
+      { panel: 14, type: 'medium_shot', purpose: 'Resolution' },
     ],
     
-    // Minimum unique shot types required
     minUniqueShotTypes: 4,
     
-    // Maximum consecutive same-type panels
     maxConsecutiveSameType: 2,
     
-    // Minimum unique character actions across all panels
-    minUniqueActions: 5,
+    minUniqueActions: 7,
     
     // Example actions to rotate through
     actionPool: [
@@ -119,43 +121,46 @@ export const PANEL_DIVERSITY_CONFIG = {
   },
 
   /**
-   * YOUNG ADULTS (15 panels) - Dynamic, emotionally resonant compositions
+   * YOUNG ADULTS (20 panels) — aligned with PROFESSIONAL_AUDIENCE_CONFIG
    */
   'young adults': {
-    totalPanels: 15,
+    totalPanels: 20,
     
-    // Required panel type distribution
     panelDistribution: {
       wide_establishing: { min: 2, max: 3 },
-      medium_shot: { min: 4, max: 5 },
-      close_up: { min: 3, max: 4 },
-      action_shot: { min: 2, max: 3 },
-      pov_over_shoulder: { min: 1, max: 2 },
-      dramatic_angle: { min: 1, max: 2 }  // Required at climax
+      medium_shot: { min: 5, max: 7 },
+      close_up: { min: 4, max: 6 },
+      action_shot: { min: 3, max: 5 },
+      pov_over_shoulder: { min: 1, max: 3 },
+      dramatic_angle: { min: 1, max: 2 },
     },
     
-    // Recommended sequence for young adults
     recommendedSequence: [
       { panel: 1, type: 'wide_establishing', purpose: 'Set the world and tone' },
       { panel: 2, type: 'medium_shot', purpose: 'Introduce character in context' },
       { panel: 3, type: 'close_up', purpose: 'Reveal internal state' },
-      { panel: 4, type: 'medium_shot', purpose: 'Show relationships/dynamics' },
-      { panel: 5, type: 'wide_establishing', purpose: 'New location or situation' },
-      { panel: 6, type: 'action_shot', purpose: 'First major conflict' },
-      { panel: 7, type: 'pov_over_shoulder', purpose: 'Character perspective' },
-      { panel: 8, type: 'medium_shot', purpose: 'Midpoint shift moment' },
-      { panel: 9, type: 'close_up', purpose: 'Emotional reaction' },
-      { panel: 10, type: 'action_shot', purpose: 'Rising tension' },
-      { panel: 11, type: 'medium_shot', purpose: 'Dark moment setup' },
-      { panel: 12, type: 'close_up', purpose: 'Internal struggle peak' },
-      { panel: 13, type: 'dramatic_angle', purpose: 'Climax begins' },
-      { panel: 14, type: 'action_shot', purpose: 'Defining action' },
-      { panel: 15, type: 'medium_shot', purpose: 'Resolution and transformation' },
+      { panel: 4, type: 'medium_shot', purpose: 'Relationships / dynamics' },
+      { panel: 5, type: 'action_shot', purpose: 'Rising action' },
+      { panel: 6, type: 'close_up', purpose: 'Emotional beat' },
+      { panel: 7, type: 'medium_shot', purpose: 'Escalation' },
+      { panel: 8, type: 'action_shot', purpose: 'Conflict intensifies' },
+      { panel: 9, type: 'pov_over_shoulder', purpose: 'Character perspective' },
+      { panel: 10, type: 'medium_shot', purpose: 'Midsection beat' },
+      { panel: 11, type: 'close_up', purpose: 'Reaction / doubt' },
+      { panel: 12, type: 'action_shot', purpose: 'Rising tension' },
+      { panel: 13, type: 'medium_shot', purpose: 'Dark moment setup' },
+      { panel: 14, type: 'close_up', purpose: 'Internal struggle' },
+      { panel: 15, type: 'dramatic_angle', purpose: 'Climax (~75%)' },
+      { panel: 16, type: 'action_shot', purpose: 'Defining action' },
+      { panel: 17, type: 'close_up', purpose: 'Consequence' },
+      { panel: 18, type: 'medium_shot', purpose: 'Resolution beat' },
+      { panel: 19, type: 'close_up', purpose: 'Emotional resolution' },
+      { panel: 20, type: 'medium_shot', purpose: 'Transformation / closure' },
     ],
     
     minUniqueShotTypes: 5,
     maxConsecutiveSameType: 2,
-    minUniqueActions: 8,
+    minUniqueActions: 10,
     
     actionPool: [
       'sitting', 'standing', 'walking', 'reaching', 'pointing',
@@ -174,39 +179,55 @@ export const PANEL_DIVERSITY_CONFIG = {
   },
 
   /**
-   * ADULTS (24 panels) - Sophisticated, cinematic compositions
+   * ADULTS (28 panels) — aligned with PROFESSIONAL_AUDIENCE_CONFIG
    */
   adults: {
-    totalPanels: 24,
+    totalPanels: 28,
     
-    // Required panel type distribution
     panelDistribution: {
       wide_establishing: { min: 3, max: 4 },
-      medium_shot: { min: 6, max: 8 },
-      close_up: { min: 5, max: 6 },
-      action_shot: { min: 3, max: 4 },
-      pov_over_shoulder: { min: 2, max: 3 },
+      medium_shot: { min: 7, max: 10 },
+      close_up: { min: 6, max: 8 },
+      action_shot: { min: 4, max: 6 },
+      pov_over_shoulder: { min: 2, max: 4 },
       dramatic_angle: { min: 2, max: 3 },
-      symbolic_artistic: { min: 1, max: 2 }  // Required for adults
+      symbolic_artistic: { min: 1, max: 2 },
     },
     
-    // Recommended key panels (not all 24, just important beats)
     recommendedSequence: [
-      { panel: 1, type: 'symbolic_artistic', purpose: 'Visual thesis/opening image' },
-      { panel: 2, type: 'wide_establishing', purpose: 'World establishment' },
-      { panel: 3, type: 'medium_shot', purpose: 'Character introduction' },
-      { panel: 6, type: 'close_up', purpose: 'Reveal hidden tension' },
-      { panel: 8, type: 'action_shot', purpose: 'Inciting incident' },
-      { panel: 12, type: 'pov_over_shoulder', purpose: 'Midpoint revelation' },
-      { panel: 16, type: 'dramatic_angle', purpose: 'All is lost moment' },
-      { panel: 20, type: 'close_up', purpose: 'Dark night of soul' },
-      { panel: 22, type: 'dramatic_angle', purpose: 'Climax moment' },
-      { panel: 24, type: 'symbolic_artistic', purpose: 'Thematic resolution' },
+      { panel: 1, type: 'wide_establishing', purpose: 'Set the world' },
+      { panel: 2, type: 'medium_shot', purpose: 'Character in context' },
+      { panel: 3, type: 'close_up', purpose: 'Psychological / internal' },
+      { panel: 4, type: 'medium_shot', purpose: 'Setup / relationships' },
+      { panel: 5, type: 'action_shot', purpose: 'Inciting energy' },
+      { panel: 6, type: 'close_up', purpose: 'Stakes land emotionally' },
+      { panel: 7, type: 'medium_shot', purpose: 'First act turn' },
+      { panel: 8, type: 'action_shot', purpose: 'Rising complications' },
+      { panel: 9, type: 'pov_over_shoulder', purpose: 'Subjective view' },
+      { panel: 10, type: 'medium_shot', purpose: 'Layered obstacle' },
+      { panel: 11, type: 'close_up', purpose: 'Pressure / doubt' },
+      { panel: 12, type: 'action_shot', purpose: 'Escalation' },
+      { panel: 13, type: 'medium_shot', purpose: 'Midpoint build' },
+      { panel: 14, type: 'close_up', purpose: 'Revelation / shift' },
+      { panel: 15, type: 'medium_shot', purpose: 'Consequences unfold' },
+      { panel: 16, type: 'action_shot', purpose: 'Complications peak' },
+      { panel: 17, type: 'close_up', purpose: 'All is lost emotionally' },
+      { panel: 18, type: 'pov_over_shoulder', purpose: 'Perspective fracture' },
+      { panel: 19, type: 'medium_shot', purpose: 'Dark night setup' },
+      { panel: 20, type: 'action_shot', purpose: 'External pressure' },
+      { panel: 21, type: 'dramatic_angle', purpose: 'Climax approach (~75%)' },
+      { panel: 22, type: 'action_shot', purpose: 'Defining action' },
+      { panel: 23, type: 'dramatic_angle', purpose: 'Moment of truth' },
+      { panel: 24, type: 'close_up', purpose: 'Climax emotional beat' },
+      { panel: 25, type: 'medium_shot', purpose: 'Aftermath' },
+      { panel: 26, type: 'close_up', purpose: 'Resolution / thematic' },
+      { panel: 27, type: 'medium_shot', purpose: 'New equilibrium' },
+      { panel: 28, type: 'symbolic_artistic', purpose: 'Thematic closure' },
     ],
     
     minUniqueShotTypes: 6,
     maxConsecutiveSameType: 3,
-    minUniqueActions: 12,
+    minUniqueActions: 14,
     
     actionPool: [
       'sitting', 'standing', 'walking', 'reaching', 'pointing',
@@ -265,7 +286,7 @@ export const NARRATION_RULES = {
     // Resolution/ending rules
     endingRequirements: {
       mustInclude: [
-        'concrete_lesson',           // "Maya learned that..."
+        'growth_through_action_or_emotion', // Show change; do not lecture "learned that..."
         'actionable_takeaway',       // Something child can understand/do
         'connection_to_problem',     // Links back to story problem
         'explainable_by_child'       // A child could explain to friend
@@ -717,7 +738,7 @@ export class ComicGenerationEngine {
   /**
    * Analyze story structure using advanced narrative intelligence
    * Enhanced with storytelling archetypes and emotional progression
-   * FIXED: All TypeScript errors resolved
+   * Rare fallback path: Claude Sonnet via completeTextWithSonnet (temp 0.3), not Gemini text.
    */
   private async analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis> {
     try {
@@ -782,16 +803,10 @@ GOOD: "gripping rope tightly, preparing to pull friend up from the muddy ditch"
   "speechBubbleDistribution": {"style": count}
 }`;
 
-      const response = await this.geminiIntegration.generateTextCompletion(
-        analysisPrompt,
-        {
-          temperature: 0.3,
-          max_output_tokens: 16000,
-          // model: // Gemini doesn't use model parameter 'gpt-4o',
-          top_p: 0.9
-          // useJsonMode: true  // Gemini doesn't have JSON mode flag
-        }
-      );
+      const response = await this.claudeIntegration.completeTextWithSonnet(analysisPrompt, {
+        temperature: 0.3,
+        max_tokens: 2000
+      });
 
       // Parse response into structured story analysis (FROM BOTH FILES)
       const analysis = this.parseStoryAnalysisResponse(response, config, narrativeIntel);
@@ -2028,6 +2043,71 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         physicalRequirements.push(requirement);
       }
     }
+
+    const narrationLower = combinedText;
+    if (narrationLower.includes('against') || narrationLower.includes('pressed against')) {
+      physicalRequirements.push('Character pressed against surface/wall');
+    }
+    if (narrationLower.includes('behind')) {
+      physicalRequirements.push('Character positioned behind object');
+    }
+    if (narrationLower.includes('under') || narrationLower.includes('beneath')) {
+      physicalRequirements.push('Character positioned below/under something');
+    }
+    if (narrationLower.includes('above') || narrationLower.includes('over')) {
+      physicalRequirements.push('Character positioned above something');
+    }
+    if (narrationLower.includes('between')) {
+      physicalRequirements.push('Character positioned between objects');
+    }
+    if (narrationLower.includes('curled up') || narrationLower.includes('curling')) {
+      physicalRequirements.push('Character in curled/fetal position');
+    }
+    if (narrationLower.includes('frozen') || narrationLower.includes('still as')) {
+      physicalRequirements.push('Character completely motionless, frozen in place');
+    }
+    if (narrationLower.includes('trembl') || narrationLower.includes('shaking')) {
+      physicalRequirements.push('Character visibly trembling/shaking');
+    }
+    if (narrationLower.includes('tiptoe') || narrationLower.includes('tip-toe')) {
+      physicalRequirements.push('Character on tiptoes');
+    }
+    if (narrationLower.includes('sprawl') || narrationLower.includes('spread out')) {
+      physicalRequirements.push('Character sprawled/spread out');
+    }
+    if (narrationLower.includes('lean') && !narrationLower.includes('leaned in')) {
+      physicalRequirements.push('Character leaning against something');
+    }
+    if (narrationLower.includes('crouch') || narrationLower.includes('squat')) {
+      physicalRequirements.push('Character in low crouching/squatting position');
+    }
+    if (narrationLower.includes('carrying') || narrationLower.includes('carried')) {
+      physicalRequirements.push('Character carrying something');
+    }
+    if (narrationLower.includes('hiding') || narrationLower.includes('hidden')) {
+      physicalRequirements.push('Character partially or fully hidden/concealed');
+    }
+    if (narrationLower.includes('climbing') || narrationLower.includes('scaling')) {
+      physicalRequirements.push('Character in climbing position on vertical surface');
+    }
+    if (narrationLower.includes('swimming') || narrationLower.includes('floating')) {
+      physicalRequirements.push('Character in water, swimming or floating');
+    }
+    if (narrationLower.includes('flying') || narrationLower.includes('soaring')) {
+      physicalRequirements.push('Character airborne/flying');
+    }
+    if (narrationLower.includes('falling') || narrationLower.includes('tumbling')) {
+      physicalRequirements.push('Character falling/tumbling through air');
+    }
+    if (narrationLower.includes('dancing') || narrationLower.includes('twirling')) {
+      physicalRequirements.push('Character in dynamic dance/twirl pose');
+    }
+    if (narrationLower.includes('pushing') || narrationLower.includes('shoving')) {
+      physicalRequirements.push('Character actively pushing against something');
+    }
+    if (narrationLower.includes('pulling') || narrationLower.includes('tugging')) {
+      physicalRequirements.push('Character pulling/tugging something');
+    }
     
     // Also extract specific body part mentions from characterAction
     if (beat.characterAction) {
@@ -2105,12 +2185,13 @@ NARRATION MUST NEVER describe:
     if (audience === 'children') {
       const resolutionRules = narrativePosition === 'RESOLUTION' ? `
 RESOLUTION PANEL REQUIREMENTS:
-✓ State what ${characterName} learned or feels NOW
+✓ Warm close: show what ${characterName} DOES, FEELS, or quietly realizes — not a moral lecture
 ✓ Simple, concrete, a 5-year-old understands
 ✓ Connect emotionally to the story's heart
 
 FORBIDDEN ENDINGS:
 ✗ "And they all lived happily ever after"
+✗ "[Name] learned that..." formula
 ✗ Abstract philosophy about magic or wonder` : '';
 
       return `Write 15-25 word narration for children's comic panel ${panelNumber}/${totalPanels}.
@@ -2766,29 +2847,29 @@ private calculateNarrativePosition(
   private getAudienceStructureRequirements(audience: AudienceType, totalPanels: number): any {
     const requirements = {
       children: {
-        // Children: 8 panels
-        goalExpectedBy: 3,           // Goal by panel 2-3
-        obstacleExpectedBy: 4,       // Obstacle by panel 3-4
-        climaxPanel: 7,              // Panel 7
-        resolutionPanel: 8,          // Panel 8
+        // Children: 12-16 panels (target 14)
+        goalExpectedBy: 4,           // Goal by panels 3-4
+        obstacleExpectedBy: 5,       // Obstacle by panels 4-5
+        climaxPanel: 11,             // Climax panels 10-12
+        resolutionPanel: 14,         // Resolution panels 13-14
         requiredElements: ['clear_problem', 'clear_solution', 'explicit_lesson', 'happy_ending'],
         forbiddenElements: ['ambiguous_ending', 'unresolved_conflict', 'abstract_conclusion', 'scary_obstacles']
       },
       'young adults': {
-        // Young Adults: 15 panels
-        goalExpectedBy: 4,           // Goal by panel 2-4
-        obstacleExpectedBy: 6,       // First obstacle by panel 4-6
-        climaxPanel: 14,             // Panels 12-14
-        resolutionPanel: 15,         // Panel 15
+        // Young Adults: 18-22 panels (target 20)
+        goalExpectedBy: 4,           // Goal by panels 3-4
+        obstacleExpectedBy: 6,       // First obstacle by panels 4-6
+        climaxPanel: 17,             // Climax panels 16-18
+        resolutionPanel: 20,         // Resolution panels 19-20
         requiredElements: ['internal_conflict', 'external_conflict', 'character_growth', 'earned_resolution'],
         forbiddenElements: ['preachy_lesson', 'oversimplification', 'adult_lecturing']
       },
       adults: {
-        // Adults: 24 panels
-        goalExpectedBy: 5,           // Goal revealed by panel 3-5
-        obstacleExpectedBy: 8,       // Main obstacle by panel 5-8
-        climaxPanel: 22,             // Panels 20-22
-        resolutionPanel: 24,         // Panels 23-24
+        // Adults: 24-32 panels (target 28)
+        goalExpectedBy: 7,           // Goal by panels 5-7
+        obstacleExpectedBy: 10,      // Main obstacle by rising act
+        climaxPanel: 24,             // Climax panels 23-25
+        resolutionPanel: 28,         // Resolution panels 26-28
         requiredElements: ['psychological_depth', 'moral_complexity', 'earned_payoff', 'thematic_resonance'],
         forbiddenElements: ['spelling_out_themes', 'unearned_resolution', 'simplistic_conclusion']
       }
@@ -2893,12 +2974,8 @@ private calculateNarrativePosition(
         }
       }
       
-      // Check for explicit lesson (children need this)
-      const lessonIndicators = ['learned', 'now knew', 'understood', 'realized', 'discovered'];
-      const hasExplicitLesson = lessonIndicators.some(ind => narration.toLowerCase().includes(ind));
-      
-      if (!hasExplicitLesson) {
-        recommendations.push(`Children's resolution should include explicit lesson ("${panel.description?.split(' ')[0] || 'Character'} learned that...")`)
+      if (/\blearned that\b/i.test(narration)) {
+        warnings.push(`Children's resolution: avoid formulaic "learned that" — prefer action, feeling, or a short realization`);
       }
       
       // Check for concrete outcome

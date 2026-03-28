@@ -56,6 +56,30 @@ export class ClaudeIntegration {
     this.client = new Anthropic({ apiKey });
   }
 
+  /**
+   * Sonnet text-only completion (JSON prompts, environmental analysis, etc.).
+   * Strips markdown fences when present.
+   */
+  async completeTextWithSonnet(
+    prompt: string,
+    options: { max_tokens: number; temperature: number }
+  ): Promise<string> {
+    const message = await this.client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: options.max_tokens,
+      temperature: options.temperature,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    let text = message.content[0].type === 'text' ? message.content[0].text : '';
+    text = text.trim();
+    if (text.startsWith('```json')) {
+      text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (text.startsWith('```')) {
+      text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    return text.trim();
+  }
+
   async analyzeStoryEnvironment(
     story: string,
     audience: AudienceType
@@ -269,7 +293,7 @@ Return JSON:
     try {
       const message = await this.client.messages.create({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 100,
+        max_tokens: 200,
         temperature: 0.7,
         messages: [{
           role: 'user',
@@ -290,34 +314,17 @@ Return JSON:
   }
 
   // ===== OPTION C: SINGLE-PASS COMIC SCRIPT GENERATION =====
-  
+
   /**
-   * Generate complete comic script in a single API call
-   * This replaces 17+ text API calls with 1 structured call
-   * 
-   * @param options - Comic script generation options
-   * @returns Complete comic script with narration, dialogue, and visual directions
+   * Shared prompt body for create + user-story adaptation (Option C family).
+   * Excludes objective, source story, genre framework, and few-shot wrapper.
    */
-  async generateComicScript(options: ComicScriptOptions): Promise<ComicScript> {
-    const { genre, audience, characterDescription, panelCount } = options;
-    
-    console.log(`🎬 Generating complete comic script: ${panelCount} panels for ${audience} audience (${genre} genre)...`);
-    
-    const audienceRules = this.getAudienceSpecificRules(audience);
-    const genreFramework = this.getGenreFramework(genre);
-    const fewShotExample = this.getFewShotExample(audience);
+  private buildComicScriptSharedPromptCore(panelCount: number, audienceRules: string): string {
     const midpoint = Math.ceil(panelCount / 2);
     const climax = Math.ceil(panelCount * 0.8);
     const end = panelCount;
-    
-    const systemPrompt = `You are a professional comic book writer creating panel-by-panel scripts. Your output is used DIRECTLY - every word becomes final narration and dialogue. Write with the precision of a published comic writer.`;
 
-    const userPrompt = `<objective>
-Create a ${panelCount}-panel ${audience} comic book script for the ${genre} genre.
-Character: ${characterDescription}
-</objective>
-
-<output_schema>
+    return `<output_schema>
 You MUST return valid JSON matching this exact structure:
 {
   "title": "string (3-6 words)",
@@ -582,6 +589,13 @@ CRITICAL - Avoid repetition:
 - Vary sentence structures (statement, question, exclamation)
 - Mix short punchy (5-8 words) with medium (10-15 words)
 - Each narration must feel distinct
+
+CROSS-PANEL REVIEW (do this before returning JSON):
+- Read all narrations together as a sequence
+- No two narrations should start with the same word
+- No similar phrasing should appear in multiple panels (e.g., "heart raced" and "heart pounded")
+- The narrative voice must feel consistent throughout — same register, same maturity level
+- Narration should build on itself, not repeat emotional beats
 </narration_variety_rules>
 
 <dialogue_rules>
@@ -589,12 +603,40 @@ CRITICAL - Avoid repetition:
 - Include 1-3 thought bubbles across the story for internal moments
 - Dialogue reveals character AND advances plot
 - Each speaker has consistent voice
+
+VOICE DIFFERENTIATION:
+Each named character must have a distinct speaking style. If the main character speaks in short excited bursts ("Wow! Look at that!"), a wise elder should use longer measured sentences ("There's more to this than meets the eye"). A shy friend should use hesitant fragments ("Maybe... we could try?"). Do NOT give all characters the same speech patterns.
 </dialogue_rules>
 
 <audience_rules>
 ${audienceRules}
-</audience_rules>
+</audience_rules>`;
+  }
 
+  /**
+   * Generate complete comic script in a single API call
+   * This replaces 17+ text API calls with 1 structured call
+   *
+   * @param options - Comic script generation options
+   * @returns Complete comic script with narration, dialogue, and visual directions
+   */
+  async generateComicScript(options: ComicScriptOptions): Promise<ComicScript> {
+    const { genre, audience, characterDescription, panelCount } = options;
+
+    console.log(`🎬 Generating complete comic script: ${panelCount} panels for ${audience} audience (${genre} genre)...`);
+
+    const audienceRules = this.getAudienceSpecificRules(audience);
+    const genreFramework = this.getGenreFramework(genre);
+    const fewShotExample = this.getFewShotExample(audience);
+
+    const systemPrompt = `You are a professional comic book writer creating panel-by-panel scripts. Your output is used DIRECTLY - every word becomes final narration and dialogue. Write with the precision of a published comic writer.`;
+
+    const userPrompt = `<objective>
+Create a ${panelCount}-panel ${audience} comic book script for the ${genre} genre.
+Character: ${characterDescription}
+</objective>
+
+${this.buildComicScriptSharedPromptCore(panelCount, audienceRules)}
 <genre_framework>
 ${genreFramework}
 </genre_framework>
@@ -605,67 +647,29 @@ ${fewShotExample}
 
 Generate the complete comic script now. Return ONLY valid JSON.`;
 
-try {
-  const message = await this.client.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 8000,
-    temperature: 0.7,
-    system: [
-      {
-        type: 'text',
-        text: systemPrompt,
-        cache_control: { type: 'ephemeral' }
-      }
-    ],
-    messages: [{
-      role: 'user',
-      content: userPrompt
-    }]
-  });
+    try {
+      const message = await this.client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        temperature: 0.5,
+        system: [
+          {
+            type: 'text',
+            text: systemPrompt,
+            cache_control: { type: 'ephemeral' }
+          }
+        ],
+        messages: [{
+          role: 'user',
+          content: userPrompt
+        }]
+      });
 
-      const responseText = message.content[0].type === 'text' 
-        ? message.content[0].text 
+      const responseText = message.content[0].type === 'text'
+        ? message.content[0].text
         : '';
-      
-      console.log('✅ Claude comic script received:', responseText.substring(0, 300));
 
-      // Strip markdown code fences if present
-      let cleanedResponse = responseText.trim();
-      if (cleanedResponse.startsWith('```json')) {
-        cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-      } else if (cleanedResponse.startsWith('```')) {
-        cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
-      }
-      
-      // Parse and validate JSON
-      let script: ComicScript;
-      try {
-        script = JSON.parse(cleanedResponse);
-      } catch (parseError) {
-        console.error('❌ Failed to parse comic script JSON:', cleanedResponse.substring(0, 500));
-        throw new Error(`CRITICAL: Claude returned invalid JSON for comic script. Cannot proceed.`);
-      }
-      
-      // Validate required fields
-      if (!script.title || !script.panels || !Array.isArray(script.panels)) {
-        throw new Error(`CRITICAL: Comic script missing required fields (title or panels)`);
-      }
-      
-      if (script.panels.length < panelCount * 0.8) {
-        console.warn(`⚠️ Comic script has ${script.panels.length} panels, expected ${panelCount}`);
-      }
-      
-      console.log(`✅ Comic script generated: "${script.title}" with ${script.panels.length} panels`);
-      console.log(`   📊 Character: ${script.characterName}`);
-      console.log(`   📝 Summary: ${script.storySummary?.substring(0, 100)}...`);
-      
-      // Log panel distribution
-      const silentPanels = script.panels.filter(p => p.narration === null && p.dialogue === null).length;
-      const dialoguePanels = script.panels.filter(p => p.dialogue && p.dialogue.length > 0).length;
-      console.log(`   🔇 Silent panels: ${silentPanels}`);
-      console.log(`   💬 Dialogue panels: ${dialoguePanels}`);
-      
-      return script;
+      return this.parseAndValidateComicScriptJson(responseText, panelCount);
 
     } catch (error: any) {
       console.error('❌ Claude comic script generation error:', error);
@@ -674,6 +678,115 @@ try {
       criticalError.severity = 'critical';
       throw criticalError;
     }
+  }
+
+  /**
+   * Adapt an existing user-authored story into the same ComicScript JSON as Option C (no new story invention).
+   */
+  async analyzeStoryAsComicScript(
+    story: string,
+    audience: AudienceType,
+    characterDescription: string,
+    panelCount: number
+  ): Promise<ComicScript> {
+    console.log(`🎬 Adapting user-provided story to ${panelCount}-panel comic script (${audience})...`);
+
+    const audienceRules = this.getAudienceSpecificRules(audience);
+    const fewShotExample = this.getFewShotExample(audience);
+
+    const systemPrompt = `You are a professional comic book writer creating panel-by-panel scripts. Your output is used DIRECTLY - every word becomes final narration and dialogue. Write with the precision of a published comic writer.`;
+
+    const userPrompt = `<objective>
+Analyze the following story and adapt it into a ${panelCount}-panel ${audience} comic book script. Preserve the story's plot, characters, and dialogue while structuring it for visual storytelling.
+Character focus: ${characterDescription}
+</objective>
+
+<source_story>
+${story}
+</source_story>
+
+<adaptation_note>
+The source text defines genre, tone, and voice—honor it; do not substitute a different plot or ending.
+Tighten dialogue for bubble length only when necessary; preserve who speaks and what they mean.
+List every named supporting character from the source in storyCharacters with visual descriptions suitable for identical rendering across panels.
+</adaptation_note>
+
+${this.buildComicScriptSharedPromptCore(panelCount, audienceRules)}
+
+<example_output>
+${fewShotExample}
+</example_output>
+
+Analyze and produce the complete adapted comic script now. Return ONLY valid JSON.`;
+
+    try {
+      const message = await this.client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        temperature: 0.5,
+        system: [
+          {
+            type: 'text',
+            text: systemPrompt,
+            cache_control: { type: 'ephemeral' }
+          }
+        ],
+        messages: [{
+          role: 'user',
+          content: userPrompt
+        }]
+      });
+
+      const responseText = message.content[0].type === 'text'
+        ? message.content[0].text
+        : '';
+
+      return this.parseAndValidateComicScriptJson(responseText, panelCount);
+    } catch (error: any) {
+      console.error('❌ Claude user-story comic adaptation error:', error);
+      const criticalError: any = new Error(`User story comic adaptation failed: ${error?.message || 'Unknown error'}`);
+      criticalError.retryable = false;
+      criticalError.severity = 'critical';
+      throw criticalError;
+    }
+  }
+
+  private parseAndValidateComicScriptJson(responseText: string, panelCount: number): ComicScript {
+    console.log('✅ Claude comic script received:', responseText.substring(0, 300));
+
+    let cleanedResponse = responseText.trim();
+    if (cleanedResponse.startsWith('```json')) {
+      cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedResponse.startsWith('```')) {
+      cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+
+    let script: ComicScript;
+    try {
+      script = JSON.parse(cleanedResponse);
+    } catch {
+      console.error('❌ Failed to parse comic script JSON:', cleanedResponse.substring(0, 500));
+      throw new Error(`CRITICAL: Claude returned invalid JSON for comic script. Cannot proceed.`);
+    }
+
+    if (!script.title || !script.panels || !Array.isArray(script.panels)) {
+      throw new Error(`CRITICAL: Comic script missing required fields (title or panels)`);
+    }
+
+    if (script.panels.length < panelCount * 0.8) {
+      console.warn(`⚠️ Comic script has ${script.panels.length} panels, expected ${panelCount}`);
+    }
+
+    console.log(`✅ Comic script parsed: "${script.title}" with ${script.panels.length} panels`);
+    console.log(`   📊 Character: ${script.characterName}`);
+    console.log(`   📝 Summary: ${script.storySummary?.substring(0, 100)}...`);
+
+    const silentPanels = script.panels.filter(p => p.narration === null && p.dialogue === null).length;
+    const dialoguePanels = script.panels.filter(p => p.dialogue && p.dialogue.length > 0).length;
+    console.log(`   🔇 Silent panels: ${silentPanels}`);
+    console.log(`   💬 Dialogue panels: ${dialoguePanels}`);
+
+    return script;
   }
 
   /**
@@ -697,15 +810,19 @@ GRAMMAR RULES (CRITICAL - CHILDREN):
 - CORRECT examples: "I can help!", "Let's go!", "I'm scared.", "Thank you!", "Can I try?"
 - WRONG examples: "Me help", "I hungry", "Want go", "Me scared"
 
-ENDING RULES (CRITICAL - EXACTLY ONE LESSON):
-- The FINAL panel must contain EXACTLY ONE simple lesson
-- Format: "[Character name] learned that [concrete lesson]."
-- The lesson must be CONCRETE and ACTIONABLE
-- GOOD lessons: "sharing makes friends happy", "trying new things can be fun", "asking for help is okay"
-- BAD lessons: "magic lives in our hearts", "wonder is everywhere", "the adventure never ends"
-- FORBIDDEN: Multiple lesson statements across different panels
+ENDING APPROACH (choose the BEST fit for this story):
+A) ACTION ENDING: Character DOES something that shows the lesson.
+   Example: "Maya left the biggest cookie for Teddy."
+B) EMOTIONAL ENDING: Character expresses the feeling of growth.
+   Example: "For the first time, Maya didn't want the adventure to end."  
+C) REFLECTION ENDING: Short, simple realization.
+   Example: "Maybe being brave wasn't so hard after all."
+
+FORBIDDEN: Do NOT use "[Character] learned that..." formula. Trust the story to show the lesson through action or emotion. Professional children's books never spell out the moral.
+
+The final panel's narration should feel like a warm, satisfying close — not a lecture.
 - FORBIDDEN endings: "The magic would always be there" / "In that moment, everything changed"
-- Only the LAST panel states the lesson - previous panels show the OUTCOME/CELEBRATION`,
+- Previous panels show outcome/celebration; the close lands without a moral lecture`,
 
       'young adults': `YOUNG ADULT COMIC RULES (ages 12-17):
 - Vocabulary: Grade 6-9 level, contemporary tone
@@ -932,15 +1049,43 @@ GOOD: Creation requires iteration, failure, and persistence`
     
     return frameworks[genre.toLowerCase()] || frameworks['adventure'];
   }
-/**
+
+  /**
+   * Warns Claude that few-shot JSON is truncated; must not pattern-match panel count.
+   */
+  private getFewShotAbbreviationWarning(audience: AudienceType): string {
+    const normalizedAudience = audience.replace(/_/g, ' ');
+    if (normalizedAudience === 'children') {
+      return `⚠️ NOTE: The example below shows only 8 panels for brevity. Your output MUST contain 12-16 panels (target 14) as specified in the panel count requirements above. Do NOT use the example's panel count as your target.
+
+The last panelNumber in this sample (8) is abbreviated; your JSON must list every panel from 1 through the panel count in your objective.
+
+`;
+    }
+    if (normalizedAudience === 'young adults') {
+      return `⚠️ NOTE: The example below shows only 10 panels for brevity. Your output MUST contain 18-22 panels (target 20) as specified in the panel count requirements above. Do NOT use the example's panel count as your target.
+
+The last panelNumber in this sample (10) is abbreviated; your JSON must list every panel from 1 through the panel count in your objective.
+
+`;
+    }
+    return `⚠️ NOTE: The example below shows only 12 panels for brevity. Your output MUST contain 24-32 panels (target 28) as specified in the panel count requirements above. Do NOT use the example's panel count as your target.
+
+The last panelNumber in this sample (12) is abbreviated; your JSON must list every panel from 1 through the panel count in your objective.
+
+`;
+  }
+
+  /**
    * Get few-shot example for the specified audience
    * IMPROVED: All narrations now demonstrate "invisible context" principle
    */
-private getFewShotExample(audience: AudienceType): string {
-  const normalizedAudience = audience.replace(/_/g, ' ');
-  
-  if (normalizedAudience === 'children') {
-    return `{
+  private getFewShotExample(audience: AudienceType): string {
+    const normalizedAudience = audience.replace(/_/g, ' ');
+    const abbreviationWarning = this.getFewShotAbbreviationWarning(audience);
+
+    if (normalizedAudience === 'children') {
+      return abbreviationWarning + `{
 "title": "Lily and the Brave Little Star",
 "storySummary": "Lily finds a fallen star who is scared to fly back to the sky. By showing the star that being brave means trying even when scared, Lily helps her new friend find courage, learning that she too can be brave.",
 "characterName": "Lily",
@@ -1011,7 +1156,7 @@ private getFewShotExample(audience: AudienceType): string {
   {
     "panelNumber": 8,
     "narrativePhase": "RESOLUTION",
-    "narration": "Lily learned that she could be brave too.",
+    "narration": "Some braveries start small—and that was enough.",
     "dialogue": null,
     "visualDirection": "Wide shot of Lily waving as the star flies upward, leaving a trail of sparkles. The star glows brightly now. Lily smiles warmly.",
     "emotion": "proud",
@@ -1019,8 +1164,8 @@ private getFewShotExample(audience: AudienceType): string {
   }
 ]
 }`;
-  } else if (normalizedAudience === 'young adults') {
-    return `{
+    } else if (normalizedAudience === 'young adults') {
+      return abbreviationWarning + `{
 "title": "The Unfollow",
 "storySummary": "After discovering her best friend's secret social media account mocking her, Alex must decide whether to confront her or walk away, learning that some friendships aren't worth saving.",
 "characterName": "Alex",
@@ -1117,9 +1262,9 @@ private getFewShotExample(audience: AudienceType): string {
   }
 ]
 }`;
-  } else {
-    // Adults
-    return `{
+    } else {
+      // Adults
+      return abbreviationWarning + `{
 "title": "The Last Letter",
 "storySummary": "Twenty years after leaving without explanation, David returns to his hometown for his father's funeral, where an undelivered letter reveals the sacrifice that defined both their lives.",
 "characterName": "David",
@@ -1234,6 +1379,6 @@ private getFewShotExample(audience: AudienceType): string {
   }
 ]
 }`;
+    }
   }
-}
 }

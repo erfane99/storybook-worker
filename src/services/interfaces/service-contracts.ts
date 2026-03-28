@@ -1188,6 +1188,11 @@ export interface IAIOperations {
   
   // ✅ FIXED: Added missing enterprise methods
   analyzeStoryStructure(story: string, audience: AudienceType): Promise<StoryAnalysis>;
+  analyzeUserStoryAsComicScript(
+    story: string,
+    audience: AudienceType,
+    characterDescription: string
+  ): Promise<{ storyAnalysis: StoryAnalysis; title: string; story: string; storyIntroducedCharacters?: any[] }>;
   createMasterCharacterDNA(
     imageUrl: string, 
     artStyle: string, 

@@ -18,6 +18,20 @@ import {
 
 import { EnvironmentalConsistencyValidator } from '../../services/ai/modular/environmental-consistency-validator.js';
 import { UnifiedPanelValidator, UnifiedValidationError } from '../../services/ai/modular/unified-panel-validator.js';
+import { PROFESSIONAL_AUDIENCE_CONFIG } from '../../services/ai/modular/constants-and-types.js';
+
+function normalizeAudienceKeyForPanels(audience: string): keyof typeof PROFESSIONAL_AUDIENCE_CONFIG {
+  const key = audience.replace(/_/g, ' ').toLowerCase().trim();
+  if (key === 'young adults' || key === 'young_adults') return 'young adults';
+  if (key === 'adults' || key === 'adult') return 'adults';
+  if (key === 'children' || key === 'child') return 'children';
+  return 'children';
+}
+
+function getExpectedTotalPanelsForAudience(audience: string): number {
+  const cfg = PROFESSIONAL_AUDIENCE_CONFIG[normalizeAudienceKeyForPanels(audience)];
+  return cfg?.totalPanels ?? PROFESSIONAL_AUDIENCE_CONFIG.children.totalPanels;
+}
 import {
   Result,
   ErrorFactory,
@@ -673,9 +687,10 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         this.trackServiceUsage(job.id, 'ai');
         if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
         
-        // Enhanced story analysis with environmental awareness (legacy path)
-        console.log('📝 Legacy path: Generating story analysis via Claude...');
-        storyAnalysis = await aiService.analyzeStoryStructure(story, audience);
+        // User-provided story: Option C–style comic script adaptation (same pipeline as auto-story quality)
+        console.log('📝 User story path: Adapting story to comic script via Claude (Option C family)...');
+        const scriptResult = await aiService.analyzeUserStoryAsComicScript(story, audience, character_description);
+        storyAnalysis = scriptResult.storyAnalysis;
         this.updateComicGenerationProgress(job.id, { storyAnalyzed: true });
         
         console.log(`✅ Story structure analyzed: ${storyAnalysis.storyBeats.length} narrative beats for ${audience} audience`);
@@ -752,7 +767,7 @@ if (is_reused_image && character_description) {
 }
 
 if (character_image) {
-  this.updateComicGenerationProgress(job.id, { targetPanels: audience === 'children' ? 8 : audience === 'young adults' ? 15 : 24 });
+  this.updateComicGenerationProgress(job.id, { targetPanels: getExpectedTotalPanelsForAudience(audience) });
   
   try {
     // ===== CHARACTER DATA CACHING - Eliminate redundant API calls on retries =====
@@ -778,7 +793,7 @@ if (character_image) {
       this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
       console.log('✅ Character DNA loaded from cache');
       
-      const totalPanels = audience === 'children' ? 8 : audience === 'young adults' ? 15 : 24;
+      const totalPanels = getExpectedTotalPanelsForAudience(audience);
       await jobService.updateJobProgress(job.id, 35, `Character data loaded from cache - ensuring consistency across all ${totalPanels} panels...`);
       
     } else {
@@ -809,7 +824,7 @@ if (character_image) {
       this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
       console.log('✅ Professional character DNA created with maximum consistency protocols');
       
-      const totalPanels = audience === 'children' ? 8 : audience === 'young adults' ? 15 : 24;
+      const totalPanels = getExpectedTotalPanelsForAudience(audience);
       await jobService.updateJobProgress(job.id, 35, `Creating visual DNA for your character - ensuring perfect consistency across all ${totalPanels} panels...`);
       
       // ===== CACHE THE NEW CHARACTER DATA FOR FUTURE RETRIES =====

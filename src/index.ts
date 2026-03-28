@@ -3,10 +3,12 @@
 import 'dotenv/config';
 import express from 'express';
 import cron from 'node-cron';
+import { createClient } from '@supabase/supabase-js';
 import type { JobData, WorkerConfig, JobStats, HealthResponse } from './lib/types.js';
 import { environmentManager } from './lib/config/environment.js';
 import { ServiceRegistry } from './services/registry/service-registry.js';
 import { SERVICE_TOKENS } from './services/interfaces/service-contracts.js';
+import type { DatabaseService } from './services/database/database-service.js';
 
 // Environment configuration with graceful degradation
 const envConfig = environmentManager.getConfig();
@@ -160,6 +162,40 @@ async function loadJobProcessor() {
 }
 
 // Validate job system with consolidated service container
+/**
+ * Mark DB jobs stuck in processing (e.g. after worker crash) as failed via Supabase RPC.
+ * Non-critical: failures are logged; worker startup continues.
+ */
+async function runStaleProcessingJobsCleanupAtStartup(): Promise<void> {
+  try {
+    const { serviceContainer } = await import('./services/container/service-container.js');
+    const db = (await serviceContainer.resolve(
+      SERVICE_TOKENS.DATABASE
+    )) as DatabaseService;
+    let supabase = db.getClient();
+    if (!supabase) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!supabaseUrl || !supabaseKey) {
+        console.warn('⚠️ Stale job cleanup skipped: Supabase client unavailable');
+        return;
+      }
+      supabase = createClient(supabaseUrl, supabaseKey);
+    }
+
+    const { data, error } = await supabase.rpc('cleanup_stale_processing_jobs', {
+      stale_threshold_minutes: 30,
+    });
+    if (error) {
+      console.warn('⚠️ Stale job cleanup warning:', error.message);
+    } else {
+      console.log('🧹 Stale job cleanup result:', data);
+    }
+  } catch (cleanupError) {
+    console.warn('⚠️ Stale job cleanup failed (non-critical):', cleanupError);
+  }
+}
+
 async function validateJobSystem(): Promise<boolean> {
   try {
     const { jobProcessor } = await loadJobProcessor();
@@ -327,6 +363,9 @@ async function initializeWorker(): Promise<void> {
       console.warn('⚠️ Worker warnings:');
       initializationState.warnings.forEach(w => console.warn(`   - ${w}`));
     }
+
+    // Recover rows left in processing by a previous crashed worker (before first job poll)
+    await runStaleProcessingJobsCleanupAtStartup();
     
     // Step 4: Set up job processing with error recovery
     console.log('⏰ Setting up job processing schedule...');

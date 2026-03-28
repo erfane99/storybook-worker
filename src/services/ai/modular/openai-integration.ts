@@ -13,7 +13,7 @@
  * - Reason: Switching to Gemini 3 Pro Image for 95% character consistency
  *           via image-based generation (vs 70-80% with text-based OpenAI)
  * - Architecture Change: Image-to-image generation instead of text-to-image
- * - Benefits: 15-25% improvement in character consistency across 24 panels
+ * - Benefits: 15-25% improvement in character consistency across full stories (panel count from PROFESSIONAL_AUDIENCE_CONFIG)
  * 
  * Rollback Instructions:
  * If you need to rollback to OpenAI:
@@ -160,7 +160,11 @@ const STORY_BEAT_FEW_SHOT_EXAMPLES = {
 EXAMPLE INPUT:
 Story: "Luna the brave little rabbit decided to explore the dark forest. She met a friendly owl who warned her about the river. Luna carefully crossed the stepping stones and found a magical garden full of glowing flowers. She picked one flower to bring home to her mother."
 Audience: children
-Panel Count: 8
+Panel Count: 12-16 (optimal 14)
+
+⚠️ NOTE: The example below shows only 8 panels for brevity. Your output MUST contain 12-16 panels (target 14) matching the Panel Count specified for this analysis request (see below). Do NOT use the example's panel count as your target.
+
+The sample ends at beatNumber 8 only because it is abbreviated; your full JSON must include every beat through the required panel count.
 
 EXAMPLE OUTPUT:
 {
