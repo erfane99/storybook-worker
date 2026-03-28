@@ -656,6 +656,21 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
     const aiService = await serviceContainer.resolve<IAIService>(SERVICE_TOKENS.AI);
     const databaseService = await serviceContainer.resolve<IDatabaseService>(SERVICE_TOKENS.DATABASE);
 
+    let lastProgressUpdateTime = 0;
+    const PROGRESS_THROTTLE_MS = 3000;
+    const MILESTONE_PROGRESS = new Set([
+      5, 10, 15, 25, 30, 35, 45, 50, 55, 75, 90, 93, 95, 97, 100,
+    ]);
+    const throttledProgressUpdate = async (jobId: string, progress: number, message: string) => {
+      const now = Date.now();
+      const rounded = Math.round(progress);
+      const isMilestone = MILESTONE_PROGRESS.has(rounded);
+      if (isMilestone || now - lastProgressUpdateTime >= PROGRESS_THROTTLE_MS) {
+        await jobService.updateJobProgress(jobId, progress, message);
+        lastProgressUpdateTime = now;
+      }
+    };
+
     this.trackServiceUsage(job.id, 'job');
     servicesUsed.push('job');
     await jobService.updateJobProgress(job.id, 5, 'Analyzing your story structure and creating narrative blueprint...');
@@ -716,153 +731,178 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
       await jobService.updateJobProgress(job.id, 15, `Analyzing ${pages.length} predefined pages for environmental consistency`);
     }
 
-    // PHASE 2: ENVIRONMENTAL DNA CREATION
-    console.log('🌍 PHASE 2: Environmental DNA Creation for World Consistency...');
+    // PHASE 2 + 3: Environmental DNA + Character DNA (parallel when both API calls are needed)
     let environmentalDNA: any = null;
-    
-    try {
-      this.trackServiceUsage(job.id, 'ai');
-      if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
-      
-      // Create environmental DNA for consistent world-building
-// FIX: Pass storyBeats array, not the full analysis object
-environmentalDNA = await aiService.createEnvironmentalDNA(
-  story,
-  storyAnalysis ? storyAnalysis.storyBeats : pages.map((p: any, i: number) => ({ 
-    description: `Page ${i + 1}`, 
-    setting: 'general',
-    environment: 'general setting'
-  })),
-  audience,
-  character_art_style
-);
-      
-      console.log(`✅ Environmental DNA created: ${environmentalDNA.primaryLocation?.name || 'Generic Setting'}`);
-      console.log(`☀️ Lighting Context: ${environmentalDNA.lightingContext?.timeOfDay || 'afternoon'} - ${environmentalDNA.lightingContext?.lightingMood || 'bright'}`);
-      await jobService.updateJobProgress(job.id, 25, `Building world consistency profile - ${environmentalDNA.primaryLocation?.name || 'setting'} with ${environmentalDNA.primaryLocation?.keyFeatures?.length || 0} unique features...`);
-      
-    } catch (envError: any) {
-      const errorMsg = `Environmental DNA creation failed - quality standards not met: ${envError?.message || 'Unknown error'}`;
-      console.error(`❌ ${errorMsg}`);
-      
-      // CRITICAL: Use handleCriticalError to ensure shouldRetry = false
-      await this.handleCriticalError(
-        job.id,
-        envError,
-        'PHASE 2: Environmental DNA Creation',
-        false  // Do NOT retry - quality standards not met
-      );
+    let characterDescriptionToUse = character_description;
+    let characterDNA: any = null;
+    let usedCachedCharacterData = false;
+
+    const storyBeatsForEnvDNA = storyAnalysis
+      ? storyAnalysis.storyBeats
+      : pages.map((p: any, i: number) => ({
+          description: `Page ${i + 1}`,
+          setting: 'general',
+          environment: 'general setting',
+        }));
+
+    this.trackServiceUsage(job.id, 'ai');
+    if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
+
+    if (is_reused_image && character_description) {
+      characterDescriptionToUse = character_description;
+      console.log('📝 Using stored character description for reused cartoon image');
     }
 
-    // PHASE 3: CHARACTER DNA CREATION
-console.log('🧬 PHASE 3: Character DNA Creation for Maximum Consistency...');
-let characterDescriptionToUse = character_description;
-let characterDNA: any = null;
-let usedCachedCharacterData = false;
-
-// CRITICAL FIX: Use existing description for reused images
-if (is_reused_image && character_description) {
-  characterDescriptionToUse = character_description;
-  console.log('📝 Using stored character description for reused cartoon image');
-}
-
-if (character_image) {
-  this.updateComicGenerationProgress(job.id, { targetPanels: getExpectedTotalPanelsForAudience(audience) });
-  
-  try {
-    // ===== CHARACTER DATA CACHING - Eliminate redundant API calls on retries =====
-    // Check if we already have cached character data for this image
-    const cachedCharacter = await databaseService.getCachedCharacterData(character_image);
-    
-    if (cachedCharacter?.character_description && cachedCharacter?.cartoon_image_url) {
-      // ✅ CACHE HIT: Reuse cached data (saves $0.04-0.06 and ~60 seconds per retry)
-      console.log('✅ Found cached character data, skipping regeneration (saving $0.04-0.06 and ~60 seconds)');
-      console.log('   📋 Reusing character description and cartoon from previous analysis');
-      
-      characterDNA = {
-        description: cachedCharacter.character_description,
-        cartoonImage: cachedCharacter.cartoon_image_url,
-        sourceImage: character_image,
-        artStyle: character_art_style,
-        cached: true
-      };
-      
-      characterDescriptionToUse = cachedCharacter.character_description;
-      usedCachedCharacterData = true;
-      
-      this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
-      console.log('✅ Character DNA loaded from cache');
-      
-      const totalPanels = getExpectedTotalPanelsForAudience(audience);
-      await jobService.updateJobProgress(job.id, 35, `Character data loaded from cache - ensuring consistency across all ${totalPanels} panels...`);
-      
-    } else {
-      // ❌ CACHE MISS: Create character DNA from scratch
-      console.log('📝 No cached character data found, creating new character DNA...');
-      
-      this.trackServiceUsage(job.id, 'ai');
-      if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
-      
-      // Pass the existing description for reused cartoons
-      // NEW: Include character identity for multi-character stories
-      characterDNA = await aiService.createMasterCharacterDNA(
-        character_image, 
-        character_art_style,
-        characterDescriptionToUse,  // ✅ FIX: Pass the character description as third parameter
-        mainCharacter ? {           // NEW: Pass character identity if available
-          name: mainCharacter.name,
-          age: mainCharacter.age,
-          gender: mainCharacter.gender
-        } : undefined
-      );
-      
-      // Only extract description if we don't already have one
-      if (!is_reused_image || !characterDescriptionToUse) {
-        characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
-      }
-      
-      this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
-      console.log('✅ Professional character DNA created with maximum consistency protocols');
-      
-      const totalPanels = getExpectedTotalPanelsForAudience(audience);
-      await jobService.updateJobProgress(job.id, 35, `Creating visual DNA for your character - ensuring perfect consistency across all ${totalPanels} panels...`);
-      
-      // ===== CACHE THE NEW CHARACTER DATA FOR FUTURE RETRIES =====
-      // Store in database to avoid redundant API calls if job retries
+    const runEnvironmentalDNAOnly = async (): Promise<void> => {
+      console.log('🌍 PHASE 2: Environmental DNA Creation for World Consistency...');
       try {
-        const cacheSuccess = await databaseService.cacheCharacterData({
-          sourceImageUrl: character_image,
-          characterDescription: characterDescriptionToUse || characterDNA?.description || '',
-          cartoonImageUrl: characterDNA?.cartoonImage || '',
-          artStyle: character_art_style,
-          userId: job.user_id
-        });
-        
-        if (cacheSuccess) {
-          console.log('💾 Cached character data for future retries');
-        }
-      } catch (cacheError) {
-        console.warn('⚠️ Failed to cache character data (non-critical):', cacheError);
-        // Don't fail job if caching fails - it's just an optimization
+        environmentalDNA = await aiService.createEnvironmentalDNA(
+          story,
+          storyBeatsForEnvDNA,
+          audience,
+          character_art_style
+        );
+        console.log(`✅ Environmental DNA created: ${environmentalDNA.primaryLocation?.name || 'Generic Setting'}`);
+        console.log(
+          `☀️ Lighting Context: ${environmentalDNA.lightingContext?.timeOfDay || 'afternoon'} - ${environmentalDNA.lightingContext?.lightingMood || 'bright'}`
+        );
+        await jobService.updateJobProgress(
+          job.id,
+          25,
+          `Building world consistency profile - ${environmentalDNA.primaryLocation?.name || 'setting'} with ${environmentalDNA.primaryLocation?.keyFeatures?.length || 0} unique features...`
+        );
+      } catch (envError: any) {
+        const errorMsg = `Environmental DNA creation failed - quality standards not met: ${envError?.message || 'Unknown error'}`;
+        console.error(`❌ ${errorMsg}`);
+        await this.handleCriticalError(job.id, envError, 'PHASE 2: Environmental DNA Creation', false);
       }
-    }
-        
-      } catch (dnaError) {
-        console.warn('⚠️ Character DNA creation failed, using fallback description method:', dnaError);
-        
-        if (!is_reused_image && !characterDescriptionToUse) {
-          // FIXED: Proper AsyncResult handling for describeCharacter
-this.trackServiceUsage(job.id, 'ai');
-const descriptionAsync = await aiService.describeCharacter(character_image, 'You are a professional character artist. Describe this character for maximum comic book consistency.');
-const resolvedDescription = await descriptionAsync.unwrap();
-if (resolvedDescription && typeof resolvedDescription === 'string') {
-  characterDescriptionToUse = resolvedDescription;
-} else {
-  characterDescriptionToUse = 'Character with consistent appearance';
-}
+    };
+
+    const applyCharacterDNAFallback = async (dnaError: unknown): Promise<void> => {
+      console.warn('⚠️ Character DNA creation failed, using fallback description method:', dnaError);
+      if (!is_reused_image && !characterDescriptionToUse) {
+        this.trackServiceUsage(job.id, 'ai');
+        const descriptionAsync = await aiService.describeCharacter(
+          character_image!,
+          'You are a professional character artist. Describe this character for maximum comic book consistency.'
+        );
+        const resolvedDescription = await descriptionAsync.unwrap();
+        if (resolvedDescription && typeof resolvedDescription === 'string') {
+          characterDescriptionToUse = resolvedDescription;
+        } else {
+          characterDescriptionToUse = 'Character with consistent appearance';
         }
-        
-        await jobService.updateJobProgress(job.id, 35, 'Character analysis completed (fallback method)');
+      }
+      await jobService.updateJobProgress(job.id, 35, 'Character analysis completed (fallback method)');
+    };
+
+    if (!character_image) {
+      await runEnvironmentalDNAOnly();
+    } else {
+      this.updateComicGenerationProgress(job.id, { targetPanels: getExpectedTotalPanelsForAudience(audience) });
+
+      const cachedCharacter = await databaseService.getCachedCharacterData(character_image);
+      const cacheHit = !!(cachedCharacter?.character_description && cachedCharacter?.cartoon_image_url);
+
+      if (cacheHit) {
+        console.log('🧬 PHASE 3: Character DNA from cache (sequential with Environmental DNA — no parallel Gemini call)...');
+        await runEnvironmentalDNAOnly();
+
+        console.log('✅ Found cached character data, skipping regeneration (saving $0.04-0.06 and ~60 seconds)');
+        console.log('   📋 Reusing character description and cartoon from previous analysis');
+
+        characterDNA = {
+          description: cachedCharacter.character_description,
+          cartoonImage: cachedCharacter.cartoon_image_url,
+          sourceImage: character_image,
+          artStyle: character_art_style,
+          cached: true,
+        };
+        characterDescriptionToUse = cachedCharacter.character_description;
+        usedCachedCharacterData = true;
+        this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
+        console.log('✅ Character DNA loaded from cache');
+
+        const totalPanelsCached = getExpectedTotalPanelsForAudience(audience);
+        await jobService.updateJobProgress(
+          job.id,
+          35,
+          `Character data loaded from cache - ensuring consistency across all ${totalPanelsCached} panels...`
+        );
+      } else {
+        console.log('🚀 PHASE 2+3: Running Environmental DNA + Character DNA in PARALLEL...');
+        const phase23Start = Date.now();
+
+        const [envResult, charResult] = await Promise.allSettled([
+          aiService.createEnvironmentalDNA(story, storyBeatsForEnvDNA, audience, character_art_style),
+          aiService.createMasterCharacterDNA(
+            character_image,
+            character_art_style,
+            characterDescriptionToUse,
+            mainCharacter
+              ? {
+                  name: mainCharacter.name,
+                  age: mainCharacter.age,
+                  gender: mainCharacter.gender,
+                }
+              : undefined
+          ),
+        ]);
+
+        const phase23Sec = ((Date.now() - phase23Start) / 1000).toFixed(1);
+        console.log(`⏱️ PHASE 2+3 wall time: ${phase23Sec}s (parallel)`);
+
+        if (envResult.status === 'rejected') {
+          const envError = envResult.reason;
+          const errorMsg = `Environmental DNA creation failed - quality standards not met: ${envError instanceof Error ? envError.message : String(envError)}`;
+          console.error(`❌ ${errorMsg}`);
+          await this.handleCriticalError(job.id, envResult.reason, 'PHASE 2: Environmental DNA Creation', false);
+        }
+
+        environmentalDNA = (envResult as PromiseFulfilledResult<EnvironmentalDNA>).value;
+        console.log(`✅ Environmental DNA created: ${environmentalDNA.primaryLocation?.name || 'Generic Setting'}`);
+        console.log(
+          `☀️ Lighting Context: ${environmentalDNA.lightingContext?.timeOfDay || 'afternoon'} - ${environmentalDNA.lightingContext?.lightingMood || 'bright'}`
+        );
+
+        const totalPanels = getExpectedTotalPanelsForAudience(audience);
+
+        if (charResult.status === 'fulfilled') {
+          characterDNA = charResult.value;
+          if (!is_reused_image || !characterDescriptionToUse) {
+            characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
+          }
+          this.updateComicGenerationProgress(job.id, { characterDNACreated: true });
+          console.log('✅ Professional character DNA created with maximum consistency protocols');
+
+          try {
+            const cacheSuccess = await databaseService.cacheCharacterData({
+              sourceImageUrl: character_image,
+              characterDescription: characterDescriptionToUse || characterDNA?.description || '',
+              cartoonImageUrl: characterDNA?.cartoonImage || '',
+              artStyle: character_art_style,
+              userId: job.user_id,
+            });
+            if (cacheSuccess) {
+              console.log('💾 Cached character data for future retries');
+            }
+          } catch (cacheError) {
+            console.warn('⚠️ Failed to cache character data (non-critical):', cacheError);
+          }
+
+          await jobService.updateJobProgress(
+            job.id,
+            35,
+            `Environmental DNA + Character DNA ready (${phase23Sec}s parallel) — ${environmentalDNA.primaryLocation?.name || 'setting'}, ${totalPanels} panels`
+          );
+        } else {
+          await jobService.updateJobProgress(
+            job.id,
+            25,
+            `World profile ready — ${environmentalDNA.primaryLocation?.name || 'setting'} (${phase23Sec}s parallel env leg complete)`
+          );
+          await applyCharacterDNAFallback(charResult.reason);
+        }
       }
     }
 
@@ -878,91 +918,89 @@ if (resolvedDescription && typeof resolvedDescription === 'string') {
         
         // Get Gemini integration for secondary character generation
         const geminiIntegration = (aiService as any).geminiIntegration;
-        
-        // Generate cartoon reference for each secondary character
-        for (let i = 0; i < secondaryCharacters.length; i++) {
-          const secondaryChar = secondaryCharacters[i];
-          
-          // Skip if character already has a reference image
-          if (secondaryChar.cartoonImageUrl) {
-            console.log(`   ✅ ${secondaryChar.name} already has reference image, skipping...`);
-            continue;
-          }
-          
-          console.log(`   🎨 Generating reference for ${secondaryChar.name} (${i + 1}/${secondaryCharacters.length})...`);
-          
-          try {
-            // FIX A3: Handle story-introduced characters (animals, creatures) differently
-            const isStoryIntroduced = (secondaryChar as any).isStoryIntroduced === true;
-            
-            let secondaryCartoonUrl: string;
-            
-            if (isStoryIntroduced) {
-              // Story-introduced character (butterfly, owl, etc.) - use detailed visual description
-              console.log(`   🦋 Story-introduced character: ${secondaryChar.name} (${(secondaryChar as any).characterType || 'creature'})`);
-              secondaryCartoonUrl = await geminiIntegration.generateSecondaryCharacterCartoon(
-                {
-                  name: secondaryChar.name,
-                  age: 'child',  // Default for creatures
-                  gender: 'non-binary',
-                  // Use the rich visual description from Claude's extraction
-                  characterDescription: (secondaryChar as any).characterDescription,
-                  characterType: (secondaryChar as any).characterType,
-                  species: (secondaryChar as any).species,
-                  colorScheme: (secondaryChar as any).colorScheme,
-                  distinctiveFeatures: (secondaryChar as any).distinctiveFeatures
-                },
-                character_art_style,
-                audience
+
+        const secondaryRefStart = Date.now();
+        const secondaryTasks = secondaryCharacters.map((secondaryChar, i) =>
+          (async () => {
+            if (secondaryChar.cartoonImageUrl) {
+              console.log(`   ✅ ${secondaryChar.name} already has reference image, skipping...`);
+              return;
+            }
+
+            console.log(`   🎨 Generating reference for ${secondaryChar.name} (${i + 1}/${secondaryCharacters.length})...`);
+
+            try {
+              const isStoryIntroduced = (secondaryChar as any).isStoryIntroduced === true;
+              let secondaryCartoonUrl: string;
+
+              if (isStoryIntroduced) {
+                console.log(
+                  `   🦋 Story-introduced character: ${secondaryChar.name} (${(secondaryChar as any).characterType || 'creature'})`
+                );
+                secondaryCartoonUrl = await geminiIntegration.generateSecondaryCharacterCartoon(
+                  {
+                    name: secondaryChar.name,
+                    age: 'child',
+                    gender: 'non-binary',
+                    characterDescription: (secondaryChar as any).characterDescription,
+                    characterType: (secondaryChar as any).characterType,
+                    species: (secondaryChar as any).species,
+                    colorScheme: (secondaryChar as any).colorScheme,
+                    distinctiveFeatures: (secondaryChar as any).distinctiveFeatures,
+                  },
+                  character_art_style,
+                  audience
+                );
+              } else {
+                secondaryCartoonUrl = await geminiIntegration.generateSecondaryCharacterCartoon(
+                  {
+                    name: secondaryChar.name,
+                    age: secondaryChar.age,
+                    gender: secondaryChar.gender,
+                    relationship: secondaryChar.relationship,
+                    hairColor: secondaryChar.hairColor,
+                    eyeColor: secondaryChar.eyeColor,
+                  },
+                  character_art_style,
+                  audience
+                );
+              }
+
+              if (secondaryCartoonUrl && secondaryCartoonUrl.startsWith('http')) {
+                secondaryChar.cartoonImageUrl = secondaryCartoonUrl;
+                console.log(`   ✅ ${secondaryChar.name} reference image generated: ${secondaryCartoonUrl.substring(0, 50)}...`);
+              } else {
+                console.warn(`   ⚠️ ${secondaryChar.name}: Invalid reference image URL returned, will use text description`);
+              }
+            } catch (charError: any) {
+              const errorMessage = charError?.message || String(charError);
+              const isRateLimit = errorMessage.includes('rate') || errorMessage.includes('429');
+              const isContentPolicy = errorMessage.includes('policy') || errorMessage.includes('blocked');
+              const isTimeout = errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT');
+
+              if (isRateLimit) {
+                console.warn(`   ⚠️ ${secondaryChar.name}: Rate limited - waiting 5s (parallel task)...`);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+              } else if (isContentPolicy) {
+                console.warn(`   ⚠️ ${secondaryChar.name}: Content policy issue - character description may need adjustment`);
+                console.warn(`      Description: ${(secondaryChar as any).characterDescription?.substring(0, 100) || 'N/A'}...`);
+              } else if (isTimeout) {
+                console.warn(`   ⚠️ ${secondaryChar.name}: Generation timed out - will use text description`);
+              } else {
+                console.warn(`   ⚠️ ${secondaryChar.name}: Unexpected error - ${errorMessage.substring(0, 100)}`);
+              }
+
+              console.log(
+                `   📊 SECONDARY_CHAR_FAILURE: name=${secondaryChar.name}, type=${(secondaryChar as any).characterType || 'human'}, error=${isRateLimit ? 'rate_limit' : isContentPolicy ? 'content_policy' : isTimeout ? 'timeout' : 'unknown'}`
               );
-            } else {
-              // User-defined secondary character (human) - use standard generation
-              secondaryCartoonUrl = await geminiIntegration.generateSecondaryCharacterCartoon(
-                {
-                  name: secondaryChar.name,
-                  age: secondaryChar.age,
-                  gender: secondaryChar.gender,
-                  relationship: secondaryChar.relationship,
-                  hairColor: secondaryChar.hairColor,
-                  eyeColor: secondaryChar.eyeColor
-                },
-                character_art_style,
-                audience
-              );
             }
-            
-            // Update the character with their reference image URL
-            if (secondaryCartoonUrl && secondaryCartoonUrl.startsWith('http')) {
-              secondaryChar.cartoonImageUrl = secondaryCartoonUrl;
-              console.log(`   ✅ ${secondaryChar.name} reference image generated: ${secondaryCartoonUrl.substring(0, 50)}...`);
-            } else {
-              console.warn(`   ⚠️ ${secondaryChar.name}: Invalid reference image URL returned, will use text description`);
-            }
-            
-          } catch (charError: any) {
-            // FIX 3: Enhanced error handling with specific error categorization
-            const errorMessage = charError?.message || String(charError);
-            const isRateLimit = errorMessage.includes('rate') || errorMessage.includes('429');
-            const isContentPolicy = errorMessage.includes('policy') || errorMessage.includes('blocked');
-            const isTimeout = errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT');
-            
-            if (isRateLimit) {
-              console.warn(`   ⚠️ ${secondaryChar.name}: Rate limited - waiting 5s before continuing...`);
-              await new Promise(resolve => setTimeout(resolve, 5000));
-            } else if (isContentPolicy) {
-              console.warn(`   ⚠️ ${secondaryChar.name}: Content policy issue - character description may need adjustment`);
-              console.warn(`      Description: ${(secondaryChar as any).characterDescription?.substring(0, 100) || 'N/A'}...`);
-            } else if (isTimeout) {
-              console.warn(`   ⚠️ ${secondaryChar.name}: Generation timed out - will use text description`);
-            } else {
-              console.warn(`   ⚠️ ${secondaryChar.name}: Unexpected error - ${errorMessage.substring(0, 100)}`);
-            }
-            
-            // Log for monitoring - helps identify patterns in failures
-            console.log(`   📊 SECONDARY_CHAR_FAILURE: name=${secondaryChar.name}, type=${(secondaryChar as any).characterType || 'human'}, error=${isRateLimit ? 'rate_limit' : isContentPolicy ? 'content_policy' : isTimeout ? 'timeout' : 'unknown'}`);
-            // Continue without reference image - will fall back to text description
-          }
-        }
+          })()
+        );
+
+        await Promise.allSettled(secondaryTasks);
+        console.log(
+          `⏱️ PHASE 3.25 secondary references wall time: ${((Date.now() - secondaryRefStart) / 1000).toFixed(1)}s (parallel)`
+        );
         
         // Count how many got reference images
         const charsWithImages = secondaryCharacters.filter(c => c.cartoonImageUrl).length;
@@ -1095,6 +1133,33 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       throw new Error('No pages available for professional comic generation with environmental consistency and learned patterns');
     }
 
+    // Book cover: start now, await after PHASE 6 (independent of validation; failures are non-critical)
+    const geminiForCover = (aiService as any).geminiIntegration;
+    let coverImageUrl: string | null = null;
+    let coverPromise: Promise<string | null> = Promise.resolve(null);
+    if (geminiForCover && typeof geminiForCover.generateBookCover === 'function') {
+      console.log('📕 Starting book cover generation in background (overlaps PHASE 6 validation)...');
+      this.trackServiceUsage(job.id, 'ai');
+      if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
+      coverPromise = geminiForCover
+        .generateBookCover({
+          title: title,
+          characterDNA: characterDNA,
+          cartoonImageUrl: characterDNA?.cartoonImage || character_image,
+          genre: storyAnalysis?.storyArchetype || 'adventure',
+          audience: audience,
+          artStyle: character_art_style,
+          thematicElements: storyAnalysis?.thematicElements || [],
+        })
+        .catch((err: unknown) => {
+          console.warn(
+            '⚠️ Book cover generation failed (non-critical):',
+            err instanceof Error ? err.message : err
+          );
+          return null;
+        });
+    }
+
     // PHASE 6: VALIDATE AND PROCESS COMIC PAGES WITH CHARACTER & ENVIRONMENTAL VALIDATION
     const updatedPages = [];
     const totalScenes = pages.reduce((total, page) => total + (page.scenes?.length || 0), 0);
@@ -1188,7 +1253,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
           .filter((url: any) => url);
 
         if (panelUrls.length > 0) {
-          await jobService.updateJobProgress(
+          await throttledProgressUpdate(
             job.id,
             Math.round(35 + ((pageIndex) / pages.length) * 55),
             `🔍 Unified validation: Page ${pageIndex + 1} (${panelUrls.length} panels, single API call)`
@@ -1299,13 +1364,13 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
             // Update progress
             if (attempt === 1) {
-              await jobService.updateJobProgress(
+              await throttledProgressUpdate(
                 job.id,
                 Math.round(35 + ((pageIndex) / pages.length) * 55),
                 `Validating panel ${globalPanelNumber} quality...`
               );
             } else {
-              await jobService.updateJobProgress(
+              await throttledProgressUpdate(
                 job.id,
                 Math.round(35 + ((pageIndex) / pages.length) * 55),
                 `Quality check failed - regenerating panel ${globalPanelNumber} with enhanced prompts (attempt ${attempt}/3)`
@@ -1347,7 +1412,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
                 characterValidationScores.push(validationScore.overallScore);
                 validationPassed = true;
 
-                await jobService.updateJobProgress(
+                await throttledProgressUpdate(
                   job.id,
                   Math.round(35 + ((pageIndex) / pages.length) * 55),
                   `✅ Panel ${globalPanelNumber} quality verified (score: ${validationScore.overallScore}%)`
@@ -1472,7 +1537,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
         for (let pageAttempt = 1; pageAttempt <= 2; pageAttempt++) {
           totalEnvironmentalValidationAttempts++;
 
-          await jobService.updateJobProgress(
+          await throttledProgressUpdate(
             job.id,
             Math.round(35 + ((pageIndex + 0.5) / pages.length) * 55),
             `Validating page ${pageIndex + 1} environmental consistency (${updatedScenes.length} panels, attempt ${pageAttempt}/2)`
@@ -1512,7 +1577,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
               environmentalValidationScores.push(envReport.overallCoherence);
               pageValidationPassed = true;
 
-              await jobService.updateJobProgress(
+              await throttledProgressUpdate(
                 job.id,
                 Math.round(35 + ((pageIndex + 0.5) / pages.length) * 55),
                 `✅ Page ${pageIndex + 1} validated (coherence: ${envReport.overallCoherence.toFixed(1)}%)`
@@ -1525,7 +1590,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
             if (pageAttempt < 2) {
               console.warn(`Page ${pageIndex + 1} failed environmental validation (attempt ${pageAttempt}/2): coherence=${envReport.overallCoherence.toFixed(1)}%`);
 
-              await jobService.updateJobProgress(
+              await throttledProgressUpdate(
                 job.id,
                 Math.round(35 + ((pageIndex + 0.5) / pages.length) * 55),
                 `Environmental consistency below threshold (${envReport.overallCoherence.toFixed(1)}%) - regenerating entire page ${pageIndex + 1} (attempt ${pageAttempt + 1}/2)`
@@ -1610,7 +1675,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
       // Update progress for each page completion
       const progressPercent = 35 + ((pageIndex + 1) / pages.length) * 55;
-      await jobService.updateJobProgress(
+      await throttledProgressUpdate(
         job.id,
         Math.round(progressPercent),
         `✅ Page ${pageIndex + 1}/${pages.length} complete with quality validation`
@@ -1669,38 +1734,21 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
     await jobService.updateJobProgress(job.id, 93, `✅ All quality checks passed - Character: ${characterConsistencyScore}%, Environmental: ${environmentalConsistencyScore}%, Overall: ${overallScore}%`);
 
-    // PHASE 6.5: BOOK COVER GENERATION
-    console.log('📕 PHASE 6.5: Generating professional book cover...');
-    let coverImageUrl: string | null = null;
-    
+    // PHASE 6.5: Await book cover (started in background before PHASE 6)
+    console.log('📕 PHASE 6.5: Finalizing book cover (awaiting background generation)...');
     try {
-      await jobService.updateJobProgress(job.id, 95, 'Generating book cover...');
-      
-      this.trackServiceUsage(job.id, 'ai');
-      if (!servicesUsed.includes('ai')) servicesUsed.push('ai');
-      
-      // Get Gemini integration for cover generation
-      const geminiIntegration = (aiService as any).geminiIntegration;
-      
-      if (geminiIntegration && typeof geminiIntegration.generateBookCover === 'function') {
-        coverImageUrl = await geminiIntegration.generateBookCover({
-          title: title,
-          characterDNA: characterDNA,
-          cartoonImageUrl: characterDNA?.cartoonImage || character_image,
-          genre: storyAnalysis?.storyArchetype || 'adventure',
-          audience: audience,
-          artStyle: character_art_style,
-          thematicElements: storyAnalysis?.thematicElements || []
-        });
-        
-        console.log(`✅ Book cover generated successfully: ${coverImageUrl?.substring(0, 60)}...`);
+      await jobService.updateJobProgress(job.id, 95, 'Finishing book cover...');
+      coverImageUrl = await coverPromise;
+      if (coverImageUrl) {
+        console.log(`✅ Book cover generated successfully: ${coverImageUrl.substring(0, 60)}...`);
         await jobService.updateJobProgress(job.id, 97, '✅ Book cover generated successfully');
       } else {
-        console.warn('⚠️ Gemini integration not available for cover generation, skipping...');
+        console.warn('⚠️ Book cover not available (skipped or failed non-critically)');
+        await jobService.updateJobProgress(job.id, 97, 'Book cover generation skipped');
       }
-    } catch (coverError: any) {
-      // Cover generation failure is non-critical - continue with storybook creation
-      console.warn('⚠️ Book cover generation failed (non-critical):', coverError?.message || coverError);
+    } catch (coverAwaitError: any) {
+      console.warn('⚠️ Book cover await error (non-critical):', coverAwaitError?.message || coverAwaitError);
+      coverImageUrl = null;
       await jobService.updateJobProgress(job.id, 97, 'Book cover generation skipped');
     }
 

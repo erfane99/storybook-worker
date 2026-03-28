@@ -1289,7 +1289,7 @@ REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art
         // Get feedback image enhancement from context if available
         const feedbackImageEnhancement = options.enhancedContext?.learnedPatterns?.feedbackEnhancements?.imageEnhancement || '';
 
-        const imageUrl = await this.geminiIntegration.generatePanelWithCharacter(
+        const { uploadPromise } = await this.geminiIntegration.generatePanelWithCharacter(
           cartoonImageUrl,
           worldClassPrompt,  // Use the world-class prompt as scene description
           options.emotion || 'neutral',
@@ -1310,6 +1310,7 @@ REQUIREMENTS: Professional ${options.characterArtStyle || 'storybook'} comic art
             }
           }
         );
+        const imageUrl = await uploadPromise;
         
         const duration = Date.now() - startTime;
         this.enterpriseMonitoring.recordOperationMetrics('generateImages', duration, true);

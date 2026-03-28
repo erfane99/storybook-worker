@@ -1469,7 +1469,11 @@ COMIC BOOK PROFESSIONAL STANDARDS:
     const { plannedTypes, adjustments } = this.planPanelDiversity(pageBeats, audience);
 
     const panels: ComicPanel[] = [];
-    let adaptiveDelay = 2000;  // Start with 2000ms (2s) between panels to prevent API overload
+    /** Deferred Cloudinary URLs — awaited after all panels on this page are generated */
+    const panelCloudinaryUploadTasks: Promise<{ panelIndex: number; url: string }>[] = [];
+    /** In-page sequential context: avoid re-downloading prior panel from Cloudinary */
+    const panelBase64ByPanelNumber = new Map<number, string>();
+    let adaptiveDelay = 500;  // Start conservative; backoff/retry handles rate limits
     let consecutiveSuccesses = 0;
 
     // Generate panels ONE AT A TIME for narrative continuity
@@ -1512,13 +1516,18 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         previousBeat?.characterAction || previousPanel.characterAction || ''
       ) : undefined;
       
-      const previousPanelContext = previousPanel?.generatedImage ? {
-        imageUrl: previousPanel.generatedImage,
-        description: previousBeat?.beat || previousPanel.description || 'previous scene',
-        action: previousBeat?.characterAction || previousPanel.characterAction || 'previous action',
-        // NEW: Track pose for diversity enforcement
-        pose: previousPose
-      } : undefined;
+      const prevPanelNum = panelNumber - 1;
+      const cachedPrevBase64 = panelBase64ByPanelNumber.get(prevPanelNum);
+      const previousPanelContext =
+        previousPanel != null
+          ? {
+              imageUrl: previousPanel.generatedImage || '',
+              description: previousBeat?.beat || previousPanel.description || 'previous scene',
+              action: previousBeat?.characterAction || previousPanel.characterAction || 'previous action',
+              pose: previousPose,
+              ...(cachedPrevBase64 ? { cachedBase64: cachedPrevBase64 } : {}),
+            }
+          : undefined;
 
       // ✅ NARRATION-FIRST ARCHITECTURE: Generate narration FIRST, then use it for image generation
       // This ensures images match exactly what narration describes (no more "crawling" in text but "standing" in image)
@@ -1585,7 +1594,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
       
       // GEMINI MIGRATION: Use image-based generation if character DNA has cartoon image
       let imageUrl: string;
-      
+
       if (characterDNA?.cartoonImage) {
         // IMAGE-BASED GENERATION: Gemini sees actual cartoon for 95% consistency
         // SEQUENTIAL: Now also receives previous panel for narrative continuity
@@ -1593,14 +1602,14 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         if (previousPanelContext) {
           console.log(`   🔗 Including previous panel context for continuity: "${previousPanelContext.action}"`);
         }
-        
+
         // NEW: Get secondary characters for this beat if multi-character mode
         const secondaryCharsInBeat = characters ? this.getSecondaryCharactersForBeat(beat, characters) : [];
         if (secondaryCharsInBeat.length > 0) {
           console.log(`   👥 Secondary characters in scene: ${secondaryCharsInBeat.map(c => c.name).join(', ')}`);
         }
-        
-        imageUrl = await this.geminiIntegration.generatePanelWithCharacter(
+
+        const { base64: panelRawBase64, uploadPromise } = await this.geminiIntegration.generatePanelWithCharacter(
           characterDNA.cartoonImage,
           visualDescription,  // ✅ NARRATION-FIRST: Use narration-based description instead of beat.beat
           beat.emotion,
@@ -1655,6 +1664,13 @@ COMIC BOOK PROFESSIONAL STANDARDS:
             symbolicElements: beat.symbolicElements
           }
         );
+
+        panelBase64ByPanelNumber.set(panelNumber, panelRawBase64);
+        imageUrl = ''; // Filled after Cloudinary uploads complete (same page batch)
+        const pendingPanelIndex = panels.length;
+        panelCloudinaryUploadTasks.push(
+          uploadPromise.then(url => ({ panelIndex: pendingPanelIndex, url }))
+        );
       } else {
         // Fallback: Text-only generation (no character)
         console.log(`   📝 Using text-based generation (no character image)`);
@@ -1702,10 +1718,9 @@ COMIC BOOK PROFESSIONAL STANDARDS:
       // ✅ ADAPTIVE DELAY: Adjust based on API performance
       consecutiveSuccesses++;
       
-      // If panels completing quickly (under 30 seconds), reduce delay gradually
-      // Keep minimum at 1000ms (1s) to prevent API overload and 503 errors
+      // If panels complete quickly, reduce delay further (floor 200ms; retries absorb 429/503)
       if (consecutiveSuccesses >= 3 && panelDuration < 30000) {
-        adaptiveDelay = Math.max(1000, adaptiveDelay - 200);  // Reduce delay, minimum 1000ms
+        adaptiveDelay = Math.max(200, adaptiveDelay - 100);
       }
 
       // Apply delay between panels (not after last panel)
@@ -1713,6 +1728,23 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         console.log(`⏳ Waiting ${adaptiveDelay}ms before next panel (maintaining API rate)...`);
         await new Promise(resolve => setTimeout(resolve, adaptiveDelay));
       }
+    }
+
+    if (panelCloudinaryUploadTasks.length > 0) {
+      const uploadWaitStart = Date.now();
+      console.log(
+        `☁️ Awaiting ${panelCloudinaryUploadTasks.length} Cloudinary upload(s) for page ${pageNumber} before hand-off...`
+      );
+      const uploadResults = await Promise.all(panelCloudinaryUploadTasks);
+      for (const { panelIndex, url } of uploadResults) {
+        if (!url || !url.includes('cloudinary.com')) {
+          throw new Error(`Invalid Cloudinary URL for panel: ${url?.substring(0, 120) || 'empty'}`);
+        }
+        panels[panelIndex].generatedImage = url;
+      }
+      console.log(
+        `✅ Page ${pageNumber} Cloudinary batch finished in ${((Date.now() - uploadWaitStart) / 1000).toFixed(1)}s`
+      );
     }
 
     console.log(`✅ Generated ${panels.length} panels for page ${pageNumber} with sequential continuity`);

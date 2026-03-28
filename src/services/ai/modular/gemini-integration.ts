@@ -125,6 +125,14 @@ export interface PreviousPanelContext {
   action: string;
   // NEW: Track pose category to prevent repetitive poses in adjacent panels
   pose?: string;  // 'standing' | 'sitting' | 'walking' | 'running' | 'crouching' | 'lying' | 'jumping' | 'reaching' | 'climbing' | 'bending' | 'other'
+  /** Raw Gemini panel bytes — avoids re-downloading prior panel from Cloudinary for sequential context */
+  cachedBase64?: string;
+}
+
+/** Result of panel image generation: local base64 + deferred Cloudinary URL */
+export interface PanelImageWithUpload {
+  base64: string;
+  uploadPromise: Promise<string>;
 }
 
 export interface PanelOptions {
@@ -685,9 +693,10 @@ DO NOT include:
     sceneDescription: string,
     emotion: string,
     options: PanelOptions
-  ): Promise<string> {
+  ): Promise<PanelImageWithUpload> {
     const hasEnvDNA = !!options.environmentalContext?.environmentalDNA;
-    const hasPreviousPanel = !!options.previousPanelContext;
+    const ppc = options.previousPanelContext;
+    const hasPreviousPanel = !!ppc && (!!ppc.cachedBase64 || !!ppc.imageUrl);
     
     this.logger.log('🎬 Generating panel with character reference...', { 
       cartoonImageUrl: cartoonImageUrl.substring(0, 50) + '...', 
@@ -795,17 +804,25 @@ DO NOT include:
         this.logger.log(`✅ Added ${successfullyAdded} secondary character reference images for consistency (${imageIndex - 2 - successfullyAdded} failed, using text descriptions)`);
       }
       
-      // SEQUENTIAL CONTEXT: If previous panel exists, add it as reference image
-      if (hasPreviousPanel && options.previousPanelContext?.imageUrl) {
-        this.logger.log('📷 Fetching previous panel for continuity reference...');
-        const base64PreviousPanel = await this.fetchImageAsBase64(options.previousPanelContext.imageUrl, true);
-        parts.push({
-          inline_data: {
-            mime_type: 'image/jpeg',
-            data: base64PreviousPanel
-          }
-        });
-        this.logger.log('✅ Previous panel added to generation context');
+      // SEQUENTIAL CONTEXT: prior panel — prefer in-memory base64 (no Cloudinary round-trip)
+      if (ppc) {
+        let base64PreviousPanel = '';
+        if (ppc.cachedBase64) {
+          base64PreviousPanel = ppc.cachedBase64;
+          this.logger.log('⚡ Using cached base64 for previous panel (skipped Cloudinary download)');
+        } else if (ppc.imageUrl) {
+          this.logger.log('📷 Fetching previous panel for continuity reference from URL...');
+          base64PreviousPanel = await this.fetchImageAsBase64(ppc.imageUrl, true);
+        }
+        if (base64PreviousPanel) {
+          parts.push({
+            inline_data: {
+              mime_type: 'image/jpeg',
+              data: base64PreviousPanel,
+            },
+          });
+          this.logger.log('✅ Previous panel added to generation context');
+        }
       }
       
       // Call Gemini with cartoon image + (optionally) previous panel + scene description
@@ -824,16 +841,16 @@ DO NOT include:
         }
       }, 'generatePanelWithCharacter');
       
-      // Extract generated panel URL (now uploads to Cloudinary)
-      const panelUrl = await this.extractImageUrlFromResponse(response);
-      
-      this.logger.log('✅ Panel generated successfully', { 
-        panelUrl: panelUrl.substring(0, 60) + '...',
+      const panelBase64 = this.extractRawImageBase64FromResponse(response);
+      const uploadPromise = this.uploadToCloudinary(panelBase64, 'storybook-panels');
+
+      this.logger.log('✅ Panel Gemini image decoded; Cloudinary upload started (non-blocking)', {
+        base64Chars: panelBase64.length,
         environmentEnforced: hasEnvDNA,
-        previousPanelUsed: hasPreviousPanel
+        previousPanelUsed: hasPreviousPanel,
       });
-      
-      return panelUrl;
+
+      return { base64: panelBase64, uploadPromise };
       
     } catch (error) {
       this.logger.error('❌ Panel generation failed:', error);
@@ -2036,110 +2053,122 @@ private addCloudinaryTransformations(url: string): string {
   }
 
   /**
- * Extract image URL from Gemini response
- * CRITICAL: When using responseModalities: ['TEXT', 'IMAGE'], Gemini returns BOTH text and image
- * in the parts array. We must search through ALL parts to find the image.
- */
-private async extractImageUrlFromResponse(response: GeminiResponse): Promise<string> {
-  if (response.error) {
-    throw new Error(`Gemini API error: ${response.error.message}`);
-  }
-  
-  // Get all parts from response
-  const parts = response.candidates?.[0]?.content?.parts;
-  
-  if (!parts || parts.length === 0) {
-    throw new AIValidationError('No parts in Gemini response', {
-      service: 'GeminiIntegration',
-      operation: 'extractImageUrlFromResponse',
-      details: { response }
-    });
-  }
-  
-  // DEBUG: Log what we received to understand response structure
-  this.logger.log('🔍 Examining Gemini response parts:', {
-    partsCount: parts.length,
-    partsTypes: parts.map(p => {
-      if (p.text) return 'text';
-      if (p.inline_data) return 'inline_data';
-      return 'unknown';
-    })
-  });
-  
- // CRITICAL FIX: Search for image data using BOTH naming conventions
-// Gemini API may return inline_data (snake_case) OR inlineData (camelCase)
-let imagePart: any = null;
-let base64Data: string | null = null;
-let mimeType: string | null = null;
-
-for (const part of parts) {
-  const partAny = part as any;
-  
-  // Try snake_case (inline_data) - matches our TypeScript interface
-  if (partAny.inline_data?.data) {
-    imagePart = part;
-    base64Data = partAny.inline_data.data;
-    mimeType = partAny.inline_data.mime_type;
-    this.logger.log('✅ Found image using snake_case (inline_data)');
-    break;
-  }
-  
-  // Try camelCase (inlineData) - some Gemini SDKs use this
-  if (partAny.inlineData?.data) {
-    imagePart = part;
-    base64Data = partAny.inlineData.data;
-    mimeType = partAny.inlineData.mimeType;
-    this.logger.log('✅ Found image using camelCase (inlineData)');
-    break;
-  }
-}
-
-if (!imagePart || !base64Data) {
-  // Enhanced error logging to diagnose the issue
-  this.logger.error('❌ No image found in any response part (checked both naming conventions):', {
-    totalParts: parts.length,
-    responseId: (response as any).responseId,
-    modelVersion: (response as any).modelVersion,
-    finishReason: response.candidates?.[0]?.finishReason,
-    partsDetail: parts.map((p, idx) => {
-      const partAny = p as any;
-      return {
-        index: idx,
-        allKeys: Object.keys(partAny),
-        hasText: !!partAny.text,
-        textLength: partAny.text ? partAny.text.length : 0,
-        hasInlineData_snake: !!partAny.inline_data,
-        hasInlineData_camel: !!partAny.inlineData,
-        inlineDataKeys_snake: partAny.inline_data ? Object.keys(partAny.inline_data) : [],
-        inlineDataKeys_camel: partAny.inlineData ? Object.keys(partAny.inlineData) : [],
-        hasDataField_snake: !!partAny.inline_data?.data,
-        hasDataField_camel: !!partAny.inlineData?.data
-      };
-    })
-  });
-  
-  throw new AIContentPolicyError('No image in Gemini response - searched both inline_data and inlineData', {
-    service: 'GeminiIntegration',
-    operation: 'extractImageUrlFromResponse',
-    details: { 
-      response,
-      partsCount: parts.length,
-      searchedFormats: ['inline_data.data', 'inlineData.data']
+   * Extract raw base64 image payload from Gemini response (no Cloudinary).
+   */
+  private extractRawImageBase64FromResponse(response: GeminiResponse): string {
+    if (response.error) {
+      throw new Error(`Gemini API error: ${response.error.message}`);
     }
-  });
-}
 
-this.logger.log('✅ Found image in response part', {
-  base64Length: base64Data.length,
-  mimeType: mimeType || 'unknown'
-});
-  
-  // Upload to Cloudinary and return permanent URL
-  this.logger.log('📤 Converting Gemini base64 to Cloudinary URL...');
-  const cloudinaryUrl = await this.uploadToCloudinary(base64Data, 'storybook-panels');
-  
-  return cloudinaryUrl;
-}
+    const parts = response.candidates?.[0]?.content?.parts;
+
+    if (!parts || parts.length === 0) {
+      throw new AIValidationError('No parts in Gemini response', {
+        service: 'GeminiIntegration',
+        operation: 'extractRawImageBase64FromResponse',
+        details: { response },
+      });
+    }
+
+    this.logger.log('🔍 Examining Gemini response parts:', {
+      partsCount: parts.length,
+      partsTypes: parts.map(p => {
+        if (p.text) return 'text';
+        if ((p as any).inline_data) return 'inline_data';
+        return 'unknown';
+      }),
+    });
+
+    let imagePart: any = null;
+    let base64Data: string | null = null;
+    let mimeType: string | null = null;
+
+    for (const part of parts) {
+      const partAny = part as any;
+
+      if (partAny.inline_data?.data) {
+        imagePart = part;
+        base64Data = partAny.inline_data.data;
+        mimeType = partAny.inline_data.mime_type;
+        this.logger.log('✅ Found image using snake_case (inline_data)');
+        break;
+      }
+
+      if (partAny.inlineData?.data) {
+        imagePart = part;
+        base64Data = partAny.inlineData.data;
+        mimeType = partAny.inlineData.mimeType;
+        this.logger.log('✅ Found image using camelCase (inlineData)');
+        break;
+      }
+    }
+
+    if (!imagePart || !base64Data) {
+      this.logger.error('❌ No image found in any response part (checked both naming conventions):', {
+        totalParts: parts.length,
+        responseId: (response as any).responseId,
+        modelVersion: (response as any).modelVersion,
+        finishReason: response.candidates?.[0]?.finishReason,
+        partsDetail: parts.map((p, idx) => {
+          const partAny = p as any;
+          return {
+            index: idx,
+            allKeys: Object.keys(partAny),
+            hasText: !!partAny.text,
+            textLength: partAny.text ? partAny.text.length : 0,
+            hasInlineData_snake: !!partAny.inline_data,
+            hasInlineData_camel: !!partAny.inlineData,
+            inlineDataKeys_snake: partAny.inline_data ? Object.keys(partAny.inline_data) : [],
+            inlineDataKeys_camel: partAny.inlineData ? Object.keys(partAny.inlineData) : [],
+            hasDataField_snake: !!partAny.inline_data?.data,
+            hasDataField_camel: !!partAny.inlineData?.data,
+          };
+        }),
+      });
+
+      throw new AIContentPolicyError(
+        'No image in Gemini response - searched both inline_data and inlineData',
+        {
+          service: 'GeminiIntegration',
+          operation: 'extractRawImageBase64FromResponse',
+          details: {
+            response,
+            partsCount: parts.length,
+            searchedFormats: ['inline_data.data', 'inlineData.data'],
+          },
+        }
+      );
+    }
+
+    this.logger.log('✅ Found image in response part', {
+      base64Length: base64Data.length,
+      mimeType: mimeType || 'unknown',
+    });
+
+    return base64Data;
+  }
+
+  /**
+   * Extract image URL from Gemini response (uploads to Cloudinary — blocking).
+   */
+  private async extractImageUrlFromResponse(response: GeminiResponse): Promise<string> {
+    const base64Data = this.extractRawImageBase64FromResponse(response);
+    this.logger.log('📤 Converting Gemini base64 to Cloudinary URL...');
+    return await this.uploadToCloudinary(base64Data, 'storybook-panels');
+  }
+
+  /**
+   * Returns both Cloudinary URL and raw base64 (blocking upload). Prefer
+   * {@link generatePanelWithCharacter} + deferred upload for sequential panels.
+   */
+  public async extractImageWithBase64FromResponse(
+    response: GeminiResponse
+  ): Promise<{ url: string; base64: string }> {
+    const base64 = this.extractRawImageBase64FromResponse(response);
+    this.logger.log('📤 Converting Gemini base64 to Cloudinary URL...');
+    const url = await this.uploadToCloudinary(base64, 'storybook-panels');
+    return { url, base64 };
+  }
 
   /**
    * Parse character analysis from Gemini text response
