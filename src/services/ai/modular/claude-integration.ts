@@ -65,7 +65,7 @@ export class ClaudeIntegration {
     options: { max_tokens: number; temperature: number }
   ): Promise<string> {
     const message = await this.client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: options.max_tokens,
       temperature: options.temperature,
       messages: [{ role: 'user', content: prompt }]
@@ -113,7 +113,7 @@ Return JSON:
       console.log('🔵 Calling Claude API for environmental analysis...');
       
       const message = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         system: [
           {
@@ -253,7 +253,7 @@ Return JSON:
       console.log('🔵 Calling Claude API for story analysis...');
       
       const message = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 8000,
         temperature: 0.3,
         messages: [{
@@ -292,7 +292,7 @@ Return JSON:
   async generateNarrationText(prompt: string): Promise<string> {
     try {
       const message = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 200,
         temperature: 0.7,
         messages: [{
@@ -649,7 +649,7 @@ Generate the complete comic script now. Return ONLY valid JSON.`;
 
     try {
       const message = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 8000,
         temperature: 0.5,
         system: [
@@ -721,7 +721,7 @@ Analyze and produce the complete adapted comic script now. Return ONLY valid JSO
 
     try {
       const message = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 8000,
         temperature: 0.5,
         system: [

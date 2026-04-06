@@ -191,7 +191,7 @@ export class GeminiIntegration {
   private apiKey: string;
   private errorHandler: ErrorHandlingSystem;
   private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
-  private defaultModel = 'gemini-3-pro-preview';  // ✅ CHANGED: For text/vision tasks
+  private defaultModel = 'gemini-3.1-pro-preview';  // ✅ CHANGED: For text/vision tasks
   private imageModel = 'gemini-3-pro-image-preview';  // ✅ NEW: For image generation
   
   // Circuit breaker states
