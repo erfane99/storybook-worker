@@ -946,7 +946,9 @@ DO NOT include:
     enhancedGuidance: string,
     options: PanelOptions
   ): string {
-    let prompt = `REGENERATION WITH FIXES - Create a ${options.artStyle} comic book panel using the character design from the reference image.
+    let prompt = `${this.buildMainCharacterIdentityAnchor(options)}
+
+REGENERATION WITH FIXES - Create a ${options.artStyle} comic book panel using the character design from the reference image.
 
 CRITICAL FIXES REQUIRED (from previous failed validation):
 ${enhancedGuidance}
@@ -1119,6 +1121,10 @@ THIS REGENERATION MUST SHOW CORRECT SPATIAL RELATIONSHIPS.
 - If narration says "trapped" → character MUST appear CONSTRAINED
 - If narration says "flying above" → character MUST be IN THE AIR`;
     }
+
+    prompt += `
+
+${this.buildMainCharacterIdentityForbiddenLine(options)}`;
 
     return prompt;
   }
@@ -1331,6 +1337,92 @@ THIS REGENERATION MUST SHOW CORRECT SPATIAL RELATIONSHIPS.
     return map[key] || '';
   }
 
+  /** Same height-relative descriptions as secondary-character panel blocks (keep in sync conceptually). */
+  private static readonly PANEL_MAIN_CHARACTER_AGE_HEIGHT: Record<string, string> = {
+    toddler: 'very small, about 1/3 height of adult',
+    child: 'small, about half height of adult',
+    teen: 'medium height, slightly shorter than adult',
+    'young-adult': 'full adult height',
+    adult: 'full adult height',
+    senior: 'full adult height, possibly slightly stooped',
+  };
+
+  private resolveMainCharacterAgeCategory(options: PanelOptions): string {
+    const raw = (options.environmentalContext?.characterDNA?.characterAge || '').toString().trim();
+    const map = GeminiIntegration.PANEL_MAIN_CHARACTER_AGE_HEIGHT;
+    if (raw) {
+      const normalized = raw.toLowerCase().replace(/\s+/g, '-').replace(/_/g, '-');
+      if (map[normalized]) return normalized;
+      const rl = raw.toLowerCase();
+      if (/\btoddler\b|\bbaby\b|1-3/.test(rl)) return 'toddler';
+      if (/\bteen\b|adolescent|11-17/.test(rl)) return 'teen';
+      if (/\byoung[\s-]?adult\b/.test(rl)) return 'young-adult';
+      if (/\bsenior\b|\belder\b/.test(rl)) return 'senior';
+      if (/\badult\b/.test(rl) && !/\bchild\b/.test(rl)) return 'adult';
+      if (/\bchild\b|\bkid\b|4-10/.test(rl)) return 'child';
+    }
+    return 'child';
+  }
+
+  private formatAgeCategoryLabel(category: string): string {
+    return category.replace(/-/g, ' ');
+  }
+
+  /** Hair/eyes/skin-style line from character DNA when substantive; else reference IMAGE 1. */
+  private extractMainCharacterPreserveFeatures(characterDNA: any): string {
+    if (!characterDNA?.visualDNA) {
+      return 'match IMAGE 1 exactly—face, hair, eyes, skin tone, and proportions.';
+    }
+    const vd = characterDNA.visualDNA;
+    const isGeneric = (s: string) =>
+      /reference image|as shown|all features|from reference|colors from reference/i.test(s);
+    const feats = (vd.facialFeatures || []).filter((f: string) => f && !isGeneric(f));
+    const dist = (vd.distinctiveFeatures || []).filter((f: string) => f && !isGeneric(f));
+    const palette = (vd.colorPalette || []).filter((c: string) => c && !isGeneric(c));
+    const parts: string[] = [];
+    if (feats.length) parts.push(...feats.slice(0, 2));
+    if (dist.length) parts.push(...dist.slice(0, 2));
+    if (palette.length) parts.push(...palette.slice(0, 3));
+    if (parts.length > 0) return parts.join('; ');
+    const desc = characterDNA.description;
+    if (desc && String(desc).length > 20 && !isGeneric(String(desc))) {
+      return String(desc).replace(/\s+/g, ' ').trim().slice(0, 100);
+    }
+    return 'match IMAGE 1 exactly—face, hair, eyes, skin tone, and proportions.';
+  }
+
+  private buildMainCharacterIdentityAnchor(options: PanelOptions): string {
+    const name = options.mainCharacterName || 'the main character';
+    const category = this.resolveMainCharacterAgeCategory(options);
+    const heightDesc =
+      GeminiIntegration.PANEL_MAIN_CHARACTER_AGE_HEIGHT[category] ||
+      'proportional to stated age—not adult height unless character is an adult';
+    const label = this.formatAgeCategoryLabel(category);
+    const preserve = this.extractMainCharacterPreserveFeatures(options.environmentalContext?.characterDNA);
+    const youthCategories = category === 'toddler' || category === 'child' || category === 'teen';
+    const lockLine = youthCategories
+      ? '- DO NOT age the character up. DO NOT use adult body proportions.'
+      : '- DO NOT change the character\'s apparent age, stature, or life stage.';
+    return `IDENTITY ANCHOR — DO NOT MODIFY:
+- ${name} is a ${label} — ${heightDesc}
+${lockLine}
+- Preserve: ${preserve}`;
+  }
+
+  private buildMainCharacterIdentityForbiddenLine(options: PanelOptions): string {
+    const name = options.mainCharacterName || 'the main character';
+    const category = this.resolveMainCharacterAgeCategory(options);
+    const label = this.formatAgeCategoryLabel(category);
+    const base = `FORBIDDEN: Do not make ${name} look older, taller, or more mature than a ${label}.`;
+    if (category === 'toddler' || category === 'child') {
+      return `${base} Maintain child-like proportions in every panel.`;
+    }
+    if (category === 'teen') {
+      return `${base} Maintain teen-appropriate proportions—not adult height or bulk—in every panel.`;
+    }
+    return `${base} Keep body proportions and apparent age consistent with a ${label} in every panel.`;
+  }
+
   /**
    * Build compressed panel generation prompt
    * Gemini processes reference images first; text is supplementary (~500–700 chars for core).
@@ -1361,7 +1453,11 @@ THIS REGENERATION MUST SHOW CORRECT SPATIAL RELATIONSHIPS.
     const featuresStr = keyFeatures.length > 0 ? keyFeatures.join(', ') : 'key setting details';
     const envColorsTail = dominantColorsStr || 'consistent with setting';
 
-    let prompt = `${options.artStyle} comic panel. CHARACTER: Match IMAGE 1 exactly—same face, body, clothing.${hasPreviousPanel ? ' Use IMAGE 2 for continuity; change pose/composition.' : ''}
+    const identityAnchor = this.buildMainCharacterIdentityAnchor(options);
+
+    let prompt = `${identityAnchor}
+
+${options.artStyle} comic panel. CHARACTER: Match IMAGE 1 exactly—same face, body, clothing.${hasPreviousPanel ? ' Use IMAGE 2 for continuity; change pose/composition.' : ''}
 
 SCENE: ${sceneDescription}
 
@@ -1635,6 +1731,10 @@ REQUIREMENTS: Professional ${options.artStyle}, publication quality. Match chara
 ${options.hasSpeechBubble && options.dialogue ? `- EXCEPTION: Include ONE speech bubble with: "${options.dialogue}"` : '- NO speech bubbles'}
 - The image must be PURELY VISUAL - all text is added by the application afterward
 - ANY text rendered in the image is a CRITICAL FAILURE`;
+
+    prompt += `
+
+${this.buildMainCharacterIdentityForbiddenLine(options)}`;
 
     return prompt;
   }

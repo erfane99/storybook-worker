@@ -157,7 +157,7 @@ Create a detailed visual DNA profile that will ensure perfect consistency across
 
 // ===== QUALITY STANDARDS =====
 export const QUALITY_STANDARDS = {
-  characterConsistency: { min: 85, target: 95 },
+  characterConsistency: { min: 88, target: 95 },
   narrativeCoherence: { min: 80, target: 90 },
   visualQuality: { min: 85, target: 95 },
   emotionalResonance: { min: 75, target: 85 },
@@ -1093,7 +1093,7 @@ export function createDefaultConfig(overrides?: Partial<AIServiceConfig>): AISer
 export function generateQualityRecommendations(metrics: QualityMetrics): string[] {
   const recommendations: string[] = [];
   
-  if (metrics.characterConsistency < 80) {
+  if (metrics.characterConsistency < 88) {
     recommendations.push('Improve character consistency by implementing Visual DNA fingerprinting');
     recommendations.push('Review character design guidelines for target audience');
   }
@@ -1185,7 +1185,7 @@ export const ERROR_HANDLING_BEST_PRACTICES = {
 } as const;
 // ===== CHARACTER CONSISTENCY THRESHOLDS =====
 export const CHARACTER_CONSISTENCY_THRESHOLDS = {
-  MINIMUM_ACCEPTABLE: 85,
+  MINIMUM_ACCEPTABLE: 88,
   TARGET: 95,
   PERFECT: 100
 } as const;

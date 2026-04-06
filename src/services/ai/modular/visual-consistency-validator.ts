@@ -24,6 +24,7 @@ import {
 import { ErrorCategory, ErrorSeverity } from '../../errors/index.js';
 
 import { OpenAIIntegration } from './openai-integration.js';
+import { QUALITY_STANDARDS } from './constants-and-types.js';
 
 // ===== INTERFACES =====
 
@@ -112,7 +113,7 @@ export class ValidationError extends BaseServiceError {
 
 // ===== VALIDATION CONSTANTS =====
 
-const VALIDATION_THRESHOLD = 70; // Minimum score to pass validation (lowered for early-stage app)
+const VALIDATION_THRESHOLD = QUALITY_STANDARDS.characterConsistency.min;
 const MAX_RETRY_ATTEMPTS = 3;
 const VISION_API_TIMEOUT = 180000; // 180 seconds
 
@@ -140,7 +141,7 @@ CRITICAL ANALYSIS REQUIRED:
 
 Rate each aspect 0-100 and provide overall consistency score.
 BE STRICT: Even minor deviations should reduce score significantly.
-FAIL if overall score < 70.
+FAIL if overall score < ${VALIDATION_THRESHOLD}.
 
 Return ONLY valid JSON in this exact format (no markdown, no code blocks):
 {

@@ -17,7 +17,7 @@
  *
  * Features:
  * - Single GPT-4 Vision call validates ALL dimensions at once
- * - 70% threshold logic preserved from individual validators
+ * - Character pass threshold from QUALITY_STANDARDS.characterConsistency.min; environmental/sequential remain at 70%
  * - Database persistence compatible with existing tables
  * - Graceful degradation when Vision API unavailable
  */
@@ -31,6 +31,7 @@ import {
 
 import { ErrorCategory, ErrorSeverity } from '../../errors/index.js';
 import { OpenAIIntegration } from './openai-integration.js';
+import { QUALITY_STANDARDS } from './constants-and-types.js';
 
 // ===== INTERFACES =====
 
@@ -161,7 +162,8 @@ export class UnifiedValidationError extends BaseServiceError {
 
 // ===== VALIDATION CONSTANTS =====
 
-const VALIDATION_THRESHOLD = 70; // Same threshold as individual validators
+const VALIDATION_THRESHOLD = 70; // Environmental + sequential pass threshold (unchanged)
+const CHARACTER_CONSISTENCY_PASS_MIN = QUALITY_STANDARDS.characterConsistency.min;
 const VISION_API_TIMEOUT = 180000; // 180 seconds
 
 /**
@@ -206,11 +208,12 @@ For each consecutive panel pair, verify visual continuity:
 
 SCORING (0-100):
 - 90-100: Publication-ready quality
-- 70-89: Acceptable quality (PASSES)
+- 88-89: Character: minimum pass band. Environmental/sequential: acceptable if >= 70.
+- 70-87: Character overallScore in this band FAILS (must be >= ${QUALITY_STANDARDS.characterConsistency.min} to pass). Environmental/sequential may still pass at >= 70.
 - 50-69: Noticeable issues, may need improvement
 - Below 50: Significant problems, regeneration required
 
-THRESHOLD: Score >= 70 to pass
+PASS THRESHOLDS: Character consistency overallScore >= ${QUALITY_STANDARDS.characterConsistency.min}. Environmental overallCoherence >= 70. Sequential averageScore >= 70 (single-panel page: sequential may be N/A).
 
 Return ONLY valid JSON (no markdown, no code blocks):
 {
@@ -548,7 +551,7 @@ Compare each panel against this reference for character consistency.`
    * Check if all validation thresholds pass
    */
   private checkAllThresholds(report: UnifiedValidationReport): boolean {
-    const characterPasses = report.characterConsistency.overallScore >= VALIDATION_THRESHOLD;
+    const characterPasses = report.characterConsistency.overallScore >= CHARACTER_CONSISTENCY_PASS_MIN;
     const environmentalPasses = report.environmentalConsistency.overallCoherence >= VALIDATION_THRESHOLD;
     const sequentialPasses = report.sequentialConsistency.averageScore >= VALIDATION_THRESHOLD ||
       report.sequentialConsistency.panelPairScores.length === 0; // Single panel pages pass
@@ -556,7 +559,7 @@ Compare each panel against this reference for character consistency.`
     // Add failure reasons
     if (!characterPasses) {
       report.failureReasons.push(
-        `Character consistency (${report.characterConsistency.overallScore}%) below threshold (${VALIDATION_THRESHOLD}%)`
+        `Character consistency (${report.characterConsistency.overallScore}%) below threshold (${CHARACTER_CONSISTENCY_PASS_MIN}%)`
       );
     }
     if (!environmentalPasses) {

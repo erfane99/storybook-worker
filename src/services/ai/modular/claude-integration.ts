@@ -583,6 +583,22 @@ Panel 10: emotion="shocked" (discovers teddy took cookies)
 Panel 11: emotion="happy" (shares cookies) ← BROKEN - skipped understanding!
 </emotional_transition_rules>
 
+<narrative_logic_rules>
+MANDATORY NARRATIVE LOGIC — causality between panels and order of resolution
+
+RULE 1 — CAUSAL CHAIN:
+Every panel must follow logically from the previous with NO implied off-screen events. If panel N shows Action A and panel N+1 shows Result C, there MUST be a panel showing cause B between them. The reader should never need to ask "what happened between these two panels?" If a consequence appears (penalty, injury, reward, punishment, disqualification, etc.), the event that caused it MUST appear in an earlier panel first.
+
+❌ BAD: Panel 5 — plays soccer toward goal → Panel 6 — penalty kick (the foul never shown).
+✅ GOOD: Panel 5 — shot on goal → Panel 6 — foul/trip; referee signals → Panel 7 — penalty kick.
+
+RULE 2 — RESOLUTION ORDERING:
+The character's ACTION resolution (winning, achieving, completing the goal) must come BEFORE or SIMULTANEOUSLY with the thematic realization or lesson—not after. The final 1–2 panels should be reflective and warm, not a new action climax; end on emotion after the peak of action, not on the peak.
+
+❌ WRONG: Reflects "teamwork matters" in narration → then scores the winning goal in the next panel (lesson before payoff; anticlimactic).
+✅ CORRECT: Scores the winning goal (or completes the deed) → then reflects on what it meant in the closing panels (action earns the lesson).
+</narrative_logic_rules>
+
 <narration_variety_rules>
 CRITICAL - Avoid repetition:
 - NEVER start 2+ panels with same words (e.g., "Maya's heart" twice = FAILURE)

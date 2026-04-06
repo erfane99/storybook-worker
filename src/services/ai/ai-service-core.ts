@@ -3037,7 +3037,7 @@ private determineCameraAngle(index: number, total: number): string {
   generateQualityRecommendations(qualityMetrics: any): string[] {
     const recommendations: string[] = [];
     
-    if (qualityMetrics.characterConsistency < 80) {
+    if (qualityMetrics.characterConsistency < 88) {
       recommendations.push('Improve character consistency with Visual DNA system');
     }
     

@@ -666,7 +666,11 @@ export class ComicGenerationEngine {
       if (characterImage && !characterDNA) {
         // Only create if not provided (fallback for edge cases)
         console.log('⚠️ Character DNA not in context, creating new...');
-        characterDNA = await this.createMasterCharacterDNA(characterImage, characterArtStyle);
+        characterDNA = await this.createMasterCharacterDNA(
+          characterImage,
+          characterArtStyle,
+          mainCharacter?.age
+        );
       } else if (characterDNA) {
         console.log('✅ Using pre-created Character DNA from PHASE 3');
       }
@@ -1224,7 +1228,11 @@ COMIC BOOK PROFESSIONAL STANDARDS:
    * Create master character DNA with image-based reference
    * GEMINI MIGRATION: Uses cartoon image directly, no text analysis needed
    */
-  private async createMasterCharacterDNA(characterImage: string, artStyle: string): Promise<CharacterDNA> {
+  private async createMasterCharacterDNA(
+    characterImage: string,
+    artStyle: string,
+    mainCharacterAge?: string
+  ): Promise<CharacterDNA> {
     try {
       console.log('🧬 Creating Character DNA with image-based reference (no text analysis)...');
       
@@ -1236,6 +1244,7 @@ COMIC BOOK PROFESSIONAL STANDARDS:
         cartoonImage: characterImage,  // Use cartoon as reference
         description: 'Character reference stored as image', // Minimal text, image is the truth
         artStyle: artStyle,
+        characterAge: mainCharacterAge,
         visualDNA: {
           imageBasedReference: characterImage,  // CRITICAL: Store cartoon URL for panels
           facialFeatures: ['Reference image contains all features'],

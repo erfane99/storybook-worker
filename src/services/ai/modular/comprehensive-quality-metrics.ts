@@ -950,7 +950,7 @@ export class ComprehensiveQualityMetrics {
     const criticalIssues: string[] = [];
 
     // Identify weak dimensions
-    if (dimensions.characterConsistency.overallScore < 80) {
+    if (dimensions.characterConsistency.overallScore < 88) {
       weakAreas.push('Character Consistency');
       recommendations.push('Improve character DNA enforcement and validation thresholds');
     }

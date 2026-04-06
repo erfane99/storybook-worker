@@ -34,6 +34,7 @@ import {
 import { ErrorCategory, ErrorSeverity } from '../../errors/index.js';
 
 import { OpenAIIntegration } from './openai-integration.js';
+import { QUALITY_STANDARDS } from './constants-and-types.js';
 
 // ===== INTERFACES =====
 
@@ -142,7 +143,7 @@ const MAX_REGENERATION_ATTEMPTS = 2;
 
 // Critical failure thresholds for individual dimensions
 const CRITICAL_THRESHOLDS = {
-  characterContinuity: 80,
+  characterContinuity: QUALITY_STANDARDS.characterConsistency.min,
   artStyleConsistency: 75,
   minimumIndividualScore: 60
 };

@@ -816,6 +816,7 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
           cartoonImage: cachedCharacter.cartoon_image_url,
           sourceImage: character_image,
           artStyle: character_art_style,
+          characterAge: mainCharacter?.age,
           cached: true,
         };
         characterDescriptionToUse = cachedCharacter.character_description;
@@ -869,6 +870,9 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
 
         if (charResult.status === 'fulfilled') {
           characterDNA = charResult.value;
+          if (mainCharacter?.age && characterDNA && (characterDNA.characterAge == null || characterDNA.characterAge === '')) {
+            characterDNA = { ...characterDNA, characterAge: mainCharacter.age };
+          }
           if (!is_reused_image || !characterDescriptionToUse) {
             characterDescriptionToUse = this.extractCharacterDescriptionFromDNA(characterDNA);
           }
@@ -1756,8 +1760,8 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
     this.trackServiceUsage(job.id, 'database');
     if (!servicesUsed.includes('database')) servicesUsed.push('database');
 
-    // Recalculate final averages with actual scores
-    averageConsistency = totalScenes > 0 ? totalCharacterConsistencyScore / totalScenes : 0;
+    // Align job completion score with unified validation (same source as quality metrics)
+    averageConsistency = characterConsistencyScore;
     averageEnvironmentalConsistency = totalScenes > 0 ? totalEnvironmentalConsistencyScore / totalScenes : 0;
     
     const storybookEntry = await databaseService.saveStorybookEntry({
@@ -1826,7 +1830,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
 
     // STORE FINAL CHARACTER CONSISTENCY SCORE
     // Character DNA and consistency scores are passed to markJobCompleted below
-    console.log(`📊 Character consistency score: ${Math.round(averageConsistency)}%`);
+    console.log(`📊 Character consistency score: ${Math.round(averageConsistency)}% (from unified validation)`);
     console.log(`🧬 Character DNA: ${characterDNA ? 'Created and will be stored' : 'Using fallback'}`);
 
     // ===== SAVE QUALITY METRICS TO DATABASE =====
@@ -1884,7 +1888,7 @@ if (sceneResult && sceneResult.pages && Array.isArray(sceneResult.pages)) {
       characterDescription: characterDNA ? characterDNA.description : characterDescriptionToUse,  // Use DNA description
       characterDNA: characterDNA,  // ADD - Store full Character DNA
       visualFingerprint: characterDNA?.visualFingerprint,  // ADD - Store fingerprint
-      character_consistency_score: Math.round(averageConsistency),  // Save the actual score
+      character_consistency_score: Math.round(averageConsistency),  // Unified validation average (matches quality metrics)
       qualityMetrics,
       characterDNAUsed: !!characterDNA,
       parallelProcessed: true,

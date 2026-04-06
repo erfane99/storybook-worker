@@ -216,7 +216,7 @@ export class ValidationWrapper {
         // If this is the last attempt, throw error
         if (attempt === MAX_PANEL_ATTEMPTS) {
           throw new Error(
-            `Panel ${context.panelNumber} failed character consistency validation after ${MAX_PANEL_ATTEMPTS} attempts. Quality score: ${bestScore}%. Required: 90%. Failure reasons: ${validationScore.failureReasons.join(', ')}. Cannot proceed with substandard quality.`
+            `Panel ${context.panelNumber} failed character consistency validation after ${MAX_PANEL_ATTEMPTS} attempts. Quality score: ${bestScore}%. Required: 88%. Failure reasons: ${validationScore.failureReasons.join(', ')}. Cannot proceed with substandard quality.`
           );
         }
 
