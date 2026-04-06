@@ -727,8 +727,9 @@ private async processJobWithCleanup(job: JobData): Promise<void> {
         throw new Error(`Failed to analyze story structure: ${storyError instanceof Error ? storyError.message : String(storyError)}`);
       }
     } else {
-      console.log(`📄 Using predefined pages - analyzing ${pages.length} existing pages for environmental enhancement`);
-      await jobService.updateJobProgress(job.id, 15, `Analyzing ${pages.length} predefined pages for environmental consistency`);
+      throw new Error(
+        'CRITICAL: Predefined pages without story analysis are not supported. All stories must go through the Option C comic script pipeline for quality assurance.'
+      );
     }
 
     // PHASE 2 + 3: Environmental DNA + Character DNA (parallel when both API calls are needed)
